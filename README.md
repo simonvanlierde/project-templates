@@ -131,9 +131,12 @@ rendering them in CI first: `.jinja` is not YAML, but its output is.
 licenses API, with the copyright placeholders filled in.
 
 **Dependency updates** in scaffolded projects go through Dependabot: no app to install,
-and it covers every ecosystem these layers generate. This repo itself uses Renovate,
-because its pins live inside `.jinja` templates that Dependabot can't parse. Neither bot
-tracks the `FROM` base images — those tags are copier answers, so bump them by hand.
+and it covers every ecosystem these layers generate. Version updates sit out a `cooldown`
+first — a week, or a month for a major — which is the window a compromised release is
+usually caught and yanked in. Security updates ignore it, so a known CVE still lands the
+same day. This repo itself uses Renovate, because its pins live inside `.jinja` templates
+that Dependabot can't parse. Neither bot tracks the `FROM` base images — those tags are
+copier answers, so bump them by hand.
 
 ## Publishing
 

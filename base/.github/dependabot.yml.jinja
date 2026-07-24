@@ -4,11 +4,18 @@
 #
 # No automerge: Dependabot has none natively, and adding it would take a workflow
 # holding contents:write.
+#
+# `cooldown` holds a version update back until the release has been public for a
+# week, which is the window a compromised release is caught and yanked in.
+# Security updates ignore it, so a known CVE still lands the same day. Ecosystem
+# support differs: github-actions and pre-commit take default-days only — see
+# the options reference under "cooldown".
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
     groups:
       actions: { patterns: ["*"] }
 
@@ -18,6 +25,7 @@ updates:
   - package-ecosystem: pre-commit
     directory: /
     schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
     groups:
       hooks: { patterns: ["*"] }
 {%- if 'python' in stacks %}
@@ -27,6 +35,7 @@ updates:
   - package-ecosystem: uv
     directory: {{ '/' if python_dir == '.' else '/' ~ python_dir }}
     schedule: { interval: weekly }
+    cooldown: { default-days: 7, semver-major-days: 30 }
     groups:
       dev-tooling:
         dependency-type: development
@@ -38,6 +47,7 @@ updates:
   - package-ecosystem: npm
     directory: {{ '/' if ts_dir == '.' else '/' ~ ts_dir }}
     schedule: { interval: weekly }
+    cooldown: { default-days: 7, semver-major-days: 30 }
     groups:
       dev-tooling:
         dependency-type: development
