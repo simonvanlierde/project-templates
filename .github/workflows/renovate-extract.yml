@@ -1,0 +1,78 @@
+name: renovate extract
+
+# The regex managers in renovate.json5 fail open, so run the extraction and
+# assert each manager still finds its anchor dependency.
+#
+# Its own workflow, not a ci.yml job: booting Renovate is the slowest step in
+# CI, and only the files a manager reads can break extraction, so everything
+# else skips it via the paths filter below.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - renovate.json5
+      - "**/.github/workflows/**"
+      - "**/Dockerfile*.jinja"
+      - "**/.pre-commit-config.yaml.jinja"
+      - "**/pyproject.toml.jinja"
+      - "**/package.json.jinja"
+  pull_request:
+    paths:
+      - renovate.json5
+      - "**/.github/workflows/**"
+      - "**/Dockerfile*.jinja"
+      - "**/.pre-commit-config.yaml.jinja"
+      - "**/pyproject.toml.jinja"
+      - "**/package.json.jinja"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Pinned for reproducibility; Renovate bumps the pin itself via
+# githubActionsVersions.
+env:
+  # renovate: datasource=npm depName=renovate
+  RENOVATEBOT_VERSION: 43.280.2
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  renovate-extract:
+    name: renovate extract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Renovate supports only the active node LTS line.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # The cold npx install is the longest step in this workflow without this.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-renovate-${{ env.RENOVATEBOT_VERSION }}
+
+      - name: extract and assert anchors
+        env:
+          RENOVATE_CONFIG_FILE: renovate.json5
+          LOG_LEVEL: debug
+        run: |
+          set -euo pipefail
+          npx -y "renovate@$RENOVATEBOT_VERSION" --platform=local --dry-run=extract > extract.log 2>&1 \
+            || { tail -n 50 extract.log; exit 1; }
+          # One anchor per manager block; copier and renovate come from the
+          # githubActionsVersions preset, which fails open too.
+          for dep in actions/checkout ghcr.io/astral-sh/uv pre-commit/pre-commit-hooks \
+                     uv_build pytest pnpm @biomejs/biome copier renovate; do
+            grep -qF "\"depName\": \"$dep\"" extract.log \
+              || { echo "not extracted: $dep — a manager pattern in renovate.json5 broke"; exit 1; }
+          done
