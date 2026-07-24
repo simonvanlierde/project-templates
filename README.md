@@ -1,7 +1,7 @@
 # project-templates
 
+[![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-black.json)](https://github.com/copier-org/copier)
 [![CI](https://github.com/simonvanlierde/project-templates/actions/workflows/ci.yml/badge.svg)](https://github.com/simonvanlierde/project-templates/actions/workflows/ci.yml)
-[![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge.json)](https://github.com/copier-org/copier)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Starter templates for new projects, built with [Copier](https://copier.readthedocs.io).
