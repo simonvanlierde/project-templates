@@ -88,11 +88,8 @@ jobs:
 {%- if publish_to_ghcr %}
 
   push:
-    # The write half. The image is built and smoke-tested here before the push:
-    # the pushing build resolves every layer from the tested build's cache, so
-    # nothing reaches the registry that has never answered /health. Project code
-    # runs only inside buildkit and `docker run`, and neither passes this job's
-    # credentials or OIDC environment through.
+    # The write half: builds and smoke-tests again, then pushes from the tested
+    # build's cache, so nothing reaches the registry that never answered /health.
     name: push
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -126,21 +123,17 @@ jobs:
       - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       # Build to the local store first and prove the image starts, before the
-      # registry login below puts any credential on this runner.
+      # registry login below puts any credential on this runner. This job runs
+      # on push only, so it is the one that populates the per-stack cache.
       - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: {% raw %}${{ matrix.context }}{% endraw %}
-          # Scoped per stack: the default gha scope is shared, so two images in
-          # one workflow would evict each other's layers on every run. This job
-          # runs on push only, so it is the one that populates that cache.
           cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
           cache-to: {% raw %}type=gha,mode=max,scope=${{ matrix.stack }}{% endraw %}
           push: false
           load: true # so the smoke test below can run it
           tags: {% raw %}${{ matrix.tag }}{% endraw %}
 
-      # An image that cannot start is not a passing build. Matrix jobs get their
-      # own runner, so both images can use {{ app_port }}.
       - name: smoke test
         run: |
           docker run -d --name ci -p {{ app_port }}:{{ app_port }} {% raw %}${{ matrix.tag }}{% endraw %}

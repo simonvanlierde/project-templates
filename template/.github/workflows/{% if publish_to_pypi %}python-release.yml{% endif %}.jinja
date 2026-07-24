@@ -4,14 +4,12 @@ name: python release
 # https://pypi.org/manage/account/publishing/ for repo {{ github_user }}/{{ slug }},
 # workflow `python-release.yml`, environment `pypi`.
 #
-# The build job re-runs the full suite rather than trusting python.yml: a release
-# tag can point at any commit, including one that never went green. It then tests
-# the built wheel, which python.yml cannot — the branch suite imports from src/,
-# so a packaging fault (wrong module-name, missing py.typed, a file left out of
-# the wheel) only shows up against the installed artifact.
+# The build job re-runs the full suite (a release tag can point at a commit that
+# never went green), then runs it again against the installed wheel — the only
+# place packaging faults like a wrong module-name show up.
 #
-# Two jobs on purpose: `id-token: write` exposes an OIDC request token to every
-# step in its job, so the job holding it runs no project code.
+# `id-token: write` exposes an OIDC request token to every step in its job,
+# which is why publish is a separate job that runs no project code.
 
 on:
   release:
@@ -34,10 +32,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # No cache, unlike python.yml. A cache entry written from any branch of
-      # this repo is restorable here, which would put attacker-controlled bytes
-      # into the wheel this workflow signs and publishes. Releases are rare
-      # enough that a cold resolve costs nothing worth having.
+      # No cache: an entry written from any branch is restorable here, which
+      # would put attacker-controlled bytes into the wheel this workflow signs.
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: false

@@ -1,0 +1,29 @@
+# Run with prek, a drop-in pre-commit replacement: prek install && prek run -a
+#
+# The local half of CI: hygiene, secrets, and a zizmor audit of this repo's own
+# workflows. The rendered-template checks stay in ci.yml — they need copier and
+# a scaffold per answer combination.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+        # The Apache license text is byte-exact from the GitHub licenses API.
+        exclude: 'LICENSE.*\.jinja$'
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  # .jinja workflows are not YAML, so zizmor only sees ci.yml and
+  # renovate-extract.yml here; CI renders the templates and audits the output.
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.28.0
+    hooks:
+      - id: zizmor

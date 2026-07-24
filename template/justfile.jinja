@@ -1,9 +1,7 @@
 # Task runner: https://just.systems. `just` lists the recipes, `just <name>` runs one.
 #
-# Each stack adds its own recipe file. `import?` is the optional form, so a stack
-# you never scaffolded is skipped rather than an error. Recipes are prefixed
-# (`py-`, `ts-`) because imports share one namespace, and two stacks would
-# otherwise both define `check`.
+# `import?` skips a recipe file you never scaffolded. Recipes are prefixed
+# (`py-`, `ts-`) because imports share one namespace.
 import? 'just/python.just'
 import? 'just/ts.just'
 import? 'just/docker.just'

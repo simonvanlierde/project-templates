@@ -17,21 +17,12 @@
 prek install     # git hooks
 {% endif %}```
 
-{% if use_just %}`just` lists the tasks; they mirror what [.github/workflows/](.github/workflows/) runs.
+`just` lists the tasks; they mirror what [.github/workflows/](.github/workflows/) runs.
 
 ```sh
 just check       # lint, types and tests for every stack here{% if 'docker' in stacks %}
 just up          # run the service(s) in its container, rebuilt on source changes{% endif %}
 ```
-{% else %}The build, lint, type and test commands live in
-[.github/workflows/](.github/workflows/). Run those locally.
-{% if 'docker' in stacks %}
-Run the service in its container:
-
-```sh
-docker compose up --watch   # rebuilds the image when src/ or the lockfile changes
-```
-{% endif %}{% endif %}
 
 ## License
 

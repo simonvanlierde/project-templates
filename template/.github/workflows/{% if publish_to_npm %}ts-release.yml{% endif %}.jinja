@@ -4,19 +4,16 @@ name: ts release
 # https://www.npmjs.com/package/{{ slug }}/access for repo
 # {{ github_user }}/{{ slug }}, workflow `ts-release.yml`, environment `npm`.
 #
-# The package must already exist on npm: trusted publishing cannot create it.
-# Publish the first version manually (`pnpm publish`), then wire up the publisher.
-# npm generates the provenance attestation automatically over OIDC, so there is
-# no --provenance flag here.
+# The package must already exist on npm: trusted publishing cannot create it, so
+# publish the first version manually (`pnpm publish`). npm adds the provenance
+# attestation itself over OIDC — no --provenance flag.
 #
-# The build job re-runs the full suite rather than trusting ts.yml: a release tag
-# can point at any commit, including one that never went green.
+# The build job re-runs the full suite: a release tag can point at any commit,
+# including one that never went green.
 #
-# Two jobs on purpose. `id-token: write` puts an OIDC request token in the
-# environment of every step of its job, where anything executing — a dependency
-# install script, a compiler plugin, a test — could mint one and publish under
-# this package name. So that job runs no project code: it downloads the tarball
-# `build` produced and uploads it.
+# `id-token: write` reaches every step of its job, where any dependency script or
+# test could mint a token and publish under this name. So the publish job runs no
+# project code: it downloads the tarball `build` produced and uploads it.
 
 on:
   release:
@@ -46,10 +43,8 @@ jobs:
           package_json_file: {{ ts_dir }}/package.json
 {%- endif %}
 
-      # No cache, unlike ts.yml. A cache entry written from any branch of this
-      # repo is restorable here, which would put attacker-controlled bytes into
-      # the tarball this workflow signs and publishes. Releases are rare enough
-      # that a cold install costs nothing worth having.
+      # No cache: an entry written from any branch is restorable here, which
+      # would put attacker-controlled bytes into the tarball this workflow signs.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "{{ node_version }}"
@@ -89,9 +84,8 @@ jobs:
         with:
           name: package
 
-      # There is no lockfile here to cache, but setup-node enables cache
-      # detection by default, and a default-on cache in a publishing job is
-      # exactly what zizmor's cache-poisoning audit flags. Off explicitly.
+      # setup-node's cache detection is on by default — exactly what zizmor's
+      # cache-poisoning audit flags in a publishing job. Off explicitly.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "{{ node_version }}"
@@ -99,6 +93,5 @@ jobs:
           package-manager-cache: false
 
       # npm, not pnpm: a prebuilt tarball needs no checkout, install or lockfile,
-      # and this drops pnpm's --no-git-checks workaround since there is no git
-      # tree. npm ships with Node and has supported OIDC since 11.5.1 (Node 24+).
+      # and npm ships with Node with OIDC support since 11.5.1 (Node 24+).
       - run: npm publish --access public ./*.tgz

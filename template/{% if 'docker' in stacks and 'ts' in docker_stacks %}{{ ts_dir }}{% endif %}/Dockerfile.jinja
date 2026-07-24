@@ -1,14 +1,12 @@
 # syntax=docker/dockerfile:1
 #
 # Follows https://pnpm.io/docker, in particular its prod-deps / build stage
-# split, so the production node_modules is built by pnpm rather than pruned after
-# the fact. `pnpm deploy`, the other option that page documents, targets
-# workspaces; this is a single package.
+# split, so the production node_modules is built by pnpm rather than pruned
+# after the fact.
 #
-# One deviation: that page still installs pnpm with `corepack enable`, which Node
-# stopped shipping in v25. `npm i -g pnpm@11` replaces it. Only the major is
-# pinned, since pnpm >=10 reads `packageManager` from package.json and fetches
-# that exact version itself.
+# One deviation: that page installs pnpm with `corepack enable`, which Node
+# stopped shipping in v25; `npm i -g pnpm@11` replaces it. Only the major is
+# pinned — pnpm >=10 reads `packageManager` and fetches that exact version.
 
 # ---- base -------------------------------------------------------------------
 FROM node:{{ node_version }}-slim AS base

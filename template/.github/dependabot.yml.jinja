@@ -1,15 +1,10 @@
-# Dependabot, not Renovate: it needs no app install, so a scaffolded repo gets
-# updates the moment it is pushed. It covers every ecosystem these layers
-# generate, including the `rev` pins in .pre-commit-config.yaml.
-#
-# No automerge: Dependabot has none natively, and adding it would take a workflow
-# holding contents:write.
+# Dependabot, not Renovate: no app install needed, and it covers every ecosystem
+# here, including the `rev` pins in .pre-commit-config.yaml. No automerge — that
+# would take a workflow holding contents:write.
 #
 # `cooldown` holds a version update back until the release has been public for a
-# week, which is the window a compromised release is caught and yanked in.
-# Security updates ignore it, so a known CVE still lands the same day. Ecosystem
-# support differs: github-actions and pre-commit take default-days only — see
-# the options reference under "cooldown".
+# week, the window a compromised release is usually caught and yanked in.
+# Security updates ignore it. github-actions and pre-commit take default-days only.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -20,8 +15,7 @@ updates:
       actions: { patterns: ["*"] }
 
   # Version updates only; Dependabot has no security updates for this ecosystem.
-  # Hook revs group wholesale: they are all dev tooling, and Dependabot reports
-  # every pre-commit dep as a production one regardless.
+  # Hook revs group wholesale: all dev tooling.
   - package-ecosystem: pre-commit
     directory: /
     schedule: { interval: weekly }
@@ -55,7 +49,5 @@ updates:
         patterns: ["*"]
 {%- endif %}
 
-# No docker ecosystem. It reads FROM lines only, and those tags are copier
-# answers rather than pins, so its PRs would fight the next `copier update`. The
-# one pin that does want a bot, `COPY --from=ghcr.io/astral-sh/uv:<ver>`, it
-# cannot see anyway.
+# No docker ecosystem: it reads FROM lines only, and those tags are copier
+# answers, so its PRs would fight the next `copier update`.
