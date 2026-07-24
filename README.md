@@ -1,5 +1,7 @@
 # project-templates
 
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Starter templates for new projects, built with [Copier](https://copier.readthedocs.io).
 
 The templates are split into four layers: `base`, `python`, `ts` and `docker`. You apply
