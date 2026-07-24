@@ -3,6 +3,4 @@
      + (['ms-toolsai.jupyter'] if 'python' in stacks and kind == 'research' else [])
      + (['biomejs.biome'] if 'ts' in stacks else [])
      + (['ms-azuretools.vscode-containers'] if 'docker' in stacks else []) -%}
-{
-  "recommendations": {{ exts | to_json }}
-}
+{{ {'recommendations': exts} | to_nice_json(indent=2) }}
