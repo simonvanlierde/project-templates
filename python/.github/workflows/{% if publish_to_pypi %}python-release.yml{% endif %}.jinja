@@ -34,9 +34,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # No cache, unlike python.yml. A cache entry written from any branch of
+      # this repo is restorable here, which would put attacker-controlled bytes
+      # into the wheel this workflow signs and publishes. Releases are rare
+      # enough that a cold resolve costs nothing worth having.
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          enable-cache: true
+          enable-cache: false
           python-version: "{{ python_version }}"
 
       # Publish only what passes, on the exact commit being released.

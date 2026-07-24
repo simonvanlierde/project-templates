@@ -46,13 +46,14 @@ jobs:
           package_json_file: {{ ts_dir }}/package.json
 {%- endif %}
 
+      # No cache, unlike ts.yml. A cache entry written from any branch of this
+      # repo is restorable here, which would put attacker-controlled bytes into
+      # the tarball this workflow signs and publishes. Releases are rare enough
+      # that a cold install costs nothing worth having.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "{{ node_version }}"
-          cache: pnpm
-{%- if ts_dir != '.' %}
-          cache-dependency-path: {{ ts_dir }}/pnpm-lock.yaml
-{%- endif %}
+          package-manager-cache: false
 
       - run: pnpm install --frozen-lockfile
 
@@ -88,10 +89,14 @@ jobs:
         with:
           name: package
 
+      # There is no lockfile here to cache, but setup-node enables cache
+      # detection by default, and a default-on cache in a publishing job is
+      # exactly what zizmor's cache-poisoning audit flags. Off explicitly.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "{{ node_version }}"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
 
       # npm, not pnpm: a prebuilt tarball needs no checkout, install or lockfile,
       # and this drops pnpm's --no-git-checks workaround since there is no git
