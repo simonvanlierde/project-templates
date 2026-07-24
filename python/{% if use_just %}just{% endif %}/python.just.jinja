@@ -18,6 +18,10 @@ py-fmt:
     {{ uv }} run ruff check --fix
     {{ uv }} run ruff format
 
+# Tests with coverage: a terminal summary, plus coverage.xml for an uploader.
+py-cov:
+    {{ uv }} run pytest --cov --cov-report=term-missing --cov-report=xml
+
 # Tests only; extra arguments reach pytest (`just py-test -k name`).
 py-test *args:
     {{ uv }} run pytest {% raw %}{{ args }}{% endraw %}

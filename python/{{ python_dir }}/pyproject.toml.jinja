@@ -29,6 +29,7 @@ Issues = "https://github.com/{{ github_user }}/{{ slug }}/issues"
 [dependency-groups]
 dev = [
   "pytest>=9",
+  "pytest-cov>=7",
   "ruff>=0.16",
   "ty>=0.0.63",
 {%- if kind == 'research' %}
@@ -82,3 +83,14 @@ max-args = 10
 [tool.pytest.ini_options]
 addopts = ["-ra", "--strict-config", "--strict-markers", "--import-mode=importlib"]
 testpaths = ["tests"]
+
+# Coverage is opt-in, via `pytest --cov` (`just py-cov`), not addopts: it costs
+# every plain test run for a number you only look at now and then. No fail_under
+# until there is a suite worth setting one against.
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]

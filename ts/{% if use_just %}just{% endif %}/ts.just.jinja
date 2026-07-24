@@ -17,6 +17,10 @@ ts-check:
 ts-fmt:
     {{ pnpm }} run fix
 
+# Tests with coverage: a terminal summary, plus coverage/lcov.info for an uploader.
+ts-cov:
+    {{ pnpm }} run coverage
+
 # Tests only; extra arguments reach vitest (`just ts-test -t name`).
 ts-test *args:
     {{ pnpm }} exec vitest run {% raw %}{{ args }}{% endraw %}

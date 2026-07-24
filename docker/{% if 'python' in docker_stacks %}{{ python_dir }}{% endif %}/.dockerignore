@@ -20,6 +20,7 @@ __pycache__
 .ipynb_checkpoints
 htmlcov
 .coverage
+coverage.xml
 
 # Not in the image, and `COPY . /app` would otherwise put them in the layer hash:
 # touching a test or a notebook would re-run the whole dependency install, which

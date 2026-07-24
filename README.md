@@ -127,6 +127,10 @@ that isn't the commit it claims to be — so the workflows you add later are hel
 same line as the ones this template wrote. This repo audits its own templates by
 rendering them in CI first: `.jinja` is not YAML, but its output is.
 
+**Coverage** is opt-in, through `just py-cov` and `just ts-cov` rather than `just check`.
+Both print a terminal summary and write a file an uploader can read: `coverage.xml` for
+Python, `coverage/lcov.info` for TypeScript. Neither enforces a threshold.
+
 **Licenses** are MIT, Apache-2.0, BSD-3-Clause or none. The texts come from the GitHub
 licenses API, with the copyright placeholders filled in.
 
