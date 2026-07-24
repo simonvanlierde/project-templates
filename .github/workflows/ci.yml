@@ -25,6 +25,8 @@ env:
   COPIER_VERSION: 9.17.0
   # renovate: datasource=pypi depName=zizmor
   ZIZMOR_VERSION: 1.28.0
+  # No .dockerbuild record artifacts; nothing reads them here.
+  DOCKER_BUILD_RECORD_UPLOAD: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
