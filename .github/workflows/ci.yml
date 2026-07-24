@@ -305,10 +305,23 @@ jobs:
             "${C[@]}" --data layer=docker --data 'docker_stacks=[ts]' . "$PROJ"
           fi
 
-      # pnpm version from the scaffold's packageManager pin.
+      # pnpm version from the scaffold's packageManager pin. Read by hand, not
+      # via package_json_file: action-setup resolves that input relative to
+      # GITHUB_WORKSPACE even when it is absolute, and the scaffold lives in
+      # RUNNER_TEMP, so the action would find nothing and fail.
+      - name: pnpm version
+        id: pnpm
+        env:
+          TS_DIR: ${{ matrix.ts_dir }}
+        run: |
+          set -euo pipefail
+          v=$(jq -er '.packageManager | ltrimstr("pnpm@")' "$RUNNER_TEMP/proj/$TS_DIR/package.json")
+          test -n "$v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
-          package_json_file: ${{ runner.temp }}/proj/${{ matrix.ts_dir }}/package.json
+          version: ${{ steps.pnpm.outputs.version }}
 
       # From the answer copier recorded, so it cannot drift from the ts layer's
       # default. Not engines.node, which is an open range.
