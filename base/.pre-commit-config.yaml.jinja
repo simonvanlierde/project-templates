@@ -31,6 +31,16 @@ repos:
     rev: v8.30.1
     hooks:
       - id: gitleaks
+
+  # Static analysis of .github/: template injection, credential leakage, cache
+  # poisoning, impostor commits behind a pinned digest. The workflows this
+  # template writes are already audited in its own CI; this covers the ones you
+  # add afterwards. Set GH_TOKEN to enable the audits that need the API — without
+  # it the offline subset still runs.
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.28.0
+    hooks:
+      - id: zizmor
 {%- if 'docker' in stacks %}
 
   # Runs from its own image: nothing to install, but it needs the Docker daemon.

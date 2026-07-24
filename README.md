@@ -120,7 +120,12 @@ and [pnpm](https://pnpm.io/docker) guides: multi-stage builds on `-slim` bases, 
 cache mounts, a non-root runtime user, OCI labels.
 
 **GitHub Actions** are pinned to commit digests, with the human-readable version in a
-trailing comment. Every workflow declares least-privilege `permissions`.
+trailing comment. Every workflow declares least-privilege `permissions`. A
+[zizmor](https://docs.zizmor.sh) git hook audits `.github/` for the mistakes that
+convention prevents — template injection, credential leakage, cache poisoning, a digest
+that isn't the commit it claims to be — so the workflows you add later are held to the
+same line as the ones this template wrote. This repo audits its own templates by
+rendering them in CI first: `.jinja` is not YAML, but its output is.
 
 **Licenses** are MIT, Apache-2.0, BSD-3-Clause or none. The texts come from the GitHub
 licenses API, with the copyright placeholders filled in.

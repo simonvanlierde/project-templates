@@ -21,6 +21,8 @@ env:
   COPIER_VERSION: 9.17.0
   # renovate: datasource=npm depName=renovate
   RENOVATEBOT_VERSION: 43.280.2
+  # renovate: datasource=pypi depName=zizmor
+  ZIZMOR_VERSION: 1.28.0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -239,6 +241,15 @@ jobs:
           # The depth-derived up-paths, at both depths this render uses.
           grep -qF '](../README.md)' c/api/README.md
           grep -qF '"root": "../.."' c/apps/web/biome.json
+
+      # The workflow templates are .jinja, and no linter can parse them. Their
+      # rendered output is ordinary YAML, so audit that instead — across all
+      # three renders, which between them cover every conditional branch.
+      # Scaffolded repos get the same audit as a git hook.
+      - name: zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uvx "zizmor@$ZIZMOR_VERSION" "$RUNNER_TEMP"/a "$RUNNER_TEMP"/b "$RUNNER_TEMP"/c
 
   renovate-extract:
     # The regex managers in renovate.json5 fail open, so run the extraction and
