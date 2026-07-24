@@ -135,11 +135,11 @@ tracks the `FROM` base images — those tags are copier answers, so bump them by
 All three publish targets default to **off**. Each one needs a trust relationship set up
 on the registry side before it can work.
 
-| Answer            | Off (default)                                                              | On                                                       |
-| ----------------- | -------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `publish_to_pypi` | `classifiers = ["Private :: Do Not Upload"]`, so PyPI rejects the upload   | `python-release.yml` publishing via trusted publishing   |
-| `publish_to_npm`  | `"private": true`, so pnpm refuses with `EPRIVATE` before any network call | `ts-release.yml` publishing via trusted publishing       |
-| `publish_to_ghcr` | CI builds the image and smoke-tests `/health`, pushes nothing              | build, push to GHCR, SBOM, signed provenance attestation |
+| Answer            | Off (default)                                                              | On                                                     |
+| ----------------- | -------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `publish_to_pypi` | `classifiers = ["Private :: Do Not Upload"]`, so PyPI rejects the upload   | `python-release.yml` publishing via trusted publishing |
+| `publish_to_npm`  | `"private": true`, so pnpm refuses with `EPRIVATE` before any network call | `ts-release.yml` publishing via trusted publishing     |
+| `publish_to_ghcr` | CI builds the image and smoke-tests `/health`, pushes nothing              | same smoke test, then push to GHCR, SBOM, provenance   |
 
 To turn one on, configure the publisher first
 ([pypi.org](https://pypi.org/manage/account/publishing/),

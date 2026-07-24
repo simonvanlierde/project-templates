@@ -15,42 +15,42 @@ permissions:
 concurrency:
   group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
   cancel-in-progress: true
-
-jobs:
-  build:
-{%- if publish_to_ghcr %}
-    name: build{% raw %}${{ github.event_name != 'pull_request' && ' and push' || '' }}{% endraw %}
-{%- else %}
-    # Build-only. To push, set publish_to_ghcr and re-run copier update.
-    name: build
-{%- endif %}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-{%- if publish_to_ghcr %}
-    # Job-level permissions replace the workflow-level grant, so restate contents.
-    permissions:
-      contents: read
-      packages: write
-      id-token: write # keyless signing for the provenance attestation
-      attestations: write
-{%- endif %}
-    strategy:
-      # One image per containerized stack, each built from its own context.
-      fail-fast: false
-      matrix:
-        include:
+{#- One image per containerized stack, each built from its own context. Both jobs
+    below matrix over this same list. -#}
+{%- set images = [] %}
 {%- for stack, name, dir in [
       ('python', 'api', python_dir),
       ('ts', 'web', ts_dir),
     ] if stack in docker_stacks %}
-{%- set suffix = '' if docker_stacks | length == 1 else name %}
-          - stack: {{ stack }}
-            context: {{ dir }}
+{%- set _ = images.append({
+      'stack': stack,
+      'context': dir,
+      'suffix': '' if docker_stacks | length == 1 else name,
+    }) %}
+{%- endfor %}
+
+jobs:
+  build:
+    name: build
 {%- if publish_to_ghcr %}
-            image: {% raw %}ghcr.io/${{ github.repository }}{% endraw %}{% if suffix %}/{{ suffix }}{% endif %}
+    # Builds and runs the image, holding no write scopes. `permissions` takes no
+    # expression, so splitting this from the pushing job below is the only way a
+    # pull request's Dockerfile steps — and every dependency they install — run
+    # without packages: write and id-token: write in their environment.
+    if: github.event_name == 'pull_request'
 {%- else %}
-            tag: {{ slug }}{% if suffix %}-{{ suffix }}{% endif %}:ci
+    # Build-only. To push, set publish_to_ghcr and re-run copier update.
 {%- endif %}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+{%- for image in images %}
+          - stack: {{ image.stack }}
+            context: {{ image.context }}
+            tag: {{ slug }}{% if image.suffix %}-{{ image.suffix }}{% endif %}:ci
 {%- endfor %}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,61 +58,27 @@ jobs:
           persist-credentials: false
 
       - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
-{%- if publish_to_ghcr %}
 
-      # PRs from forks cannot read secrets, so only log in when we intend to push.
-      - if: github.event_name != 'pull_request'
-        uses: docker/login-action@06fb636fac595d6fb4b28a5dfcb21a6f5091859c # v4.5.0
-        with:
-          registry: ghcr.io
-          username: {% raw %}${{ github.actor }}{% endraw %}
-          password: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
-
-      - id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: {% raw %}${{ matrix.image }}{% endraw %}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={% raw %}{{version}}{% endraw %}
-            type=semver,pattern={% raw %}{{major}}.{{minor}}{% endraw %}
-            type=sha
-{%- endif %}
-
-      - id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: {% raw %}${{ matrix.context }}{% endraw %}
           # Scoped per stack: the default gha scope is shared, so two images in
           # one workflow would evict each other's layers on every run.
           cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
+{%- if publish_to_ghcr %}
+          # No cache-to: this job runs on pull requests only, and a PR-ref cache
+          # is dropped on merge. The push job below populates the shared scope.
+{%- else %}
           # Export only on push: a PR-ref cache is readable only by that PR and
           # dropped when it merges, so mode=max there uploads hundreds of MB
           # nothing reads, against the budget that then evicts main's.
           cache-to: {% raw %}${{ github.event_name == 'push' && format('type=gha,mode=max,scope={0}', matrix.stack) || '' }}{% endraw %}
-{%- if publish_to_ghcr %}
-          push: {% raw %}${{ github.event_name != 'pull_request' }}{% endraw %}
-          tags: {% raw %}${{ steps.meta.outputs.tags }}{% endraw %}
-          labels: {% raw %}${{ steps.meta.outputs.labels }}{% endraw %}
-          provenance: mode=max
-          sbom: true
-{%- else %}
+{%- endif %}
           push: false
           load: true # so the smoke test below can run it
           tags: {% raw %}${{ matrix.tag }}{% endraw %}
           # No provenance/sbom: the docker exporter cannot load attestations,
           # and they are only meaningful once the image reaches a registry.
-{%- endif %}
-{%- if publish_to_ghcr %}
-
-      - if: github.event_name != 'pull_request'
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
-        with:
-          subject-name: {% raw %}${{ matrix.image }}{% endraw %}
-          subject-digest: {% raw %}${{ steps.build.outputs.digest }}{% endraw %}
-          push-to-registry: true
-{%- else %}
 
       # An image that cannot start is not a passing build. Matrix jobs get their
       # own runner, so both images can use {{ app_port }}.
@@ -127,4 +93,103 @@ jobs:
           docker logs ci
           docker rm -f ci
           test -n "$ok" || { echo "::error::/health never answered"; exit 1; }
+{%- if publish_to_ghcr %}
+
+  push:
+    # The write half. The image is built and smoke-tested here before the push:
+    # the pushing build resolves every layer from the tested build's cache, so
+    # nothing reaches the registry that has never answered /health. Project code
+    # runs only inside buildkit and `docker run`, and neither passes this job's
+    # credentials or OIDC environment through.
+    name: push
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Job-level permissions replace the workflow-level grant, so restate contents.
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # keyless signing for the provenance attestation
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+{%- for image in images %}
+          - stack: {{ image.stack }}
+            context: {{ image.context }}
+            tag: {{ slug }}{% if image.suffix %}-{{ image.suffix }}{% endif %}:ci
+            image: {% raw %}ghcr.io/${{ github.repository }}{% endraw %}{% if image.suffix %}/{{ image.suffix }}{% endif %}
+{%- endfor %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      # Build to the local store first and prove the image starts, before the
+      # registry login below puts any credential on this runner.
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: {% raw %}${{ matrix.context }}{% endraw %}
+          # Scoped per stack: the default gha scope is shared, so two images in
+          # one workflow would evict each other's layers on every run. This job
+          # runs on push only, so it is the one that populates that cache.
+          cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
+          cache-to: {% raw %}type=gha,mode=max,scope=${{ matrix.stack }}{% endraw %}
+          push: false
+          load: true # so the smoke test below can run it
+          tags: {% raw %}${{ matrix.tag }}{% endraw %}
+
+      # An image that cannot start is not a passing build. Matrix jobs get their
+      # own runner, so both images can use {{ app_port }}.
+      - name: smoke test
+        run: |
+          docker run -d --name ci -p {{ app_port }}:{{ app_port }} {% raw %}${{ matrix.tag }}{% endraw %}
+          ok=""
+          for _ in $(seq 1 30); do
+            if curl -fsS "http://127.0.0.1:{{ app_port }}/health"; then ok=1; break; fi
+            sleep 1
+          done
+          docker logs ci
+          docker rm -f ci
+          test -n "$ok" || { echo "::error::/health never answered"; exit 1; }
+
+      - uses: docker/login-action@06fb636fac595d6fb4b28a5dfcb21a6f5091859c # v4.5.0
+        with:
+          registry: ghcr.io
+          username: {% raw %}${{ github.actor }}{% endraw %}
+          password: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
+
+      # No type=ref,event=pr: this job never runs on a pull request.
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: {% raw %}${{ matrix.image }}{% endraw %}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={% raw %}{{version}}{% endraw %}
+            type=semver,pattern={% raw %}{{major}}.{{minor}}{% endraw %}
+            type=sha
+
+      # Repeats the build above on the same builder, so every layer resolves
+      # from its cache: the pushed image is the smoke-tested one, plus the
+      # attestation manifests only a registry can hold.
+      - id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: {% raw %}${{ matrix.context }}{% endraw %}
+          cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
+          push: true
+          tags: {% raw %}${{ steps.meta.outputs.tags }}{% endraw %}
+          labels: {% raw %}${{ steps.meta.outputs.labels }}{% endraw %}
+          provenance: mode=max
+          sbom: true
+
+      - uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-name: {% raw %}${{ matrix.image }}{% endraw %}
+          subject-digest: {% raw %}${{ steps.build.outputs.digest }}{% endraw %}
+          push-to-registry: true
 {%- endif %}

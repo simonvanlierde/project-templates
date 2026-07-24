@@ -147,8 +147,10 @@ jobs:
           "${C[@]}" --data layer=docker --data 'docker_stacks=[python]' . "$RUNNER_TEMP/a"
 
       # The only render with nested paths, at two different depths to catch
-      # hardcoded up-paths. Both publish flags on: the only render where the two
-      # release workflows could collide.
+      # hardcoded up-paths. All three publish flags on: the only render where the
+      # two release workflows could collide, and the only one where docker.yml
+      # grows its pushing half — the branch holding the write scopes zizmor most
+      # needs to see.
       - name: render monorepo
         run: |
           set -euo pipefail
@@ -157,7 +159,8 @@ jobs:
             --data python_dir=api --data ts_dir=apps/web . "$RUNNER_TEMP/c"
           "${C[@]}" --data layer=python --data publish_to_pypi=true . "$RUNNER_TEMP/c"
           "${C[@]}" --data layer=ts --data publish_to_npm=true . "$RUNNER_TEMP/c"
-          "${C[@]}" --data layer=docker --data 'docker_stacks=[python,ts]' . "$RUNNER_TEMP/c"
+          "${C[@]}" --data layer=docker --data 'docker_stacks=[python,ts]' \
+            --data publish_to_ghcr=true . "$RUNNER_TEMP/c"
 
       # license=none, plus a name and description carrying the punctuation
       # `slug` strips and `to_json` escapes.
@@ -231,6 +234,8 @@ jobs:
           # Both stacks publishing: two release workflows, neither overwritten.
           test -f c/.github/workflows/python-release.yml
           test -f c/.github/workflows/ts-release.yml
+          # publish_to_ghcr=true: docker.yml rendered its pushing half.
+          grep -q 'packages: write' c/.github/workflows/docker.yml
           # The depth-derived up-paths, at both depths this render uses.
           grep -qF '](../README.md)' c/api/README.md
           grep -qF '"root": "../.."' c/apps/web/biome.json
