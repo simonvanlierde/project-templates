@@ -15,19 +15,6 @@ permissions:
 concurrency:
   group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
   cancel-in-progress: true
-{#- One image per containerized stack, each built from its own context. Both jobs
-    below matrix over this same list. -#}
-{%- set images = [] %}
-{%- for stack, name, dir in [
-      ('python', 'api', python_dir),
-      ('ts', 'web', ts_dir),
-    ] if stack in docker_stacks %}
-{%- set _ = images.append({
-      'stack': stack,
-      'context': dir,
-      'suffix': '' if docker_stacks | length == 1 else name,
-    }) %}
-{%- endfor %}
 
 jobs:
   build:
@@ -44,13 +31,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
+      # One image per containerized stack, each built from its own context.
       fail-fast: false
       matrix:
         include:
-{%- for image in images %}
-          - stack: {{ image.stack }}
-            context: {{ image.context }}
-            tag: {{ slug }}{% if image.suffix %}-{{ image.suffix }}{% endif %}:ci
+{%- for stack, name, dir in [
+      ('python', 'api', python_dir),
+      ('ts', 'web', ts_dir),
+    ] if stack in docker_stacks %}
+{%- set suffix = '' if docker_stacks | length == 1 else name %}
+          - stack: {{ stack }}
+            context: {{ dir }}
+            tag: {{ slug }}{% if suffix %}-{{ suffix }}{% endif %}:ci
 {%- endfor %}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -112,14 +104,19 @@ jobs:
       id-token: write # keyless signing for the provenance attestation
       attestations: write
     strategy:
+      # The build job's matrix again, plus the registry image name.
       fail-fast: false
       matrix:
         include:
-{%- for image in images %}
-          - stack: {{ image.stack }}
-            context: {{ image.context }}
-            tag: {{ slug }}{% if image.suffix %}-{{ image.suffix }}{% endif %}:ci
-            image: {% raw %}ghcr.io/${{ github.repository }}{% endraw %}{% if image.suffix %}/{{ image.suffix }}{% endif %}
+{%- for stack, name, dir in [
+      ('python', 'api', python_dir),
+      ('ts', 'web', ts_dir),
+    ] if stack in docker_stacks %}
+{%- set suffix = '' if docker_stacks | length == 1 else name %}
+          - stack: {{ stack }}
+            context: {{ dir }}
+            tag: {{ slug }}{% if suffix %}-{{ suffix }}{% endif %}:ci
+            image: {% raw %}ghcr.io/${{ github.repository }}{% endraw %}{% if suffix %}/{{ suffix }}{% endif %}
 {%- endfor %}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

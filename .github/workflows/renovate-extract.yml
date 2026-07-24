@@ -10,7 +10,7 @@ name: renovate extract
 on:
   push:
     branches: [main]
-    paths:
+    paths: &paths
       - renovate.json5
       - "**/.github/workflows/**"
       - "**/Dockerfile*.jinja"
@@ -18,13 +18,7 @@ on:
       - "**/pyproject.toml.jinja"
       - "**/package.json.jinja"
   pull_request:
-    paths:
-      - renovate.json5
-      - "**/.github/workflows/**"
-      - "**/Dockerfile*.jinja"
-      - "**/.pre-commit-config.yaml.jinja"
-      - "**/pyproject.toml.jinja"
-      - "**/package.json.jinja"
+    paths: *paths
   workflow_dispatch:
 
 permissions:
@@ -42,7 +36,6 @@ concurrency:
 
 jobs:
   renovate-extract:
-    name: renovate extract
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
