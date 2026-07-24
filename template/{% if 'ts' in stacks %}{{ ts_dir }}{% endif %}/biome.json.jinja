@@ -3,6 +3,7 @@
     have to point back up at it. -#}
 {
   "$schema": "https://biomejs.dev/schemas/latest/schema.json",
+  "files": { "includes": ["**", "!.vscode"] },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "formatter": { "indentStyle": "space", "lineWidth": 100 },
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true{% if ts_dir != '.' %}, "root": "{{ (['..'] * ts_dir.split('/') | length) | join('/') }}"{% endif %} }
