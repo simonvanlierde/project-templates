@@ -1,0 +1,59 @@
+name: ts
+
+on:
+  push:
+    branches: [main]
+{%- if ts_dir != '.' %}
+    paths: ["{{ ts_dir }}/**", ".github/workflows/ts.yml"]
+{%- endif %}
+  pull_request:
+{%- if ts_dir != '.' %}
+    paths: ["{{ ts_dir }}/**", ".github/workflows/ts.yml"]
+{%- endif %}
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: lint, types, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+{%- if ts_dir != '.' %}
+    # Only `run:` steps take this, so the two setup actions are pointed at the
+    # package separately: pnpm/action-setup reads `packageManager` from a
+    # package.json, and setup-node hashes a lockfile to key its cache.
+    defaults:
+      run:
+        working-directory: {{ ts_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+{%- if ts_dir != '.' %}
+        with:
+          package_json_file: {{ ts_dir }}/package.json
+{%- endif %}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "{{ node_version }}"
+          cache: pnpm
+{%- if ts_dir != '.' %}
+          cache-dependency-path: {{ ts_dir }}/pnpm-lock.yaml
+{%- endif %}
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run check
+      - run: pnpm run typecheck
+      - run: pnpm run test
+      - run: pnpm run build

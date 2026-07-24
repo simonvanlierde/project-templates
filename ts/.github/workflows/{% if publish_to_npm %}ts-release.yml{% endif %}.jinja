@@ -1,0 +1,99 @@
+name: ts release
+
+# Trusted publishing: no NPM_TOKEN. Configure the publisher once at
+# https://www.npmjs.com/package/{{ slug }}/access for repo
+# {{ github_user }}/{{ slug }}, workflow `ts-release.yml`, environment `npm`.
+#
+# The package must already exist on npm: trusted publishing cannot create it.
+# Publish the first version manually (`pnpm publish`), then wire up the publisher.
+# npm generates the provenance attestation automatically over OIDC, so there is
+# no --provenance flag here.
+#
+# The build job re-runs the full suite rather than trusting ts.yml: a release tag
+# can point at any commit, including one that never went green.
+#
+# Two jobs on purpose. `id-token: write` puts an OIDC request token in the
+# environment of every step of its job, where anything executing — a dependency
+# install script, a compiler plugin, a test — could mint one and publish under
+# this package name. So that job runs no project code: it downloads the tarball
+# `build` produced and uploads it.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+{%- if ts_dir != '.' %}
+    defaults:
+      run:
+        working-directory: {{ ts_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+{%- if ts_dir != '.' %}
+        with:
+          package_json_file: {{ ts_dir }}/package.json
+{%- endif %}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "{{ node_version }}"
+          cache: pnpm
+{%- if ts_dir != '.' %}
+          cache-dependency-path: {{ ts_dir }}/pnpm-lock.yaml
+{%- endif %}
+
+      - run: pnpm install --frozen-lockfile
+
+      # Publish only what passes, on the exact commit being released.
+      - run: pnpm run check
+      - run: pnpm run typecheck
+      - run: pnpm run test
+      - run: pnpm run build
+
+      - run: pnpm pack --pack-destination dist-pack
+
+      # Lints the tarball rather than the source: exports map, types resolution,
+      # and what `files` actually included. ts.yml cannot see any of that.
+      - run: pnpm exec publint dist-pack/*.tgz
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package
+          path: {{ ts_dir }}/dist-pack/*.tgz
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm
+    # Job-level permissions replace the workflow-level grant, so restate contents
+    # or setup-node resolves Node releases against the anonymous rate limit.
+    permissions:
+      contents: read
+      id-token: write # required for trusted publishing
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: package
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "{{ node_version }}"
+          registry-url: "https://registry.npmjs.org"
+
+      # npm, not pnpm: a prebuilt tarball needs no checkout, install or lockfile,
+      # and this drops pnpm's --no-git-checks workaround since there is no git
+      # tree. npm ships with Node and has supported OIDC since 11.5.1 (Node 24+).
+      - run: npm publish --access public ./*.tgz

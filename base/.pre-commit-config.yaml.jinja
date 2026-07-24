@@ -1,0 +1,102 @@
+{#- Hooks run from the repo root with repo-root-relative filenames, so a nested
+    package is reached by pointing each tool at it rather than cd-ing there.
+    --project keeps the cwd so filenames still resolve; --directory moves it, and
+    is only used where the hook passes no filenames. Both render bare at '.'. -#}
+{%- set uv_project = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --project ' ~ python_dir %}
+{%- set uv_cd = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --directory ' ~ python_dir %}
+{%- set pnpm = 'pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir -%}
+# Run with prek, a drop-in pre-commit replacement: prek install && prek run -a
+#
+# Python projects get prek from `uv tool install prek`; TypeScript-only projects
+# get the same binary from the @j178/prek devDependency. Dependabot keeps the
+# pinned revs current (see the pre-commit ecosystem in .github/dependabot.yml).
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+{%- if 'python' in stacks %}
+      - id: check-toml
+{%- endif %}
+{%- if 'ts' in stacks %}
+      - id: check-json
+{%- endif %}
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+{%- if 'docker' in stacks %}
+
+  # Runs from its own image: nothing to install, but it needs the Docker daemon.
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
+    hooks:
+      - id: hadolint-docker
+{%- endif %}
+{%- if 'python' in stacks %}
+
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+{%- endif %}
+
+{%- if 'python' in stacks or 'ts' in stacks %}
+
+  - repo: local
+    hooks:
+{%- endif %}
+{%- if 'python' in stacks %}
+      # From the project's venv, not the ruff-pre-commit mirror: a mirror would
+      # pin ruff a second time, and the hook could then lint with a different one
+      # than CI. --force-exclude makes ruff honour its own exclude config when a
+      # hook hands it explicit filenames.
+      - id: ruff-check
+        name: ruff check
+        entry: {{ uv_project }} ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi, jupyter]
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: {{ uv_project }} ruff format --force-exclude
+        language: system
+        types_or: [python, pyi, jupyter]
+        require_serial: true
+
+      - id: ty
+        name: ty check
+        entry: {{ uv_cd }} ty check
+        language: system
+        pass_filenames: false
+        types: [python]
+{%- endif %}
+{%- if 'ts' in stacks %}
+      - id: biome
+        name: biome check
+{%- if ts_dir == '.' %}
+        entry: pnpm exec biome check --write --no-errors-on-unmatched
+{%- else %}
+        # The one hook that cannot take filenames: biome has no --project, and
+        # pnpm -C moves the cwd out from under repo-root-relative paths. Checking
+        # the whole package instead costs nothing for a Rust linter.
+        entry: {{ pnpm }} exec biome check --write --no-errors-on-unmatched
+        pass_filenames: false
+{%- endif %}
+        language: system
+        types_or: [javascript, jsx, ts, tsx, json, css]
+
+      - id: tsc
+        name: tsc --noEmit
+        entry: {{ pnpm }} exec tsc --noEmit
+        language: system
+        pass_filenames: false
+        types_or: [ts, tsx]
+{%- endif %}

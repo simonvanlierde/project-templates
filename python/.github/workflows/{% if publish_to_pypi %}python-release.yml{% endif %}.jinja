@@ -1,0 +1,74 @@
+name: python release
+
+# Trusted publishing: no API token. Configure the publisher once at
+# https://pypi.org/manage/account/publishing/ for repo {{ github_user }}/{{ slug }},
+# workflow `python-release.yml`, environment `pypi`.
+#
+# The build job re-runs the full suite rather than trusting python.yml: a release
+# tag can point at any commit, including one that never went green. It then tests
+# the built wheel, which python.yml cannot — the branch suite imports from src/,
+# so a packaging fault (wrong module-name, missing py.typed, a file left out of
+# the wheel) only shows up against the installed artifact.
+#
+# Two jobs on purpose: `id-token: write` exposes an OIDC request token to every
+# step in its job, so the job holding it runs no project code.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+{%- if python_dir != '.' %}
+    defaults:
+      run:
+        working-directory: {{ python_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          python-version: "{{ python_version }}"
+
+      # Publish only what passes, on the exact commit being released.
+      - run: uv sync --locked
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+      - run: uv run ty check
+      - run: uv run pytest
+
+      - run: uv build
+
+      # The suite again, against the wheel instead of src/: --no-project stops uv
+      # resolving the local tree, so the import can only come from dist/.
+      - run: uv run --isolated --no-project --with dist/*.whl --with pytest pytest tests
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: {{ python_dir }}/dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: pypi
+    # Job-level permissions replace the workflow-level grant, so restate contents.
+    permissions:
+      contents: read
+      id-token: write # required for trusted publishing
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: {{ python_dir }}/dist/
+      - uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # v1.14.1

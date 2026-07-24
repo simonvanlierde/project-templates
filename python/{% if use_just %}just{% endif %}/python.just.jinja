@@ -1,0 +1,23 @@
+{#- just runs every recipe from the root justfile's directory, so a nested package
+    is reached with uv's own --directory rather than with a cd. It renders empty
+    for the flat layout, where the root already is the package. -#}
+{%- set uv = 'uv' if python_dir == '.' else 'uv --directory ' ~ python_dir -%}
+# Install the venv from uv.lock.
+py-sync:
+    {{ uv }} sync
+
+# What CI runs: lint, format check, types, tests.
+py-check:
+    {{ uv }} run ruff check
+    {{ uv }} run ruff format --check
+    {{ uv }} run ty check
+    {{ uv }} run pytest
+
+# Fix what ruff can fix, then format.
+py-fmt:
+    {{ uv }} run ruff check --fix
+    {{ uv }} run ruff format
+
+# Tests only; extra arguments reach pytest (`just py-test -k name`).
+py-test *args:
+    {{ uv }} run pytest {% raw %}{{ args }}{% endraw %}

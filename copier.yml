@@ -1,0 +1,212 @@
+_subdirectory: "{{ layer }}"
+_answers_file: ".copier/{{ layer }}.yml"
+# 9.5.0: `_external_data` below landed there. (`stacks`, a multiselect, needs 9.1.0.)
+_min_copier_version: "9.5.0"
+
+# Lets a later layer default to what an earlier one already answered. Loaded
+# lazily, so an unapplied layer reads as an empty dict.
+#
+# Every read is written `_external_data.x if <cond> else {}`: copier renders every
+# default, including those of questions `when` hides, and reading a missing
+# answers file warns — so each guard repeats the `when` of the branch needing it.
+_external_data:
+  base: ".copier/base.yml"
+  python: ".copier/python.yml"
+  ts: ".copier/ts.yml"
+
+# The one layer-ordering mistake copier cannot refuse: `base` renders the hooks
+# file, README and `just check` aggregate from its own `stacks` answer, which a
+# later stack layer cannot set. Nothing breaks and nothing warns, so say so here.
+_message_after_copy: |
+  {%- if layer != 'base' and layer not in _external_data.base.get('stacks', [layer]) %}
+  Note: .copier/base.yml records stacks {{ _external_data.base.get('stacks') }}, without `{{ layer }}`,
+  so base rendered .pre-commit-config.yaml, the README and any justfile without it. To add it:
+
+      copier update -a .copier/base.yml   # and tick `{{ layer }}` under stacks
+  {%- endif %}
+
+layer:
+  type: str
+  help: Which layer to apply (run copier once per layer)
+  choices:
+    Repo furniture (README, license, gitignore, dependabot, git hooks): base
+    Python (uv, ruff, ty, pytest): python
+    TypeScript (pnpm, biome, vitest): ts
+    Docker (multi-stage build, compose, ghcr publish): docker
+
+# --- asked by every layer -----------------------------------------------------
+#
+# These default to what base recorded, not to the template's literals. Otherwise
+# `--defaults` on a second layer re-derives slug, license and description, and
+# ships metadata that disagrees with the repo it lands in.
+
+project_name:
+  type: str
+  help: Project name (directory / repo name)
+  default: "{{ (_external_data.base if layer != 'base' else {}).get('project_name', _copier_conf.dst_path.name) }}"
+
+# Computed, never asked. project_name is a display name; this is the form npm,
+# PyPI, compose and image tags require, hence the regex_replace.
+slug:
+  type: str
+  when: false
+  default: "{{ project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '') }}"
+
+project_description:
+  type: str
+  help: One-line description
+  default: "{{ (_external_data.base if layer != 'base' else {}).get('project_description', '') }}"
+
+github_user:
+  type: str
+  help: GitHub user or org
+  default: "{{ (_external_data.base if layer != 'base' else {}).get('github_user', 'simonvanlierde') }}"
+
+author_name:
+  type: str
+  default: "{{ (_external_data.base if layer != 'base' else {}).get('author_name', 'Simon van Lierde') }}"
+
+author_email:
+  type: str
+  default: "{{ (_external_data.base if layer != 'base' else {}).get('author_email', 'simonvanlierde@gmail.com') }}"
+
+# Asked by every layer, since each owns its own recipe file. The read is
+# unguarded: out of order it degrades to a warning and a `true` default.
+use_just:
+  type: bool
+  help: Add just recipes (base owns the justfile, each stack layer a just/<layer>.just)
+  default: "{{ (_external_data.base if layer != 'base' else {}).get('use_just', true) }}"
+
+license:
+  type: str
+  help: License (texts are the canonical ones from the GitHub licenses API)
+  choices:
+    MIT (permissive, shortest): MIT
+    Apache-2.0 (permissive, explicit patent grant): Apache-2.0
+    BSD-3-Clause (permissive, no endorsement clause): BSD-3-Clause
+    None (not licensed for redistribution): none
+  default: "{{ (_external_data.base if layer != 'base' else {}).get('license', 'MIT') }}"
+
+# --- layout: base asks, every other layer reads the answer ---------------------
+#
+# Declared ahead of the questions that depend on them: copier resolves questions
+# in file order, and a forward reference renders undefined.
+
+# base owns .pre-commit-config.yaml and the justfile outright, so it has to know
+# which stacks the repo will use and where each one lives.
+stacks:
+  type: str
+  multiselect: true
+  when: "{{ layer == 'base' }}"
+  help: Which stack layers this repo will use (drives the git hooks and README)
+  choices: [python, ts, docker]
+  default: [python]
+
+# Where each stack's package lives. `.` renders every path exactly as it did
+# before this answer existed; anything else nests only the package, leaving the
+# workflows, hooks, justfile and answers files at the root.
+python_dir:
+  type: str
+  when: "{{ layer == 'base' and 'python' in stacks }}"
+  help: Directory holding the Python package (`.` for the repo root, `apps/api` for a monorepo)
+  default: "{{ (_external_data.base if layer != 'base' else {}).get('python_dir', '.') }}"
+
+ts_dir:
+  type: str
+  when: "{{ layer == 'base' and 'ts' in stacks }}"
+  help: Directory holding the TypeScript package (`.` for the repo root, `apps/web` for a monorepo)
+  default: "{{ (_external_data.base if layer != 'base' else {}).get('ts_dir', '.') }}"
+
+docker_stacks:
+  type: str
+  multiselect: true
+  when: "{{ layer == 'docker' }}"
+  help: Which stacks get an image (one Dockerfile each, one compose service each)
+  choices: [python, ts]
+  default: [python]
+  # Two Dockerfiles cannot share one directory — the one place a monorepo is not
+  # optional. The flat layout is fine for code: uv and tsc each read their half.
+  validator: >-
+    {% if docker_stacks | length > 1 and python_dir == ts_dir %}
+    Both images would be written to {{ python_dir }}/Dockerfile. Give the stacks
+    separate directories first: copier update -a .copier/base.yml
+    {% endif %}
+
+module_name:
+  type: str
+  help: Importable Python module name
+  when: "{{ layer == 'python' or (layer == 'docker' and 'python' in docker_stacks) }}"
+  default: >-
+    {{ (_external_data.python if layer == 'docker' and 'python' in docker_stacks else {}).get('module_name')
+       or slug|replace('-', '_') }}
+
+# --- base ---------------------------------------------------------------------
+
+copyright_year:
+  type: str
+  when: "{{ layer == 'base' and license != 'none' }}"
+  help: Copyright year
+  default: "2026"
+
+# --- python -------------------------------------------------------------------
+
+kind:
+  type: str
+  when: "{{ layer == 'python' }}"
+  help: What kind of Python project
+  choices:
+    Library (packaged, publishable to PyPI): library
+    Application (packaged, not published): app
+    Research (packaged, plus notebooks/ and data/): research
+  default: library
+
+python_version:
+  type: str
+  when: "{{ layer == 'python' or (layer == 'docker' and 'python' in docker_stacks) }}"
+  default: >-
+    {{ (_external_data.python if layer == 'docker' and 'python' in docker_stacks else {})
+       .get('python_version', '3.14') }}
+
+publish_to_pypi:
+  type: bool
+  when: "{{ layer == 'python' and kind == 'library' }}"
+  help: Add a release workflow publishing to PyPI via trusted publishing (needs setup on pypi.org first)
+  default: false
+
+# --- ts -----------------------------------------------------------------------
+
+node_version:
+  type: str
+  when: "{{ layer == 'ts' or (layer == 'docker' and 'ts' in docker_stacks) }}"
+  # Node 26 is Current; it becomes the active LTS in Oct 2026.
+  default: >-
+    {{ (_external_data.ts if layer == 'docker' and 'ts' in docker_stacks else {})
+       .get('node_version', '26') }}
+
+ts_kind:
+  type: str
+  when: "{{ layer == 'ts' }}"
+  choices:
+    Library (publishes dist/ and type declarations): library
+    Application (builds to dist/, not published): app
+  default: library
+
+publish_to_npm:
+  type: bool
+  when: "{{ layer == 'ts' and ts_kind == 'library' }}"
+  help: Add a release workflow publishing to npm via trusted publishing (needs setup on npmjs.com first)
+  default: false
+
+# --- docker -------------------------------------------------------------------
+
+app_port:
+  type: int
+  when: "{{ layer == 'docker' }}"
+  help: Port the service listens on
+  default: 8000
+
+publish_to_ghcr:
+  type: bool
+  when: "{{ layer == 'docker' }}"
+  help: Push the image to GitHub Container Registry (CI builds it either way)
+  default: false

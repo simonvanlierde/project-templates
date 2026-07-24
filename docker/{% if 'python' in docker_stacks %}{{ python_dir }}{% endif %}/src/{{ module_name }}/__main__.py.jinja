@@ -1,0 +1,39 @@
+"""Entrypoint for the container image.
+
+A stdlib HTTP server serving the /health endpoint the Dockerfile's HEALTHCHECK
+probes, so `docker run` works before you have written anything. Replace the
+handler with your real application.
+"""
+
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+PORT = {{ app_port }}
+HEALTH_PATH = "/health"
+
+
+class Handler(BaseHTTPRequestHandler):
+    """Answers /health, 404s everything else."""
+
+    # do_GET, not do_get: the stdlib dispatches on this exact name.
+    def do_GET(self) -> None:
+        """Handle a GET request."""
+        healthy = self.path == HEALTH_PATH
+        body = b'{"status":"ok"}' if healthy else b"not found"
+        self.send_response(200 if healthy else 404)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+        """Silence the default stderr access log."""
+
+
+def main() -> None:
+    """Serve until the container stops."""
+    with ThreadingHTTPServer(("", PORT), Handler) as httpd:
+        httpd.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

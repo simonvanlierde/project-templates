@@ -1,0 +1,49 @@
+name: python
+
+on:
+  push:
+    branches: [main]
+{%- if python_dir != '.' %}
+    paths: ["{{ python_dir }}/**", ".github/workflows/python.yml"]
+{%- endif %}
+  pull_request:
+{%- if python_dir != '.' %}
+    paths: ["{{ python_dir }}/**", ".github/workflows/python.yml"]
+{%- endif %}
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: lint, types, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+{%- if python_dir != '.' %}
+    # Only `run:` steps take this. setup-uv needs no path of its own: its cache
+    # glob is **/uv.lock, which finds a nested lockfile.
+    defaults:
+      run:
+        working-directory: {{ python_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          python-version: "{{ python_version }}"
+
+      - run: uv sync --locked
+
+      - run: uv run ruff check --output-format=github
+      - run: uv run ruff format --check
+      - run: uv run ty check
+      - run: uv run pytest

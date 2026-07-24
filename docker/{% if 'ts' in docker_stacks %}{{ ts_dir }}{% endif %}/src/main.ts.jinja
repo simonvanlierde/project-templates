@@ -1,0 +1,20 @@
+/**
+ * Entrypoint for the container image.
+ *
+ * Serves the /health endpoint the Dockerfile's HEALTHCHECK probes, so
+ * `docker run` works before you have written anything. Replace the handler
+ * with your real application.
+ */
+import { createServer } from "node:http";
+
+const PORT = {{ app_port }};
+
+createServer((req, res) => {
+  if (req.url === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end('{"status":"ok"}');
+    return;
+  }
+  res.writeHead(404);
+  res.end("not found");
+}).listen(PORT);

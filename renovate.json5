@@ -1,0 +1,118 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigests",
+    // Picks up the `# renovate: datasource=... depName=...` / `X_VERSION:` pairs
+    // in ci.yml, which is how the copier and renovate pins there stay current.
+    "customManagers:githubActionsVersions",
+  ],
+
+  // Renovate here, Dependabot in the generated projects. This repo's pins live
+  // inside .jinja templates, and Renovate is the only one of the two that can
+  // read them: built-in managers via a file-pattern override where the parser
+  // tolerates it, custom regex managers where it does not. Dependabot has
+  // neither escape hatch.
+
+  // github-actions unions a YAML parse with a line-based `uses:` scan, and the
+  // line scan does not care that Jinja control tags make the file invalid YAML.
+  // So the built-in manager works as-is; it just needs to be pointed at .jinja.
+  // Everything under a workflows dir, extension-free: the default is anchored on
+  // \.ya?ml$, and two of the templates are named
+  // `{% if publish_to_pypi %}python-release.yml{% endif %}.jinja`.
+  "github-actions": {
+    managerFilePatterns: ["/(^|/)\\.github/workflows/.+/"],
+  },
+
+  // Same story: the dockerfile manager is line-based, it just needs pointing at
+  // the `.jinja` suffix, which the default `(^|/)([Dd]ocker|[Cc]ontainer)file[^/]*`
+  // never matches.
+  // This picks up `COPY --from=ghcr.io/astral-sh/uv:<pin>`. The
+  // `FROM python:{{ python_version }}` lines extract nothing, correctly — that
+  // tag is a copier answer, not a pin.
+  dockerfile: {
+    managerFilePatterns: ["/(^|/)[^/]*Dockerfile[^/]*\\.jinja$/"],
+  },
+
+  // The npm/pep621/pre-commit managers parse their files properly, so Jinja
+  // control tags defeat them. These regex managers read raw bytes instead.
+  //
+  // They fail OPEN: a formatting change that breaks a pattern extracts nothing
+  // and reports no error. CI's `renovate extract` job runs
+  //   npx renovate --platform=local --dry-run=extract
+  // and asserts each manager still finds its anchor dependency.
+  customManagers: [
+    {
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)\\.pre-commit-config\\.yaml\\.jinja$/"],
+      matchStrings: ["repo: https://github\\.com/(?<depName>\\S+)\\s+rev: (?<currentValue>\\S+)"],
+      datasourceTemplate: "github-tags",
+    },
+    {
+      // The open-ended `"name>=version"` pins: the dev group. Anchored on the
+      // closing quote, which is what keeps the two-bound uv_build range below out
+      // of it — capturing only that range's floor would let Renovate raise it past
+      // the cap and write an unsatisfiable `>=0.12.4,<0.12.0`.
+      // `requires-python = ">=3.14"` cannot match either: there is no name
+      // between the quote and the `>=`.
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)pyproject\\.toml\\.jinja$/"],
+      matchStrings: ["\"(?<depName>[a-z][a-z0-9._-]*)>=(?<currentValue>\\d[\\d.]*)\""],
+      datasourceTemplate: "pypi",
+      versioningTemplate: "pep440",
+    },
+    {
+      // The build backend, captured as a whole range so pep440 rewrites both
+      // bounds together. See the `uv` packageRule below for the rangeStrategy.
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)pyproject\\.toml\\.jinja$/"],
+      matchStrings: ["\"uv_build(?<currentValue>>=[\\d.]+,<[\\d.]+)\""],
+      depNameTemplate: "uv_build",
+      datasourceTemplate: "pypi",
+      versioningTemplate: "pep440",
+    },
+    {
+      // Anchored on the caret rather than scoped to a devDependencies block:
+      // those ranges are the only `^` in the file, so `"version": "0.1.0"` and
+      // the engines range stay out of it. Keep @types/node a literal, not
+      // {{ node_version }}, or it stops being extractable.
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)package\\.json\\.jinja$/"],
+      matchStrings: ["\"(?<depName>@?[\\w.\\-/]+)\": \"\\^(?<currentValue>\\d[^\"]*)\""],
+      datasourceTemplate: "npm",
+    },
+    {
+      // "packageManager": "pnpm@11.17.0" — outside devDependencies, so the block
+      // above never sees it.
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)package\\.json\\.jinja$/"],
+      matchStrings: ["\"packageManager\": \"(?<depName>[a-z]+)@(?<currentValue>[\\d.]+)\""],
+      datasourceTemplate: "npm",
+    },
+  ],
+
+  // One PR for all of it. A digest bump in ci.yml and the same bump in the five
+  // templates are the same decision, and they should land together or not at all.
+  packageRules: [
+    {
+      matchManagers: ["github-actions"],
+      groupName: "actions",
+    },
+    // The uv binary in the Dockerfile and the uv_build backend in pyproject ship
+    // from the same release; split PRs would leave the image building with one
+    // version and the wheel with another.
+    //
+    // widen, not the pep440 default: uv_build is a `>=floor,<cap` range and the
+    // cap is the half that has to move on a minor. Raising the floor in lockstep
+    // would drop support for every uv already installed, for nothing — the
+    // Dockerfile pin next to it is the version actually used to build.
+    {
+      matchPackageNames: ["ghcr.io/astral-sh/uv", "uv_build"],
+      groupName: "uv",
+      rangeStrategy: "widen",
+    },
+  ],
+
+  schedule: ["before 6am on monday"],
+}

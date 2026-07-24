@@ -1,0 +1,50 @@
+{
+  "name": "{{ slug }}",
+  "version": "0.1.0",
+  "description": {{ project_description | to_json }},
+{%- if license != 'none' %}
+  "license": "{{ license }}",
+{%- endif %}
+  "author": "{{ author_name }} <{{ author_email }}>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/{{ github_user }}/{{ slug }}.git"
+  },
+  "type": "module",
+{%- if ts_kind == 'library' %}
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/main.*"
+  ],
+{%- endif %}
+{%- if not publish_to_npm %}
+  "private": true,
+{%- endif %}
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">={{ node_version }}"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "biome check",
+    "fix": "biome check --write",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.5",
+    "@j178/prek": "^0.4.10",
+    "@types/node": "^26.1.1",
+{%- if publish_to_npm %}
+    "publint": "^0.3.22",
+{%- endif %}
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

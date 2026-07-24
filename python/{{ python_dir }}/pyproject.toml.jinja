@@ -1,0 +1,84 @@
+{#- `readme` and `license-files` resolve against this file's directory and cannot
+    escape it, so a nested package gets its own README and drops license-files
+    rather than pointing at a LICENSE it cannot reach. The SPDX expression below
+    still records the license; only the bundled copy of the text goes. -#}
+[project]
+name = "{{ slug }}"
+version = "0.1.0"
+description = {{ project_description | to_json }}
+readme = "README.md"
+requires-python = ">={{ python_version }}"
+authors = [{ name = "{{ author_name }}", email = "{{ author_email }}" }]
+{%- if license != 'none' %}
+license = "{{ license }}"
+{%- if python_dir == '.' %}
+license-files = ["LICENSE"]
+{%- endif %}
+{%- endif %}
+dependencies = []
+{%- if not publish_to_pypi %}
+# PyPI rejects unknown classifiers, so this one makes an accidental upload fail.
+# Delete it (and set publish_to_pypi) when you do want to publish.
+classifiers = ["Private :: Do Not Upload"]
+{%- endif %}
+{% if kind == 'library' %}
+[project.urls]
+Homepage = "https://github.com/{{ github_user }}/{{ slug }}"
+Issues = "https://github.com/{{ github_user }}/{{ slug }}/issues"
+{% endif %}
+[dependency-groups]
+dev = [
+  "pytest>=9",
+  "ruff>=0.16",
+  "ty>=0.0.63",
+{%- if kind == 'research' %}
+  "jupyterlab>=4",
+{%- endif %}
+]
+
+# Research projects are packaged too, so notebooks can `import {{ module_name }}`
+# without sys.path games.
+[build-system]
+requires = ["uv_build>=0.11.31,<0.12.0"]
+build-backend = "uv_build"
+
+# uv_build derives the package dir from the normalized project.name, so pin it
+# for a module_name that differs.
+[tool.uv.build-backend]
+module-name = "{{ module_name }}"
+
+# NOTE: self-contained ruff config, deliberately not extended from any shared base.
+# No target-version: ruff derives it from requires-python above.
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "ANN204", # missing-return-type-special-method
+  "COM812", # trailing-comma-missing: conflicts with the formatter
+  "CPY001", # missing copyright notice
+  "D105",   # undocumented-magic-method
+  "D107",   # undocumented-public-init
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["INP001"]              # tests are not a package
+"test*.py" = ["S101", "PLR2004"]     # allow assert and literals in tests
+{%- if kind == 'research' %}
+"*.ipynb" = ["T201", "E402"] # notebooks print and import late
+{%- endif %}
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pylint]
+allow-magic-value-types = ["int"]
+max-args = 10
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-config", "--strict-markers", "--import-mode=importlib"]
+testpaths = ["tests"]

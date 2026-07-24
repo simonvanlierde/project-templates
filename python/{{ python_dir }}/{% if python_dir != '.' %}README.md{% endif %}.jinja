@@ -1,0 +1,6 @@
+# {{ project_name }}
+
+{% if project_description %}{{ project_description }}
+
+{% endif %}A package of [{{ slug }}]({{ (['..'] * python_dir.split('/') | length) | join('/') }}/README.md); see the repository root for how to
+build and test it.

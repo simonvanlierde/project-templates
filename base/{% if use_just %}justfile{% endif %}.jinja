@@ -1,0 +1,26 @@
+# Task runner: https://just.systems. `just` lists the recipes, `just <name>` runs one.
+#
+# Each stack adds its own recipe file. `import?` is the optional form, so a stack
+# you never scaffolded is skipped rather than an error. Recipes are prefixed
+# (`py-`, `ts-`) because imports share one namespace, and two stacks would
+# otherwise both define `check`.
+import? 'just/python.just'
+import? 'just/ts.just'
+import? 'just/docker.just'
+
+# List the recipes (what a bare `just` runs).
+default:
+    @just --list
+
+# Everything CI runs, for every stack in this repo.
+check:
+{%- if 'python' in stacks %}
+    @just py-check
+{%- endif %}
+{%- if 'ts' in stacks %}
+    @just ts-check
+{%- endif %}
+
+# Run every git hook over the whole repo, not just staged files.
+hooks:
+    {% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run -a

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "es2025",
+    "lib": ["es2025"],
+    "module": "nodenext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+{%- if ts_kind == 'library' %}
+    "declaration": true,
+    "declarationMap": true,
+{%- endif %}
+    "sourceMap": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}

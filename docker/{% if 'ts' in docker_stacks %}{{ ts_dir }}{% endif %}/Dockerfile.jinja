@@ -1,0 +1,65 @@
+# syntax=docker/dockerfile:1
+#
+# Follows https://pnpm.io/docker, in particular its prod-deps / build stage
+# split, so the production node_modules is built by pnpm rather than pruned after
+# the fact. `pnpm deploy`, the other option that page documents, targets
+# workspaces; this is a single package.
+#
+# One deviation: that page still installs pnpm with `corepack enable`, which Node
+# stopped shipping in v25. `npm i -g pnpm@11` replaces it. Only the major is
+# pinned, since pnpm >=10 reads `packageManager` from package.json and fetches
+# that exact version itself.
+
+# ---- base -------------------------------------------------------------------
+FROM node:{{ node_version }}-slim AS base
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="/pnpm/bin:$PATH"
+ENV CI=1
+RUN npm i -g pnpm@11
+
+WORKDIR /app
+
+# Manifests only: prod-deps and build both start here, so their install layers
+# stay cached until the lockfile changes.
+COPY package.json pnpm-lock.yaml ./
+
+# ---- production dependencies ------------------------------------------------
+FROM base AS prod-deps
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --prod --frozen-lockfile
+
+# ---- build ------------------------------------------------------------------
+FROM base AS build
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm run build
+
+# ---- runtime ----------------------------------------------------------------
+# Plain node, not `base`: the final image needs no pnpm.
+FROM node:{{ node_version }}-slim AS runtime
+
+LABEL org.opencontainers.image.source="https://github.com/{{ github_user }}/{{ slug }}" \
+      org.opencontainers.image.description={{ project_description | to_json }} \
+{%- if license != 'none' %}
+      org.opencontainers.image.licenses="{{ license }}" \
+{%- endif %}
+      org.opencontainers.image.title={{ project_name | to_json }}
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+# The node images already ship an unprivileged `node` user (uid 1000).
+COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/package.json ./
+
+USER node
+EXPOSE {{ app_port }}
+
+# NOTE: assumes an HTTP GET /health returning 200. Drop this if the image is not a service.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:{{ app_port }}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+CMD ["node", "dist/main.js"]

@@ -1,0 +1,22 @@
+{#- just runs every recipe from the root justfile's directory, so a nested package
+    is reached with pnpm's own -C rather than with a cd. It renders empty for the
+    flat layout, where the root already is the package. -#}
+{%- set pnpm = 'pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir -%}
+# Install node_modules from pnpm-lock.yaml.
+ts-sync:
+    {{ pnpm }} install
+
+# What CI runs: lint, types, tests, build.
+ts-check:
+    {{ pnpm }} run check
+    {{ pnpm }} run typecheck
+    {{ pnpm }} run test
+    {{ pnpm }} run build
+
+# Fix what biome can fix, then format.
+ts-fmt:
+    {{ pnpm }} run fix
+
+# Tests only; extra arguments reach vitest (`just ts-test -t name`).
+ts-test *args:
+    {{ pnpm }} exec vitest run {% raw %}{{ args }}{% endraw %}

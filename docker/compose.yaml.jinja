@@ -1,0 +1,40 @@
+# `docker compose up --watch` rebuilds on source changes. No live reload: a
+# runtime image ships the built artifact, not its ./src.
+#
+# Ports are loopback-bound because Docker's iptables rules run ahead of the host
+# firewall, so a bare "{{ app_port }}:{{ app_port }}" reaches the LAN even on a deny-by-default
+# machine. Drop the 127.0.0.1 when you do want a service published.
+name: {{ slug }}
+
+services:
+{%- for stack, service, dir, lock in [
+      ('python', 'api', python_dir, 'uv.lock'),
+      ('ts', 'web', ts_dir, 'pnpm-lock.yaml'),
+    ] if stack in docker_stacks %}
+  {{ 'app' if docker_stacks | length == 1 else service }}:
+    build:
+      context: {{ dir }}
+    ports:
+{%- if loop.index0 > 0 %}
+      # Only the host side moves: each container keeps {{ app_port }} in its own
+      # network namespace.
+{%- endif %}
+      - "127.0.0.1:{{ app_port + loop.index0 }}:{{ app_port }}"
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+{%- if loop.first %}
+    # The image already runs as a non-root uid; these stop it from regaining what
+    # it dropped. Free here: the entrypoint needs no capability to bind {{ app_port }}.
+{%- endif %}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    develop:
+      watch:
+        - action: rebuild
+          path: {{ dir }}/src
+        - action: rebuild
+          path: {{ dir }}/{{ lock }}
+{%- endfor %}

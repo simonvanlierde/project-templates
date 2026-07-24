@@ -1,0 +1,387 @@
+name: ci
+
+# Renders each real layer combination with copier, then runs the generated
+# project's own inner loop.
+
+on:
+  push:
+    branches: [main]
+    # Only the root README; every other .md is template output.
+    paths-ignore: [README.md]
+  pull_request:
+    paths-ignore: [README.md]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Pinned for reproducibility; Renovate bumps both via githubActionsVersions.
+env:
+  # renovate: datasource=pypi depName=copier
+  COPIER_VERSION: 9.17.0
+  # renovate: datasource=npm depName=renovate
+  RENOVATEBOT_VERSION: 43.280.2
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    # base + python (+ docker). The library row's module_name != project_name
+    # exercises the uv_build module-name path.
+    name: python (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: library
+            project_name: ci-smoke
+            module_name: smokepkg
+            stacks: "[python]"
+            python_dir: "."
+          - name: docker
+            project_name: ci-docker-py
+            module_name: ci_docker_py
+            stacks: "[python,docker]"
+            python_dir: "."
+          # The nested layout built for real: the build context is a subdirectory.
+          - name: monorepo
+            project_name: ci-mono-py
+            module_name: ci_mono_py
+            stacks: "[python,docker]"
+            python_dir: apps/api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Default globs match nothing here (pins live in .jinja files), so key on
+      # the template. matrix.name in the suffix keeps the three rows off one key.
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: python/**/pyproject.toml.jinja
+          cache-suffix: ${{ github.job }}-${{ matrix.name }}
+
+      # publish_to_pypi=true so the conditionally-named python-release.yml renders
+      # too. Matrix values reach the shell as env: project_name is free text.
+      - name: scaffold layers
+        env:
+          PROJECT_NAME: ${{ matrix.project_name }}
+          MODULE_NAME: ${{ matrix.module_name }}
+          STACKS: ${{ matrix.stacks }}
+          PYTHON_DIR: ${{ matrix.python_dir }}
+          # Derived from stacks so a row can't gain docker and skip the layer.
+          DOCKER: ${{ contains(matrix.stacks, 'docker') }}
+        run: |
+          set -euo pipefail
+          PROJ="$RUNNER_TEMP/proj"
+          # --vcs-ref=HEAD so CI tests the pushed commit, not the last tag.
+          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
+             --data "project_name=$PROJECT_NAME"
+             --data "module_name=$MODULE_NAME")
+          "${C[@]}" --data layer=base --data "stacks=$STACKS" --data "python_dir=$PYTHON_DIR" . "$PROJ"
+          "${C[@]}" --data layer=python --data kind=library --data publish_to_pypi=true . "$PROJ"
+          if [ "$DOCKER" = true ]; then
+            "${C[@]}" --data layer=docker --data 'docker_stacks=[python]' . "$PROJ"
+          fi
+
+      # The same commands the generated python.yml runs. No --locked: a fresh
+      # scaffold has no lockfile until uv sync writes one.
+      - name: inner loop
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
+        run: |
+          uv sync
+          uv run ruff check
+          uv run ruff format --check
+          uv run ty check
+          uv run pytest
+
+      # buildx for the gha layer cache.
+      - if: contains(matrix.stacks, 'docker')
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - if: contains(matrix.stacks, 'docker')
+        name: docker build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
+          push: false
+          # Scoped per row: on the default shared scope these unrelated images
+          # would evict each other.
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.name }}
+          # Export only on push: a PR-ref cache is dropped on merge, so mode=max
+          # there uploads MBs nothing reads.
+          cache-to: ${{ github.event_name == 'push' && format('type=gha,mode=max,scope={0}-{1}', github.job, matrix.name) || '' }}
+
+  render:
+    # Renders the branches the default answers reach, which the jobs above skip,
+    # and stops at "does the output parse".
+    name: render
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # uv only runs copier here, so key on this file, which pins it.
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: .github/workflows/ci.yml
+          cache-suffix: ${{ github.job }}
+
+      # Every layer at its defaults, all three stacks at once. module_name is
+      # withheld so the docker layer exercises the _external_data path.
+      - name: render defaults
+        run: |
+          set -euo pipefail
+          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite --data project_name=render-me)
+          "${C[@]}" --data layer=base --data 'stacks=[python,ts,docker]' . "$RUNNER_TEMP/a"
+          "${C[@]}" --data layer=python --data kind=research . "$RUNNER_TEMP/a"
+          "${C[@]}" --data layer=ts --data ts_kind=app . "$RUNNER_TEMP/a"
+          "${C[@]}" --data layer=docker --data 'docker_stacks=[python]' . "$RUNNER_TEMP/a"
+
+      # The only render with nested paths, at two different depths to catch
+      # hardcoded up-paths. Both publish flags on: the only render where the two
+      # release workflows could collide.
+      - name: render monorepo
+        run: |
+          set -euo pipefail
+          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite --data project_name=mono-me)
+          "${C[@]}" --data layer=base --data 'stacks=[python,ts,docker]' \
+            --data python_dir=api --data ts_dir=apps/web . "$RUNNER_TEMP/c"
+          "${C[@]}" --data layer=python --data publish_to_pypi=true . "$RUNNER_TEMP/c"
+          "${C[@]}" --data layer=ts --data publish_to_npm=true . "$RUNNER_TEMP/c"
+          "${C[@]}" --data layer=docker --data 'docker_stacks=[python,ts]' . "$RUNNER_TEMP/c"
+
+      # license=none, plus a name and description carrying the punctuation
+      # `slug` strips and `to_json` escapes.
+      - name: render license=none
+        run: |
+          set -euo pipefail
+          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
+             --data 'project_name=Odd "Name" & Co!'
+             --data 'project_description=A "quoted" one'
+             --data license=none)
+          "${C[@]}" --data layer=base --data 'stacks=[ts,docker]' . "$RUNNER_TEMP/b"
+          "${C[@]}" --data layer=ts . "$RUNNER_TEMP/b"
+          "${C[@]}" --data layer=docker --data 'docker_stacks=[ts]' . "$RUNNER_TEMP/b"
+
+      - name: parse everything rendered
+        run: |
+          set -euo pipefail
+          uv run --no-project --with pyyaml python - <<'PY'
+          import json, os, pathlib, tomllib, yaml
+
+          load = {".json": json.loads, ".toml": tomllib.loads,
+                  ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
+          tmp = pathlib.Path(os.environ["RUNNER_TEMP"])
+          seen = 0
+          for path in sorted(tmp.glob("[abc]/**/*")):
+              parse = load.get(path.suffix)
+              if parse and path.is_file():
+                  parse(path.read_text())
+                  seen += 1
+          print(f"parsed {seen} files")
+          # A copier run that silently rendered nothing would otherwise pass.
+          assert seen > 20, f"only {seen} structured files rendered"
+          PY
+
+      - name: check the conditional branches landed
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          # kind=research adds two dirs; publishing off on both stacks removes
+          # both release workflows.
+          test -f a/data/README.md
+          test -f a/notebooks/.gitkeep
+          test ! -e a/.github/workflows/python-release.yml
+          test ! -e a/.github/workflows/ts-release.yml
+          grep -q 'Private :: Do Not Upload' a/pyproject.toml
+          grep -q '"private": true' a/package.json
+          # The docker layer read module_name out of .copier/python.yml.
+          test -f a/src/render_me/__main__.py
+          # All three stacks at once: every hook block present together.
+          grep -q hadolint a/.pre-commit-config.yaml
+          grep -q 'ruff check' a/.pre-commit-config.yaml
+          grep -q 'biome check' a/.pre-commit-config.yaml
+          # license=none: no file, and no license key in either place that carries one.
+          test ! -e b/LICENSE
+          ! grep -q '"license"' b/package.json
+          ! grep -q 'image.licenses' b/Dockerfile
+          # The awkward project name reduced to something npm will accept.
+          grep -q '"name": "odd-name--co"' b/package.json
+          # Monorepo: packages nested, root files at the root, one Dockerfile
+          # per context.
+          test -f c/api/pyproject.toml
+          test -f c/apps/web/package.json
+          test -f c/api/Dockerfile
+          test -f c/apps/web/Dockerfile
+          test -f c/compose.yaml
+          test -f c/.github/workflows/python.yml
+          test ! -e c/pyproject.toml
+          grep -q 'working-directory: api' c/.github/workflows/python.yml
+          grep -q 'context: apps/web' c/compose.yaml
+          grep -q 'uv --directory api' c/just/python.just
+          # Both stacks publishing: two release workflows, neither overwritten.
+          test -f c/.github/workflows/python-release.yml
+          test -f c/.github/workflows/ts-release.yml
+          # The depth-derived up-paths, at both depths this render uses.
+          grep -qF '](../README.md)' c/api/README.md
+          grep -qF '"root": "../.."' c/apps/web/biome.json
+
+  renovate-extract:
+    # The regex managers in renovate.json5 fail open, so run the extraction and
+    # assert each manager still finds its anchor dependency.
+    name: renovate extract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Renovate supports only the active node LTS line.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # The cold npx install is the longest step in the workflow without this.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-renovate-${{ env.RENOVATEBOT_VERSION }}
+
+      # Pinned rather than @latest; Renovate bumps the pin itself.
+      - name: extract and assert anchors
+        env:
+          RENOVATE_CONFIG_FILE: renovate.json5
+          LOG_LEVEL: debug
+        run: |
+          set -euo pipefail
+          npx -y "renovate@$RENOVATEBOT_VERSION" --platform=local --dry-run=extract > extract.log 2>&1 \
+            || { tail -n 50 extract.log; exit 1; }
+          # One anchor per manager block; copier and renovate come from the
+          # githubActionsVersions preset, which fails open too.
+          for dep in actions/checkout ghcr.io/astral-sh/uv pre-commit/pre-commit-hooks \
+                     uv_build pytest pnpm @biomejs/biome copier renovate; do
+            grep -qF "\"depName\": \"$dep\"" extract.log \
+              || { echo "not extracted: $dep — a manager pattern in renovate.json5 broke"; exit 1; }
+          done
+
+  typescript:
+    # base + ts (+ docker).
+    name: typescript (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # A project_name carrying the punctuation `slug` has to strip.
+          - name: library
+            project_name: 'Ci "TS" Lib'
+            stacks: "[ts]"
+            ts_dir: "."
+          - name: docker
+            project_name: ci-ts-docker
+            stacks: "[ts,docker]"
+            ts_dir: "."
+          # The nested package installed and built, not only rendered.
+          - name: monorepo
+            project_name: ci-mono-ts
+            stacks: "[ts,docker]"
+            ts_dir: apps/web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # uv only runs copier here, so key on this file, which pins it. matrix.name
+      # in the suffix keeps the three rows off one key.
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: .github/workflows/ci.yml
+          cache-suffix: ${{ github.job }}-${{ matrix.name }}
+
+      # publish_to_npm=true so the conditionally-named ts-release.yml renders
+      # too. project_name via env: one row's value contains quotes.
+      - name: scaffold layers
+        env:
+          PROJECT_NAME: ${{ matrix.project_name }}
+          STACKS: ${{ matrix.stacks }}
+          TS_DIR: ${{ matrix.ts_dir }}
+          # Derived from stacks so a row can't gain docker and skip the layer.
+          DOCKER: ${{ contains(matrix.stacks, 'docker') }}
+        run: |
+          set -euo pipefail
+          PROJ="$RUNNER_TEMP/proj"
+          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
+             --data "project_name=$PROJECT_NAME")
+          "${C[@]}" --data layer=base --data "stacks=$STACKS" --data "ts_dir=$TS_DIR" . "$PROJ"
+          "${C[@]}" --data layer=ts --data ts_kind=library --data publish_to_npm=true . "$PROJ"
+          if [ "$DOCKER" = true ]; then
+            "${C[@]}" --data layer=docker --data 'docker_stacks=[ts]' . "$PROJ"
+          fi
+
+      # pnpm version from the scaffold's packageManager pin.
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          package_json_file: ${{ runner.temp }}/proj/${{ matrix.ts_dir }}/package.json
+
+      # From the answer copier recorded, so it cannot drift from the ts layer's
+      # default. Not engines.node, which is an open range.
+      - name: node version
+        id: node
+        run: |
+          set -euo pipefail
+          v=$(sed -n 's/^node_version: *//p' "$RUNNER_TEMP/proj/.copier/ts.yml" | tr -d "\"'")
+          test -n "$v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+
+      # Not setup-node's `cache: pnpm`: it wants a lockfile the scaffold lacks.
+      - id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('ts/**/package.json.jinja') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      # The same commands the generated ts.yml runs. No --frozen-lockfile: a
+      # fresh scaffold has no pnpm-lock.yaml until this install writes it.
+      - name: inner loop
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.ts_dir }}
+        run: |
+          pnpm install
+          pnpm run check
+          pnpm run typecheck
+          pnpm run test
+          pnpm run build
+
+      - if: contains(matrix.stacks, 'docker')
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - if: contains(matrix.stacks, 'docker')
+        name: docker build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ${{ runner.temp }}/proj/${{ matrix.ts_dir }}
+          push: false
+          # Scoped per row: on the default shared scope these unrelated images
+          # would evict each other.
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.name }}
+          # Export only on push: a PR-ref cache is dropped on merge, so mode=max
+          # there uploads MBs nothing reads.
+          cache-to: ${{ github.event_name == 'push' && format('type=gha,mode=max,scope={0}-{1}', github.job, matrix.name) || '' }}

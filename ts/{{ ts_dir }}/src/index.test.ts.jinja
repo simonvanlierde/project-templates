@@ -1,0 +1,6 @@
+import { expect, test } from "vitest";
+import { name } from "./index.js";
+
+test("exports a name", () => {
+  expect(name).toBe("{{ slug }}");
+});

@@ -1,0 +1,33 @@
+# {{ project_name }}
+
+{% if project_description %}{{ project_description }}
+{% endif %}
+## Development
+
+```sh
+{% if 'python' in stacks %}uv sync{% if python_dir != '.' %} --directory {{ python_dir }}{% endif %}
+{% endif %}{% if 'ts' in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} install
+{% endif %}{% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek install     # git hooks
+{% else %}uv tool install prek   # once per machine
+prek install     # git hooks
+{% endif %}```
+
+{% if use_just %}`just` lists the tasks; they mirror what [.github/workflows/](.github/workflows/) runs.
+
+```sh
+just check       # lint, types and tests for every stack here{% if 'docker' in stacks %}
+just up          # run the service(s) in its container, rebuilt on source changes{% endif %}
+```
+{% else %}The build, lint, type and test commands live in
+[.github/workflows/](.github/workflows/). Run those locally.
+{% if 'docker' in stacks %}
+Run the service in its container:
+
+```sh
+docker compose up --watch   # rebuilds the image when src/ or the lockfile changes
+```
+{% endif %}{% endif %}
+
+## License
+
+{% if license == 'none' %}Not licensed for redistribution.{% else %}{{ license }} (see [LICENSE](LICENSE)).{% endif %}
