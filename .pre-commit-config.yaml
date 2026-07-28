@@ -16,6 +16,12 @@ repos:
         # The Apache license text is byte-exact from the GitHub licenses API.
         exclude: 'LICENSE.*\.jinja$'
 
+  # JSON5 superset check: also parses renovate.json5, which check-json cannot.
+  - repo: https://github.com/simonvanlierde/check-json5
+    rev: v1.2.0
+    hooks:
+      - id: check-json5
+
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:

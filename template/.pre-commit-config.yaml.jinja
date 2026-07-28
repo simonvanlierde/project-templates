@@ -24,7 +24,12 @@ repos:
       - id: check-toml
 {%- endif %}
 {%- if 'ts' in stacks %}
-      - id: check-json
+
+  # JSON5 superset check: tolerates JSONC configs (tsconfig, VS Code settings).
+  - repo: https://github.com/simonvanlierde/check-json5
+    rev: v1.2.0
+    hooks:
+      - id: check-json5
 {%- endif %}
 
   - repo: https://github.com/gitleaks/gitleaks
