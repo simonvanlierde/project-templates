@@ -17,7 +17,7 @@
 prek install     # git hooks
 {% endif %}```
 
-`just` lists the tasks; they mirror what [.github/workflows/](.github/workflows/) runs.
+`just` lists the tasks. They mirror what [.github/workflows/](.github/workflows/) runs.
 
 ```sh
 just check       # lint, types and tests for every stack here{% if 'docker' in stacks %}
@@ -26,4 +26,4 @@ just up          # run the service(s) in its container, rebuilt on source change
 
 ## License
 
-{% if license == 'none' %}Not licensed for redistribution.{% else %}{{ license }} (see [LICENSE](LICENSE)).{% endif %}
+{% if license == 'none' %}Not licensed for redistribution.{% else %}See [LICENSE](LICENSE) for the license terms.{% endif %}

@@ -54,7 +54,15 @@ repos:
     hooks:
       - id: nbstripout
 {%- endif %}
-
+  - repo: https://github.com/errata-ai/vale
+    rev: 16d3a7f
+    hooks:
+      - id: vale
+        name: vale sync
+        pass_filenames: false
+        args: [sync]
+      - id: vale
+        args: [--output=line, --minAlertLevel=error]
 {%- if 'python' in stacks or 'ts' in stacks %}
 
   - repo: local

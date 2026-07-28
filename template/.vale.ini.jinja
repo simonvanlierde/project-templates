@@ -1,0 +1,8 @@
+StylesPath = .vale/styles
+Packages = Google, write-good, alex
+
+[*.md]
+BasedOnStyles = Google, write-good, alex
+; Google.LyHyphens misreads "supply-chain" as a hyphenated -ly adverb, at error
+; level, which would gate the hook on ordinary prose.
+TokenIgnores = (\bsupply-chain\b)
