@@ -22,6 +22,14 @@ repos:
     hooks:
       - id: check-json5
 
+  # Dogfooding: lint this repo's own YAML with the config it ships to scaffolds,
+  # rather than keeping a second copy at the root.
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        args: [-c, template/.yamllint.yml]
+
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
