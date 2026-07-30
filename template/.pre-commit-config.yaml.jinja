@@ -20,9 +20,8 @@ repos:
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
-{%- if 'python' in stacks %}
+      # Not gated to python: .rumdl.toml ships to every stack.
       - id: check-toml
-{%- endif %}
 {%- if 'ts' in stacks %}
 
   # JSON5 superset check: tolerates JSONC configs (tsconfig, VS Code settings).
@@ -73,6 +72,12 @@ repos:
         args: [sync]
       - id: vale
         args: [--output=line, --minAlertLevel=error]
+
+  - repo: https://github.com/rvben/rumdl-pre-commit
+    rev: v0.2.46
+    hooks:
+      - id: rumdl
+        args: [--fix]
 {%- if 'python' in stacks or 'ts' in stacks %}
 
   - repo: local

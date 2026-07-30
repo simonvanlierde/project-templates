@@ -4,8 +4,8 @@
 {% endif %}{% if 'ts' in stacks %}[![ts](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/ts.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/ts.yml)
 {% endif %}{% if 'docker' in stacks %}[![docker](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/docker.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/docker.yml)
 {% endif %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license }}-blue.svg)](LICENSE)
-{% endif %}
-{% if project_description %}{{ project_description }}
+{% endif %}{% if project_description %}
+{{ project_description }}
 {% endif %}
 ## Development
 
