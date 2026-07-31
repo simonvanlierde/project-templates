@@ -1,9 +1,9 @@
 [global]
-# READMEs carry long badge/link lines (often Jinja-templated) that don't
-# wrap; MD013 would flag nearly every line.
-disable = ["MD013"]
+  # READMEs carry long badge/link lines that don't wrap; MD013 would flag nearly every line.
+  disable = ["MD013"]
+  flavor  = "gfm"
 
 [per-file-ignores]
-# PR templates conventionally open with a section, not a level-1 heading. The
-# glob also catches template/.github/ when this file lints the templates repo.
-"**/PULL_REQUEST_TEMPLATE.md" = ["MD041"]
+  # PR templates conventionally open with a section, not a level-1 heading. The
+  # glob also catches template/.github/ when this file lints the templates repo.
+  "**/PULL_REQUEST_TEMPLATE.md" = ["MD041"]
