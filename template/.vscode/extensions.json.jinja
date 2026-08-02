@@ -1,4 +1,4 @@
-{%- set exts = ['editorconfig.editorconfig']
+{%- set exts = ['editorconfig.editorconfig', 'rvben.rumdl', 'tamasfe.even-better-toml', 'bluebrown.yamlfmt']
      + (['ms-python.python', 'charliermarsh.ruff', 'astral-sh.ty'] if 'python' in stacks else [])
      + (['ms-toolsai.jupyter'] if 'python' in stacks and kind == 'research' else [])
      + (['biomejs.biome'] if 'ts' in stacks else [])
