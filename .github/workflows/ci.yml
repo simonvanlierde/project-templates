@@ -362,10 +362,6 @@ jobs:
           test -n "$v"
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-        with:
-          version: ${{ steps.pnpm.outputs.version }}
-
       # From the answer copier recorded, so it cannot drift from the template's
       # default. Not engines.node, which is an open range.
       - name: node version
@@ -376,11 +372,13 @@ jobs:
           test -n "$v"
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
         with:
-          node-version: ${{ steps.node.outputs.version }}
+          version: ${{ steps.pnpm.outputs.version }}
+          runtime: node@${{ steps.node.outputs.version }}
+          install: false
 
-      # Not setup-node's `cache: pnpm`: it wants a lockfile the scaffold lacks.
+      # Not a cache-dependency-path: this scaffold has no lockfile yet.
       - id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
