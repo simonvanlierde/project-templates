@@ -7,18 +7,17 @@ name: renovate extract
 # CI, and only the files a manager reads can break extraction, so everything
 # else skips it via the paths filter below.
 
+# No push trigger: main only advances through a PR, so a push run repeats
+# the check that already passed on the PR head.
 on:
-  push:
-    branches: [main]
-    paths: &paths
+  pull_request:
+    paths:
       - renovate.json5
       - "**/.github/workflows/**"
       - "**/Dockerfile*.jinja"
       - "**/.pre-commit-config.yaml.jinja"
       - "**/pyproject.toml.jinja"
       - "**/package.json.jinja"
-  pull_request:
-    paths: *paths
   workflow_dispatch:
 
 permissions:
@@ -58,7 +57,7 @@ jobs:
         env:
           RENOVATE_CONFIG_FILE: renovate.json5
           LOG_LEVEL: debug
-        run: |
+        run: |-
           set -euo pipefail
           npx -y "renovate@$RENOVATEBOT_VERSION" --platform=local --dry-run=extract > extract.log 2>&1 \
             || { tail -n 50 extract.log; exit 1; }
