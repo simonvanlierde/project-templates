@@ -89,6 +89,12 @@ module_name:
   help: Importable Python module name
   default: "{{ slug|replace('-', '_') }}"
 
+author_orcid:
+  type: str
+  when: "{{ 'python' in stacks and kind in ('research', 'data-pipeline') }}"
+  help: ORCID iD for CITATION.cff, as 0000-0000-0000-0000 (blank for none)
+  default: "0009-0006-6953-909X"
+
 python_version:
   type: str
   when: "{{ 'python' in stacks }}"

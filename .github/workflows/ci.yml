@@ -26,6 +26,8 @@ env:
   ZIZMOR_VERSION: 1.28.0
   # renovate: datasource=pypi depName=actionlint-py
   ACTIONLINT_PY_VERSION: 1.7.12.25
+  # renovate: datasource=pypi depName=check-jsonschema
+  CHECK_JSONSCHEMA_VERSION: 0.38.2
   # No .dockerbuild record artifacts; nothing reads them here.
   DOCKER_BUILD_RECORD_UPLOAD: false
 
@@ -255,6 +257,14 @@ jobs:
           # Every render gets the hooks enforced in CI.
           test -f a/.github/workflows/hygiene.yml
           test -f b/.github/workflows/hygiene.yml
+          # CITATION.cff only for the kinds that publish research output, at the
+          # root even when the package is nested.
+          test -f a/CITATION.cff
+          test -f d/CITATION.cff
+          test ! -e b/CITATION.cff
+          test ! -e c/CITATION.cff
+          grep -q check-citation-file-format a/.pre-commit-config.yaml
+          (! grep -q check-citation-file-format c/.pre-commit-config.yaml)
           # Rendered from a local checkout, the answers file still names the
           # canonical source, never the path it was rendered from.
           grep -qx '_src_path: gh:simonvanlierde/project-templates' a/.copier-answers.yml
@@ -314,6 +324,12 @@ jobs:
       # and shellcheck over every `run:` (shellcheck ships on the runner).
       - name: actionlint
         run: uvx --from "actionlint-py==$ACTIONLINT_PY_VERSION" actionlint "$RUNNER_TEMP"/[abcd]/.github/workflows/*.yml
+
+      # The same schema the rendered hook validates against.
+      - name: CITATION.cff schema
+        run: |
+          uvx --from "check-jsonschema==$CHECK_JSONSCHEMA_VERSION" check-jsonschema \
+            --builtin-schema vendor.citation-file-format "$RUNNER_TEMP"/a/CITATION.cff "$RUNNER_TEMP"/d/CITATION.cff
 
   update:
     # Scaffolds from the last tag, then `copier update`s to the pushed commit —

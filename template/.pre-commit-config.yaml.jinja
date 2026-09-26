@@ -63,6 +63,15 @@ repos:
     hooks:
       - id: hadolint-docker
 {%- endif %}
+{%- if 'python' in stacks and kind in ('research', 'data-pipeline') %}
+
+  # CITATION.cff against the official schema; GitHub's "Cite this repository"
+  # silently drops a file that fails it.
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.38.2
+    hooks:
+      - id: check-citation-file-format
+{%- endif %}
 {%- if 'python' in stacks %}
 
   - repo: https://github.com/kynan/nbstripout
