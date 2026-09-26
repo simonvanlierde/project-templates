@@ -39,13 +39,52 @@ top and reconcile with git.
 | Stack    | What it writes                                                                                                                                       |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | always   | The repo furniture: `README.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot, `SECURITY.md`, and a PR template; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
-| `python` | A Python package in `<python_dir>`: `pyproject.toml`, `.python-version`, `src/`, `tests/`, and `data/` + `notebooks/` for a research project         |
+| `python` | A Python package in `<python_dir>`: `pyproject.toml`, `.python-version`, `src/`, `tests/`, plus extra files for the `research` and `data-pipeline` kinds (see below) |
 | `ts`     | A TypeScript package in `<ts_dir>`: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `biome.json`, `src/index.ts`, `src/index.test.ts`        |
 | `docker` | Per containerized stack: `Dockerfile`, `.dockerignore`, a runnable `/health` entrypoint. Plus `compose.yaml` at the repo root                        |
 
 Each stack also gets a CI workflow in `.github/workflows/`, a `just/<stack>.just`
 recipe file, and a release workflow if the matching publish answer is on. A package
 nested below the repo root gets its own `README.md` too.
+
+## Picking a Python `kind`
+
+| `kind`          | Pick it when                                                                  | It adds                                          |
+| --------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
+| `library`       | Other projects install and import the package                                 | Project URLs, and the option to publish to PyPI  |
+| `app`           | You run the code, and nothing imports it                                      | Nothing beyond the package                       |
+| `research`      | You analyse data in notebooks, and you manage the data files by hand          | `notebooks/`, `data/`, and JupyterLab            |
+| `data-pipeline` | The repo rebuilds a dataset from third-party sources, and each value must trace back to a download | See below                    |
+
+A `data-pipeline` project gets:
+
+- `sources.toml`, a manifest of every input. Each source has a URL, the publisher's
+  reuse terms (`terms`, `terms_url`), and a `status`. A source marked
+  `status = "unimplemented"` is one you know about but don't read yet.
+- `data/raw/` and `data/processed/`, both gitignored, so the repo never
+  redistributes source data.
+- A small standard-library module with three stages. `fetch` writes each download
+  atomically, with a record of its URL, retrieval time, SHA-256 and vintage. `build`
+  refuses a download made for a different request than the manifest now makes, and
+  verifies checksums before it parses. `validate` re-reads the published output and
+  re-hashes the raw files.
+- `just fetch`, `just build`, `just validate`, and `just pipeline` for all three.
+- `ATTRIBUTION.md`, which states what the repo reuses and on what terms. The code
+  license doesn't cover those.
+- Tests that run the whole pipeline against a local file, with no network.
+- A CI workflow that runs the pipeline for real on the manifest's URLs, then uploads
+  only the fetch records. CI skips the tests that compare published values with
+  literal numbers unless you set `TRIPWIRE=1`, so a publisher revision doesn't turn
+  `main` red.
+
+The example source in `sources.toml` is about 1 kB. Replace it, and the tests that
+read its output, with your own sources.
+
+This variant comes from the first real project built on this template: a rebuild of
+a published research database from its public sources. That project started from
+the `research` kind and added the manifest, the data split, the recipes, the
+attribution file and the pipeline CI by hand. The generic parts of that work are now
+the template. The readers for each source stayed in that project.
 
 ## Layout: one package or a monorepo
 
@@ -147,3 +186,9 @@ copier copy --vcs-ref=HEAD gh:simonvanlierde/project-templates .
 ```
 
 Without it, copier renders the last tag and your changes never reach the output.
+
+A render from a local checkout records `gh:simonvanlierde/project-templates` as
+`_src_path` in `.copier-answers.yml`, not the local path. A local path would leak your
+home directory into the new repo, and `copier update` would fail on any other machine.
+To test an update against a local checkout, set `_src_path` to the checkout's path for
+that run, as the CI `update` job does.
