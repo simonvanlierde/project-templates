@@ -34,7 +34,8 @@ concurrency:
 jobs:
   python:
     # The python stack (+ docker). The library row's module_name != project_name
-    # exercises the uv_build module-name path.
+    # exercises the uv_build module-name path. The data-pipeline row also runs its
+    # pipeline, as its generated python.yml does.
     name: python (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -47,38 +48,49 @@ jobs:
             module_name: smokepkg
             stacks: "[python]"
             python_dir: "."
+            kind: library
           - name: docker
             project_name: ci-docker-py
             module_name: ci_docker_py
             stacks: "[python,docker]"
             python_dir: "."
+            kind: library
           # The nested layout built for real: the build context is a subdirectory.
           - name: monorepo
             project_name: ci-mono-py
             module_name: ci_mono_py
             stacks: "[python,docker]"
             python_dir: apps/api
+            kind: library
+          - name: data-pipeline
+            project_name: ci-pipeline
+            module_name: ci_pipeline
+            stacks: "[python]"
+            python_dir: "."
+            kind: data-pipeline
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       # Default globs match nothing here (pins live in .jinja files), so key on
-      # the template. matrix.name in the suffix keeps the three rows off one key.
+      # the template. matrix.name in the suffix keeps the rows off one key.
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: true
           cache-dependency-glob: template/**/pyproject.toml.jinja
           cache-suffix: ${{ github.job }}-${{ matrix.name }}
 
-      # publish_to_pypi=true so the conditionally-named python-release.yml renders
-      # too. Matrix values reach the shell as env: project_name is free text.
+      # publish_to_pypi=true (asked only of a library) so the conditionally-named
+      # python-release.yml renders too. Matrix values reach the shell as env:
+      # project_name is free text.
       - name: scaffold
         env:
           PROJECT_NAME: ${{ matrix.project_name }}
           MODULE_NAME: ${{ matrix.module_name }}
           STACKS: ${{ matrix.stacks }}
           PYTHON_DIR: ${{ matrix.python_dir }}
+          KIND: ${{ matrix.kind }}
           # Derived from stacks so a row can't gain docker and skip its answers.
           DOCKER: ${{ contains(matrix.stacks, 'docker') }}
         run: |
@@ -89,8 +101,8 @@ jobs:
              --data "module_name=$MODULE_NAME"
              --data "stacks=$STACKS"
              --data "python_dir=$PYTHON_DIR"
-             --data kind=library
-             --data publish_to_pypi=true)
+             --data "kind=$KIND")
+          if [ "$KIND" = library ]; then C+=(--data publish_to_pypi=true); fi
           if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[python]'); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
@@ -104,6 +116,20 @@ jobs:
           uv run ruff format --check
           uv run ty check
           uv run pytest
+
+      # Against the example source's live URL, then the tests that read its output.
+      - if: matrix.kind == 'data-pipeline'
+        name: pipeline
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
+        env:
+          PROJECT_NAME: ${{ matrix.project_name }}
+          PIPELINE_OUTPUT_REQUIRED: "1"
+        run: |
+          uv run "$PROJECT_NAME" fetch
+          uv run "$PROJECT_NAME" build
+          uv run "$PROJECT_NAME" validate
+          uv run pytest
+          ls data/raw/*.fetch.json
 
       # buildx for the gha layer cache.
       - if: contains(matrix.stacks, 'docker')
@@ -164,6 +190,16 @@ jobs:
             --data publish_to_pypi=true --data publish_to_npm=true \
             --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$RUNNER_TEMP/c"
 
+      # The data-pipeline variant nested and beside docker: the nested paths reach
+      # .gitignore, the workflow's artifact path and ATTRIBUTION.md.
+      - name: render data-pipeline
+        run: |
+          set -euo pipefail
+          uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
+            --data project_name=pipe-me --data 'stacks=[python,docker]' \
+            --data kind=data-pipeline --data python_dir=pipe \
+            --data 'docker_stacks=[python]' . "$RUNNER_TEMP/d"
+
       # license=none, plus a name and description carrying the punctuation
       # `slug` strips and `to_json` escapes.
       - name: render license=none
@@ -185,7 +221,7 @@ jobs:
                   ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
           tmp = pathlib.Path(os.environ["RUNNER_TEMP"])
           seen = 0
-          for path in sorted(tmp.glob("[abc]/**/*")):
+          for path in sorted(tmp.glob("[abcd]/**/*")):
               parse = load.get(path.suffix)
               if parse and path.is_file():
                   parse(path.read_text())
@@ -246,15 +282,27 @@ jobs:
           # The depth-derived up-paths, at both depths this render uses.
           grep -qF '](../README.md)' c/api/README.md
           grep -qF '"root": "../.."' c/apps/web/biome.json
+          # data-pipeline: manifest and data dirs in the package, the rest at the root.
+          test -f d/pipe/sources.toml
+          test -f d/pipe/src/pipe_me/pipeline.py
+          test -f d/pipe/data/raw/.gitkeep
+          test -f d/ATTRIBUTION.md
+          test ! -e d/pipe/notebooks
+          grep -qx 'pipe/data/raw/\*' d/.gitignore
+          grep -q 'path: pipe/data/raw/\*.fetch.json' d/.github/workflows/python.yml
+          grep -q '^pipeline: fetch build validate' d/just/python.just
+          # Only data-pipeline renders it.
+          test ! -e a/sources.toml
+          test ! -e a/ATTRIBUTION.md
 
       # The workflow templates are .jinja, and no linter can parse them. Their
       # rendered output is ordinary YAML, so audit that instead — across all
-      # three renders, which between them cover every conditional branch.
+      # four renders, which between them cover every conditional branch.
       # Scaffolded repos get the same audit as a git hook.
       - name: zizmor
         env:
           GH_TOKEN: ${{ github.token }}
-        run: uvx "zizmor@$ZIZMOR_VERSION" "$RUNNER_TEMP"/a "$RUNNER_TEMP"/b "$RUNNER_TEMP"/c
+        run: uvx "zizmor@$ZIZMOR_VERSION" "$RUNNER_TEMP"/a "$RUNNER_TEMP"/b "$RUNNER_TEMP"/c "$RUNNER_TEMP"/d
 
   update:
     # Scaffolds from the last tag, then `copier update`s to the pushed commit —
