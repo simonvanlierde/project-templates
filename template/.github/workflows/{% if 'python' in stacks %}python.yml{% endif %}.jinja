@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   check:
-    name: lint, types, tests
+    name: lint, types, {% if kind == 'data-pipeline' %}pipeline, {% endif %}tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 {%- if python_dir != '.' %}
@@ -46,4 +46,29 @@ jobs:
       - run: uv run ruff check --output-format=github
       - run: uv run ruff format --check
       - run: uv run ty check
+{%- if kind == 'data-pipeline' %}
+
+      # The pipeline runs for real against the URLs in sources.toml: not a dry run
+      # and not a fixture. Keep each URL a small cut of its source so this stays fast.
+      - run: uv run {{ slug }} fetch
+      - run: uv run {{ slug }} build
+      - run: uv run {{ slug }} validate
+
+      # tests/test_published.py fails rather than skips when the output is missing.
+      # GitHub sets CI, which skips the literal-value tripwire, so a publisher revision
+      # does not turn main red. Set TRIPWIRE=1 to assert the literals too.
       - run: uv run pytest
+        env:
+          PIPELINE_OUTPUT_REQUIRED: "1"
+
+      # Fetch records only: URL, timestamp, checksum, byte count, vintage. They hold
+      # no source values, so the artifact redistributes nothing (see ATTRIBUTION.md).
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: fetch-records
+          path: {% if python_dir != '.' %}{{ python_dir }}/{% endif %}data/raw/*.fetch.json
+          if-no-files-found: error
+{%- else %}
+      - run: uv run pytest
+{%- endif %}

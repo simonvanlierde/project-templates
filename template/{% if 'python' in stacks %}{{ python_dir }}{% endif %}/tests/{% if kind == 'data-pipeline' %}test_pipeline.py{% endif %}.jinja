@@ -1,0 +1,145 @@
+"""The whole pipeline against a fixture served from a local file: no network."""
+
+import hashlib
+import json
+from email.message import Message
+from pathlib import Path
+
+import pytest
+
+from {{ module_name }} import pipeline
+
+FIXTURE = "year,value\n2020,1.5\n2021,2.5\n"
+RAW = Path("data/raw/example.csv")
+OUT = Path("data/processed/example.csv")
+
+
+def _manifest(root: Path, url: str, terms: str = 'terms = "CC0-1.0"\nterms_url = "https://example.org/terms"') -> None:
+    """One implemented source at `url`, and one unimplemented source."""
+    text = f"""
+[[source]]
+id = "example"
+status = "implemented"
+url = "{url}"
+{terms}
+
+[[source]]
+id = "later"
+status = "unimplemented"
+reason = "No reader written yet."
+"""
+    (root / "sources.toml").write_text(text, encoding="utf-8")
+
+
+@pytest.fixture
+def upstream(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A fixture source file and a manifest pointing at it; the test runs inside the project."""
+    source = tmp_path / "upstream" / "example.csv"
+    source.parent.mkdir()
+    source.write_text(FIXTURE, encoding="utf-8")
+    _manifest(tmp_path, source.as_uri())
+    monkeypatch.chdir(tmp_path)
+    return source
+
+
+def _run(*stages: str) -> list[int]:
+    return [pipeline.main([stage]) for stage in stages]
+
+
+def test_the_whole_pipeline_runs_from_a_local_file(upstream: Path) -> None:
+    """Fetch, build and validate succeed, and every output row names the bytes it came from."""
+    assert _run("fetch", "build", "validate") == [0, 0, 0]
+
+    record = json.loads(Path("data/raw/example.csv.fetch.json").read_text(encoding="utf-8"))
+    assert record["url"] == upstream.as_uri()
+    assert record["sha256"] == hashlib.sha256(FIXTURE.encode()).hexdigest()
+    assert record["retrieved_at"].endswith("Z")
+    assert record["vintage_basis"] == "last-modified"
+
+    rows = pipeline.read_output(OUT)
+    assert [(r["year"], r["value"]) for r in rows] == [("2020", "1.5"), ("2021", "2.5")]
+    assert {(r["source_url"], r["raw_sha256"]) for r in rows} == {(record["url"], record["sha256"])}
+
+
+def test_vintage_says_who_states_it() -> None:
+    """The server's Last-Modified date if sent, else the manifest's release, labelled as such."""
+    dated = Message()
+    dated["Last-Modified"] = "Wed, 01 Jul 2026 12:00:00 GMT"
+    assert pipeline.vintage({"release": "2026"}, dated) == ("2026-07-01", "last-modified")
+    assert pipeline.vintage({"release": "2026"}, Message()) == ("2026", "manifest")
+    assert pipeline.vintage({}, Message()) == ("not stated", "manifest")
+
+
+def test_build_refuses_a_fetch_made_for_a_different_request(
+    upstream: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Changing a source's URL without re-fetching must not pass the old bytes off as the new request."""
+    _run("fetch")
+    moved = upstream.with_name("moved.csv")
+    moved.write_text(FIXTURE, encoding="utf-8")
+    _manifest(tmp_path, moved.as_uri())
+    assert _run("build") == [1]
+    assert "re-run fetch" in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("upstream")
+def test_build_refuses_a_raw_file_changed_after_fetch(capsys: pytest.CaptureFixture[str]) -> None:
+    """Checksums are verified before anything is parsed."""
+    _run("fetch")
+    RAW.write_text(FIXTURE + "2022,9.9\n", encoding="utf-8")
+    assert _run("build") == [1]
+    assert "changed since it was fetched" in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("upstream")
+def test_a_missing_input_is_one_line_and_a_failed_exit(capsys: pytest.CaptureFixture[str]) -> None:
+    """Building before fetching names the missing file instead of printing a traceback."""
+    assert _run("build") == [1]
+    err = capsys.readouterr().err
+    assert "example.csv.fetch.json is missing" in err
+    assert len(err.strip().splitlines()) == 1
+
+
+@pytest.mark.usefixtures("upstream")
+def test_validate_rehashes_the_raw_file(capsys: pytest.CaptureFixture[str]) -> None:
+    """A raw file edited after the build fails validation."""
+    _run("fetch", "build")
+    RAW.write_text("edited\n", encoding="utf-8")
+    assert _run("validate") == [1]
+    assert "changed since it was fetched" in capsys.readouterr().err
+
+
+def test_validate_rereads_the_published_output(upstream: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Output built from an earlier fetch fails once the source is fetched again with new bytes."""
+    _run("fetch", "build")
+    upstream.write_text(FIXTURE + "2022,3.5\n", encoding="utf-8")
+    _run("fetch")
+    assert _run("validate") == [1]
+    assert "re-run build" in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("upstream")
+def test_validate_rejects_output_from_an_unimplemented_source(capsys: pytest.CaptureFixture[str]) -> None:
+    """An `unimplemented` source is absent from the output by design, so output from one is an error."""
+    _run("fetch", "build")
+    OUT.with_name("later.csv").write_text("year\n2020\n", encoding="utf-8")
+    assert _run("validate") == [1]
+    assert "later: status is unimplemented" in capsys.readouterr().err
+
+
+def test_validate_requires_reuse_terms(upstream: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Every implemented source states its publisher's terms before its data is used."""
+    _manifest(tmp_path, upstream.as_uri(), terms="")
+    _run("fetch", "build")
+    assert _run("validate") == [1]
+    assert "example: no terms" in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("upstream")
+def test_a_source_id_is_a_plain_file_name(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """An id names files under data/, so one that is a path is refused before anything is written."""
+    manifest = tmp_path / "sources.toml"
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace('"example"', '"../escaped"'), encoding="utf-8")
+    assert _run("fetch") == [1]
+    assert "../escaped" in capsys.readouterr().err
+    assert not Path("data").exists()

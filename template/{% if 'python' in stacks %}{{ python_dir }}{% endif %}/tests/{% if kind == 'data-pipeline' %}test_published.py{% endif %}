@@ -1,0 +1,54 @@
+"""Checks on what `just pipeline` published, not on a fixture.
+
+EXAMPLE: these read the example source in sources.toml. Point them at your own
+sources when you replace it.
+
+They skip until the pipeline has run. CI runs it first and sets
+PIPELINE_OUTPUT_REQUIRED=1, so there a missing output fails instead of skipping.
+
+The literal-value test is a tripwire: a number read from the source when the test
+was written. A publisher revision trips it. That is the point locally and noise in
+CI, so CI skips it unless TRIPWIRE=1 is set.
+"""
+
+import csv
+import hashlib
+import os
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parent.parent
+RAW = ROOT / "data" / "raw" / "example-co2.csv"
+OUT = ROOT / "data" / "processed" / "example-co2.csv"
+
+tripwire = pytest.mark.skipif(
+    bool(os.environ.get("CI")) and os.environ.get("TRIPWIRE") != "1",
+    reason="literal values move when a publisher revises; set TRIPWIRE=1 to assert them in CI",
+)
+
+
+@pytest.fixture(scope="module")
+def published() -> dict[str, dict[str, str]]:
+    """The published rows, keyed by year."""
+    if not OUT.exists():
+        msg = f"{OUT} is missing; run `just pipeline` first"
+        if os.environ.get("PIPELINE_OUTPUT_REQUIRED") == "1":
+            pytest.fail(msg)
+        pytest.skip(msg)
+    with OUT.open(newline="", encoding="utf-8") as fh:
+        return {row["Year"]: row for row in csv.DictReader(fh)}
+
+
+def test_each_value_is_the_raw_files_text(published: dict[str, dict[str, str]]) -> None:
+    """Each published value equals the raw file's, and the raw file still hashes to the rows' checksum."""
+    payload = RAW.read_bytes()
+    assert {row["raw_sha256"] for row in published.values()} == {hashlib.sha256(payload).hexdigest()}
+    raw = {row["Year"]: row["Mean"] for row in csv.DictReader(payload.decode().splitlines())}
+    assert {year: row["Mean"] for year, row in published.items()} == raw
+
+
+@tripwire
+def test_a_known_value_is_the_literal_read_when_written(published: dict[str, dict[str, str]]) -> None:
+    """Mauna Loa annual mean CO2 for 2020, in ppm, as served when this test was written."""
+    assert published["2020"]["Mean"] == "414.21"

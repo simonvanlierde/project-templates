@@ -1,0 +1,249 @@
+"""Fetch, build and validate the sources declared in sources.toml.
+
+A starting point, not a framework: standard library only, one function per stage.
+`parse` reads every source as CSV; give a source its own reader when it needs one.
+
+Raw files stay in data/raw/ and outputs in data/processed/, both gitignored, so the
+repository never redistributes source data. Each fetch leaves a `<file>.fetch.json`
+record beside its raw file: the URL, when it was retrieved, the SHA-256 of the bytes,
+and the source's vintage together with who states it.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import dataclasses
+import email.utils
+import hashlib
+import io
+import json
+import sys
+import tomllib
+import urllib.request
+from datetime import UTC, datetime
+from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
+
+if TYPE_CHECKING:
+    from email.message import Message
+
+# Relative to the working directory, which `just` and CI set to the project root.
+MANIFEST = Path("sources.toml")
+RAW = Path("data/raw")
+PROCESSED = Path("data/processed")
+
+IMPLEMENTED = "implemented"
+UNIMPLEMENTED = "unimplemented"
+FETCH, BUILD, VALIDATE = "fetch", "build", "validate"
+_TIMEOUT_S = 120
+
+type Source = dict[str, Any]
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class FetchRecord:
+    """What one download was, so every output row traces back to the bytes it came from."""
+
+    source_id: str
+    url: str
+    retrieved_at: str
+    sha256: str
+    bytes: int
+    vintage: str
+    vintage_basis: str
+
+
+def load_manifest(path: Path = MANIFEST) -> list[Source]:
+    """The `[[source]]` tables of sources.toml.
+
+    Raises ValueError for an id that is not a plain file name: ids name files
+    under data/, and a path there would write outside it.
+    """
+    with path.open("rb") as fh:
+        sources = tomllib.load(fh)["source"]
+    for source in sources:
+        if source["id"] != Path(source["id"]).name or source["id"].startswith("."):
+            msg = f"source id {source['id']!r} must be a plain file name"
+            raise ValueError(msg)
+    return sources
+
+
+def implemented(sources: list[Source]) -> list[Source]:
+    """The sources the pipeline reads."""
+    return [s for s in sources if s.get("status") == IMPLEMENTED]
+
+
+def raw_name(source: Source) -> str:
+    """The raw file's name: the source id plus the URL's extension, e.g. `example-co2.csv`."""
+    return source["id"] + PurePosixPath(urlsplit(source["url"]).path).suffix
+
+
+def vintage(source: Source, headers: Message) -> tuple[str, str]:
+    """(vintage, basis): how current the data is, and who says so.
+
+    The server's Last-Modified date if it sends one, else the release the manifest
+    declares. The basis names which, so a manifest string is never passed off as a
+    statement by the source.
+    """
+    modified = headers.get("Last-Modified")
+    if modified:
+        return email.utils.parsedate_to_datetime(modified).date().isoformat(), "last-modified"
+    return source.get("release", "not stated"), "manifest"
+
+
+def _write_atomic(path: Path, data: bytes) -> None:
+    """Write a sibling temp file, then rename it: a reader never sees half a file."""
+    part = path.with_name(path.name + ".part")
+    part.write_bytes(data)
+    part.replace(path)
+
+
+def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
+    """Download each implemented source into `raw`, with a fetch record beside it."""
+    raw.mkdir(parents=True, exist_ok=True)
+    records = []
+    for source in implemented(sources):
+        # NOTE: urlopen follows any scheme, file:// included, which the tests use for fixtures.
+        # The URLs come from sources.toml, which is as trusted as the code.
+        request = urllib.request.Request(source["url"], headers={"User-Agent": "{{ slug }}"})  # noqa: S310
+        with urllib.request.urlopen(request, timeout=_TIMEOUT_S) as response:  # noqa: S310
+            payload, headers = response.read(), response.headers
+        stated, basis = vintage(source, headers)
+        record = FetchRecord(
+            source_id=source["id"],
+            url=source["url"],
+            retrieved_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            sha256=hashlib.sha256(payload).hexdigest(),
+            bytes=len(payload),
+            vintage=stated,
+            vintage_basis=basis,
+        )
+        name = raw_name(source)
+        _write_atomic(raw / name, payload)
+        _write_atomic(raw / f"{name}.fetch.json", (json.dumps(dataclasses.asdict(record), indent=2) + "\n").encode())
+        records.append(record)
+    return records
+
+
+def verified(source: Source, raw: Path = RAW) -> tuple[FetchRecord, bytes]:
+    """The fetch record and raw bytes for `source`, once both are shown to be current.
+
+    Raises ValueError when the record was made for a different request than the
+    manifest now makes, or when the raw file no longer hashes to the record.
+    """
+    name = raw_name(source)
+    record = FetchRecord(**json.loads((raw / f"{name}.fetch.json").read_text(encoding="utf-8")))
+    if (record.source_id, record.url) != (source["id"], source["url"]):
+        msg = f"{name} was fetched from {record.url}, but sources.toml now requests {source['url']}; re-run fetch"
+        raise ValueError(msg)
+    payload = (raw / name).read_bytes()
+    if hashlib.sha256(payload).hexdigest() != record.sha256:
+        msg = f"{name} changed since it was fetched; re-run fetch"
+        raise ValueError(msg)
+    return record, payload
+
+
+def parse(source: Source, payload: bytes) -> list[dict[str, str]]:
+    """One raw file as rows. Every source is read as CSV here; branch on `source["id"]` when one is not."""
+    text = payload.decode(source.get("encoding", "utf-8"))
+    return list(csv.DictReader(io.StringIO(text, newline="")))
+
+
+def build(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED) -> list[Path]:
+    """Write each implemented source to `processed/<id>.csv`, each row stamped with its fetch record."""
+    processed.mkdir(parents=True, exist_ok=True)
+    written = []
+    for source in implemented(sources):
+        record, payload = verified(source, raw)
+        stamp = {
+            "source_id": record.source_id,
+            "source_url": record.url,
+            "retrieved_at": record.retrieved_at,
+            "vintage": record.vintage,
+            "vintage_basis": record.vintage_basis,
+            "raw_sha256": record.sha256,
+        }
+        rows = parse(source, payload)
+        columns = list(rows[0]) if rows else []
+        if clash := stamp.keys() & set(columns):
+            msg = f"{source['id']}: source columns {sorted(clash)} collide with the provenance columns"
+            raise ValueError(msg)
+        buffer = io.StringIO(newline="")
+        writer = csv.DictWriter(buffer, fieldnames=[*stamp, *columns])
+        writer.writeheader()
+        writer.writerows({**stamp, **row} for row in rows)
+        out = processed / f"{source['id']}.csv"
+        _write_atomic(out, buffer.getvalue().encode())
+        written.append(out)
+    return written
+
+
+def read_output(path: Path) -> list[dict[str, str]]:
+    """A published output file, as written."""
+    with path.open(newline="", encoding="utf-8") as fh:
+        return list(csv.DictReader(fh))
+
+
+def validate(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED) -> list[str]:
+    """Check the published output against the manifest and the fetch records; one string per problem."""
+    problems = []
+    for source in sources:
+        sid, status = source["id"], source.get("status")
+        out = processed / f"{sid}.csv"
+        if status == UNIMPLEMENTED:
+            if out.exists():
+                problems.append(f"{sid}: status is unimplemented, but {out} exists")
+            continue
+        if status != IMPLEMENTED:
+            problems.append(f"{sid}: status must be {IMPLEMENTED!r} or {UNIMPLEMENTED!r}, not {status!r}")
+            continue
+        if not (source.get("terms") and source.get("terms_url")):
+            problems.append(f"{sid}: no terms or terms_url; record the publisher's reuse terms")
+        try:
+            record, _ = verified(source, raw)
+        except ValueError as error:
+            problems.append(str(error))
+            continue
+        rows = read_output(out)
+        if not rows:
+            problems.append(f"{out}: no rows")
+        if {(r["source_url"], r["raw_sha256"]) for r in rows} - {(record.url, record.sha256)}:
+            problems.append(f"{out}: rows come from an earlier fetch than {raw_name(source)}; re-run build")
+    return problems
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run one stage: fetch, build or validate."""
+    parser = argparse.ArgumentParser(prog="{{ slug }}", description=__doc__.splitlines()[0])
+    parser.add_argument("stage", choices=[FETCH, BUILD, VALIDATE])
+    stage = parser.parse_args(argv).stage
+    try:
+        problems = _run(stage, load_manifest())
+    except (FileNotFoundError, ValueError) as error:
+        missing = isinstance(error, FileNotFoundError) and error.filename
+        print(f"{stage}: {f'{error.filename} is missing' if missing else error}", file=sys.stderr)
+        return 1
+    for problem in problems:
+        print(problem, file=sys.stderr)
+    return 1 if problems else 0
+
+
+def _run(stage: str, sources: list[Source]) -> list[str]:
+    """Run `stage` and return its problems; only validate reports any."""
+    if stage == FETCH:
+        for r in fetch(sources):
+            print(f"{r.source_id}  {r.bytes:>9,} B  {r.sha256[:12]}  {r.vintage} ({r.vintage_basis})  {r.url}")
+        return []
+    if stage == BUILD:
+        for path in build(sources):
+            print(f"{len(read_output(path))} rows -> {path}")
+        return []
+    problems = validate(sources)
+    print(f"{len(problems)} problems")
+    return problems
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

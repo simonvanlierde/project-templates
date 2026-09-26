@@ -34,3 +34,13 @@ node_modules/
 .pnpm-store/
 *.tsbuildinfo
 coverage/
+{%- if 'python' in stacks and kind == 'data-pipeline' %}
+{%- set d = '' if python_dir == '.' else python_dir ~ '/' %}
+
+# Pipeline data, never committed: `just pipeline` rebuilds both from sources.toml,
+# so the repository redistributes no source data.
+{{ d }}data/raw/*
+!{{ d }}data/raw/.gitkeep
+{{ d }}data/processed/*
+!{{ d }}data/processed/.gitkeep
+{%- endif %}

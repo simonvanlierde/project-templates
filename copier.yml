@@ -80,6 +80,7 @@ kind:
     Library (packaged, publishable to PyPI): library
     Application (packaged, not published): app
     Research (packaged, plus notebooks/ and data/): research
+    Data pipeline (packaged, plus sources.toml and fetch/build/validate): data-pipeline
   default: library
 
 module_name:

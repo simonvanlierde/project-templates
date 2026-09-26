@@ -1,0 +1,35 @@
+{%- set d = '' if python_dir == '.' else python_dir ~ '/' -%}
+# Attribution and reuse terms
+
+This file records what this repository reuses from others, and on what terms.
+{% if license == 'none' -%}
+The repository has no license of its own yet, and no `LICENSE` file.
+{%- else -%}
+The code is under {{ license }} (see [LICENSE](LICENSE)). That license covers only
+the code written here. The source data and everything listed below keep their own terms.
+{%- endif %}
+
+## Reused code, methods and conventions
+
+Replace this table. Give one row for each reused piece: a naming scheme, a
+harmonisation step, or copied or adapted code. Name its source with a DOI, or a
+repository and commit, and state the license. Delete the section if nothing is reused.
+
+| Reused | From | License | Where it lives here |
+| --- | --- | --- | --- |
+| _a naming convention_ | _article DOI, or repository at commit_ | _license_ | _path_ |
+
+## Source data
+
+Source data is not redistributed. `{{ d }}data/raw/` and `{{ d }}data/processed/` are
+gitignored, and `just pipeline` downloads from each publisher on every run. The CI
+artifact holds only the `*.fetch.json` records (URL, timestamp, checksum, byte
+count, vintage), not values.
+
+Each source's terms are in [`{{ d }}sources.toml`]({{ d }}sources.toml) (`terms` and
+`terms_url`), and `just validate` fails when an implemented source has none. Keep
+this table in step with that file.
+
+| Source | Terms as stated by the publisher |
+| --- | --- |
+| Mauna Loa CO2 annual mean (EXAMPLE) | [ODC-PDDL-1.0](https://opendatacommons.org/licenses/pddl/) for the `datasets/co2-ppm` package. The original data is from NOAA GML |

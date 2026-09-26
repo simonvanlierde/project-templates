@@ -21,7 +21,11 @@ dependencies = []
 # Delete it (and set publish_to_pypi) when you do want to publish.
 classifiers = ["Private :: Do Not Upload"]
 {%- endif %}
-{% if kind == 'library' %}
+{% if kind == 'data-pipeline' %}
+# `{{ slug }} fetch|build|validate`, what the `just` recipes of the same names run.
+[project.scripts]
+{{ slug }} = "{{ module_name }}.pipeline:main"
+{% endif %}{% if kind == 'library' %}
 [project.urls]
 Homepage = "https://github.com/{{ github_user }}/{{ slug }}"
 Issues = "https://github.com/{{ github_user }}/{{ slug }}/issues"
@@ -71,6 +75,9 @@ ignore = [
 "test*.py" = ["S101", "PLR2004"]     # allow assert and literals in tests
 {%- if kind == 'research' %}
 "*.ipynb" = ["T201", "E402"] # notebooks print and import late
+{%- endif %}
+{%- if kind == 'data-pipeline' %}
+"src/{{ module_name }}/pipeline.py" = ["T201"] # a CLI reports by printing
 {%- endif %}
 
 [tool.ruff.lint.pydocstyle]

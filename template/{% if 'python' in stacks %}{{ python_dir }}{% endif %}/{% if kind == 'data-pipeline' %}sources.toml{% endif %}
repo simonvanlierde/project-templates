@@ -1,0 +1,38 @@
+# Input manifest: every source this pipeline reads, declared before any code reads it.
+#
+# `just fetch` downloads each `implemented` source to data/raw/, `just build` turns
+# it into data/processed/<id>.csv, and `just validate` checks what was published.
+#
+# Keep each `url` a small cut of its source (one series, a few years, a filtered API
+# query). CI runs the whole pipeline against these URLs on every push.
+#
+# Per source:
+#   id         names the raw file (<id> plus the URL's extension) and the output
+#   status     "implemented", or "unimplemented" plus a `reason`: a source you know
+#              about but do not read yet. It stays out of the output by design, and
+#              `just validate` fails if it ever produces any.
+#   url        what `just fetch` downloads. Change it and `just build` refuses the old
+#              download until you fetch again.
+#   release    optional: the edition you expect, recorded as the vintage when the
+#              server sends no Last-Modified date
+#   terms      the publisher's reuse terms, in their words, plus `terms_url`. Required
+#              for every implemented source, and listed again in ATTRIBUTION.md.
+
+# EXAMPLE: replace with your own sources. Mauna Loa annual mean CO2, as repackaged
+# by the Frictionless Data `datasets` project. About 1 kB.
+[[source]]
+id = "example-co2"
+name = "Mauna Loa CO2 annual mean (EXAMPLE)"
+status = "implemented"
+url = "https://raw.githubusercontent.com/datasets/co2-ppm/main/data/co2-annmean-mlo.csv"
+# The server sends no Last-Modified date, so this is recorded as the vintage.
+release = "unversioned, main branch"
+terms = "ODC-PDDL-1.0 (datasets/co2-ppm package; original data from NOAA GML)"
+terms_url = "https://opendatacommons.org/licenses/pddl/"
+
+# EXAMPLE: a source you know about but do not read yet.
+[[source]]
+id = "example-later"
+name = "A second source (EXAMPLE)"
+status = "unimplemented"
+reason = "No reader written yet."
