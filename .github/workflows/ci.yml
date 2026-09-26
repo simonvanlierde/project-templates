@@ -24,6 +24,8 @@ env:
   COPIER_VERSION: 9.17.0
   # renovate: datasource=pypi depName=zizmor
   ZIZMOR_VERSION: 1.28.0
+  # renovate: datasource=pypi depName=actionlint-py
+  ACTIONLINT_PY_VERSION: 1.7.12.25
   # No .dockerbuild record artifacts; nothing reads them here.
   DOCKER_BUILD_RECORD_UPLOAD: false
 
@@ -250,6 +252,9 @@ jobs:
           grep -q charliermarsh.ruff a/.vscode/extensions.json
           grep -q biomejs.biome a/.vscode/settings.json
           test -f a/.github/SECURITY.md
+          # Every render gets the hooks enforced in CI.
+          test -f a/.github/workflows/hygiene.yml
+          test -f b/.github/workflows/hygiene.yml
           # Rendered from a local checkout, the answers file still names the
           # canonical source, never the path it was rendered from.
           grep -qx '_src_path: gh:simonvanlierde/project-templates' a/.copier-answers.yml
@@ -304,6 +309,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: uvx "zizmor@$ZIZMOR_VERSION" "$RUNNER_TEMP"/a "$RUNNER_TEMP"/b "$RUNNER_TEMP"/c "$RUNNER_TEMP"/d
+
+      # What zizmor doesn't check: unknown keys, bad `needs`, expression types,
+      # and shellcheck over every `run:` (shellcheck ships on the runner).
+      - name: actionlint
+        run: uvx --from "actionlint-py==$ACTIONLINT_PY_VERSION" actionlint "$RUNNER_TEMP"/[abcd]/.github/workflows/*.yml
 
   update:
     # Scaffolds from the last tag, then `copier update`s to the pushed commit —

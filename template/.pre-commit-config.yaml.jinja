@@ -48,6 +48,13 @@ repos:
     rev: v1.28.0
     hooks:
       - id: zizmor
+
+  # What zizmor doesn't check: unknown keys, bad `needs`, type errors in
+  # expressions, and shellcheck over every `run:` when shellcheck is on PATH.
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
 {%- if 'docker' in stacks %}
 
   # Runs from its own image: nothing to install, but it needs the Docker daemon.
