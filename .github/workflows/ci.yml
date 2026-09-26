@@ -72,6 +72,13 @@ jobs:
             stacks: "[python]"
             python_dir: "."
             kind: data-pipeline
+          # FastAPI behind the image: also started, and its /health probed.
+          - name: web-service
+            project_name: ci-web
+            module_name: ci_web
+            stacks: "[python,docker]"
+            python_dir: "."
+            kind: web-service
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -151,6 +158,24 @@ jobs:
           # Export only on push: a PR-ref cache is dropped on merge, so mode=max
           # there uploads MBs nothing reads.
           cache-to: ${{ github.event_name == 'push' && format('type=gha,mode=max,scope={0}-{1}', github.job, matrix.name) || '' }}
+          # Loaded so the web-service row can run it below.
+          load: ${{ matrix.kind == 'web-service' }}
+          tags: ${{ matrix.project_name }}:ci
+
+      # The image serves, and the HEALTHCHECK it ships turns healthy.
+      - if: matrix.kind == 'web-service'
+        name: container health
+        env:
+          IMAGE: ${{ matrix.project_name }}:ci
+        run: |
+          set -euo pipefail
+          docker run -d --name svc -p 127.0.0.1:8000:8000 "$IMAGE"
+          for _ in $(seq 30); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' svc)" = healthy ] && break
+            sleep 2
+          done
+          docker inspect -f '{{.State.Health.Status}}' svc | grep -qx healthy
+          curl -fsS http://127.0.0.1:8000/health | grep -q '"status":"ok"'
 
   render:
     # Renders the branches the default answers reach, which the jobs above skip,
@@ -310,6 +335,11 @@ jobs:
           # Only data-pipeline renders it.
           test ! -e a/sources.toml
           test ! -e a/ATTRIBUTION.md
+          # Only web-service renders the FastAPI modules; the others keep the
+          # stdlib /health stub.
+          test ! -e a/src/render_me/app.py
+          (! grep -q fastapi a/pyproject.toml)
+          grep -q http.server a/src/render_me/__main__.py
 
       # The workflow templates are .jinja, and no linter can parse them. Their
       # rendered output is ordinary YAML, so audit that instead — across all

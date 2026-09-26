@@ -53,6 +53,13 @@ COPY --from=builder --chown=app:app /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
+{%- if kind == 'web-service' %}
+
+# The app defaults to loopback; inside the container it has to listen on every
+# interface for the published port to reach it.
+ENV HOST=0.0.0.0 \
+    PORT={{ app_port }}
+{%- endif %}
 
 # Numeric, so the uid holds even where the host has no user named app.
 USER 1001:1001
@@ -62,5 +69,7 @@ EXPOSE {{ app_port }}
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD ["python", "-c", "import urllib.request as r,sys; sys.exit(0 if r.urlopen('http://127.0.0.1:{{ app_port }}/health').status==200 else 1)"]
 
+{% if kind != 'web-service' -%}
 # NOTE: needs src/{{ module_name }}/__main__.py. Replace with your real entrypoint.
+{% endif -%}
 CMD ["python", "-m", "{{ module_name }}"]

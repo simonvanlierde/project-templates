@@ -42,3 +42,9 @@ validate:
 # The whole chain, from the network to validated output.
 pipeline: fetch build validate
 {%- endif %}
+{%- if kind == 'web-service' %}
+
+# Serve on 127.0.0.1:{{ app_port }} (HOST and PORT override), outside Docker.
+serve:
+    {{ uv }} run {{ slug }}
+{%- endif %}

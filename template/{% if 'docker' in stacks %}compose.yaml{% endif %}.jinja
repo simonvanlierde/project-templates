@@ -23,6 +23,13 @@ services:
     env_file:
       - path: .env
         required: false
+{%- if stack == 'python' and kind == 'web-service' %}
+    environment:
+      # Telemetry stays off unless this names an OTLP/HTTP collector, for example
+      # http://otel-collector:4318 on a shared Docker network. Empty means unset.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_SERVICE_NAME: {{ slug }}
+{%- endif %}
     restart: unless-stopped
 {%- if loop.first %}
     # The image already runs as a non-root uid; these stop it from regaining what

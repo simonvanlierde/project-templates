@@ -1,0 +1,34 @@
+"""The FastAPI application."""
+
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
+
+from fastapi import FastAPI
+
+from {{ module_name }} import telemetry as otel
+from {{ module_name }}.config import Settings
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+
+def create_app(settings: Settings | None = None, telemetry: otel.Telemetry | None = None) -> FastAPI:
+    """Build the app; tests pass their own settings and in-memory telemetry."""
+    settings = settings or Settings.from_env()
+    telemetry = telemetry or otel.from_settings(settings)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        yield
+        telemetry.shutdown()
+
+    app = FastAPI(title="{{ project_name }}", lifespan=lifespan)
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        """Liveness: the process answers. The image's HEALTHCHECK probes this."""
+        # Unauthenticated: no version, config or environment in the body.
+        return {"status": "ok"}
+
+    telemetry.instrument(app)
+    return app

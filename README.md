@@ -55,6 +55,7 @@ nested below the repo root gets its own `README.md` too.
 | `app`           | You run the code, and nothing imports it                                      | Nothing beyond the package                       |
 | `research`      | You analyse data in notebooks, and you manage the data files by hand          | `notebooks/`, `data/`, and JupyterLab            |
 | `data-pipeline` | The repo rebuilds a dataset from third-party sources, and each value must trace back to a download | See below                    |
+| `web-service`   | The package is an HTTP service that runs as a container (needs the `docker` stack) | See below                    |
 
 A `data-pipeline` project gets:
 
@@ -85,6 +86,27 @@ a published research database from its public sources. That project started from
 the `research` kind and added the manifest, the data split, the recipes, the
 attribution file and the pipeline CI by hand. The generic parts of that work are now
 the template. The readers for each source stayed in that project.
+
+A `web-service` project gets:
+
+- A FastAPI app built by `create_app()`, with one route: `GET /health`, a fixed
+  `{"status": "ok"}` that the image's `HEALTHCHECK` probes.
+- `config.py`: settings from plain environment variables (`HOST`, `PORT`,
+  `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`), no settings framework. The
+  app listens on `127.0.0.1` unless `HOST` says otherwise; the image sets
+  `HOST=0.0.0.0` and `compose.yaml` publishes the port on `127.0.0.1` only.
+- `telemetry.py`: OpenTelemetry request spans and a request-duration histogram
+  (`http.server.duration`; `http.server.request.duration` with
+  `OTEL_SEMCONV_STABILITY_OPT_IN=http`),
+  sent over OTLP/HTTP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Without
+  it, no provider is built, no middleware is added, and the SDK is not imported.
+- `just serve`, and a `<slug>` console script, to run it outside Docker.
+- Tests for `/health`, the settings, telemetry off, and telemetry on (in-memory
+  exporters: one span and one duration point per request).
+
+It follows the deployment pattern of a production FastAPI service: config from the
+environment, an unauthenticated health route that leaks nothing, and telemetry that
+is off by default.
 
 ## Layout: one package or a monorepo
 

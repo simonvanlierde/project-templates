@@ -81,7 +81,12 @@ kind:
     Application (packaged, not published): app
     Research (packaged, plus notebooks/ and data/): research
     Data pipeline (packaged, plus sources.toml and fetch/build/validate): data-pipeline
+    Web service (FastAPI, /health, OpenTelemetry, shipped as a container): web-service
   default: library
+  validator: >-
+    {% if kind == 'web-service' and 'docker' not in stacks %}
+    A web service ships as a container: add docker to `stacks` too.
+    {% endif %}
 
 module_name:
   type: str
@@ -142,6 +147,8 @@ docker_stacks:
   validator: >-
     {% if docker_stacks | reject('in', stacks) | list %}
     An image needs its stack: add {{ docker_stacks | reject('in', stacks) | join(' and ') }} to `stacks` too.
+    {% elif kind == 'web-service' and 'python' not in docker_stacks %}
+    The web-service kind is the python image: add python to `docker_stacks`.
     {% elif docker_stacks | length > 1 and python_dir == ts_dir %}
     Both images would be written to {{ python_dir }}/Dockerfile. Give python_dir
     and ts_dir different values first.

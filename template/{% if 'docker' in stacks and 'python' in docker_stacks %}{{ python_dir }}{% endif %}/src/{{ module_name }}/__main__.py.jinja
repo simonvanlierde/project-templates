@@ -1,3 +1,21 @@
+{%- if kind == 'web-service' -%}
+"""Entrypoint: `python -m {{ module_name }}` (the image's CMD) or `{{ slug }}`."""
+
+import uvicorn
+
+from {{ module_name }}.app import create_app
+from {{ module_name }}.config import Settings
+
+
+def main() -> None:
+    """Serve until stopped, on HOST:PORT from the environment."""
+    settings = Settings.from_env()
+    uvicorn.run(create_app(settings), host=settings.host, port=settings.port)
+
+
+if __name__ == "__main__":
+    main()
+{%- else -%}
 """Entrypoint for the container image.
 
 A stdlib HTTP server serving the /health endpoint the Dockerfile's HEALTHCHECK
@@ -37,3 +55,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+{%- endif %}
