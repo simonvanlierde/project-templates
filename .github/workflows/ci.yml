@@ -234,6 +234,7 @@ jobs:
       - name: check the conditional branches landed
         run: |
           set -euo pipefail
+          # A bare `! cmd` never trips set -e; the negated subshells below do.
           cd "$RUNNER_TEMP"
           # kind=research adds two dirs; publishing off on both stacks removes
           # both release workflows.
@@ -258,8 +259,8 @@ jobs:
           grep -q 'biome check' a/.pre-commit-config.yaml
           # license=none: no file, and no license key in either place that carries one.
           test ! -e b/LICENSE
-          ! grep -q '"license"' b/package.json
-          ! grep -q 'image.licenses' b/Dockerfile
+          (! grep -q '"license"' b/package.json)
+          (! grep -q 'image.licenses' b/Dockerfile)
           # The awkward project name reduced to something npm will accept.
           grep -q '"name": "odd-name--co"' b/package.json
           # Monorepo: packages nested, root files at the root, one Dockerfile
