@@ -213,6 +213,9 @@ jobs:
           grep -q charliermarsh.ruff a/.vscode/extensions.json
           grep -q biomejs.biome a/.vscode/settings.json
           test -f a/.github/SECURITY.md
+          # Rendered from a local checkout, the answers file still names the
+          # canonical source, never the path it was rendered from.
+          grep -qx '_src_path: gh:simonvanlierde/project-templates' a/.copier-answers.yml
           # All three stacks at once: every hook block present together.
           grep -q hadolint a/.pre-commit-config.yaml
           grep -q 'ruff check' a/.pre-commit-config.yaml
@@ -286,6 +289,9 @@ jobs:
           uvx "copier@$COPIER_VERSION" copy --vcs-ref="$TAG" --defaults --overwrite \
             --data project_name=update-me --data 'stacks=[python,ts,docker]' \
             --data 'docker_stacks=[python]' . "$PROJ"
+          # The answers name the canonical GitHub source; point this update at
+          # the pushed commit instead.
+          sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
           git -C "$PROJ" add -A
           git -C "$PROJ" -c user.email=ci@invalid -c user.name=ci commit -qm scaffold
           uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults "$PROJ"

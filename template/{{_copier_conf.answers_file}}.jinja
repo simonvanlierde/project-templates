@@ -1,2 +1,8 @@
+{#- A render from a local checkout records its path as `_src_path`, which in a
+    publishable repo leaks the author's home directory and breaks `copier update`
+    on every other machine. Record the canonical URL instead; a remote source is
+    kept as given. -#}
+{%- set src = _copier_answers._src_path -%}
+{%- set local = ':' not in src or src[1:3] in (':\\', ':/') -%}
 # Managed by copier. Do not edit by hand. Run: copier update
-{{ _copier_answers|to_nice_yaml -}}
+{{ (dict(_copier_answers, _src_path='gh:simonvanlierde/project-templates') if local else _copier_answers)|to_nice_yaml -}}
