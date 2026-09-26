@@ -54,12 +54,13 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-USER app
+# Numeric, so the uid holds even where the host has no user named app.
+USER 1001:1001
 EXPOSE {{ app_port }}
 
 # NOTE: assumes an HTTP GET /health returning 200. Drop this if the image is not a service.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD python -c "import urllib.request as r,sys; sys.exit(0 if r.urlopen('http://127.0.0.1:{{ app_port }}/health').status==200 else 1)"
+  CMD ["python", "-c", "import urllib.request as r,sys; sys.exit(0 if r.urlopen('http://127.0.0.1:{{ app_port }}/health').status==200 else 1)"]
 
 # NOTE: needs src/{{ module_name }}/__main__.py. Replace with your real entrypoint.
 CMD ["python", "-m", "{{ module_name }}"]
