@@ -2,5 +2,5 @@
 
 {% if project_description %}{{ project_description }}
 
-{% endif %}A package of [{{ slug }}]({{ (['..'] * python_dir.split('/') | length) | join('/') }}/README.md); see the repository root for how to
-build and test it.
+{% endif %}One package in the [{{ slug }}]({{ (['..'] * python_dir.split('/') | length) | join('/') }}/README.md)
+repository. The root README explains how to build and test it.
