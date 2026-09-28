@@ -4,6 +4,8 @@ Plain environment variables, no settings framework: three values do not need one
 Put them in `.env` for `docker compose` (never commit it) or export them.
 """
 
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING

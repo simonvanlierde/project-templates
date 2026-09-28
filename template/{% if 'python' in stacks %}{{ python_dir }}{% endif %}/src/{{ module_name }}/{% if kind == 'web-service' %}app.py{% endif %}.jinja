@@ -1,4 +1,8 @@
+{#- The quote style ruff format keeps: single quotes only around a name with double quotes in it. -#}
+{%- set title = project_name | pprint if '"' in project_name and "'" not in project_name else project_name | to_json -%}
 """The FastAPI application."""
+
+from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
@@ -22,7 +26,7 @@ def create_app(settings: Settings | None = None, telemetry: otel.Telemetry | Non
         yield
         telemetry.shutdown()
 
-    app = FastAPI(title="{{ project_name }}", lifespan=lifespan)
+    app = FastAPI(title={{ title }}, lifespan=lifespan)
 
     @app.get("/health")
     def health() -> dict[str, str]:

@@ -5,6 +5,8 @@ middleware is added and nothing leaves the process. With it, spans and metrics g
 to that collector over OTLP/HTTP; the SDK reads the other OTEL_* variables itself.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 

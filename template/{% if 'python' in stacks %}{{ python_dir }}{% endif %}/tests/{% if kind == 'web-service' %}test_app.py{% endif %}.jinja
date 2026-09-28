@@ -1,5 +1,7 @@
 """The app, its settings and its telemetry, all in process."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import pytest
@@ -38,6 +40,11 @@ def test_health() -> None:
         response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_title_is_the_project_name() -> None:
+    """The OpenAPI title is the project name exactly, quotes included."""
+    assert create_app(Settings()).title == {{ project_name | pprint if '"' in project_name and "'" not in project_name else project_name | to_json }}
 
 
 def test_unknown_path_is_404() -> None:
