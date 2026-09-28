@@ -79,5 +79,11 @@
       groupName: "uv",
       rangeStrategy: "widen",
     },
+    // Maintained (commits in 2026-08), but tags only about once a year, which
+    // trips the 1-year abandonment threshold.
+    {
+      matchPackageNames: ["pre-commit/pre-commit-hooks"],
+      abandonmentThreshold: null,
+    },
   ],
 }
