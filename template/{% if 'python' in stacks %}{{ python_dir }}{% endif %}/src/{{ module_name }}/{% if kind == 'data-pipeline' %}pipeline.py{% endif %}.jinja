@@ -12,6 +12,7 @@ and the source's vintage together with who states it.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import dataclasses
 import email.utils
@@ -62,7 +63,7 @@ def load_manifest(path: Path = MANIFEST) -> list[Source]:
     under data/, and a path there would write outside it.
     """
     with path.open("rb") as fh:
-        sources = tomllib.load(fh)["source"]
+        sources = tomllib.load(fh).get("source", [])
     for source in sources:
         if source["id"] != Path(source["id"]).name or source["id"].startswith("."):
             msg = f"source id {source['id']!r} must be a plain file name"
@@ -83,14 +84,17 @@ def raw_name(source: Source) -> str:
 def vintage(source: Source, headers: Message) -> tuple[str, str]:
     """(vintage, basis): how current the data is, and who says so.
 
-    The server's Last-Modified date if it sends one, else the release the manifest
-    declares. The basis names which, so a manifest string is never passed off as a
-    statement by the source.
+    The server's Last-Modified date if it sends a readable one, else the release the
+    manifest declares. The basis names which, so a manifest string is never passed off
+    as a statement by the source.
     """
     modified = headers.get("Last-Modified")
     if modified:
-        return email.utils.parsedate_to_datetime(modified).date().isoformat(), "last-modified"
-    return source.get("release", "not stated"), "manifest"
+        # A header that is not a date falls through to the manifest.
+        with contextlib.suppress(TypeError, ValueError):
+            return email.utils.parsedate_to_datetime(modified).date().isoformat(), "last-modified"
+    # str(): a TOML date (`release = 2024-06-01`) loads as a datetime.date.
+    return str(source.get("release", "not stated")), "manifest"
 
 
 def _write_atomic(path: Path, data: bytes) -> None:
@@ -145,10 +149,21 @@ def verified(source: Source, raw: Path = RAW) -> tuple[FetchRecord, bytes]:
     return record, payload
 
 
-def parse(source: Source, payload: bytes) -> list[dict[str, str]]:
-    """One raw file as rows. Every source is read as CSV here; branch on `source["id"]` when one is not."""
+def parse(source: Source, payload: bytes) -> tuple[list[str], list[dict[str, str]]]:
+    """One raw file as its columns and rows. Every source is read as CSV here; branch on `source["id"]` when one is not.
+
+    Raises ValueError for a row with more fields than the header.
+    """
     text = payload.decode(source.get("encoding", "utf-8"))
-    return list(csv.DictReader(io.StringIO(text, newline="")))
+    reader = csv.DictReader(io.StringIO(text, newline=""))
+    rows = []
+    for row in reader:
+        # DictReader files the surplus fields of a long row under the key None.
+        if None in row:
+            msg = f"{source['id']}: line {reader.line_num} has more fields than the header"
+            raise ValueError(msg)
+        rows.append(row)
+    return list(reader.fieldnames or []), rows
 
 
 def build(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED) -> list[Path]:
@@ -165,8 +180,7 @@ def build(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED) -
             "vintage_basis": record.vintage_basis,
             "raw_sha256": record.sha256,
         }
-        rows = parse(source, payload)
-        columns = list(rows[0]) if rows else []
+        columns, rows = parse(source, payload)
         if clash := stamp.keys() & set(columns):
             msg = f"{source['id']}: source columns {sorted(clash)} collide with the provenance columns"
             raise ValueError(msg)
@@ -189,6 +203,13 @@ def read_output(path: Path) -> list[dict[str, str]]:
 def validate(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED) -> list[str]:
     """Check the published output against the manifest and the fetch records; one string per problem."""
     problems = []
+    ids = {source["id"] for source in sources}
+    # Output of a source since removed or renamed would otherwise pass as published data.
+    problems += [
+        f"{out}: no source {out.stem!r} in sources.toml; delete it"
+        for out in sorted(processed.glob("*.csv"))
+        if out.stem not in ids
+    ]
     for source in sources:
         sid, status = source["id"], source.get("status")
         out = processed / f"{sid}.csv"

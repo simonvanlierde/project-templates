@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import tomllib
 from email.message import Message
 from pathlib import Path
 
@@ -70,6 +71,24 @@ def test_vintage_says_who_states_it() -> None:
     assert pipeline.vintage({}, Message()) == ("not stated", "manifest")
 
 
+def test_vintage_is_always_a_string() -> None:
+    """A TOML date as the release, or a Last-Modified header that is not a date, still gives a string."""
+    dated = tomllib.loads("release = 2024-06-01")
+    assert pipeline.vintage(dated, Message()) == ("2024-06-01", "manifest")
+    garbled = Message()
+    garbled["Last-Modified"] = "yesterday"
+    assert pipeline.vintage(dated, garbled) == ("2024-06-01", "manifest")
+    json.dumps(pipeline.vintage(dated, garbled))
+
+
+def test_an_empty_manifest_is_no_sources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A manifest with no `[[source]]` yet is valid: nothing to fetch, build or check."""
+    (tmp_path / "sources.toml").write_text("# no sources yet\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assert pipeline.load_manifest() == []
+    assert _run("fetch", "build", "validate") == [0, 0, 0]
+
+
 def test_build_refuses_a_fetch_made_for_a_different_request(
     upstream: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -89,6 +108,26 @@ def test_build_refuses_a_raw_file_changed_after_fetch(capsys: pytest.CaptureFixt
     RAW.write_text(FIXTURE + "2022,9.9\n", encoding="utf-8")
     assert _run("build") == [1]
     assert "changed since it was fetched" in capsys.readouterr().err
+
+
+def test_build_refuses_a_row_longer_than_the_header(upstream: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A row with an extra field is refused, not written with a column named None."""
+    upstream.write_text("year,value\n2020,1.5,extra\n2021,2.5\n", encoding="utf-8")
+    _run("fetch")
+    assert _run("build") == [1]
+    err = capsys.readouterr().err
+    assert "more fields than the header" in err
+    assert len(err.strip().splitlines()) == 1
+    assert not OUT.exists()
+
+
+def test_build_keeps_the_header_of_a_source_with_no_rows(upstream: Path) -> None:
+    """Columns come from the header, so a header-only source still publishes them."""
+    upstream.write_text("year,value\n", encoding="utf-8")
+    assert _run("fetch", "build") == [0, 0]
+    assert OUT.read_text(encoding="utf-8").splitlines() == [
+        "source_id,source_url,retrieved_at,vintage,vintage_basis,raw_sha256,year,value"
+    ]
 
 
 @pytest.mark.usefixtures("upstream")
@@ -116,6 +155,19 @@ def test_validate_rereads_the_published_output(upstream: Path, capsys: pytest.Ca
     _run("fetch")
     assert _run("validate") == [1]
     assert "re-run build" in capsys.readouterr().err
+
+
+def test_validate_rejects_output_of_a_source_no_longer_in_the_manifest(
+    upstream: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Output left behind by a removed or renamed source is stale, not published data."""
+    _run("fetch", "build")
+    _manifest(tmp_path, upstream.as_uri())
+    manifest = tmp_path / "sources.toml"
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace('"example"', '"renamed"'), encoding="utf-8")
+    _run("fetch", "build")
+    assert _run("validate") == [1]
+    assert "example.csv: no source" in capsys.readouterr().err
 
 
 @pytest.mark.usefixtures("upstream")
