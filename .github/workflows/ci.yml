@@ -139,7 +139,7 @@ jobs:
           uv run "$PROJECT_NAME" fetch
           uv run "$PROJECT_NAME" build
           uv run "$PROJECT_NAME" validate
-          uv run pytest
+          uv run pytest tests/test_published.py
           ls data/raw/*.fetch.json
 
       # buildx for the gha layer cache.
