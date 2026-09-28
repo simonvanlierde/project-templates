@@ -90,6 +90,13 @@
       matchStrings: ["\"packageManager\": \"(?<depName>[a-z]+)@(?<currentValue>[\\d.]+)\""],
       datasourceTemplate: "npm",
     },
+    {
+      // The ts image's bootstrap pnpm, kept equal to packageManager above.
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)Dockerfile\\.jinja$/"],
+      matchStrings: ["npm i -g (?<depName>pnpm)@(?<currentValue>[\\d.]+)"],
+      datasourceTemplate: "npm",
+    },
   ],
 
   // One PR for all of it. A digest bump in ci.yml and the same bump in the five
