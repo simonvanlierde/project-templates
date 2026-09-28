@@ -92,7 +92,7 @@ module_name:
   type: str
   when: "{{ 'python' in stacks }}"
   help: Importable Python module name
-  default: "{{ slug|replace('-', '_') }}"
+  default: "{{ slug|replace('-', '_')|replace('.', '_') }}"
 
 author_orcid:
   type: str

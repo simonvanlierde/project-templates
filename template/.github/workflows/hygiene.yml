@@ -33,7 +33,8 @@ jobs:
         env:
           # The stack workflows run these from the project's own environment.
           # gitleaks scans staged changes only, and CI stages nothing: GitHub
-          # secret scanning is the server-side check.
+          # secret scanning is the server-side check, free on public repos only
+          # (a private repo needs GitHub Advanced Security).
           SKIP: ruff-check,ruff-format,ty,biome,tsc,gitleaks
           # Enables zizmor's online audits (impostor commits, known-vulnerable
           # actions). Read-only, like the workflow's permissions.
