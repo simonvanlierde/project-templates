@@ -1,7 +1,9 @@
 """Settings, read from the environment once at startup.
 
 Plain environment variables, no settings framework: three values do not need one.
-Put them in `.env` for `docker compose` (never commit it) or export them.
+Put them in `.env` for `docker compose` (never commit it) or export them. Inside the
+container HOST and PORT are fixed by the image and compose.yaml; `.env` cannot move
+them, because the port mapping and the HEALTHCHECK expect them there.
 """
 
 from __future__ import annotations

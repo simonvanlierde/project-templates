@@ -25,6 +25,10 @@ services:
         required: false
 {%- if stack == 'python' and kind == 'web-service' %}
     environment:
+      # Fixed here, not in .env: the port mapping above and the image's HEALTHCHECK
+      # both expect the app on 0.0.0.0:{{ app_port }} inside the container.
+      HOST: 0.0.0.0
+      PORT: "{{ app_port }}"
       # Telemetry stays off unless this names an OTLP/HTTP collector, for example
       # http://otel-collector:4318 on a shared Docker network. Empty means unset.
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
