@@ -130,6 +130,71 @@ def test_build_keeps_the_header_of_a_source_with_no_rows(upstream: Path) -> None
     ]
 
 
+def test_validate_reports_an_output_with_no_rows(upstream: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A source that builds to nothing is a problem, not a quietly empty publication."""
+    upstream.write_text("year,value\n", encoding="utf-8")
+    assert _run("fetch", "build", "validate") == [0, 0, 1]
+    assert "no rows" in capsys.readouterr().err
+
+
+def test_build_refuses_a_repeated_column_name(upstream: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Two columns with one name would publish the second's values under both."""
+    upstream.write_text("a,a\n1,2\n", encoding="utf-8")
+    assert _run("fetch", "build") == [0, 1]
+    assert "appear more than once in the header" in capsys.readouterr().err
+    assert not OUT.exists()
+
+
+def test_build_drops_a_byte_order_mark(upstream: Path) -> None:
+    """A spreadsheet export's BOM does not end up in the first column's name."""
+    upstream.write_bytes(b"\xef\xbb\xbf" + FIXTURE.encode())
+    assert _run("fetch", "build") == [0, 0]
+    assert [r["year"] for r in pipeline.read_output(OUT)] == ["2020", "2021"]
+
+
+@pytest.mark.parametrize(
+    ("stage", "path", "text", "expected"),
+    [
+        ("fetch", "sources.toml", '[[source]]\nid = "x"\nstatus = "implemented"\n', "no url"),
+        ("fetch", "sources.toml", "[[source]]\nid = 1\n", "needs a string id"),
+        ("build", "data/raw/example.csv.fetch.json", "{}", "not a fetch record"),
+    ],
+)
+@pytest.mark.usefixtures("upstream")
+def test_a_hand_edited_file_is_one_line_and_a_failed_exit(
+    stage: str, path: str, text: str, expected: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Expected mistakes in the manifest or a fetch record are reported, not raised as a traceback."""
+    _run("fetch")
+    Path(path).write_text(text, encoding="utf-8")
+    capsys.readouterr()
+    assert _run(stage) == [1]
+    err = capsys.readouterr().err
+    assert expected in err
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_an_unknown_encoding_is_one_line_and_a_failed_exit(
+    upstream: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A mistyped `encoding` names itself instead of raising LookupError."""
+    _manifest(tmp_path, upstream.as_uri(), terms='encoding = "nope"')
+    assert _run("fetch", "build") == [0, 1]
+    err = capsys.readouterr().err
+    assert "nope" in err
+    assert len(err.strip().splitlines()) == 1
+
+
+@pytest.mark.usefixtures("upstream")
+def test_validate_rejects_an_unknown_status(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A mistyped status is named as such, not reported as a missing file."""
+    manifest = tmp_path / "sources.toml"
+    text = manifest.read_text(encoding="utf-8")
+    manifest.write_text(text.replace('"unimplemented"', '"unimplmented"'), encoding="utf-8")
+    assert _run("validate") == [1]
+    assert "status must be" in capsys.readouterr().err
+
+
 @pytest.mark.usefixtures("upstream")
 def test_a_missing_input_is_one_line_and_a_failed_exit(capsys: pytest.CaptureFixture[str]) -> None:
     """Building before fetching names the missing file instead of printing a traceback."""
@@ -152,7 +217,11 @@ def test_a_failed_download_is_one_line_and_a_failed_exit(
 
 @pytest.mark.parametrize(
     ("ids", "expected"),
-    [(["a", "a"], "appear more than once"), (["../escape"], "may hold only letters")],
+    [
+        (["a", "a"], "appear more than once"),
+        (["a", "A"], "appear more than once"),
+        (["../escape"], "may hold only letters"),
+    ],
 )
 @pytest.mark.usefixtures("upstream")
 def test_the_manifest_rejects_ids_unfit_for_file_names(

@@ -61,12 +61,20 @@ def load_manifest(path: Path = MANIFEST) -> list[Source]:
     """The `[[source]]` tables of sources.toml, once each id is shown safe as a unique file name."""
     with path.open("rb") as fh:
         sources = tomllib.load(fh).get("source", [])
+    if not isinstance(sources, list) or not all(isinstance(s, dict) and isinstance(s.get("id"), str) for s in sources):
+        msg = "sources.toml: every [[source]] needs a string id"
+        raise ValueError(msg)
     ids = [s["id"] for s in sources]
     if bad := [i for i in ids if not re.fullmatch(r"[\w-]+", i)]:
         msg = f"ids {bad} in sources.toml may hold only letters, digits, _ and -"
         raise ValueError(msg)
-    if dupes := sorted({i for i in ids if ids.count(i) > 1}):
-        msg = f"ids {dupes} appear more than once in sources.toml"
+    # Case-insensitive: macOS and Windows file names are, so `A` and `a` share a file.
+    folded = [i.casefold() for i in ids]
+    if dupes := sorted({i for i in ids if folded.count(i.casefold()) > 1}):
+        msg = f"ids {dupes} appear more than once in sources.toml, ignoring case"
+        raise ValueError(msg)
+    if no_url := [s["id"] for s in implemented(sources) if not isinstance(s.get("url"), str)]:
+        msg = f"implemented sources {no_url} in sources.toml have no url"
         raise ValueError(msg)
     return sources
 
@@ -138,7 +146,11 @@ def verified(source: Source, raw: Path = RAW) -> tuple[FetchRecord, bytes]:
     manifest now makes, or when the raw file no longer hashes to the record.
     """
     name = raw_name(source)
-    record = FetchRecord(**json.loads((raw / f"{name}.fetch.json").read_text(encoding="utf-8")))
+    try:
+        record = FetchRecord(**json.loads((raw / f"{name}.fetch.json").read_text(encoding="utf-8")))
+    except TypeError as error:
+        msg = f"{name}.fetch.json is not a fetch record; re-run fetch"
+        raise ValueError(msg) from error
     if (record.source_id, record.url) != (source["id"], source["url"]):
         msg = f"{name} was fetched from {record.url}, but sources.toml now requests {source['url']}; re-run fetch"
         raise ValueError(msg)
@@ -152,10 +164,16 @@ def verified(source: Source, raw: Path = RAW) -> tuple[FetchRecord, bytes]:
 def parse(source: Source, payload: bytes) -> tuple[list[str], list[dict[str, str]]]:
     """One raw file as its columns and rows. Every source is read as CSV here; branch on `source["id"]` when one is not.
 
-    Raises ValueError for a row with more fields than the header.
+    Raises ValueError for a repeated column name, or a row with more fields than the header.
     """
-    text = payload.decode(source.get("encoding", "utf-8"))
+    # utf-8-sig drops the byte-order mark spreadsheet exports start with; plain UTF-8 reads the same.
+    text = payload.decode(source.get("encoding", "utf-8-sig"))
     reader = csv.DictReader(io.StringIO(text, newline=""))
+    columns = list(reader.fieldnames or [])
+    # DictReader keeps only the last of two same-named columns, silently dropping the other.
+    if dupes := sorted({c for c in columns if columns.count(c) > 1}):
+        msg = f"{source['id']}: columns {dupes} appear more than once in the header"
+        raise ValueError(msg)
     rows = []
     for row in reader:
         # DictReader files the surplus fields of a long row under the key None.
@@ -163,7 +181,7 @@ def parse(source: Source, payload: bytes) -> tuple[list[str], list[dict[str, str
             msg = f"{source['id']}: line {reader.line_num} has more fields than the header"
             raise ValueError(msg)
         rows.append(row)
-    return list(reader.fieldnames or []), rows
+    return columns, rows
 
 
 def build(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED) -> list[Path]:
@@ -225,12 +243,12 @@ def validate(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED
         try:
             record, _ = verified(source, raw)
             rows = read_output(out)
-        except (OSError, ValueError) as error:
+        except (OSError, ValueError, csv.Error) as error:
             problems.append(_message(error))
             continue
         if not rows:
             problems.append(f"{out}: no rows")
-        if {(r["source_url"], r["raw_sha256"]) for r in rows} - {(record.url, record.sha256)}:
+        if {(r.get("source_url"), r.get("raw_sha256")) for r in rows} - {(record.url, record.sha256)}:
             problems.append(f"{out}: rows come from an earlier fetch than {raw_name(source)}; re-run build")
     return problems
 
@@ -249,8 +267,9 @@ def main(argv: list[str] | None = None) -> int:
     stage = parser.parse_args(argv).stage
     try:
         problems = _run(stage, load_manifest())
-    # OSError covers a missing file and a failed download; ValueError a bad manifest or a stale fetch.
-    except (OSError, ValueError) as error:
+    # OSError: a missing file or a failed download. ValueError: a bad manifest or a stale fetch.
+    # LookupError: an unknown `encoding`. csv.Error: a source that is not readable CSV.
+    except (OSError, ValueError, LookupError, csv.Error) as error:
         print(f"{stage}: {_message(error)}", file=sys.stderr)
         return 1
     for problem in problems:
