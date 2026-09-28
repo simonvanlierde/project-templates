@@ -50,5 +50,6 @@ scanning is the server-side check.
   without it, the offline subset runs.
 - The `data-pipeline` kind fetches its sources' live URLs in CI, this template's own CI
   included. A publisher outage or a moved file fails the run whatever the diff; re-run it.
-- This template's own CI renders the templates and runs zizmor, actionlint, and the
-  CITATION.cff schema check over the output, because `.jinja` files are not YAML.
+- This template's own CI renders the templates with `scripts/check-render.sh`. Then it
+  runs zizmor, actionlint, and the CITATION.cff schema check over the output, because
+  `.jinja` files aren't YAML.

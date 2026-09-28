@@ -28,7 +28,7 @@
   },
 
   // pre-commit, pep621 and npm parse their files, so Jinja defeats them; these
-  // read raw bytes instead. They fail open, which renovate-extract.yml guards.
+  // read raw bytes instead. They fail open, which lint.yml guards.
   customManagers: [
     {
       // The root config too: the built-in pre-commit manager is off by default.
