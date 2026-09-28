@@ -12,6 +12,9 @@
     // The `# renovate: datasource=... depName=...` / `X_VERSION:` pairs in the
     // workflow env blocks.
     "customManagers:githubActionsVersions",
+    // best-practices only covers npm; copier, zizmor and the pyproject pins
+    // automerge too, so they get the same 3-day wait.
+    "security:minimumReleaseAgePypi",
   ],
 
   // Renovate here, Dependabot in the generated projects: this repo's pins live
@@ -67,6 +70,14 @@
   ],
 
   packageRules: [
+    // Non-major updates merge once every check is green; majors stay manual.
+    // Renovate merges, not GitHub: main has no required checks, so native
+    // automerge would not wait for CI.
+    {
+      matchUpdateTypes: ["minor", "patch", "pin", "digest"],
+      automerge: true,
+      platformAutomerge: false,
+    },
     {
       matchManagers: ["github-actions"],
       groupName: "actions",
