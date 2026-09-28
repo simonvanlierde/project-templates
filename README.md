@@ -221,4 +221,5 @@ To test an update against a local checkout, set `_src_path` to the checkout's pa
 that run, as the CI `update` job does.
 The `_commit` it records is the checkout's commit, so render from a pushed tag:
 `copier update` can't check out a commit that only existed on your machine or on a
-deleted branch.
+deleted branch. The same goes for a tag you haven't pushed, or one that exists only in a
+fork. The answers file names this repository on GitHub, and that tag isn't there.
