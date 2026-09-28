@@ -219,3 +219,6 @@ GitHub and `copier update` would fail to check it out. Render from a tag, or edi
 `_src_path` and `_commit`, before you commit the answers file of a real project.
 To test an update against a local checkout, set `_src_path` to the checkout's path for
 that run, as the CI `update` job does.
+The `_commit` it records is the checkout's commit, so render from a pushed tag:
+`copier update` can't check out a commit that only existed on your machine or on a
+deleted branch.

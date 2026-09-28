@@ -19,6 +19,7 @@ import email.utils
 import hashlib
 import io
 import json
+import re
 import sys
 import tomllib
 import urllib.request
@@ -57,17 +58,16 @@ class FetchRecord:
 
 
 def load_manifest(path: Path = MANIFEST) -> list[Source]:
-    """The `[[source]]` tables of sources.toml.
-
-    Raises ValueError for an id that is not a plain file name: ids name files
-    under data/, and a path there would write outside it.
-    """
+    """The `[[source]]` tables of sources.toml, once each id is shown safe as a unique file name."""
     with path.open("rb") as fh:
         sources = tomllib.load(fh).get("source", [])
-    for source in sources:
-        if source["id"] != Path(source["id"]).name or source["id"].startswith("."):
-            msg = f"source id {source['id']!r} must be a plain file name"
-            raise ValueError(msg)
+    ids = [s["id"] for s in sources]
+    if bad := [i for i in ids if not re.fullmatch(r"[\w-]+", i)]:
+        msg = f"ids {bad} in sources.toml may hold only letters, digits, _ and -"
+        raise ValueError(msg)
+    if dupes := sorted({i for i in ids if ids.count(i) > 1}):
+        msg = f"ids {dupes} appear more than once in sources.toml"
+        raise ValueError(msg)
     return sources
 
 
@@ -224,15 +224,22 @@ def validate(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED
             problems.append(f"{sid}: no terms or terms_url; record the publisher's reuse terms")
         try:
             record, _ = verified(source, raw)
-        except ValueError as error:
-            problems.append(str(error))
+            rows = read_output(out)
+        except (OSError, ValueError) as error:
+            problems.append(_message(error))
             continue
-        rows = read_output(out)
         if not rows:
             problems.append(f"{out}: no rows")
         if {(r["source_url"], r["raw_sha256"]) for r in rows} - {(record.url, record.sha256)}:
             problems.append(f"{out}: rows come from an earlier fetch than {raw_name(source)}; re-run build")
     return problems
+
+
+def _message(error: Exception) -> str:
+    """One line for an expected failure: a missing file by name, anything else as raised."""
+    if isinstance(error, FileNotFoundError) and error.filename:
+        return f"{error.filename} is missing"
+    return str(error)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -242,9 +249,9 @@ def main(argv: list[str] | None = None) -> int:
     stage = parser.parse_args(argv).stage
     try:
         problems = _run(stage, load_manifest())
-    except (FileNotFoundError, ValueError) as error:
-        missing = isinstance(error, FileNotFoundError) and error.filename
-        print(f"{stage}: {f'{error.filename} is missing' if missing else error}", file=sys.stderr)
+    # OSError covers a missing file and a failed download; ValueError a bad manifest or a stale fetch.
+    except (OSError, ValueError) as error:
+        print(f"{stage}: {_message(error)}", file=sys.stderr)
         return 1
     for problem in problems:
         print(problem, file=sys.stderr)

@@ -6,7 +6,7 @@
 py-sync:
     {{ uv }} sync
 
-# What CI runs: lint, format check, types, tests.
+# What CI runs: lint, format check, types, tests{% if kind == 'data-pipeline' %}; CI also runs the `just pipeline` stages{% endif %}.
 py-check:
     {{ uv }} run ruff check
     {{ uv }} run ruff format --check

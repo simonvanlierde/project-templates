@@ -139,6 +139,51 @@ def test_a_missing_input_is_one_line_and_a_failed_exit(capsys: pytest.CaptureFix
     assert len(err.strip().splitlines()) == 1
 
 
+def test_a_failed_download_is_one_line_and_a_failed_exit(
+    upstream: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A dead URL is reported like any other expected failure, not as a traceback."""
+    _manifest(tmp_path, upstream.with_name("gone.csv").as_uri())
+    assert _run("fetch") == [1]
+    err = capsys.readouterr().err
+    assert err.startswith("fetch: ")
+    assert len(err.strip().splitlines()) == 1
+
+
+@pytest.mark.parametrize(
+    ("ids", "expected"),
+    [(["a", "a"], "appear more than once"), (["../escape"], "may hold only letters")],
+)
+@pytest.mark.usefixtures("upstream")
+def test_the_manifest_rejects_ids_unfit_for_file_names(
+    ids: list[str], expected: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Ids name the raw and output files, so a repeat would overwrite and a path would escape."""
+    Path("sources.toml").write_text("".join(f'[[source]]\nid = "{i}"\n' for i in ids), encoding="utf-8")
+    assert _run("fetch") == [1]
+    assert expected in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("upstream")
+def test_build_refuses_a_column_named_like_a_provenance_column(
+    upstream: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A source column must not be silently overwritten by the provenance stamp."""
+    upstream.write_text("year,source_url\n2020,x\n", encoding="utf-8")
+    assert _run("fetch", "build") == [0, 1]
+    assert "collide with the provenance columns" in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("upstream")
+def test_validate_reports_missing_output_as_a_problem(capsys: pytest.CaptureFixture[str]) -> None:
+    """Validate lists a source it cannot check instead of stopping at it."""
+    _run("fetch")
+    assert _run("validate") == [1]
+    out, err = capsys.readouterr()
+    assert "1 problems" in out
+    assert "data/processed/example.csv is missing" in err
+
+
 @pytest.mark.usefixtures("upstream")
 def test_validate_rehashes_the_raw_file(capsys: pytest.CaptureFixture[str]) -> None:
     """A raw file edited after the build fails validation."""

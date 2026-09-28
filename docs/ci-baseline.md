@@ -48,5 +48,7 @@ scanning is the server-side check.
 - zizmor needs a token for its online audits: impostor commits and known-vulnerable actions. The
   hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN` to get them;
   without it, the offline subset runs.
+- The `data-pipeline` kind fetches its sources' live URLs in CI, this template's own CI
+  included. A publisher outage or a moved file fails the run whatever the diff; re-run it.
 - This template's own CI renders the templates and runs zizmor, actionlint, and the
   CITATION.cff schema check over the output, because `.jinja` files are not YAML.
