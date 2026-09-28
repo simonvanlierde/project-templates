@@ -6,6 +6,9 @@
     "config:best-practices",
     ":semanticCommits",
     "schedule:weekly",
+    // Minor and patch in one PR; the actions and uv groups below take
+    // precedence for theirs, and majors stay separate.
+    "group:allNonMajor",
     // The `# renovate: datasource=... depName=...` / `X_VERSION:` pairs in the
     // workflow env blocks.
     "customManagers:githubActionsVersions",
