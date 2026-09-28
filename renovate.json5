@@ -70,13 +70,11 @@
   ],
 
   packageRules: [
-    // Non-major updates merge once every check is green; majors stay manual.
-    // Renovate merges, not GitHub: main has no required checks, so native
-    // automerge would not wait for CI.
+    // Non-major updates merge once the checks the main ruleset requires pass;
+    // majors stay manual.
     {
       matchUpdateTypes: ["minor", "patch", "pin", "digest"],
       automerge: true,
-      platformAutomerge: false,
     },
     {
       matchManagers: ["github-actions"],
