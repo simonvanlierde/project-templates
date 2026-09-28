@@ -15,13 +15,31 @@ license = "{{ license }}"
 license-files = ["LICENSE"]
 {%- endif %}
 {%- endif %}
+{%- if kind == 'web-service' %}
+dependencies = [
+  "fastapi>=0.141",
+  "opentelemetry-exporter-otlp-proto-http>=1.45",
+  "opentelemetry-instrumentation-fastapi>=0.66b0",
+  "opentelemetry-sdk>=1.45",
+  "uvicorn>=0.54",
+]
+{%- else %}
 dependencies = []
+{%- endif %}
 {%- if not publish_to_pypi %}
 # PyPI rejects unknown classifiers, so this one makes an accidental upload fail.
 # Delete it (and set publish_to_pypi) when you do want to publish.
 classifiers = ["Private :: Do Not Upload"]
 {%- endif %}
-{% if kind == 'library' %}
+{% if kind == 'data-pipeline' %}
+# `{{ slug }} fetch|build|validate`, what the `just` recipes of the same names run.
+[project.scripts]
+{{ slug }} = "{{ module_name }}.pipeline:main"
+{% endif %}{% if kind == 'web-service' %}
+# `{{ slug }}` serves on HOST:PORT, as `python -m {{ module_name }}` does in the image.
+[project.scripts]
+{{ slug }} = "{{ module_name }}.__main__:main"
+{% endif %}{% if kind == 'library' %}
 [project.urls]
 Homepage = "https://github.com/{{ github_user }}/{{ slug }}"
 Issues = "https://github.com/{{ github_user }}/{{ slug }}/issues"
@@ -34,6 +52,9 @@ dev = [
   "ty>=0.0.63",
 {%- if kind == 'research' %}
   "jupyterlab>=4",
+{%- endif %}
+{%- if kind == 'web-service' %}
+  "httpx>=0.28", # fastapi.testclient (see filterwarnings below)
 {%- endif %}
 ]
 
@@ -72,6 +93,9 @@ ignore = [
 {%- if kind == 'research' %}
 "*.ipynb" = ["T201", "E402"] # notebooks print and import late
 {%- endif %}
+{%- if kind == 'data-pipeline' %}
+"src/{{ module_name }}/pipeline.py" = ["T201"] # a CLI reports by printing
+{%- endif %}
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -83,6 +107,12 @@ max-args = 10
 [tool.pytest.ini_options]
 addopts = ["-ra", "--strict-config", "--strict-markers", "--import-mode=importlib"]
 testpaths = ["tests"]
+{%- if kind == 'web-service' %}
+# NOTE: Starlette 1.x prefers httpx2 for its TestClient and warns on httpx. httpx is
+# kept because it works with every Starlette that FastAPI accepts; swap it for
+# httpx2 (and drop this filter) once the floor reaches a Starlette that has it.
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]
+{%- endif %}
 
 # Coverage is opt-in, via `pytest --cov` (`just py-cov`), not addopts: it costs
 # every plain test run for a number you only look at now and then. No fail_under

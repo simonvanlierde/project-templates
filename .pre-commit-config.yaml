@@ -42,6 +42,11 @@ repos:
     hooks:
       - id: zizmor
 
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
   # Dogfooded the same way as yamllint above.
   - repo: https://github.com/rvben/rumdl-pre-commit
     rev: v0.2.46

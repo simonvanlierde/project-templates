@@ -1,0 +1,24 @@
+{%- set name = author_name.split(' ', 1) -%}
+# GitHub reads this for its "Cite this repository" button, Zenodo when it
+# archives a release. Check the name split below: the first word is taken as
+# the given name.
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: {{ project_name | to_json }}
+{%- if project_description %}
+abstract: {{ project_description | to_json }}
+{%- endif %}
+authors:
+{%- if name | length > 1 %}
+  - given-names: {{ name[0] | to_json }}
+    family-names: {{ name[1] | to_json }}
+{%- else %}
+  - family-names: {{ name[0] | to_json }}
+{%- endif %}
+{%- if author_orcid %}
+    orcid: "https://orcid.org/{{ author_orcid }}"
+{%- endif %}
+repository-code: "https://github.com/{{ github_user }}/{{ slug }}"
+{%- if license != 'none' %}
+license: {{ license }}
+{%- endif %}

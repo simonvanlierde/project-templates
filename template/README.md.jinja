@@ -20,10 +20,20 @@ prek install     # git hooks
 `just` lists the tasks. They mirror what [.github/workflows/](.github/workflows/) runs.
 
 ```sh
-just check       # lint, types and tests for every stack here{% if 'docker' in stacks %}
-just up          # run the service(s) in its container, rebuilt on source changes{% endif %}
+just check       # lint, types and tests for every stack here{% if 'python' in stacks and kind == 'data-pipeline' %}
+just pipeline    # fetch, build and validate every source in sources.toml{% endif %}{% if 'docker' in stacks %}
+just up          # run each service in its container, rebuilt on source changes{% endif %}
 ```
+{% if 'python' in stacks and kind == 'data-pipeline' %}{% set d = '' if python_dir == '.' else python_dir ~ '/' %}
+## Pipeline
 
+[`{{ d }}sources.toml`]({{ d }}sources.toml) declares every input: its URL, its reuse
+terms, and whether the pipeline reads it yet (`status`). `just fetch` downloads each
+implemented source to `{{ d }}data/raw/` with a fetch record, `just build` writes
+`{{ d }}data/processed/`, and `just validate` checks the published output against those
+records. Neither directory is committed. [ATTRIBUTION.md](ATTRIBUTION.md) lists what
+this repository reuses, and on what terms.
+{% endif %}
 ## License
 
 {% if license == 'none' %}Not licensed for redistribution.{% else %}See [LICENSE](LICENSE) for the license terms.{% endif %}

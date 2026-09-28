@@ -25,3 +25,26 @@ py-cov:
 # Tests only; extra arguments reach pytest (`just py-test -k name`).
 py-test *args:
     {{ uv }} run pytest {% raw %}{{ args }}{% endraw %}
+{%- if kind == 'data-pipeline' %}
+
+# Download each implemented source in sources.toml to data/raw/, with a fetch record.
+fetch:
+    {{ uv }} run {{ slug }} fetch
+
+# Turn data/raw/ into data/processed/, verifying each checksum first.
+build:
+    {{ uv }} run {{ slug }} build
+
+# Re-read data/processed/ and re-hash data/raw/ against the fetch records.
+validate:
+    {{ uv }} run {{ slug }} validate
+
+# The whole chain, from the network to validated output.
+pipeline: fetch build validate
+{%- endif %}
+{%- if kind == 'web-service' %}
+
+# Serve on 127.0.0.1:{{ app_port }} (HOST and PORT override), outside Docker.
+serve:
+    {{ uv }} run {{ slug }}
+{%- endif %}

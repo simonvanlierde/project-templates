@@ -1,0 +1,15 @@
+# data
+{% if kind == 'data-pipeline' %}
+`raw/` holds each source exactly as downloaded, beside a `<file>.fetch.json` record:
+the URL, retrieval time, SHA-256 and vintage. `processed/` holds what `just build`
+derives from it. Both are gitignored and rebuilt by `just pipeline` from
+`sources.toml`, so the repository never redistributes source data. Never edit a
+raw file in place: `just build` and `just validate` both reject one whose checksum
+no longer matches its fetch record.
+{%- else %}
+`raw/` is read-only input, never edited in place. `processed/` is derived and
+reproducible from `raw/` plus the notebooks, so it is safe to delete.
+
+Record the provenance of anything in `raw/` here. Add these directories to
+`.gitignore` if the inputs are large or private.
+{%- endif %}

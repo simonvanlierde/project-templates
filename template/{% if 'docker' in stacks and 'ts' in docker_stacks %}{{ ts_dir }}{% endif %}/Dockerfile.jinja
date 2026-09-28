@@ -53,11 +53,12 @@ COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/package.json ./
 
-USER node
+# The node image's own user, by uid, so it holds where the host has no user named node.
+USER 1000:1000
 EXPOSE {{ app_port }}
 
 # NOTE: assumes an HTTP GET /health returning 200. Drop this if the image is not a service.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:{{ app_port }}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD ["node", "-e", "fetch('http://127.0.0.1:{{ app_port }}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
 CMD ["node", "dist/main.js"]

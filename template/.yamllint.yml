@@ -1,8 +1,10 @@
 extends: default
 
-# Copier writes this file's formatting; ours to consume, not to lint.
+# Tools write these files' formatting (copier, pnpm); ours to consume, not to lint.
+# A bare name matches at any depth, so a nested package's lockfile too.
 ignore: |
   .copier-answers.yml
+  pnpm-lock.yaml
 
 rules:
   # No file in this repo opens with a `---` document marker, and comments
