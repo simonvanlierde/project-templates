@@ -6,14 +6,9 @@ name: ci
 # No push trigger: main only advances through a PR, so a push run repeats
 # the check that already passed on the PR head.
 on:
+  # No paths-ignore: `ci ok` is a required check, and a skipped workflow
+  # leaves it pending forever. The whole run takes under a minute anyway.
   pull_request:
-    # Root files no render reads. Every other .md is template output.
-    paths-ignore:
-      - README.md
-      - docs/**
-      - renovate.json5
-      - .pre-commit-config.yaml
-      - .github/workflows/lint.yml
   # Scaffolds break when upstream moves (a new uv, pnpm or hook release), not
   # when this repo does — so also run on a schedule.
   schedule:
@@ -342,3 +337,18 @@ jobs:
         env:
           CONTEXT: ${{ runner.temp }}/proj/${{ matrix.ts_dir }}
         run: docker build "$CONTEXT"
+
+  ok:
+    # The one check the main ruleset requires, so matrix rows can change
+    # without touching repo settings. always(): a skipped job must fail it.
+    name: ci ok
+    if: always()
+    needs: [python, render, update, typescript]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
