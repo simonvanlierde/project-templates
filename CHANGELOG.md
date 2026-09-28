@@ -24,3 +24,10 @@ release. Dependency bumps and this repo's own CI are left out; `git log` has the
 - Both Dockerfiles pass hadolint 2.15.
 - A project name with quotes now renders, and `module_name` is always a valid identifier.
 - yamllint skips `pnpm-lock.yaml`.
+
+## v0.5.0 and earlier
+
+The first releases, July 2026: one template with Python (`library`, `app`, `research`),
+TypeScript and Docker stacks, pinned GitHub Actions audited by zizmor, PyPI and npm
+release workflows, Dependabot with a cooldown, and vale, yamllint and rumdl linting.
+`git log v0.5.0` has the detail.
