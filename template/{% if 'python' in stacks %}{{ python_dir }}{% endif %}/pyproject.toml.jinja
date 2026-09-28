@@ -34,11 +34,11 @@ classifiers = ["Private :: Do Not Upload"]
 {% if kind == 'data-pipeline' %}
 # `{{ slug }} fetch|build|validate`, what the `just` recipes of the same names run.
 [project.scripts]
-{{ slug }} = "{{ module_name }}.pipeline:main"
+{{ slug | to_json }} = "{{ module_name }}.pipeline:main"
 {% endif %}{% if kind == 'web-service' %}
 # `{{ slug }}` serves on HOST:PORT, as `python -m {{ module_name }}` does in the image.
 [project.scripts]
-{{ slug }} = "{{ module_name }}.__main__:main"
+{{ slug | to_json }} = "{{ module_name }}.__main__:main"
 {% endif %}{% if kind == 'library' %}
 [project.urls]
 Homepage = "https://github.com/{{ github_user }}/{{ slug }}"
