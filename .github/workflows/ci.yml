@@ -240,6 +240,16 @@ jobs:
             --data license=none --data 'stacks=[ts,docker]' \
             --data 'docker_stacks=[ts]' . "$RUNNER_TEMP/b"
 
+      # Released scaffolds come from a tag, which the other renders are not.
+      # A throwaway local tag on HEAD stands in for one.
+      - name: render at a tag
+        run: |
+          set -euo pipefail
+          git tag ci-render-tag
+          uvx "copier@$COPIER_VERSION" copy --vcs-ref=ci-render-tag --defaults --overwrite \
+            --data project_name=tag-me --data 'stacks=[python]' . "$RUNNER_TEMP/e"
+          git tag -d ci-render-tag
+
       - name: parse everything rendered
         run: |
           set -euo pipefail
@@ -290,9 +300,12 @@ jobs:
           test ! -e c/CITATION.cff
           grep -q check-citation-file-format a/.pre-commit-config.yaml
           (! grep -q check-citation-file-format c/.pre-commit-config.yaml)
-          # Rendered from a local checkout, the answers file still names the
-          # canonical source, never the path it was rendered from.
-          grep -qx '_src_path: gh:simonvanlierde/project-templates' a/.copier-answers.yml
+          # Rendered from a tag, the answers name the canonical source, never
+          # the local path. From any other commit they keep the source as given:
+          # the canonical source has no such commit for `copier update` to check out.
+          grep -qx '_src_path: gh:simonvanlierde/project-templates' e/.copier-answers.yml
+          grep -qx '_commit: ci-render-tag' e/.copier-answers.yml
+          (! grep -q '^_src_path: gh:' a/.copier-answers.yml)
           # All three stacks at once: every hook block present together.
           grep -q hadolint a/.pre-commit-config.yaml
           grep -q 'ruff check' a/.pre-commit-config.yaml

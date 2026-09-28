@@ -211,8 +211,11 @@ copier copy --vcs-ref=HEAD gh:simonvanlierde/project-templates .
 
 Without it, copier renders the last tag and your changes never reach the output.
 
-A render from a local checkout records `gh:simonvanlierde/project-templates` as
-`_src_path` in `.copier-answers.yml`, not the local path. A local path would leak your
+A render of a tag from a local checkout records `gh:simonvanlierde/project-templates`
+as `_src_path` in `.copier-answers.yml`, not the local path. A local path would leak your
 home directory into the new repo, and `copier update` would fail on any other machine.
+A render of any other commit keeps the local path, because that commit may not exist on
+GitHub and `copier update` would fail to check it out. Render from a tag, or edit
+`_src_path` and `_commit`, before you commit the answers file of a real project.
 To test an update against a local checkout, set `_src_path` to the checkout's path for
 that run, as the CI `update` job does.
