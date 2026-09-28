@@ -22,7 +22,7 @@ prek install     # git hooks
 ```sh
 just check       # lint, types and tests for every stack here{% if 'python' in stacks and kind == 'data-pipeline' %}
 just pipeline    # fetch, build and validate every source in sources.toml{% endif %}{% if 'docker' in stacks %}
-just up          # run the service(s) in its container, rebuilt on source changes{% endif %}
+just up          # run each service in its container, rebuilt on source changes{% endif %}
 ```
 {% if 'python' in stacks and kind == 'data-pipeline' %}{% set d = '' if python_dir == '.' else python_dir ~ '/' %}
 ## Pipeline
