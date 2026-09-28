@@ -211,6 +211,14 @@ copier copy --vcs-ref=HEAD gh:simonvanlierde/project-templates .
 
 Without it, copier renders the last tag and your changes never reach the output.
 
+Before you push, run the hooks and the render checks CI runs. The script renders
+uncommitted edits too:
+
+```sh
+prek run -a
+scripts/check-render.sh "$(mktemp -d)"
+```
+
 A render of a tag from a local checkout records `gh:simonvanlierde/project-templates`
 as `_src_path` in `.copier-answers.yml`, not the local path. A local path would leak your
 home directory into the new repo, and `copier update` would fail on any other machine.

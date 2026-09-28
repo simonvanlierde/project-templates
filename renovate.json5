@@ -28,7 +28,7 @@
   },
 
   // pre-commit, pep621 and npm parse their files, so Jinja defeats them; these
-  // read raw bytes instead. They fail open, which renovate-extract.yml guards.
+  // read raw bytes instead. They fail open, which lint.yml guards.
   customManagers: [
     {
       // The root config too: the built-in pre-commit manager is off by default.
@@ -78,6 +78,12 @@
       matchPackageNames: ["ghcr.io/astral-sh/uv", "uv_build"],
       groupName: "uv",
       rangeStrategy: "widen",
+    },
+    // Maintained (commits in 2026-08), but tags only about once a year, which
+    // trips the 1-year abandonment threshold.
+    {
+      matchPackageNames: ["pre-commit/pre-commit-hooks"],
+      abandonmentThreshold: null,
     },
   ],
 }
