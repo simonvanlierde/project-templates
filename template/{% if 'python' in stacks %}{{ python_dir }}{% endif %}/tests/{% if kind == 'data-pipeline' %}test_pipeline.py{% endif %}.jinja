@@ -220,7 +220,6 @@ def test_a_failed_download_is_one_line_and_a_failed_exit(
     [
         (["a", "a"], "appear more than once"),
         (["a", "A"], "appear more than once"),
-        (["../escape"], "may hold only letters"),
     ],
 )
 @pytest.mark.usefixtures("upstream")

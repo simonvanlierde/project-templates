@@ -38,7 +38,6 @@ PROCESSED = Path("data/processed")
 
 IMPLEMENTED = "implemented"
 UNIMPLEMENTED = "unimplemented"
-FETCH, BUILD, VALIDATE = "fetch", "build", "validate"
 _TIMEOUT_S = 120
 
 type Source = dict[str, Any]
@@ -263,10 +262,21 @@ def _message(error: Exception) -> str:
 def main(argv: list[str] | None = None) -> int:
     """Run one stage: fetch, build or validate."""
     parser = argparse.ArgumentParser(prog="{{ slug }}", description=__doc__.splitlines()[0])
-    parser.add_argument("stage", choices=[FETCH, BUILD, VALIDATE])
+    parser.add_argument("stage", choices=["fetch", "build", "validate"])
     stage = parser.parse_args(argv).stage
+    problems: list[str] = []  # only validate reports any
     try:
-        problems = _run(stage, load_manifest())
+        sources = load_manifest()
+        match stage:
+            case "fetch":
+                for r in fetch(sources):
+                    print(f"{r.source_id}  {r.bytes:>9,} B  {r.sha256[:12]}  {r.vintage} ({r.vintage_basis})  {r.url}")
+            case "build":
+                for path in build(sources):
+                    print(f"{len(read_output(path))} rows -> {path}")
+            case _:
+                problems = validate(sources)
+                print(f"{len(problems)} problems")
     # OSError: a missing file or a failed download. ValueError: a bad manifest or a stale fetch.
     # LookupError: an unknown `encoding`. csv.Error: a source that is not readable CSV.
     except (OSError, ValueError, LookupError, csv.Error) as error:
@@ -275,21 +285,6 @@ def main(argv: list[str] | None = None) -> int:
     for problem in problems:
         print(problem, file=sys.stderr)
     return 1 if problems else 0
-
-
-def _run(stage: str, sources: list[Source]) -> list[str]:
-    """Run `stage` and return its problems; only validate reports any."""
-    if stage == FETCH:
-        for r in fetch(sources):
-            print(f"{r.source_id}  {r.bytes:>9,} B  {r.sha256[:12]}  {r.vintage} ({r.vintage_basis})  {r.url}")
-        return []
-    if stage == BUILD:
-        for path in build(sources):
-            print(f"{len(read_output(path))} rows -> {path}")
-        return []
-    problems = validate(sources)
-    print(f"{len(problems)} problems")
-    return problems
 
 
 if __name__ == "__main__":
