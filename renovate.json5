@@ -80,6 +80,12 @@
       matchManagers: ["github-actions"],
       groupName: "actions",
     },
+    // Scaffolds resolve only releases a week old (uv exclude-newer, pnpm
+    // minimumReleaseAge), so a floor raised sooner would not resolve there.
+    {
+      matchDatasources: ["pypi", "npm"],
+      minimumReleaseAge: "7 days",
+    },
     // The uv image and uv_build ship from one release. widen, because the cap
     // is what has to move on a minor; the floor would drop installed uvs for
     // nothing.

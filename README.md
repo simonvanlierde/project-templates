@@ -40,7 +40,7 @@ top and reconcile with git.
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | always   | The repo furniture: `README.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot, `SECURITY.md`, and a PR template; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
 | `python` | A Python package in `<python_dir>`: `pyproject.toml`, `.python-version`, `src/`, `tests/`, plus extra files for the `research` and `data-pipeline` kinds (see below) |
-| `ts`     | A TypeScript package in `<ts_dir>`: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `biome.json`, `src/index.ts`, `src/index.test.ts`        |
+| `ts`     | A TypeScript package in `<ts_dir>`: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `biome.json`, `pnpm-workspace.yaml`, `src/index.ts`, `src/index.test.ts`        |
 | `rust`   | A Rust crate in `<rust_dir>`: `Cargo.toml` with a strict lint policy (see below), `clippy.toml`, `deny.toml`, and `src/lib.rs` or `src/main.rs` by `rust_kind` |
 | `docker` | Per containerized stack: `Dockerfile`, `.dockerignore`, a runnable `/health` entrypoint. Plus `compose.yaml` at the repo root                        |
 
@@ -131,8 +131,8 @@ To move a package later, run `copier update` with the new directory, then delete
 the old one by hand: copier cleans up files that left the *template*, not files
 that moved because an *answer* did.
 
-This isn't a real workspace. It has neither `pnpm-workspace.yaml` nor
-`[tool.uv.workspace]`. Once you need two packages in one language, switch to
+This isn't a real workspace. Its `pnpm-workspace.yaml` holds settings and no
+`packages:` list, and there's no `[tool.uv.workspace]`. Once you need two packages in one language, switch to
 that language's workspace tooling.
 
 ## Tooling
@@ -188,6 +188,15 @@ and it covers every ecosystem this template generates. Version updates wait thro
 yanked during that time. Security updates skip it. This repo uses Renovate because its
 pins live inside `.jinja` files Dependabot can't parse. Neither bot tracks the `FROM`
 base images. Those tags are copier answers, so bump them by hand.
+
+**Dependency age and audits.** Resolvers wait a week too: uv's `exclude-newer = "1 week"`
+in `pyproject.toml` and pnpm's `minimumReleaseAge` in `pnpm-workspace.yaml` skip any
+release younger than that, so a `uv lock` or `pnpm install` can't pull in a release
+that Dependabot would still hold back. Both settings are per project, so every machine
+writes the same lockfile. `just check` and CI also audit dependencies for known
+advisories: `uv audit` (every locked dependency), `pnpm audit --prod` (what ships), and
+`cargo deny check`. Knip reports unused files, exports and dependencies in the TypeScript
+package.
 
 ## Publishing
 

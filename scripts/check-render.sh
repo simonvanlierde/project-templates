@@ -77,6 +77,10 @@ test ! -e a/.github/workflows/python-release.yml
 test ! -e a/.github/workflows/ts-release.yml
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 grep -q '"private": true' a/package.json
+# The one-week release age, in both resolvers.
+grep -qx 'exclude-newer = "1 week"' a/pyproject.toml
+grep -qx 'minimumReleaseAge: 10080' a/pnpm-workspace.yaml
+test -f c/apps/web/pnpm-workspace.yaml
 # module_name fell back to its slug-derived default.
 test -f a/src/render_me/__main__.py
 # The .vscode files rendered valid recommendations per stack.
