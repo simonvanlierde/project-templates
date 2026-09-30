@@ -369,8 +369,8 @@ jobs:
 
   fullstack:
     # Python and ts in one repo, each nested: the root justfile imports both recipe
-    # files, and `check` runs both stacks.
-    name: python + ts
+    # files, and `check` runs both stacks. Both get an image, on a non-default port.
+    name: python + ts + docker
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -388,8 +388,9 @@ jobs:
       - name: scaffold
         run: |
           uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
-            --data project_name=ci-fullstack --data 'stacks=[python,ts]' \
-            --data python_dir=api --data ts_dir=web . "$RUNNER_TEMP/proj"
+            --data project_name=ci-fullstack --data 'stacks=[python,ts,docker]' \
+            --data python_dir=api --data ts_dir=web \
+            --data 'docker_stacks=[python,ts]' --data app_port=9000 . "$RUNNER_TEMP/proj"
 
       # Read by hand for the same reason as in the typescript job.
       - name: versions
@@ -412,6 +413,15 @@ jobs:
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just py-sync ts-sync check
+
+      # --wait holds until both HEALTHCHECKs pass. The second service's host port is
+      # app_port + 1.
+      - name: compose up
+        working-directory: ${{ runner.temp }}/proj
+        run: |
+          docker compose up -d --build --wait
+          curl -fsS http://127.0.0.1:9000/health
+          curl -fsS http://127.0.0.1:9001/health
 
   rust:
     # The rust stack, one row per crate kind: the library flat, the binary nested.
