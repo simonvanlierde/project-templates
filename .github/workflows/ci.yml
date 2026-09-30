@@ -360,12 +360,58 @@ jobs:
           CONTEXT: ${{ runner.temp }}/proj/${{ matrix.ts_dir }}
         run: docker build "$CONTEXT"
 
+  fullstack:
+    # Python and ts in one repo, each nested: the root justfile imports both recipe
+    # files, and `check` runs both stacks.
+    name: python + ts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: template/**/pyproject.toml.jinja
+          cache-suffix: ${{ github.job }}
+          save-cache: ${{ github.event_name != 'pull_request' }}
+
+      - name: scaffold
+        run: |
+          uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
+            --data project_name=ci-fullstack --data 'stacks=[python,ts]' \
+            --data python_dir=api --data ts_dir=web . "$RUNNER_TEMP/proj"
+
+      # Read by hand for the same reason as in the typescript job.
+      - name: versions
+        id: v
+        run: |
+          set -euo pipefail
+          pnpm=$(jq -er '.packageManager | ltrimstr("pnpm@")' "$RUNNER_TEMP/proj/web/package.json")
+          node=$(sed -n 's/^node_version: *//p' "$RUNNER_TEMP/proj/.copier-answers.yml" | tr -d "\"'")
+          test -n "$pnpm" && test -n "$node"
+          { echo "pnpm=$pnpm"; echo "node=$node"; } >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          version: ${{ steps.v.outputs.pnpm }}
+          runtime: node@${{ steps.v.outputs.node }}
+          install: false
+
+      - run: uv tool install "rust-just==$JUST_VERSION"
+
+      - name: inner loop
+        working-directory: ${{ runner.temp }}/proj
+        run: just py-sync ts-sync check
+
   ok:
     # The one check the main ruleset requires, so matrix rows can change
     # without touching repo settings. always(): a skipped job must fail it.
     name: ci ok
     if: always()
-    needs: [python, render, update, typescript]
+    needs: [python, render, update, typescript, fullstack]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
