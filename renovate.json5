@@ -89,6 +89,12 @@
       matchDatasources: ["github-tags"],
       minimumReleaseAge: "7 days",
     },
+    // Scaffolds resolve only releases a week old (uv exclude-newer, pnpm
+    // minimumReleaseAge), so a floor raised sooner would not resolve there.
+    {
+      matchDatasources: ["pypi", "npm"],
+      minimumReleaseAge: "7 days",
+    },
     // The uv image and uv_build ship from one release. `widen` raises the cap and
     // keeps the floor, so older installed uv versions keep working.
     {

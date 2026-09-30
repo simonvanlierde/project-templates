@@ -6,12 +6,13 @@
 ts-sync:
     {{ pnpm }} install
 
-# What CI runs: lint, types, tests, build.
+# What CI runs: lint and unused code, types, tests, build, dependency audit.
 ts-check:
     {{ pnpm }} run check
     {{ pnpm }} run typecheck
     {{ pnpm }} run test
     {{ pnpm }} run build
+    {{ pnpm }} audit --prod
 
 # Fix what biome can fix, then format.
 ts-fmt:

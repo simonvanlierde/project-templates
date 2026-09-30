@@ -57,7 +57,7 @@ stacks:
   type: str
   multiselect: true
   help: Which stacks this repo uses
-  choices: [python, ts, docker]
+  choices: [python, ts, rust, docker]
   default: [python]
 
 # `.` is a single-package repo. Any other value nests only the package; workflows,
@@ -81,6 +81,12 @@ ts_dir:
     {% if ts_dir != '.' and (ts_dir.startswith(('.', '/')) or ts_dir.endswith('/') or '..' in ts_dir) %}
     Give a plain relative path such as `apps/web`: no leading `./` or `/`, no trailing `/`, no `..`.
     {% endif %}
+
+rust_dir:
+  type: str
+  when: "{{ 'rust' in stacks }}"
+  help: Directory holding the Rust crate (`.` for the repo root, `crates/core` for a monorepo)
+  default: "."
 
 # --- python -------------------------------------------------------------------
 
@@ -155,6 +161,30 @@ publish_to_npm:
   when: "{{ 'ts' in stacks and ts_kind == 'library' }}"
   help: Add a release workflow publishing to npm via trusted publishing (needs setup on npmjs.com first)
   default: false
+
+# --- rust ---------------------------------------------------------------------
+
+rust_kind:
+  type: str
+  when: "{{ 'rust' in stacks }}"
+  choices:
+    Library (src/lib.rs, documented public API): library
+    Binary (src/main.rs, may print): binary
+  default: library
+
+# Computed, never asked. Cargo takes `-` and `_` but not the `.` a slug may carry.
+crate_name:
+  type: str
+  when: false
+  default: "{{ slug|replace('.', '-') }}"
+
+# The crate's rust-version (MSRV); clippy reads it too, and skips lints that
+# suggest newer APIs. Defaults to the current stable minor.
+rust_version:
+  type: str
+  when: "{{ 'rust' in stacks }}"
+  help: Minimum supported Rust version (Cargo.toml rust-version)
+  default: "1.98"
 
 # --- docker -------------------------------------------------------------------
 

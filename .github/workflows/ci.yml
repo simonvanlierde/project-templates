@@ -413,12 +413,70 @@ jobs:
         working-directory: ${{ runner.temp }}/proj
         run: just py-sync ts-sync check
 
+  rust:
+    # The rust stack, one row per crate kind: the library flat, the binary nested.
+    name: rust (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: library
+            project_name: ci-rs-lib
+            rust_dir: "."
+            rust_kind: library
+          - name: binary
+            project_name: ci-rs-bin
+            rust_dir: crates/cli
+            rust_kind: binary
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # uv only runs copier here, so key on this file, which pins it.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: .github/workflows/ci.yml
+          cache-suffix: copier
+          save-cache: ${{ github.event_name != 'pull_request' }}
+
+      - name: scaffold
+        env:
+          PROJECT_NAME: ${{ matrix.project_name }}
+          RUST_DIR: ${{ matrix.rust_dir }}
+          RUST_KIND: ${{ matrix.rust_kind }}
+        run: |
+          uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
+            --data "project_name=$PROJECT_NAME" --data 'stacks=[rust]' \
+            --data "rust_dir=$RUST_DIR" --data "rust_kind=$RUST_KIND" . "$RUNNER_TEMP/proj"
+
+      # The toolchain the generated rust.yml installs, at the same pins.
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: cargo-nextest,cargo-deny
+
+      - run: uv tool install "rust-just==$JUST_VERSION"
+
+      # The scaffold's own recipe; `rs-check` is the same commands the generated
+      # rust.yml runs. No --locked: a fresh scaffold has no Cargo.lock yet.
+      - name: inner loop
+        working-directory: ${{ runner.temp }}/proj
+        run: just rs-check
+
   ok:
     # The one check the main ruleset requires, so matrix rows can change
     # without touching repo settings. always(): a skipped job must fail it.
     name: ci ok
     if: always()
-    needs: [python, render, update, typescript, fullstack]
+    needs: [python, render, update, typescript, rust, fullstack]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

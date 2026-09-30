@@ -13,6 +13,14 @@ take the new comment.
 
 ### Added
 
+- `rust` stack: a crate in `rust_dir`, library or binary, with a strict clippy lint policy
+  in `Cargo.toml`'s `[lints]` table, `clippy.toml`, a `deny.toml` for cargo-deny, `rust.yml`,
+  `just rs-check`, cargo hooks, and a Dependabot cargo entry.
+- Dependency audits in `just check` and CI: `uv audit` for Python, `pnpm audit --prod` for
+  TypeScript, `cargo deny check` for Rust.
+- Knip in the TypeScript `check` script, for unused files, exports and dependencies.
+- A one-week minimum release age: `exclude-newer = "1 week"` under `[tool.uv]`, and
+  `minimumReleaseAge` in a new `pnpm-workspace.yaml`. It matches Dependabot's cooldown.
 - Python `web-service` kind: FastAPI with `/health` and OpenTelemetry, shipped as a container.
 - Python `data-pipeline` kind: `sources.toml`, a standard-library `fetch`, `build` and
   `validate` pipeline that records a checksum for every download, and `ATTRIBUTION.md`.

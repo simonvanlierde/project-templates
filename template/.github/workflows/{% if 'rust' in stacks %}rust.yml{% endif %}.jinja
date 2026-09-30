@@ -1,0 +1,61 @@
+name: rust
+
+on:
+  push:
+    branches: [main]
+{%- if rust_dir != '.' %}
+    paths: ["{{ rust_dir }}/**", ".github/workflows/rust.yml"]
+{%- endif %}
+  pull_request:
+{%- if rust_dir != '.' %}
+    paths: ["{{ rust_dir }}/**", ".github/workflows/rust.yml"]
+{%- endif %}
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: fmt, clippy, tests, deny
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+{%- if rust_dir != '.' %}
+    # Only `run:` steps take this, so rust-cache is pointed at the crate separately.
+    defaults:
+      run:
+        working-directory: {{ rust_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+{%- if rust_dir != '.' %}
+        with:
+          workspaces: {{ rust_dir }}
+{%- endif %}
+
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: cargo-nextest,cargo-deny
+
+      - run: cargo fmt --check
+      # --locked: the first build fails on a Cargo.lock that is missing or stale.
+      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - run: cargo nextest run --all-features
+{%- if rust_kind == 'library' %}
+      # nextest skips doctests.
+      - run: cargo test --doc --all-features
+{%- endif %}
+      - run: cargo deny check

@@ -1,0 +1,19 @@
+//! {{ project_description or project_name }}
+
+fn main() {
+    println!("{}", greeting("world"));
+}
+
+fn greeting(name: &str) -> String {
+    format!("Hello, {name}!")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::greeting;
+
+    #[test]
+    fn greets() {
+        assert_eq!(greeting("world"), "Hello, world!");
+    }
+}

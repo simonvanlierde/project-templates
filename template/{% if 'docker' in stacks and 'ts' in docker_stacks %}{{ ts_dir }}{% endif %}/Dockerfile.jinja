@@ -19,7 +19,7 @@ WORKDIR /app
 
 # Manifests only: prod-deps and build both start here, so their install layers
 # stay cached until the lockfile changes.
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # ---- production dependencies ------------------------------------------------
 FROM base AS prod-deps
