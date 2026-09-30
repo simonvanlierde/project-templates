@@ -39,6 +39,9 @@ a minor release can break things; breaking changes are marked **Breaking**.
 - **Breaking:** secret scanning uses Betterleaks instead of gitleaks.
 - **Breaking:** the web service turns on OpenTelemetry only when
   `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
+- CI installs a pinned uv, because `uv audit` is a preview command that can change
+  between releases.
+- `pnpm audit` fails on moderate and higher advisories only.
 
 ### Removed
 
