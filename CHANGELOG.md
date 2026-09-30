@@ -1,78 +1,91 @@
 # Changelog
 
-What changes for a project rendered from this template. Run `copier update` to take a
-release. Dependency bumps and this repo's own CI are left out; `git log` has them.
+What changed for projects rendered from this template. Take a release with
+`copier update`. Dependency bumps and this repo's own CI are not listed; `git log` has them.
 
 ## v0.6.0
 
 ### Updating from v0.5.0
 
-If you added dependencies, `copier update` reports a conflict in `pyproject.toml` next to
-`dependencies`: a comment below that line was reworded. Keep your `dependencies` list and
-take the new comment.
-
-The update also adds a one-week release age and knip, so the lockfiles no longer match:
-run `uv lock` and `pnpm install`, then commit them. Expect `uv lock` to downgrade any
-package released in the last week.
+1. Run `copier update`. If you added dependencies, it reports a conflict in
+   `pyproject.toml` at `dependencies`, because the comment below that line changed. Keep
+   your `dependencies` list and take the new comment.
+2. Run `uv lock` and `pnpm install`, then commit both lockfiles. This release adds a
+   one-week release age and knip, so the old lockfiles no longer match. `uv lock` can
+   downgrade packages released in the last week.
 
 ### Added
 
-- `rust` stack: a crate in `rust_dir`, library or binary, with a strict clippy lint policy
-  in `Cargo.toml`'s `[lints]` table, `clippy.toml`, a `deny.toml` for cargo-deny, `rust.yml`,
-  `just rs-check`, cargo hooks, and a Dependabot cargo entry.
-- `go` stack: a module in `go_dir`, library or binary, with a golangci-lint v2 policy in
+- `rust` stack: a library or binary crate in `rust_dir`. It has a strict clippy policy in
+  `Cargo.toml`'s `[lints]` table, `clippy.toml`, a `deny.toml` for cargo-deny, `rust.yml`,
+  `just rs-check`, cargo hooks and a Dependabot cargo entry.
+- `go` stack: a library or binary module in `go_dir`. It has a golangci-lint v2 policy in
   `.golangci.yml`, a table-driven test and an Example, `go.yml`, `just go-check`
-  (golangci-lint, `go test -race`, govulncheck), golangci-lint hooks, and a Dependabot
+  (golangci-lint, `go test -race` and govulncheck), golangci-lint hooks and a Dependabot
   gomod entry.
-- Dependency audits in `just check` and CI: `uv audit` for Python, `pnpm audit --prod` for
-  TypeScript, `cargo deny check` for Rust.
-- Knip in the TypeScript `check` script, for unused files, exports and dependencies.
-- A one-week minimum release age: `exclude-newer = "1 week"` under `[tool.uv]`, and
-  `minimumReleaseAge` in a new `pnpm-workspace.yaml`. It matches Dependabot's cooldown.
 - Python `web-service` kind: FastAPI with `/health` and OpenTelemetry, shipped as a container.
-- Python `data-pipeline` kind: `sources.toml`, a standard-library `fetch`, `build` and
-  `validate` pipeline that records a checksum for every download, and `ATTRIBUTION.md`.
+- Python `data-pipeline` kind: a `sources.toml` manifest, a standard-library `fetch`,
+  `build` and `validate` pipeline that records a checksum for every download, and
+  `ATTRIBUTION.md`. Its workflow also runs weekly with `TRIPWIRE=1`, the only run that
+  checks published values against literal numbers.
 - `CITATION.cff` for the `research` and `data-pipeline` kinds, with an optional ORCID iD.
-- `hygiene.yml` workflow: runs the git hooks in CI and reviews new dependencies on PRs.
-- actionlint hook, and default VS Code formatters for Markdown, TOML and YAML.
-- The `data-pipeline` workflow runs weekly with `TRIPWIRE=1`, which runs the literal-value
-  tests that every other run skips.
-- Copier rejects answers that used to render a broken project: a name with no leading
-  ASCII letter or digit, a `module_name` that isn't an identifier (such as `2048_game`),
-  a `python_dir`, `ts_dir`, `rust_dir` or `go_dir` with `./`, `/` or `..`, Python older than 3.12, and the
-  docker stack with no image picked. A Rust crate name can't start with a digit, and a
-  library's can't be a Rust keyword. A Go package name must be an identifier and not a
-  Go keyword.
+- Dependency audits in `just check` and CI: `uv audit` for Python, `pnpm audit --prod` for
+  TypeScript and `cargo deny check` for Rust.
+- A one-week minimum release age, to match Dependabot's cooldown: `exclude-newer = "1 week"`
+  under `[tool.uv]`, and `minimumReleaseAge` in a new `pnpm-workspace.yaml`.
+- Knip in the TypeScript `check` script, for unused files, exports and dependencies.
+- `hygiene.yml` workflow: it runs the git hooks in CI and reviews new dependencies on PRs.
+- An actionlint hook, and default VS Code formatters for Markdown, TOML and YAML.
+- Copier rejects answers that used to render a broken project:
+  - a project name that does not start with an ASCII letter or digit;
+  - a `module_name` that is not a Python identifier, such as `2048_game`;
+  - a Rust crate name that starts with a digit, or a library crate named after a Rust keyword;
+  - a Go package name that is not an identifier or is a Go keyword;
+  - a `python_dir`, `ts_dir`, `rust_dir` or `go_dir` with a leading `./` or `/`, a trailing
+    `/`, or `..`;
+  - Python older than 3.12;
+  - the docker stack with no image picked.
 
 ### Changed
 
-- The secret-scan hook is Betterleaks, gitleaks' successor from the same authors, in place of
-  gitleaks, which now takes security fixes only. A `SKIP` list naming `gitleaks` names
-  `betterleaks` now.
-- `.copier-answers.yml` records `gh:simonvanlierde/project-templates` for a tagged render
-  from a local checkout, not the checkout's path.
-- The release workflows say to limit the `pypi` and `npm` environments to `v*` tags with a
-  required reviewer.
-- The vale hook is pinned to the v3.23.0 release instead of an old short commit.
-- `fetch` fails a download larger than 200 MiB instead of reading it whole.
-- The `web-service` kind uses zero-code OpenTelemetry: the entrypoint calls the distro's
+- The secret-scan hook is Betterleaks instead of gitleaks. Betterleaks comes from the same
+  authors; gitleaks now gets security fixes only. Rename `gitleaks` to `betterleaks` in any
+  `SKIP` list.
+- The `web-service` kind uses zero-code OpenTelemetry. The entrypoint calls the distro's
   `initialize()` when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. `config.py` and `telemetry.py`
   are gone, and `app.py` exports a plain `app`.
-- `SECURITY.md` notes that its advisories link needs private vulnerability reporting on.
+- `fetch` fails a download larger than 200 MiB instead of reading it whole.
+- The vale hook is pinned to the v3.23.0 release instead of an old short commit.
+- The release workflows tell you to limit the `pypi` and `npm` environments to `v*` tags,
+  with a required reviewer.
+- `SECURITY.md` notes that its advisories link works only when private vulnerability
+  reporting is on.
+- A tagged render from a local checkout records `gh:simonvanlierde/project-templates` in
+  `.copier-answers.yml`, not the checkout's path.
 
 ### Fixed
 
-- PyPI publishing from a nested `python_dir` failed: the wheels landed where the publish
-  action doesn't look.
-- A project name ending in `!` or other punctuation no longer fails rumdl and vale on the
-  generated README heading.
+- PyPI publishing failed for a nested `python_dir`: the wheels landed where the publish
+  action does not look.
+- A project name that ends in `!` or other punctuation no longer fails rumdl and vale on
+  the README heading.
+- A project name with quotes renders.
 - Both Dockerfiles pass hadolint 2.15.
-- A project name with quotes now renders.
 - yamllint skips `pnpm-lock.yaml`.
 
 ## v0.5.0 and earlier
 
-The first releases, July 2026: one template with Python (`library`, `app`, `research`),
-TypeScript and Docker stacks, pinned GitHub Actions audited by zizmor, PyPI and npm
-release workflows, Dependabot with a cooldown, and vale, yamllint and rumdl linting.
-`git log v0.5.0` has the detail.
+v0.1.0 to v0.5.0 came out between 24 and 30 July 2026. At v0.5.0 the template had:
+
+- Three stacks, in any mix: `python`, `ts` and `docker`.
+- Python kinds `library`, `app` and `research`, and TypeScript kinds `library` and `app`.
+- Each package at the repo root or nested, set by `python_dir` and `ts_dir`.
+- A CI workflow per stack, with GitHub Actions pinned to commit SHAs. Optional release
+  workflows publish to PyPI and npm with trusted publishing, and push images to GHCR.
+- Dependabot for actions, hooks, uv and npm, with a 7-day cooldown.
+- prek hooks: ruff, ty, biome, tsc, gitleaks, zizmor, hadolint, nbstripout, a JSON5 check,
+  yamllint, vale and rumdl.
+
+v0.1.0 shipped four separate Copier templates, which v0.2.0 merged into one. A project
+scaffolded from v0.1.0 keeps its answers under `.copier/*.yml` and cannot `copier update`
+across that change. `git log v0.5.0` has the detail.
