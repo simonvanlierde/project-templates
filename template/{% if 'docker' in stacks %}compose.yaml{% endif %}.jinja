@@ -2,7 +2,7 @@
 # a runtime image ships the built artifact, not ./src.
 #
 # Ports bind to loopback because Docker's iptables rules run ahead of the host
-# firewall, so a bare "{{ app_port }}:{{ app_port }}" reaches the LAN even on a deny-by-default
+# firewall. A bare "{{ app_port }}:{{ app_port }}" reaches the LAN even on a deny-by-default
 # machine. Drop the 127.0.0.1 to publish a service.
 name: {{ slug }}
 

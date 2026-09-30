@@ -59,7 +59,7 @@ class FetchRecord:
 
 
 def load_manifest(path: Path = MANIFEST) -> list[Source]:
-    """The `[[source]]` tables of sources.toml, once each id is shown safe as a unique file name."""
+    """The `[[source]]` tables of sources.toml, after checking that each id is a safe, unique file name."""
     with path.open("rb") as fh:
         sources = tomllib.load(fh).get("source", [])
     if not isinstance(sources, list) or not all(isinstance(s, dict) and isinstance(s.get("id"), str) for s in sources):
@@ -144,7 +144,7 @@ def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
 
 
 def verified(source: Source, raw: Path = RAW) -> tuple[FetchRecord, bytes]:
-    """The fetch record and raw bytes for `source`, once both are shown to be current.
+    """The fetch record and raw bytes for `source`, after checking that both are current.
 
     Raises ValueError when the record was made for a different request than the
     manifest now makes, or when the raw file no longer hashes to the record.
@@ -166,11 +166,13 @@ def verified(source: Source, raw: Path = RAW) -> tuple[FetchRecord, bytes]:
 
 
 def parse(source: Source, payload: bytes) -> tuple[list[str], list[dict[str, str]]]:
-    """One raw file as its columns and rows. Every source is read as CSV here; branch on `source["id"]` when one is not.
+    """One raw file as its columns and rows.
+
+    Every source is read as CSV here. Branch on `source["id"]` for a source that is not.
 
     Raises ValueError for a repeated column name, or a row with more fields than the header.
     """
-    # utf-8-sig drops the byte-order mark spreadsheet exports start with; plain UTF-8 reads the same.
+    # utf-8-sig drops the byte-order mark that spreadsheet exports start with. Plain UTF-8 reads the same.
     text = payload.decode(source.get("encoding", "utf-8-sig"))
     reader = csv.DictReader(io.StringIO(text, newline=""))
     columns = list(reader.fieldnames or [])
@@ -223,7 +225,7 @@ def read_output(path: Path) -> list[dict[str, str]]:
 
 
 def validate(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED) -> list[str]:
-    """Check the published output against the manifest and the fetch records; one string per problem."""
+    """Check the published output against the manifest and the fetch records, and return one string per problem."""
     problems = []
     ids = {source["id"] for source in sources}
     # Output of a source since removed or renamed would otherwise pass as published data.

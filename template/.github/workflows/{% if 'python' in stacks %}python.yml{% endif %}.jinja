@@ -11,7 +11,7 @@ on:
     paths: ["{{ python_dir }}/**", ".github/workflows/python.yml"]
 {%- endif %}
 {%- if kind == 'data-pipeline' %}
-  # Weekly, to catch a publisher revision: the only run that sets TRIPWIRE.
+  # Weekly, to catch a publisher revising its data. This is the only run that sets TRIPWIRE.
   schedule:
     - cron: "0 6 * * 1"
 {%- endif %}
@@ -47,9 +47,9 @@ jobs:
           version: "{{ uv_version }}"
 
       - run: uv sync --locked
-      # Known vulnerabilities, and deprecated or quarantined projects, in every
-      # locked dependency, dev group included, from OSV. Experimental in uv 0.12,
-      # hence the preview flag.
+      # Checks every locked dependency, dev group included, against the OSV database
+      # for known vulnerabilities and deprecated or quarantined projects. Experimental
+      # in uv 0.12, hence the preview flag.
       - run: uv audit --locked --preview-features audit-command
 
       - run: uv run ruff check --output-format=github

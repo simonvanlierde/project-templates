@@ -3,7 +3,7 @@
 # conditional file landed. Run from the repo root: scripts/check-render.sh "$(mktemp -d)"
 #
 # Renders HEAD plus uncommitted edits (--vcs-ref=HEAD). COPIER_VERSION pins
-# copier, as CI does; unset, uvx takes the latest.
+# copier, as CI does. Unset, uvx takes the latest.
 set -euo pipefail
 
 out=${1:?usage: scripts/check-render.sh OUT_DIR}
@@ -25,7 +25,7 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'docker_stacks=[ts]' . "$out/b"
 
 # c: the only render with nested paths, at two depths to catch hardcoded
-# up-paths. The rust crate and go module are the binary kind; a has the
+# up-paths. The rust crate and go module are the binary kind. Render a has the
 # libraries. All publish flags on, so the release workflows could collide and
 # docker.yml renders its push job.
 "${copier[@]}" --vcs-ref=HEAD \
@@ -44,8 +44,8 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'docker_stacks=[python]' . "$out/d"
 
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
-# in for one. The trap uses -C because the checks below cd out of the repo; -f
-# on the tag covers a killed run that left it behind.
+# in for one. The trap uses -C because the checks below cd out of the repo. The
+# -f on `git tag` covers a killed run that left the tag behind.
 repo=$PWD
 trap 'git -C "$repo" tag -d check-render-tag >/dev/null 2>&1 || true' EXIT
 git tag -f check-render-tag >/dev/null

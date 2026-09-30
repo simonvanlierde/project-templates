@@ -15,9 +15,9 @@ dist
 coverage
 *.tsbuildinfo
 
-# Left out of the image. With `COPY . .` they would enter the layer hash, so
-# touching a test would re-run the whole dependency install, which `docker compose
-# up --watch` does on every source change. tsconfig.build.json already keeps them
+# Left out of the image. With `COPY . .` they would enter the layer hash. Touching a
+# test would then rebuild every layer from that `COPY` on, which `docker compose up
+# --watch` does on every source change. tsconfig.build.json already keeps them
 # out of the build.
 src/**/*.test.ts
 .editorconfig

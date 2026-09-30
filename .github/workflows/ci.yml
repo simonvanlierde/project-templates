@@ -122,7 +122,8 @@ jobs:
         working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
         run: just py-sync check
 
-      # Against the example source's live URL, then the tests that read its output.
+      # Runs the pipeline against the example source's live URL, then the tests that
+      # read its output.
       - if: matrix.kind == 'data-pipeline'
         name: pipeline
         working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
@@ -252,8 +253,8 @@ jobs:
           cd "$PROJ/api" && just py-sync py-check
 
   typescript:
-    # Ts stack, with docker. The image builds nested (monorepo); the root Dockerfile is
-    # the same template and is rendered by the render job.
+    # TS stack, with docker. The image builds nested (monorepo). The root Dockerfile is
+    # the same template, and the render job renders it.
     name: typescript (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -305,8 +306,8 @@ jobs:
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
       # Read by hand: pnpm/setup resolves paths against GITHUB_WORKSPACE, and the scaffold
-      # lives in RUNNER_TEMP. pnpm comes from the packageManager pin; node from the copier
-      # answer, since engines.node is an open range.
+      # lives in RUNNER_TEMP. pnpm comes from the packageManager pin. Node comes from the
+      # copier answer, since engines.node is an open range.
       - name: versions
         id: v
         env:
@@ -511,8 +512,8 @@ jobs:
 
       - *just
 
-      # The scaffold's own recipe; `go-check` is what the generated go.yml runs,
-      # plus the separate format check that its golangci-lint run folds in.
+      # The scaffold's own recipe. `go-check` runs what the generated go.yml runs, plus
+      # a separate format check that go.yml gets from its golangci-lint run.
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just go-sync go-check

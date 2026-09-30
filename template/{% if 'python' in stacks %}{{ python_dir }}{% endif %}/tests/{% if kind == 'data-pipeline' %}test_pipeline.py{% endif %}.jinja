@@ -34,7 +34,7 @@ reason = "No reader written yet."
 
 @pytest.fixture
 def upstream(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A fixture source file and a manifest pointing at it; the test runs inside the project."""
+    """A fixture source file and a manifest that points at it. The test runs inside the project directory."""
     source = tmp_path / "upstream" / "example.csv"
     source.parent.mkdir()
     source.write_text(FIXTURE, encoding="utf-8")

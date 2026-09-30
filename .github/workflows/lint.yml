@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: 24
 
-      # The cold npx install is the longest step in this job without this.
+      # Without this cache, the cold npx install is the longest step in this job.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.npm
@@ -76,8 +76,8 @@ jobs:
           set -euo pipefail
           npx -y "renovate@$RENOVATEBOT_VERSION" --platform=local --dry-run=extract > extract.log 2>&1 \
             || { tail -n 50 extract.log; exit 1; }
-          # One anchor per manager block; copier and renovate come from the
-          # githubActionsVersions preset, which fails open too.
+          # One anchor per manager block. copier and renovate come from the
+          # githubActionsVersions preset, which also matches nothing silently when it drifts.
           for dep in actions/checkout ghcr.io/astral-sh/uv pre-commit/pre-commit-hooks \
                      uv_build pytest pnpm @biomejs/biome copier renovate; do
             grep -qF "\"depName\": \"$dep\"" extract.log \

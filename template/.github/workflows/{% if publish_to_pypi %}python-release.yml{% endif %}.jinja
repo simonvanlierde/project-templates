@@ -12,8 +12,8 @@ name: python release
 # that never went green. It then runs the suite against the installed wheel, the
 # only place packaging faults such as a wrong module name show up.
 #
-# `id-token: write` exposes an OIDC request token to every step in its job, so
-# publish is a separate job that runs no project code.
+# `id-token: write` exposes an OpenID Connect (OIDC) request token to every step
+# in its job, so publish is a separate job that runs no project code.
 
 on:
   release:

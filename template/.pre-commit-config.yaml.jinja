@@ -6,8 +6,8 @@
 {%- set uv_cd = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --directory ' ~ python_dir %}
 {%- set pnpm = 'pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir %}
 {%- set mp = '' if rust_dir == '.' else ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' %}
-{#- golangci-lint fmt takes a path, but run loads packages from the cwd's module
-    and has no flag naming another, so a nested module is the one cd. #}
+{#- golangci-lint fmt takes a path. run loads packages from the cwd's module and
+    has no flag to name another, so it is the one hook that cds into a nested module. #}
 {%- set go_fmt = 'golangci-lint fmt' if go_dir == '.' else 'golangci-lint fmt ' ~ go_dir %}
 {%- set go_run = 'golangci-lint run' if go_dir == '.' else "sh -c 'cd " ~ go_dir ~ " && exec golangci-lint run'" -%}
 # Run with prek, a drop-in pre-commit replacement: prek install && prek run -a
@@ -40,7 +40,7 @@ repos:
     hooks:
       - id: yamllint
 
-  # gitleaks' successor from the same authors; gitleaks takes security fixes only.
+  # gitleaks' successor from the same authors. gitleaks takes security fixes only.
   - repo: https://github.com/betterleaks/betterleaks
     rev: v1.9.0
     hooks:

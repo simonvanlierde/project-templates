@@ -49,8 +49,8 @@ jobs:
     name: build
 {%- if publish_to_ghcr %}
     # Builds and runs the image with no write scopes. `permissions` takes no expression,
-    # so a separate push job is the only way to keep packages: write and id-token: write
-    # away from a pull request's Dockerfile steps and the dependencies they install.
+    # so only a separate push job keeps packages: write and id-token: write away from a
+    # pull request's Dockerfile steps and the dependencies they install.
     if: github.event_name == 'pull_request'
 {%- else %}
     # Build-only. To push, set publish_to_ghcr and re-run copier update.
@@ -77,12 +77,12 @@ jobs:
           # other's layers.
           cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
 {%- if publish_to_ghcr %}
-          # No cache-to: this job runs on pull requests only, and a PR-ref cache is dropped
-          # on merge. The push job below fills the shared scope.
+          # No cache-to: this job runs on pull requests only, and a cache saved from a pull
+          # request is dropped on merge. The push job below fills the shared scope.
 {%- else %}
-          # Export only on push: a PR-ref cache is readable by that PR alone and dropped on
-          # merge, so mode=max there uploads hundreds of MB that nothing reads and that evict
-          # main's cache.
+          # Export only on push. A cache saved from a pull request is readable by that PR
+          # alone and dropped on merge. mode=max there would upload hundreds of MB that
+          # nothing reads, evicting main's cache.
           cache-to: {% raw %}${{ github.event_name == 'push' && format('type=gha,mode=max,scope={0}', matrix.stack) || '' }}{% endraw %}
 {%- endif %}
           push: false

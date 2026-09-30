@@ -14,6 +14,11 @@ a minor release can break things; breaking changes are marked **Breaking**.
 - `just rs-sync` downloads Rust dependencies and writes `Cargo.lock`, like `just py-sync`
   and `just go-sync` do for their stacks.
 
+### Changed
+
+- Comments and docstrings in generated files are shorter and plainer. Two
+  `.dockerignore` comments now describe the Docker layer cache correctly.
+
 ## [0.7.0] - 2026-09-30
 
 ### Upgrade notes

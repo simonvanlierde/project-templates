@@ -10,7 +10,7 @@ name: ts release
 #
 # The package must already exist on npm: trusted publishing cannot create it, so
 # publish the first version manually (`pnpm publish`). npm adds the provenance
-# attestation itself over OIDC; there is no --provenance flag.
+# attestation itself over OpenID Connect (OIDC). There is no --provenance flag.
 #
 # The build job re-runs the full suite because a release tag can point at any
 # commit, including one that never went green.
@@ -97,5 +97,5 @@ jobs:
           package-manager-cache: false
 
       # npm, not pnpm: a prebuilt tarball needs no checkout, install or lockfile. npm
-      # ships with Node 24+ and supports OIDC since 11.5.1.
+      # ships with Node 24+ and supports OIDC since npm 11.5.1.
       - run: npm publish --access public ./*.tgz

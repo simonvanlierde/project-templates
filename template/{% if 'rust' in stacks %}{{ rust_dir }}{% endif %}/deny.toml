@@ -4,7 +4,7 @@
 [advisories]
 
 [licenses]
-# Permissive licenses only; this crate's own is among them. Add an exception
+# Permissive licenses only. This crate's own is among them. Add an exception
 # per crate rather than widening the list.
 allow = [
   "Apache-2.0",

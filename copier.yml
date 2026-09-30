@@ -63,7 +63,7 @@ stacks:
   choices: [python, ts, rust, go, docker]
   default: [python]
 
-# `.` is a single-package repo. Any other value nests only the package; workflows,
+# `.` is a single-package repo. Any other value nests only the package. Workflows,
 # hooks, justfile and answers file stay at the root.
 python_dir:
   type: str
@@ -190,8 +190,8 @@ rust_kind:
     Library (src/lib.rs, documented public API): library
     Binary (src/main.rs, may print): binary
   default: library
-  # crate_name is computed after this question and copier skips validators on
-  # computed questions, so its check lives here, derived from slug the same way.
+  # crate_name is computed after this question, and copier skips validators on
+  # computed questions. Its check lives here instead, derived from slug the same way.
   validator: >-
     {% set ident = slug|replace('.', '-')|replace('-', '_') %}
     {% if ident|regex_search('^[0-9]') %}
@@ -204,8 +204,8 @@ crate_name:
   when: false
   default: "{{ slug|replace('.', '-') }}"
 
-# The crate's rust-version (MSRV); clippy reads it too, and skips lints that
-# suggest newer APIs. Defaults to the current stable minor.
+# The crate's rust-version: its minimum supported Rust version (MSRV). Clippy
+# reads it too, and skips lints that suggest newer APIs. Defaults to the current stable minor.
 # renovate: datasource=github-releases depName=rust-lang/rust
 rust_version:
   type: str
@@ -261,8 +261,8 @@ uv_version:
   when: false
   default: 0.12.19
 
-# Computed, never asked: the tool releases the README, `just go-check` and go.yml
-# pin, kept in one place. Renovate bumps them from the comments above each.
+# Computed, never asked: the golangci-lint release that the README, `just go-check`
+# and go.yml pin, kept in one place. Renovate bumps it from its `# renovate:` line.
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci_lint_version:
   type: str

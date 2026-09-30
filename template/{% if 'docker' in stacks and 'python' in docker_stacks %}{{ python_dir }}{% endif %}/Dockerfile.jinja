@@ -56,7 +56,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1
 {%- if kind == 'web-service' %}
 
-# The app defaults to loopback; in the container it must listen on every
+# The app defaults to loopback. In the container it must listen on every
 # interface for the published port to reach it.
 ENV HOST=0.0.0.0 \
     PORT={{ app_port }}
