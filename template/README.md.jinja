@@ -1,4 +1,4 @@
-{#- Trailing punctuation in a heading trips rumdl (MD026) and vale. -#}
+{#- Trailing punctuation in a heading trips rumdl (MD026). -#}
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
 {% if 'python' in stacks %}[![python](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/python.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/python.yml)
