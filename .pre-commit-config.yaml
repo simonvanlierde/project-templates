@@ -2,9 +2,12 @@
 #
 # The local half of CI: hygiene, secrets and workflow audits. lint.yml runs
 # these hooks on every PR. ci.yml runs scripts/check-render.sh separately.
+#
+# Revs are commit SHAs, since tags are mutable; Renovate moves each SHA and its
+# `# frozen:` tag together.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-merge-conflict
@@ -17,38 +20,45 @@ repos:
 
   # Also parses renovate.json5, which check-json cannot.
   - repo: https://github.com/simonvanlierde/check-json5
-    rev: v1.2.0
+    rev: c70883b5be6d9fb87deac8d75395031372d54e83 # frozen: v1.2.0
     hooks:
       - id: check-json5
 
   # Uses the template's own config to lint this repo's YAML.
+  # Formats first, so yamllint below sees the formatted file.
+  - repo: https://github.com/google/yamlfmt
+    rev: 21ca5323a9c87ee37a434e0ca908efc0a89daa07 # frozen: v0.21.0
+    hooks:
+      - id: yamlfmt
+        args: [-conf, template/.yamlfmt]
+
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.38.0
+    rev: cba56bcde1fdd01c1deb3f945e69764c291a6530 # frozen: v1.38.0
     hooks:
       - id: yamllint
         args: [-c, template/.yamllint.yml]
 
   # Successor to gitleaks, which now gets security fixes only.
   - repo: https://github.com/betterleaks/betterleaks
-    rev: v1.9.0
+    rev: 81aff7a638638aae3a659845d089043e1d8fe9ac # frozen: v1.9.0
     hooks:
       - id: betterleaks
 
   # Sees only ci.yml and lint.yml: .jinja workflows are not YAML. CI audits the
   # rendered output.
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.30.1
+    rev: fa412071e4f5d44d44f9e365f4676f9df92456a2 # frozen: v1.30.1
     hooks:
       - id: zizmor
 
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.12
+    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca # frozen: v1.7.12
     hooks:
       - id: actionlint
 
   # Uses the template's config, like yamllint.
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: v0.2.77
+    rev: cbd02203fbbb2839cd7e25e3062628ba4af18991 # frozen: v0.2.77
     hooks:
       - id: rumdl
         args: [--fix, --config, template/.rumdl.toml]
