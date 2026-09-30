@@ -39,6 +39,8 @@ PROCESSED = Path("data/processed")
 IMPLEMENTED = "implemented"
 UNIMPLEMENTED = "unimplemented"
 _TIMEOUT_S = 120
+# A runaway or wrong URL fails the fetch instead of filling the disk. Raise it for a big source.
+_MAX_BYTES = 200 * 1024 * 1024
 
 type Source = dict[str, Any]
 
@@ -120,7 +122,10 @@ def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
         # The URLs come from sources.toml, which is as trusted as the code.
         request = urllib.request.Request(source["url"], headers={"User-Agent": "{{ slug }}"})  # noqa: S310
         with urllib.request.urlopen(request, timeout=_TIMEOUT_S) as response:  # noqa: S310
-            payload, headers = response.read(), response.headers
+            payload, headers = response.read(_MAX_BYTES + 1), response.headers
+        if len(payload) > _MAX_BYTES:
+            msg = f"{source['id']}: download exceeds {_MAX_BYTES} bytes"
+            raise ValueError(msg)
         stated, basis = vintage(source, headers)
         record = FetchRecord(
             source_id=source["id"],

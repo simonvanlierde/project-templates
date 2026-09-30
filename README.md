@@ -74,9 +74,9 @@ A `data-pipeline` project gets:
   license doesn't cover those.
 - Tests that run the whole pipeline against a local file, with no network.
 - A CI workflow that runs the pipeline for real on the manifest's URLs, then uploads
-  only the fetch records. CI skips the tests that compare published values with
-  literal numbers unless you set `TRIPWIRE=1`, so a publisher revision doesn't turn
-  `main` red.
+  only the fetch records. The tests that compare published values with literal
+  numbers run only in its weekly scheduled run (`TRIPWIRE=1`), so a publisher
+  revision fails that run, not your PRs.
 
 The example source in `sources.toml` is about 1 kB. Replace it, and the tests that
 read its output, with your own sources.

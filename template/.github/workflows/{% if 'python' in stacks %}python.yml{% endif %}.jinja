@@ -10,6 +10,11 @@ on:
 {%- if python_dir != '.' %}
     paths: ["{{ python_dir }}/**", ".github/workflows/python.yml"]
 {%- endif %}
+{%- if kind == 'data-pipeline' %}
+  # Weekly, to catch a publisher revision: the only run that sets TRIPWIRE.
+  schedule:
+    - cron: "0 6 * * 1"
+{%- endif %}
   workflow_dispatch:
 
 permissions:
@@ -56,11 +61,12 @@ jobs:
       - run: uv run {{ slug }} validate
 
       # tests/test_published.py fails rather than skips when the output is missing.
-      # GitHub sets CI, which skips the literal-value tripwire, so a publisher revision
-      # does not turn main red. Set TRIPWIRE=1 to assert the literals too.
+      # The literal-value tripwire runs on the weekly schedule only, so a publisher
+      # revision fails that run instead of turning a PR red.
       - run: uv run pytest
         env:
           PIPELINE_OUTPUT_REQUIRED: "1"
+          TRIPWIRE: {% raw %}${{ github.event_name == 'schedule' && '1' || '' }}{% endraw %}
 
       # Fetch records only: URL, timestamp, checksum, byte count, vintage. They hold
       # no source values, so the artifact redistributes nothing (see ATTRIBUTION.md).
