@@ -3,6 +3,14 @@
 What changes for a project rendered from this template. Run `copier update` to take a
 release. Dependency bumps and this repo's own CI are left out; `git log` has them.
 
+## Unreleased
+
+### Changed
+
+- The secret-scan hook is Betterleaks, gitleaks' successor from the same authors, in place of
+  gitleaks, which now takes security fixes only. A `SKIP` list naming `gitleaks` names
+  `betterleaks` now.
+
 ## v0.6.0
 
 ### Added
