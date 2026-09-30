@@ -256,6 +256,14 @@ go_version:
   help: Minimum Go version (go.mod `go` directive)
   default: "1.27"
 
+# Computed, never asked: the uv the generated workflows install. Pinned because
+# CI runs `uv audit`, a preview command that can change in any uv release.
+# renovate: datasource=pypi depName=uv
+uv_version:
+  type: str
+  when: false
+  default: 0.12.19
+
 # Computed, never asked: the tool releases the README, `just go-check` and go.yml
 # pin, kept in one place. Renovate bumps them from the comments above each.
 # renovate: datasource=github-releases depName=golangci/golangci-lint

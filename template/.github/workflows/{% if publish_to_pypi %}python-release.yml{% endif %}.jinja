@@ -42,6 +42,7 @@ jobs:
         with:
           enable-cache: false
           python-version: "{{ python_version }}"
+          version: "{{ uv_version }}"
 
       # Publish only what passes, on the exact commit being released.
       - run: uv sync --locked

@@ -45,6 +45,7 @@ jobs:
         with:
           enable-cache: true
           python-version: "{{ python_version }}"
+          version: "{{ uv_version }}"
 
       - run: uv sync --locked
       # Known vulnerabilities, and deprecated or quarantined projects, in every
