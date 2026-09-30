@@ -15,6 +15,10 @@ rules:
   truthy:
     ignore: |
       .github/workflows/
+  # yamlfmt adds a trailing comma to the last flow mapping before a blank line
+  # when it retains blank lines (`{a: 1,}`), and it spaces commas itself.
+  commas:
+    min-spaces-after: 0
   # Pin comments (`uses: ... # v1.2.3`, `rev: ... # frozen: v1.2.3`) take a
   # single space, not two.
   comments:
