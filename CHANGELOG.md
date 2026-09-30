@@ -11,6 +11,10 @@ If you added dependencies, `copier update` reports a conflict in `pyproject.toml
 `dependencies`: a comment below that line was reworded. Keep your `dependencies` list and
 take the new comment.
 
+The update also adds a one-week release age and knip, so the lockfiles no longer match:
+run `uv lock` and `pnpm install`, then commit them. Expect `uv lock` to downgrade any
+package released in the last week.
+
 ### Added
 
 - `rust` stack: a crate in `rust_dir`, library or binary, with a strict clippy lint policy
@@ -32,7 +36,8 @@ take the new comment.
 - Copier rejects answers that used to render a broken project: a name with no leading
   ASCII letter or digit, a `module_name` that isn't an identifier (such as `2048_game`),
   a `python_dir`, `ts_dir` or `rust_dir` with `./`, `/` or `..`, Python older than 3.12, and the
-  docker stack with no image picked.
+  docker stack with no image picked. A Rust crate name can't start with a digit, and a
+  library's can't be a Rust keyword.
 
 ### Changed
 
