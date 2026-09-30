@@ -5,13 +5,15 @@
     "config:best-practices",
     ":semanticCommits",
     "schedule:weekly",
-    // Minor and patch in one PR. The actions and uv groups below override it for
-    // their packages. Majors stay separate.
+    // Minor and patch in one PR. The actions group below overrides it for actions.
+    // Majors stay separate.
     "group:allNonMajor",
     // `# renovate: datasource=... depName=...` comments above `X_VERSION:` in
     // workflow env blocks.
     "customManagers:githubActionsVersions",
   ],
+  // Its 3-day npm wait would beat the 7-day minimumReleaseAge below.
+  ignorePresets: ["security:minimumReleaseAgeNpm"],
 
   // Everything automerges and then runs with CI tokens, on developer machines, or
   // in every new scaffold, which resolves only releases a week old (uv
@@ -102,17 +104,10 @@
       matchDepNames: ["python", "node", "go", "rust-lang/rust"],
       automerge: false,
     },
-    // config:best-practices sets npm to 3 days in a package rule, which beats the
-    // top-level setting.
+    // `widen` raises uv_build's cap and keeps the floor, so older installed uv
+    // versions keep working.
     {
-      matchDatasources: ["npm"],
-      minimumReleaseAge: "7 days",
-    },
-    // The uv image and uv_build ship from one release. `widen` raises the cap and
-    // keeps the floor, so older installed uv versions keep working.
-    {
-      matchPackageNames: ["ghcr.io/astral-sh/uv", "uv_build", "uv"],
-      groupName: "uv",
+      matchPackageNames: ["uv_build"],
       rangeStrategy: "widen",
     },
     // Maintained (commits in 2026-08) but tagged about once a year, which trips
