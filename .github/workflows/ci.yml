@@ -37,7 +37,8 @@ jobs:
     # Python stack, with docker. The library row's module_name differs from project_name,
     # which exercises the uv_build module-name path. The data-pipeline row also runs its
     # pipeline, as its generated python.yml does. Images build nested (monorepo) and at
-    # the root (web-service).
+    # the root (web-service). A row leaves out an answer that keeps its default: stacks
+    # [python], python_dir `.`, and the slug-derived module_name.
     name: python (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -48,44 +49,31 @@ jobs:
           - name: library
             project_name: ci-smoke
             module_name: smokepkg
-            stacks: "[python]"
-            python_dir: "."
             kind: library
           # Nested layout: the build context is a subdirectory.
           - name: monorepo
             project_name: ci-mono-py
-            module_name: ci_mono_py
             stacks: "[python,docker]"
             python_dir: apps/api
             kind: library
           - name: app
             project_name: ci-app
-            module_name: ci_app
-            stacks: "[python]"
-            python_dir: "."
             kind: app
           # Adds JupyterLab to the dev group.
           - name: research
             project_name: ci-research
-            module_name: ci_research
-            stacks: "[python]"
-            python_dir: "."
             kind: research
           - name: data-pipeline
             project_name: ci-pipeline
-            module_name: ci_pipeline
-            stacks: "[python]"
-            python_dir: "."
             kind: data-pipeline
           # Also starts the FastAPI container and probes /health.
           - name: web-service
             project_name: ci-web
-            module_name: ci_web
             stacks: "[python,docker]"
-            python_dir: "."
             kind: web-service
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -105,7 +93,7 @@ jobs:
         env:
           PROJECT_NAME: ${{ matrix.project_name }}
           MODULE_NAME: ${{ matrix.module_name }}
-          STACKS: ${{ matrix.stacks }}
+          STACKS: ${{ matrix.stacks || '[python]' }}
           PYTHON_DIR: ${{ matrix.python_dir }}
           KIND: ${{ matrix.kind }}
           # Derived from stacks so a row can't add docker and skip its answers.
@@ -115,15 +103,16 @@ jobs:
           # --vcs-ref=HEAD tests the pushed commit, not the last tag.
           C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
              --data "project_name=$PROJECT_NAME"
-             --data "module_name=$MODULE_NAME"
              --data "stacks=$STACKS"
-             --data "python_dir=$PYTHON_DIR"
              --data "kind=$KIND")
+          if [ -n "$MODULE_NAME" ]; then C+=(--data "module_name=$MODULE_NAME"); fi
+          if [ -n "$PYTHON_DIR" ]; then C+=(--data "python_dir=$PYTHON_DIR"); fi
           if [ "$KIND" = library ]; then C+=(--data publish_to_pypi=true); fi
           if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[python]'); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
-      - run: uv tool install "rust-just==$JUST_VERSION"
+      - &just
+        run: uv tool install "rust-just==$JUST_VERSION"
 
       # The scaffold's own recipes, so the rendered justfile runs. `check` runs the same
       # commands as the generated python.yml.
@@ -173,9 +162,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - *checkout
 
       # uv runs copier and the linters here; key on this file, which pins them.
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
@@ -230,15 +217,17 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # copier needs the tags to pick the update base
 
-      # uv only runs copier here; the typescript rows share this key.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      # uv only runs copier here and in the typescript, rust and go jobs, which
+      # reuse this step and so share its cache key.
+      - &setup-uv-copier
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: .github/workflows/ci.yml
           cache-suffix: copier
           save-cache: ${{ github.event_name != 'pull_request' }}
 
-      - run: uv tool install "rust-just==$JUST_VERSION"
+      - *just
 
       # A nested package with a local change, as a real project has one: the change must
       # survive the update, and the result must still pass its own checks.
@@ -290,17 +279,9 @@ jobs:
             ts_dir: apps/web
             ts_kind: library
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - *checkout
 
-      # uv only runs copier here; key on this file, which pins it.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: .github/workflows/ci.yml
-          cache-suffix: copier
-          save-cache: ${{ github.event_name != 'pull_request' }}
+      - *setup-uv-copier
 
       # publish_to_npm=true (asked only of a library) renders the conditionally named
       # ts-release.yml. project_name goes through env: one row's value contains quotes.
@@ -353,7 +334,7 @@ jobs:
           key: pnpm-${{ runner.os }}-${{ hashFiles('template/**/package.json.jinja') }}
           restore-keys: pnpm-${{ runner.os }}-
 
-      - run: uv tool install "rust-just==$JUST_VERSION"
+      - *just
 
       # The scaffold's own recipes; `check` runs the same commands as the generated
       # ts.yml. ts-sync has no --frozen-lockfile: the install writes pnpm-lock.yaml.
@@ -374,9 +355,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - *checkout
 
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
@@ -408,7 +387,7 @@ jobs:
           runtime: node@${{ steps.v.outputs.node }}
           install: false
 
-      - run: uv tool install "rust-just==$JUST_VERSION"
+      - *just
 
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
@@ -441,17 +420,9 @@ jobs:
             rust_dir: crates/cli
             rust_kind: binary
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - *checkout
 
-      # uv only runs copier here, so key on this file, which pins it.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: .github/workflows/ci.yml
-          cache-suffix: copier
-          save-cache: ${{ github.event_name != 'pull_request' }}
+      - *setup-uv-copier
 
       - name: scaffold
         env:
@@ -473,7 +444,7 @@ jobs:
         with:
           tool: cargo-nextest,cargo-deny
 
-      - run: uv tool install "rust-just==$JUST_VERSION"
+      - *just
 
       # The scaffold's own recipe; `rs-check` is the same commands the generated
       # rust.yml runs. No --locked: a fresh scaffold has no Cargo.lock yet.
@@ -501,17 +472,9 @@ jobs:
             go_dir: services/cli
             go_kind: binary
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - *checkout
 
-      # uv only runs copier here, so key on this file, which pins it.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: .github/workflows/ci.yml
-          cache-suffix: copier
-          save-cache: ${{ github.event_name != 'pull_request' }}
+      - *setup-uv-copier
 
       - name: scaffold
         env:
@@ -546,7 +509,7 @@ jobs:
           install-only: true
           skip-cache: true
 
-      - run: uv tool install "rust-just==$JUST_VERSION"
+      - *just
 
       # The scaffold's own recipe; `go-check` is what the generated go.yml runs,
       # plus the separate format check that its golangci-lint run folds in.
