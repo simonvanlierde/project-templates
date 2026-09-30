@@ -2,7 +2,7 @@
 
 Every repository scaffolded from this template gets the same checks. The list below
 says what each piece is, why it is there, and what was left out on purpose. It
-compares against the ReLab production repository, which runs a heavier set.
+compares against ReLab, a larger production repository that runs a heavier set.
 
 ## What every scaffold gets
 

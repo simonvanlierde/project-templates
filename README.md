@@ -4,113 +4,113 @@
 [![CI](https://github.com/simonvanlierde/project-templates/actions/workflows/ci.yml/badge.svg)](https://github.com/simonvanlierde/project-templates/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A starter template for new projects, built with [Copier](https://copier.readthedocs.io).
-One `copier copy` scaffolds any mix of `python`, `ts`, `rust`, `go` and `docker`, chosen by the `stacks` answer.
+Start a new project with linting, tests, CI and releases already set up.
 
-## Getting started
-
-```sh
-mkdir myproject && cd myproject && git init
-copier copy gh:simonvanlierde/project-templates .
-just py-sync   # python stack: installs and writes uv.lock
-just ts-sync   # ts stack: installs and writes pnpm-lock.yaml
-just go-sync   # go stack: writes go.sum
-git add -A && git commit -m "chore: scaffold"
-```
-
-Copier downloads the template, so you don't need to clone this repo.
-
-Commit the lockfiles before your first push. CI runs `uv sync --locked`,
-`pnpm install --frozen-lockfile` and `cargo clippy --locked`, and Go needs `go.sum`. All of
-them fail without one.
-
-## Pulling in template fixes
-
-```sh
-copier update
-```
-
-The same command also changes answers: re-tick `stacks` to add a stack, or flip
-a publish flag. Copier updates from the last tag, on a clean tree, so tag this
-repo whenever it changes.
-
-If you scaffolded a project before the layer merge, its answers are under
-`.copier/*.yml`. You can't update it across the merge. Re-run `copier copy` on
-top and reconcile with git.
+This is a [Copier](https://copier.readthedocs.io) template. You answer a few questions,
+and it writes a ready-to-commit repository for Python, TypeScript, Rust, Go, Docker, or
+any mix of them. When the template improves later, one command pulls the changes into
+your project.
 
 ## What you get
 
-| Stack    | What it writes                                                                                                                                       |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| always   | The repo furniture: `README.md`, a Keep a Changelog `CHANGELOG.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot and `SECURITY.md`; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
-| `python` | A Python package in `<python_dir>`: `pyproject.toml`, `.python-version`, `src/`, `tests/`, plus extra files for the `research` and `data-pipeline` kinds (see below) |
-| `ts`     | A TypeScript package in `<ts_dir>`: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `biome.json`, `pnpm-workspace.yaml`, `src/index.ts`, `src/index.test.ts`        |
-| `rust`   | A Rust crate in `<rust_dir>`: `Cargo.toml` with a strict lint policy (see below), `clippy.toml`, `deny.toml`, and `src/lib.rs` or `src/main.rs` by `rust_kind` |
-| `go`     | A Go module in `<go_dir>`: `go.mod`, `.golangci.yml` (see below), and by `go_kind` either a library package with a table test and an Example, or a `main.go` with its test |
-| `docker` | Per containerized stack: `Dockerfile`, `.dockerignore`, a runnable `/health` entrypoint. Plus `compose.yaml` at the repo root                        |
+- **A working project on day one.** A package with source, a passing test, and a
+  `justfile`, so `just check` runs every linter and test the same way CI does.
+- **CI for each language.** GitHub Actions workflows that lint, type-check, test and
+  audit dependencies on every push and pull request.
+- **Supply-chain safety by default.** Actions are pinned to exact commits, workflows
+  are audited for common attacks, and uv and pnpm wait a week before they install a
+  new release.
+- **Optional publishing.** Release workflows for PyPI, npm and the GitHub Container
+  Registry, with no tokens to store. All of them start off.
+- **The usual repository files.** `README.md`, `CHANGELOG.md`, `LICENSE`,
+  `SECURITY.md`, `.gitignore`, `.editorconfig`, Dependabot, git hooks and VS Code
+  recommendations.
 
-Each stack also gets a CI workflow in `.github/workflows/`, a `just/<stack>.just`
-recipe file, and a release workflow if the matching publish answer is on. A Python package
-nested below the repo root gets its own `README.md` too.
+## Quick start
 
-## Picking a Python `kind`
+You need [Copier](https://copier.readthedocs.io/en/stable/#installation) 9.1 or later
+and [just](https://just.systems). Each language also needs its own toolchain: `uv` for
+Python, `pnpm` for TypeScript, `cargo` for Rust, or `go` for Go.
 
-| `kind`          | Pick it when                                                                  | It adds                                          |
-| --------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
-| `library`       | Other projects install and import the package                                 | Project URLs, and the option to publish to PyPI  |
-| `app`           | You run the code, and nothing imports it                                      | Nothing beyond the package                       |
-| `research`      | You analyse data in notebooks, and you manage the data files by hand          | `notebooks/`, `data/`, and JupyterLab            |
-| `data-pipeline` | The repo rebuilds a dataset from third-party sources, and each value must trace back to a download | See below                    |
-| `web-service`   | The package is an HTTP service that runs as a container (needs the `docker` stack) | See below                    |
+1. Create an empty repository:
 
-A `data-pipeline` project gets:
+   ```sh
+   mkdir myproject && cd myproject && git init
+   ```
 
-- `sources.toml`, a manifest of every input. Each source has a URL, the publisher's
-  reuse terms (`terms`, `terms_url`), and a `status`. A source marked
-  `status = "unimplemented"` is one you know about but don't read yet.
-- `data/raw/` and `data/processed/`, both gitignored, so the repo never
-  redistributes source data.
-- A small standard-library module with three stages. `fetch` writes each download
-  atomically, with a record of its URL, retrieval time, SHA-256 and vintage. `build`
-  refuses a download made for a different request than the manifest now makes, and
-  verifies checksums before it parses. `validate` re-reads the published output and
-  re-hashes the raw files.
-- `just fetch`, `just build`, `just validate`, and `just pipeline` for all three.
-- `ATTRIBUTION.md`, which states what the repo reuses and on what terms. The code
-  license doesn't cover those.
-- Tests that run the whole pipeline against a local file, with no network.
-- A CI workflow that runs the pipeline for real on the manifest's URLs, then uploads
-  only the fetch records. The tests that compare published values with literal
-  numbers run only in its weekly scheduled run (`TRIPWIRE=1`), so a publisher
-  revision fails that run, not your PRs.
+2. Run the template and answer the questions:
 
-The example source in `sources.toml` is about 1 kB. Replace it, and the tests that
-read its output, with your own sources.
+   ```sh
+   copier copy gh:simonvanlierde/project-templates .
+   ```
 
-This kind comes from a rebuild of a published research database from its public
-sources. That project started from `research` and added the manifest, the data
-split, the recipes, the attribution file and the pipeline CI by hand. The generic
-parts are now the template. The readers for each source stayed in that project.
+   Copier downloads the template itself, so you don't need to clone this repository.
 
-A `web-service` project gets:
+3. Install dependencies and write the lockfiles. Run the line for each stack you
+   picked:
 
-- A FastAPI app with one route: `GET /health`, a fixed `{"status": "ok"}` that the
-  image's `HEALTHCHECK` probes.
-- An entrypoint that reads `HOST` and `PORT`. It listens on `127.0.0.1` unless
-  `HOST` says otherwise; the image sets `HOST=0.0.0.0` and `compose.yaml` publishes
-  the port on `127.0.0.1` only.
-- OpenTelemetry through zero-code instrumentation, on only when
-  `OTEL_EXPORTER_OTLP_ENDPOINT` is set: request spans and a request-duration
-  histogram over OTLP/HTTP. The SDK reads every other `OTEL_*` variable itself.
-  Without the endpoint, nothing is imported.
-- `just serve`, and a `<slug>` console script, to run it outside Docker.
-- Tests for `/health`, telemetry off, and telemetry on (console exporters in a child
-  process: one span and one duration point per request).
+   ```sh
+   just py-sync   # Python: writes uv.lock
+   just ts-sync   # TypeScript: writes pnpm-lock.yaml
+   just go-sync   # Go: writes go.sum
+   just rs-sync   # Rust: writes Cargo.lock
+   ```
 
-## Layout: one package or a monorepo
+4. Run every linter and test, the same checks CI runs. Rust and Go need a few tools
+   installed once per machine first. The new project's README lists them.
 
-`python_dir`, `ts_dir`, `rust_dir` and `go_dir` all default to `.`, the repo root. At `.` you get a
-plain single-package repo. Any other value nests the package:
+   ```sh
+   just check
+   ```
+
+5. Commit everything, lockfiles included:
+
+   ```sh
+   git add -A && git commit -m "chore: scaffold"
+   ```
+
+Commit the lockfiles before your first push. CI installs exactly what they list
+(`uv sync --locked`, `pnpm install --frozen-lockfile`, `cargo clippy --locked`, and
+`go.sum` for Go), so it fails without them.
+
+The new project's README also shows how to turn on the git hooks.
+
+## Choosing your stacks
+
+The `stacks` question is a multi-select. Pick any combination:
+
+| Stack    | What it adds                                                                   |
+| -------- | ------------------------------------------------------------------------------ |
+| `python` | A Python package with `pyproject.toml`, `src/` and `tests/`                     |
+| `ts`     | A TypeScript package with `package.json`, `tsconfig.json` and a test           |
+| `rust`   | A Rust crate, as a library or a binary, with strict clippy lints               |
+| `go`     | A Go module, as a library or a binary, with golangci-lint                      |
+| `docker` | A `Dockerfile` for the Python or TypeScript package, and a root `compose.yaml` |
+
+Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
+`just/<stack>.just`. The files every project gets, whatever it picks, are listed in
+[What you get](#what-you-get).
+
+### Python project kinds
+
+A Python project also asks for a `kind`:
+
+| `kind`          | Pick it when                                                      | It adds                                          |
+| --------------- | ----------------------------------------------------------------- | ------------------------------------------------ |
+| `library`       | Other projects install and import your package                    | Project URLs, and the option to publish to PyPI  |
+| `app`           | You run the code yourself, and nothing imports it                 | Nothing beyond the package                       |
+| `research`      | You analyse data in notebooks and manage the data files by hand   | `notebooks/`, `data/`, JupyterLab, `CITATION.cff` |
+| `data-pipeline` | You rebuild a dataset from public sources, traceable to each download | A source manifest and fetch, build and validate steps |
+| `web-service`   | You run an HTTP service in a container (needs the `docker` stack)  | A FastAPI app with a `/health` endpoint          |
+
+[docs/python-kinds.md](docs/python-kinds.md) describes what the `data-pipeline` and
+`web-service` kinds generate.
+
+### One package or a monorepo
+
+By default, each package sits at the repository root. To put several packages in one
+repository, give each a directory when Copier asks, such as `python_dir: apps/api` and
+`ts_dir: apps/web`:
 
 ```text
 apps/api/{pyproject.toml,src,tests,Dockerfile,.dockerignore}
@@ -120,139 +120,59 @@ compose.yaml            # one service per image, api on 8000 and web on 8001
 justfile, just/, .pre-commit-config.yaml, .copier-answers.yml
 ```
 
-Only the package moves. The workflows, hooks, and justfile stay at the root.
+Only the packages move. The workflows, hooks and `justfile` stay at the root.
 
-Two stacks can share `.`, but two *images* can't: both Dockerfiles would land at
-`./Dockerfile`. `docker_stacks` rejects that combination.
+Two stacks can share the root, but two Docker images can't, because both Dockerfiles
+would land at `./Dockerfile`. Copier rejects that combination.
 
-To move a package later, run `copier update` with the new directory, then delete
-the old one by hand: copier cleans up files that left the *template*, not files
-that moved because an *answer* did.
+This layout holds one package per language. It isn't a uv or pnpm workspace. Once you
+need two packages in the same language, switch to that language's workspace tooling.
 
-This isn't a real workspace. Its `pnpm-workspace.yaml` holds settings and no
-`packages:` list, and there's no `[tool.uv.workspace]`. Once you need two packages in one language, switch to
-that language's workspace tooling.
+## Keeping your project up to date
 
-## Tooling
+Run this in your project to pull in template changes:
 
-|            | Lint and format | Types | Tests    | Packaging                        |
-| ---------- | --------------- | ----- | -------- | -------------------------------- |
-| Python     | `ruff`          | `ty`  | `pytest` | `uv`, locked, `uv_build` backend |
-| TypeScript | `biome`         | `tsc` | `vitest` | `pnpm`                           |
-| Rust       | `rustfmt`, `clippy` | `rustc` | `cargo nextest`, plus `cargo test --doc` | `cargo`, checked by `cargo-deny` |
-| Go         | `golangci-lint` (`gofumpt`, `goimports`) | `go vet`, via golangci-lint | `go test -race`, Examples included | Go modules, checked by `govulncheck` |
+```sh
+copier update
+```
 
-**Rust lints** live in the crate's `Cargo.toml` `[lints]` table, because clippy has no
-user-wide config. The policy is clippy's `pedantic` group plus restriction lints against
-shortcuts: `unwrap_used`, `expect_used`, `dbg_macro`, `todo`, `unimplemented`, and
-`allow_attributes_without_reason`. `unsafe_code` is forbidden. A library also warns on
-`missing_docs` and on printing to stdout or stderr. `clippy.toml` allows `unwrap`,
-`expect` and `dbg!` in tests, and `deny.toml` limits dependencies to crates.io and
-permissive licenses. Install `cargo-nextest` and `cargo-deny` once per machine.
+Copier needs a clean working tree. It updates to the latest tagged release of this
+template, and [CHANGELOG.md](CHANGELOG.md) lists what each release changes.
 
-**Go lints** live in the module's `.golangci.yml`, for golangci-lint v2. The policy is the
-`standard` linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `misspell`,
-`modernize`, `nilerr`, `noctx`, `revive`, `sloglint`, `unconvert`, `unparam` and
-`usestdlibvars`, with `gosec` and `noctx` off in tests. `gofumpt` and `goimports` format.
-Install golangci-lint once per machine (the scaffold's README has the line). Its version
-comes from the template, so `copier update` moves it. `govulncheck` is a `tool` in
-`go.mod`, so it needs no install and Dependabot keeps it current.
+The same command changes your earlier answers. Add a stack to `stacks`, or turn a
+publish option on, and Copier writes the new files.
 
-**Git hooks** run through [prek](https://prek.j178.dev): one runner and one
-`.pre-commit-config.yaml` covering every stack. Python projects install it with
-`uv tool install prek`. TypeScript-only projects get the same binary from the
-`@j178/prek` devDependency.
-
-**Tasks** run through [just](https://just.systems). The root `justfile` imports a
-`just/<stack>.just` from each stack. Recipes use the `py-`, `ts-`, `rs-` and `go-` prefixes
-because those imports share one namespace. Your `stacks` answer builds
-`just check`, which runs everything.
-
-**Docker images** follow the upstream [uv](https://docs.astral.sh/uv/guides/integration/docker/)
-and [pnpm](https://pnpm.io/docker) guides: multi-stage builds on `-slim` bases, BuildKit
-cache mounts, a non-root runtime user, and Open Container Initiative labels.
-
-**GitHub Actions** pins actions to commit digests and puts the version in a
-trailing comment. Every workflow declares least-privilege `permissions`. A
-[zizmor](https://docs.zizmor.sh) git hook audits `.github/` for template injection,
-credential leakage, cache poisoning, and impostor digests, and an actionlint hook
-checks keys, expressions, and shell. A `checks.yml` workflow runs the hooks in CI, so
-the workflows you add later meet the same standard. CI renders the templates before it
-audits them. `.jinja` isn't YAML, but its output is. [docs/ci-baseline.md](docs/ci-baseline.md)
-lists every check, and what was left out and why.
-
-**Coverage** is opt-in: `just py-cov` and `just ts-cov` (not `just check`) print a
-summary. No threshold, and no report files until something uploads them.
-
-**Licenses** are `MIT`, `Apache-2.0`, `BSD-3-Clause` or none. The texts come from
-the GitHub licenses API, with the copyright placeholders filled in.
-
-**Dependency updates** in scaffolded projects go through Dependabot: no app to install,
-and it covers every ecosystem this template generates. Version updates wait through a
-`cooldown` of one week, or one month for majors. A compromised release is usually
-yanked during that time. Security updates skip it. This repo uses Renovate because its
-pins live inside `.jinja` files Dependabot can't parse. Neither bot tracks the `FROM`
-base images. Those tags are copier answers, so bump them by hand.
-
-**Dependency age and audits.** Resolvers wait a week too: uv's `exclude-newer = "1 week"`
-in `pyproject.toml` and pnpm's `minimumReleaseAge` in `pnpm-workspace.yaml` skip any
-release younger than that, so a `uv lock` or `pnpm install` can't pull in a release
-that Dependabot would still hold back. Both settings are per project, so every machine
-writes the same lockfile. Go has no such setting, so for a Go module Dependabot's cooldown
-is the only wait. `just check` and CI also audit dependencies for known
-advisories: `uv audit` (every locked dependency), `pnpm audit --prod` (what ships),
-`cargo deny check`, and `govulncheck` (advisories whose code the module reaches). Knip reports unused files, exports and dependencies in the TypeScript
-package.
+To move a package to another directory, run `copier update` with the new directory.
+Then delete the old directory by hand. Copier removes files that left the template,
+but not files that moved because an answer changed.
 
 ## Publishing
 
-All three publish targets default to **off**. Each one needs a trust relationship set up
-on the registry side before it can work.
+Publishing is off by default, and each off state blocks an accidental release:
 
-| Answer            | Off by default                                                              | On                                                     |
-| ----------------- | -------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `publish_to_pypi` | `classifiers = ["Private :: Do Not Upload"]`, so PyPI rejects the upload   | `python-release.yml` publishing via trusted publishing |
-| `publish_to_npm`  | `"private": true`, so pnpm refuses with `EPRIVATE` before any network call | `ts-release.yml` publishing via trusted publishing     |
-| `publish_to_ghcr` | CI builds the image and smoke-tests `/health`, pushes nothing              | same smoke test, then push to the GitHub Container Registry with a software bill of materials and provenance |
+| Option            | While off                                                   | When on                                                  |
+| ----------------- | ----------------------------------------------------------- | -------------------------------------------------------- |
+| `publish_to_pypi` | PyPI rejects uploads (`Private :: Do Not Upload` classifier) | `python-release.yml` publishes to PyPI                   |
+| `publish_to_npm`  | pnpm refuses to publish (`"private": true`)                 | `ts-release.yml` publishes to npm                        |
+| `publish_to_ghcr` | CI builds the image and tests `/health`, but pushes nothing | CI also pushes the image to the GitHub Container Registry |
 
-To turn one on, first configure the publisher through
-[pypi.org](https://pypi.org/manage/account/publishing/) or
-[npmjs.com](https://docs.npmjs.com/trusted-publishers/). Then flip the answer and run
-`copier update`. Both use OpenID Connect trusted publishing, so there's no token to
-store. npm can't create a brand-new package that way, so publish version one by hand first.
+PyPI and npm use trusted publishing (OpenID Connect), so you store no tokens. The
+registry needs to trust your repository first. To turn publishing on:
 
-Each release workflow splits build from publish. The build job re-runs the checks and
-then validates the artifact itself: the wheel installed into a clean environment and
-tested, the tarball checked with `publint`. Only the publish job carries
-`id-token: write`, and it runs no project code: it downloads the artifact and uploads it.
+1. Add a trusted publisher on [pypi.org](https://pypi.org/manage/account/publishing/)
+   or [npmjs.com](https://docs.npmjs.com/trusted-publishers/).
+2. For a new npm package, publish the first version by hand. npm can't create a
+   package through trusted publishing.
+3. Run `copier update`, and answer yes to the publish option.
 
-## Working on the templates themselves
+## How it works
 
-To try out edits you haven't tagged yet, pass `--vcs-ref=HEAD`:
+[docs/tooling.md](docs/tooling.md) covers the tools each stack uses, the lint policies,
+the Docker images, dependency updates and the release workflows.
+[docs/ci-baseline.md](docs/ci-baseline.md) lists every CI check, and what was left out
+and why.
 
-```sh
-copier copy --vcs-ref=HEAD gh:simonvanlierde/project-templates .
-```
+## Contributing
 
-Without it, copier renders the last tag and your changes never reach the output.
-
-Before you push, run the hooks and the render checks CI runs. The script renders
-uncommitted edits too:
-
-```sh
-prek run -a
-scripts/check-render.sh "$(mktemp -d)"
-```
-
-A render of a tag from a local checkout records `gh:simonvanlierde/project-templates`
-as `_src_path` in `.copier-answers.yml`, not the local path. A local path would leak
-your home directory and break `copier update` on any other machine.
-
-A render of any other commit keeps the local path, because that commit may not exist
-on GitHub. `_commit` is then the checkout's commit, and `copier update` can't check
-out a commit that exists only on your machine (an unpushed tag, a deleted branch) or
-in a fork. Before you commit a real project's answers file, render from a tag pushed
-to this repository, or edit `_src_path` and `_commit`.
-
-To test an update against a local checkout, set `_src_path` to the checkout's path
-for that run, as the CI `update` job does.
+[CONTRIBUTING.md](CONTRIBUTING.md) explains how to test changes to the template before
+you tag a release.
