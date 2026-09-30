@@ -238,7 +238,11 @@ jobs:
           cache-suffix: copier
           save-cache: ${{ github.event_name != 'pull_request' }}
 
-      - name: scaffold at last tag, update to HEAD
+      - run: uv tool install "rust-just==$JUST_VERSION"
+
+      # A nested package with a local change, as a real project has one: the change must
+      # survive the update, and the result must still pass its own checks.
+      - name: scaffold at last tag, edit, update to HEAD
         run: |
           set -euo pipefail
           TAG=$(git describe --tags --abbrev=0)
@@ -246,14 +250,17 @@ jobs:
           git init -q "$PROJ"
           uvx "copier@$COPIER_VERSION" copy --vcs-ref="$TAG" --defaults --overwrite \
             --data project_name=update-me --data 'stacks=[python,ts,docker]' \
-            --data 'docker_stacks=[python]' . "$PROJ"
+            --data python_dir=api --data 'docker_stacks=[python]' . "$PROJ"
           # The answers name the GitHub source; point the update at the pushed commit.
           sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
+          uv add -q --directory "$PROJ/api" 'attrs>=25'
           git -C "$PROJ" add -A
           git -C "$PROJ" -c user.email=ci@invalid -c user.name=ci commit -qm scaffold
           # --conflict rej: the default inline markers would pass every check unseen.
           uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults --conflict rej "$PROJ"
           test -z "$(find "$PROJ" -name '*.rej' -print -quit)"
+          grep -q '"attrs>=25' "$PROJ/api/pyproject.toml"
+          cd "$PROJ/api" && just py-sync py-check
 
   typescript:
     # Ts stack, with docker. The image builds nested (monorepo); the root Dockerfile is
