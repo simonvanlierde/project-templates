@@ -61,6 +61,19 @@ jobs:
             stacks: "[python,docker]"
             python_dir: apps/api
             kind: library
+          - name: app
+            project_name: ci-app
+            module_name: ci_app
+            stacks: "[python]"
+            python_dir: "."
+            kind: app
+          # Adds JupyterLab to the dev group.
+          - name: research
+            project_name: ci-research
+            module_name: ci_research
+            stacks: "[python]"
+            python_dir: "."
+            kind: research
           - name: data-pipeline
             project_name: ci-pipeline
             module_name: ci_pipeline
@@ -246,8 +259,8 @@ jobs:
           sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
           git -C "$PROJ" add -A
           git -C "$PROJ" -c user.email=ci@invalid -c user.name=ci commit -qm scaffold
-          uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults "$PROJ"
-          # Conflicts don't fail the update; leftover .rej files are the signal.
+          # --conflict rej: the default, inline, writes markers that no check sees.
+          uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults --conflict rej "$PROJ"
           test -z "$(find "$PROJ" -name '*.rej' -print -quit)"
 
   typescript:
@@ -265,11 +278,18 @@ jobs:
             project_name: 'Ci "TS" Lib'
             stacks: "[ts]"
             ts_dir: "."
+            ts_kind: library
+          - name: app
+            project_name: ci-ts-app
+            stacks: "[ts]"
+            ts_dir: "."
+            ts_kind: app
           # The nested package installed and built, not only rendered.
           - name: monorepo
             project_name: ci-mono-ts
             stacks: "[ts,docker]"
             ts_dir: apps/web
+            ts_kind: library
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -283,13 +303,15 @@ jobs:
           cache-suffix: copier
           save-cache: ${{ github.event_name != 'pull_request' }}
 
-      # publish_to_npm=true so the conditionally-named ts-release.yml renders
-      # too. project_name via env: one row's value contains quotes.
+      # publish_to_npm=true (asked only of a library) so the conditionally-named
+      # ts-release.yml renders too. project_name via env: one row's value
+      # contains quotes.
       - name: scaffold
         env:
           PROJECT_NAME: ${{ matrix.project_name }}
           STACKS: ${{ matrix.stacks }}
           TS_DIR: ${{ matrix.ts_dir }}
+          TS_KIND: ${{ matrix.ts_kind }}
           # Derived from stacks so a row can't gain docker and skip its answers.
           DOCKER: ${{ contains(matrix.stacks, 'docker') }}
         run: |
@@ -298,8 +320,8 @@ jobs:
              --data "project_name=$PROJECT_NAME"
              --data "stacks=$STACKS"
              --data "ts_dir=$TS_DIR"
-             --data ts_kind=library
-             --data publish_to_npm=true)
+             --data "ts_kind=$TS_KIND")
+          if [ "$TS_KIND" = library ]; then C+=(--data publish_to_npm=true); fi
           if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[ts]'); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
