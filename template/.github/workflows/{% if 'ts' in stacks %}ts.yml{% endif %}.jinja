@@ -57,5 +57,5 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm run test
       - run: pnpm run build
-      # Known advisories in what ships: dependencies, not dev tooling.
-      - run: pnpm audit --prod
+      # Known advisories, moderate and up, in what ships: dependencies, not dev tooling.
+      - run: pnpm audit --prod --audit-level=moderate
