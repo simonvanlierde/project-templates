@@ -14,6 +14,10 @@ a minor release can break things; breaking changes are marked **Breaking**.
 - The `hygiene.yml` workflow is now `checks.yml`. Its job names are unchanged, so
   required status checks still match.
 
+### Removed
+
+- The pull request template.
+
 ## [0.6.0] - 2026-09-30
 
 ### Upgrade notes
