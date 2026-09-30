@@ -5,7 +5,11 @@
 {%- set uv_project = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --project ' ~ python_dir %}
 {%- set uv_cd = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --directory ' ~ python_dir %}
 {%- set pnpm = 'pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir %}
-{%- set mp = '' if rust_dir == '.' else ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' -%}
+{%- set mp = '' if rust_dir == '.' else ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' %}
+{#- golangci-lint fmt takes a path, but run loads packages from the cwd's module
+    and has no flag naming another, so a nested module is the one cd. #}
+{%- set go_fmt = 'golangci-lint fmt' if go_dir == '.' else 'golangci-lint fmt ' ~ go_dir %}
+{%- set go_run = 'golangci-lint run' if go_dir == '.' else "sh -c 'cd " ~ go_dir ~ " && exec golangci-lint run'" -%}
 # Run with prek, a drop-in pre-commit replacement: prek install && prek run -a
 #
 # Python projects get prek from `uv tool install prek`; TypeScript-only projects
@@ -96,7 +100,7 @@ repos:
     hooks:
       - id: rumdl
         args: [--fix]
-{%- if 'python' in stacks or 'ts' in stacks or 'rust' in stacks %}
+{%- if 'python' in stacks or 'ts' in stacks or 'rust' in stacks or 'go' in stacks %}
 
   - repo: local
     hooks:
@@ -162,4 +166,20 @@ repos:
         language: system
         pass_filenames: false
         types: [rust]
+{%- endif %}
+{%- if 'go' in stacks %}
+      # Both work on the whole module, with the policy in .golangci.yml.
+      - id: golangci-lint-fmt
+        name: golangci-lint fmt
+        entry: {{ go_fmt }}
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      - id: golangci-lint
+        name: golangci-lint run
+        entry: {{ go_run }}
+        language: system
+        pass_filenames: false
+        types: [go]
 {%- endif %}

@@ -1,0 +1,11 @@
+// Package {{ go_package }} is the {{ project_name }} library.
+{%- if project_description %}
+//
+// {{ project_description }}
+{%- endif %}
+package {{ go_package }}
+
+// Add returns the sum of left and right.
+func Add(left, right int) int {
+	return left + right
+}

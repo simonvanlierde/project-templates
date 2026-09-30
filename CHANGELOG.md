@@ -10,6 +10,10 @@ release. Dependency bumps and this repo's own CI are left out; `git log` has the
 - `rust` stack: a crate in `rust_dir`, library or binary, with a strict clippy lint policy
   in `Cargo.toml`'s `[lints]` table, `clippy.toml`, a `deny.toml` for cargo-deny, `rust.yml`,
   `just rs-check`, cargo hooks, and a Dependabot cargo entry.
+- `go` stack: a module in `go_dir`, library or binary, with a golangci-lint v2 policy in
+  `.golangci.yml`, a table-driven test and an Example, `go.yml`, `just go-check`
+  (golangci-lint, `go test -race`, govulncheck), golangci-lint hooks, and a Dependabot
+  gomod entry.
 - Dependency audits in `just check` and CI: `uv audit` for Python, `pnpm audit --prod` for
   TypeScript, `cargo deny check` for Rust.
 - Knip in the TypeScript `check` script, for unused files, exports and dependencies.

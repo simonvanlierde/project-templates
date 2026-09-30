@@ -1,0 +1,22 @@
+package {{ go_package }}
+
+import "testing"
+
+func TestAdd(t *testing.T) {
+	tests := []struct {
+		name        string
+		left, right int
+		want        int
+	}{
+		{"zeros", 0, 0, 0},
+		{"positives", 2, 2, 4},
+		{"negative", -2, 3, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Add(tt.left, tt.right); got != tt.want {
+				t.Errorf("Add(%d, %d) = %d, want %d", tt.left, tt.right, got, tt.want)
+			}
+		})
+	}
+}

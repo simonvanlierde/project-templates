@@ -13,7 +13,7 @@ compares against the ReLab production repository, which runs a heavier set.
 | `concurrency` group with `cancel-in-progress` | every workflow | A new push cancels the stale run. |
 | `timeout-minutes` on every job | every workflow | A hung job stops in minutes, not six hours. |
 | `persist-credentials: false` on checkout | every workflow | Later steps can't reuse the checkout token. |
-| Stack checks: lint, format, types, tests, dependency audit | `python.yml`, `ts.yml`, `rust.yml` | The same commands as `just check`. |
+| Stack checks: lint, format, types, tests, dependency audit | `python.yml`, `ts.yml`, `rust.yml`, `go.yml` | The same commands as `just check`. |
 | Git hooks run in CI | `hygiene.yml` | `prek install` is opt-in per clone. Without this job, a commit made without hooks reaches `main` unchecked. |
 | zizmor | hook, so also CI | Audits workflows for template injection, credential leaks, cache poisoning, and impostor commits. |
 | actionlint | hook, so also CI | Catches what zizmor doesn't: unknown keys, bad `needs`, expression type errors, and shellcheck findings in `run:` blocks. |
@@ -37,7 +37,7 @@ scanning is the server-side check.
 | Renovate from Actions | Needs a GitHub App and two secrets. Dependabot needs neither and covers every ecosystem here, including hook revs. | You need automerge or grouping Dependabot can't express. |
 | release-please | Research repos release rarely, and Zenodo archives a tagged release. A release PR on every push is noise. | Releases become frequent enough that writing the changelog by hand costs time. |
 | Secret scan over full history | GitHub secret scanning and push protection cover public repos at no cost. The hook covers local commits. | The repo is private without GitHub Advanced Security. |
-| Scheduled audit job | The stack workflows audit on every push and PR (`uv audit`, `pnpm audit --prod`, `cargo deny check`), and Dependabot security alerts cover the time between. | A dependency sits unchanged for months in a repo with few pushes. |
+| Scheduled audit job | The stack workflows audit on every push and PR (`uv audit`, `pnpm audit --prod`, `cargo deny check`, `govulncheck`), and Dependabot security alerts cover the time between. | A dependency sits unchanged for months in a repo with few pushes. |
 | One required "CI result" job | A single workflow per stack is short enough to list its jobs in branch protection. | The job list grows past what you want to maintain by hand. |
 | CODEOWNERS, issue templates, CONTRIBUTING | Single-author repos. | Other people start contributing. |
 

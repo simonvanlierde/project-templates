@@ -3,6 +3,7 @@
 {% if 'python' in stacks %}[![python](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/python.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/python.yml)
 {% endif %}{% if 'ts' in stacks %}[![ts](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/ts.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/ts.yml)
 {% endif %}{% if 'rust' in stacks %}[![rust](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/rust.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/rust.yml)
+{% endif %}{% if 'go' in stacks %}[![go](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/go.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/go.yml)
 {% endif %}{% if 'docker' in stacks %}[![docker](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/docker.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/docker.yml)
 {% endif %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license }}-blue.svg)](LICENSE)
 {% endif %}{% if project_description %}
@@ -14,6 +15,7 @@
 {% if 'python' in stacks %}uv sync{% if python_dir != '.' %} --directory {{ python_dir }}{% endif %}
 {% endif %}{% if 'ts' in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} install
 {% endif %}{% if 'rust' in stacks %}cargo install --locked cargo-nextest cargo-deny   # once per machine
+{% endif %}{% if 'go' in stacks %}curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b "$(go env GOPATH)/bin" {{ golangci_lint_version }}   # once per machine
 {% endif %}{% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek install     # git hooks
 {% else %}uv tool install prek   # once per machine
 prek install     # git hooks

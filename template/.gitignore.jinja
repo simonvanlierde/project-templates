@@ -37,6 +37,16 @@ coverage/
 
 # Rust
 target/
+{%- if 'go' in stacks %}
+{%- set d = '' if go_dir == '.' else go_dir ~ '/' %}
+
+# Go
+{{ d }}coverage.out
+{%- if go_kind == 'binary' %}
+# What `go build` writes: a binary named after the module path's last element.
+/{{ d }}{{ go_module.split('/')[-1] }}
+{%- endif %}
+{%- endif %}
 {%- if 'python' in stacks and kind == 'data-pipeline' %}
 {%- set d = '' if python_dir == '.' else python_dir ~ '/' %}
 

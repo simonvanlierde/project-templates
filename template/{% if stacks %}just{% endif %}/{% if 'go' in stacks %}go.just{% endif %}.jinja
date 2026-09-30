@@ -1,0 +1,20 @@
+{#- just runs every recipe from the root justfile's directory. golangci-lint has
+    no flag naming the module, so a nested module is reached with just's own
+    working-directory attribute rather than with a cd. It renders empty for the
+    flat layout, where the root already is the module. -#}
+{%- set wd = '' if go_dir == '.' else "[working-directory: '" ~ go_dir ~ "']\n" -%}
+# What CI runs: format check, golangci-lint, tests (with the race detector and every Example), govulncheck.
+{{ wd }}go-check:
+    golangci-lint fmt --diff
+    golangci-lint run
+    go test -race ./...
+    go run golang.org/x/vuln/cmd/govulncheck@{{ govulncheck_version }} ./...
+
+# Format, then apply golangci-lint's fixes.
+{{ wd }}go-fmt:
+    golangci-lint fmt
+    golangci-lint run --fix
+
+# Tests only; extra arguments reach go test (`just go-test -run TestName`).
+{{ wd }}go-test *args:
+    go test ./... {% raw %}{{ args }}{% endraw %}

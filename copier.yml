@@ -52,7 +52,7 @@ stacks:
   type: str
   multiselect: true
   help: Which stacks this repo uses
-  choices: [python, ts, rust, docker]
+  choices: [python, ts, rust, go, docker]
   default: [python]
 
 # Where each stack's package lives. `.` is a plain single-package repo; anything
@@ -74,6 +74,12 @@ rust_dir:
   type: str
   when: "{{ 'rust' in stacks }}"
   help: Directory holding the Rust crate (`.` for the repo root, `crates/core` for a monorepo)
+  default: "."
+
+go_dir:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  help: Directory holding the Go module (`.` for the repo root, `services/api` for a monorepo)
   default: "."
 
 # --- python -------------------------------------------------------------------
@@ -162,6 +168,52 @@ rust_version:
   when: "{{ 'rust' in stacks }}"
   help: Minimum supported Rust version (Cargo.toml rust-version)
   default: "1.98"
+
+# --- go -----------------------------------------------------------------------
+
+go_kind:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  choices:
+    Library (a package at the module root, with an Example): library
+    Binary (package main at the module root): binary
+  default: library
+
+go_module:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  help: Go module path (go.mod `module`)
+  default: "github.com/{{ github_user }}/{{ slug }}"
+
+# Computed, never asked. A package name is one lowercase identifier: no `-` or
+# `.`, which a slug may carry.
+go_package:
+  type: str
+  when: false
+  default: "{{ slug|regex_replace('[^a-z0-9]', '') }}"
+
+# go.mod's `go` directive: the oldest Go the module builds with, and the
+# language version the linters check against. Defaults to the current stable
+# minor. golangci-lint must be built with at least this Go.
+go_version:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  help: Minimum Go version (go.mod `go` directive)
+  default: "1.27"
+
+# Computed, never asked: the tool releases the README, `just go-check` and go.yml
+# pin, kept in one place. Renovate bumps them from the comments above each.
+# renovate: datasource=github-releases depName=golangci/golangci-lint
+golangci_lint_version:
+  type: str
+  when: false
+  default: v2.13.2
+
+# renovate: datasource=go depName=golang.org/x/vuln
+govulncheck_version:
+  type: str
+  when: false
+  default: v1.8.0
 
 # --- docker -------------------------------------------------------------------
 
