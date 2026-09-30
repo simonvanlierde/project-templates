@@ -218,9 +218,9 @@ jobs:
           fetch-depth: 0 # copier needs the tags to pick the update base
 
       - &setup-uv-copier
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         # uv only runs copier here and in the typescript, rust and go jobs, which
         # reuse this step and so share its cache key.
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: .github/workflows/ci.yml
