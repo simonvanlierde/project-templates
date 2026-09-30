@@ -1,4 +1,4 @@
-"""The app in process; its telemetry in a child process."""
+"""Tests the app in process, and its telemetry in a child process."""
 
 import os
 import subprocess
@@ -41,7 +41,7 @@ def test_telemetry_is_off_without_an_endpoint(monkeypatch: pytest.MonkeyPatch, e
 
 
 # Instrumenting patches FastAPI for the rest of the process, so this runs in a child.
-# Console exporters stand in for the collector; the endpoint only switches telemetry on.
+# Console exporters stand in for the collector. The endpoint only switches telemetry on.
 CHILD = """
 from {{ module_name }}.__main__ import start_telemetry
 assert start_telemetry()

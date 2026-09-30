@@ -22,8 +22,8 @@ htmlcov
 .coverage
 coverage.xml
 
-# Left out of the image. With `COPY . /app` they would enter the layer hash, so
-# touching a test or notebook would re-run the whole dependency install, which
+# Left out of the image. With `COPY . /app` they would enter the layer hash. Touching
+# a test or notebook would then rebuild every layer from that `COPY` on, which
 # `docker compose up --watch` does on every source change.
 tests
 notebooks

@@ -12,6 +12,10 @@ rs-check:
 {%- endif %}
     cargo deny{{ mp }} check
 
+# Download the dependencies, writing Cargo.lock if it is missing or stale. CI uses --locked.
+rs-sync:
+    cargo fetch{{ mp }}
+
 # Apply clippy's machine-applicable fixes, then format.
 rs-fmt:
     cargo clippy{{ mp }} --all-targets --all-features --fix --allow-dirty --allow-staged

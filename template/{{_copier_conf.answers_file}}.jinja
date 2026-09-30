@@ -1,7 +1,7 @@
 {#- A render from a local checkout records its path as `_src_path`, which leaks the
     author's home directory and breaks `copier update` on other machines. Record the
     canonical URL instead, but only for a render from an exact tag. `_commit` is
-    `git describe --tags --always`; a `<tag>-<n>-g<sha>` or bare sha from a local
+    `git describe --tags --always`. A `<tag>-<n>-g<sha>` or bare sha from a local
     commit may not exist upstream, so `copier update` could not check it out. A
     remote source is kept as given. -#}
 {%- set src = _copier_answers._src_path -%}

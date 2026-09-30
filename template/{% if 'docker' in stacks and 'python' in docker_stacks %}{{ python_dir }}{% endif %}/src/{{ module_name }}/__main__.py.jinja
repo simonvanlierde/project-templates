@@ -6,7 +6,7 @@ import os
 import uvicorn
 
 # Loopback by default, so a bare `python -m {{ module_name }}` is not reachable from the
-# network. The image sets HOST=0.0.0.0; compose publishes the port on 127.0.0.1 only.
+# network. The image sets HOST=0.0.0.0, and compose publishes the port on 127.0.0.1 only.
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = {{ app_port }}
 
@@ -19,7 +19,7 @@ def start_telemetry() -> bool:
     """
     if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
         return False
-    # The distro defaults to gRPC; the HTTP exporter is the one installed.
+    # The distro defaults to gRPC, but only the HTTP exporter is installed.
     os.environ.setdefault("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
     from opentelemetry.instrumentation.auto_instrumentation import initialize  # noqa: PLC0415
 
