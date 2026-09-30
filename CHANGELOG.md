@@ -9,6 +9,11 @@ a minor release can break things; breaking changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- The `hygiene.yml` workflow is now `checks.yml`. Its job names are unchanged, so
+  required status checks still match.
+
 ## [0.6.0] - 2026-09-30
 
 ### Upgrade notes

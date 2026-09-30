@@ -90,8 +90,8 @@ test -f a/.github/SECURITY.md
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
 (! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.
-test -f a/.github/workflows/hygiene.yml
-test -f b/.github/workflows/hygiene.yml
+test -f a/.github/workflows/checks.yml
+test -f b/.github/workflows/checks.yml
 # CITATION.cff only for research kinds, at the root even when nested.
 test -f a/CITATION.cff
 test -f d/CITATION.cff
