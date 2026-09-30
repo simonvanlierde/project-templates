@@ -1,28 +1,27 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
-    // recommended + action/docker digest pins, a 3-day npm release age, and
-    // config-migration PRs.
+    // Digest pins, a 3-day npm release age, and config-migration PRs.
     "config:best-practices",
     ":semanticCommits",
     "schedule:weekly",
-    // Minor and patch in one PR; the actions and uv groups below take
-    // precedence for theirs, and majors stay separate.
+    // Minor and patch in one PR. The actions and uv groups below override it for
+    // their packages. Majors stay separate.
     "group:allNonMajor",
-    // The `# renovate: datasource=... depName=...` / `X_VERSION:` pairs in the
+    // `# renovate: datasource=... depName=...` comments above `X_VERSION:` in
     // workflow env blocks.
     "customManagers:githubActionsVersions",
-    // best-practices only covers npm; copier, zizmor and the pyproject pins
+    // best-practices covers npm only. Copier, zizmor and the pyproject pins
     // automerge too, so they get the same 3-day wait.
     "security:minimumReleaseAgePypi",
   ],
 
-  // Renovate here, Dependabot in the generated projects: this repo's pins live
-  // inside .jinja templates, which only Renovate can be pointed at.
+  // Renovate runs here because the pins live in .jinja files, which only
+  // Renovate can be pointed at. Generated projects use Dependabot.
 
-  // Both built-in managers are line-based, so Jinja tags don't break them; they
-  // only need their file patterns widened to the .jinja names. Workflows match
-  // extension-free because some are named `{% if ... %}x.yml{% endif %}.jinja`.
+  // Both managers are line-based, so Jinja tags don't break them. They only need
+  // patterns that match the .jinja names. The workflow pattern has no extension
+  // because some files are named `{% if ... %}x.yml{% endif %}.jinja`.
   "github-actions": {
     managerFilePatterns: ["/(^|/)\\.github/workflows/.+/"],
   },
@@ -30,11 +29,12 @@
     managerFilePatterns: ["/(^|/)[^/]*Dockerfile[^/]*\\.jinja$/"],
   },
 
-  // pre-commit, pep621 and npm parse their files, so Jinja defeats them; these
-  // read raw bytes instead. They fail open, which lint.yml guards.
+  // The pre-commit, pep621 and npm managers parse their files, and Jinja breaks
+  // the parse. These read raw text instead. They match nothing when a pattern
+  // drifts, which lint.yml checks.
   customManagers: [
     {
-      // The root config too: the built-in pre-commit manager is off by default.
+      // Includes the root config: the built-in pre-commit manager is off by default.
       customType: "regex",
       managerFilePatterns: ["/(^|/)\\.pre-commit-config\\.yaml(\\.jinja)?$/"],
       matchStrings: ["repo: https://github\\.com/(?<depName>\\S+)\\s+rev: (?<currentValue>\\S+)"],
@@ -44,10 +44,10 @@
       customType: "regex",
       managerFilePatterns: ["/(^|/)pyproject\\.toml\\.jinja$/"],
       matchStrings: [
-        // Open-ended `"name>=x"` pins. The closing quote keeps the two-bound
-        // uv_build range out: raising only its floor could pass the cap.
+        // Open-ended `"name>=x"` pins. The closing quote excludes the uv_build
+        // range: raising only its floor could pass the cap.
         "\"(?<depName>[a-z][a-z0-9._-]*)>=(?<currentValue>\\d[\\d.]*)\"",
-        // uv_build as a whole range, so both bounds move together.
+        // uv_build as one range, so both bounds move together.
         "\"(?<depName>uv_build)(?<currentValue>>=[\\d.]+,<[\\d.]+)\"",
       ],
       datasourceTemplate: "pypi",
@@ -57,12 +57,12 @@
       customType: "regex",
       managerFilePatterns: ["/(^|/)package\\.json\\.jinja$/", "/(^|/)Dockerfile\\.jinja$/"],
       matchStrings: [
-        // Caret ranges are only the devDependencies. Keep @types/node a
-        // literal, not {{ node_version }}, or it stops being extractable.
+        // Caret ranges are the devDependencies. Keep @types/node literal; a
+        // {{ node_version }} placeholder cannot be extracted.
         "\"(?<depName>@?[\\w.\\-/]+)\": \"\\^(?<currentValue>\\d[^\"]*)\"",
         "\"packageManager\": \"(?<depName>[a-z]+)@(?<currentValue>[\\d.]+)\"",
-        // The ts image's bootstrap pnpm; same depName as packageManager, so
-        // both land in one PR.
+        // The ts image's bootstrap pnpm. Same depName as packageManager, so both
+        // move in one PR.
         "npm i -g (?<depName>pnpm)@(?<currentValue>[\\d.]+)",
       ],
       datasourceTemplate: "npm",
@@ -80,8 +80,7 @@
   ],
 
   packageRules: [
-    // Non-major updates merge once the checks the main ruleset requires pass;
-    // majors stay manual.
+    // Non-major updates merge once the required checks pass. Majors stay manual.
     {
       matchUpdateTypes: ["minor", "patch", "pin", "digest"],
       automerge: true,
@@ -89,6 +88,16 @@
     {
       matchManagers: ["github-actions"],
       groupName: "actions",
+    },
+    // Actions and hooks automerge and then run with CI tokens or on developer
+    // machines. The wait gives a hijacked release time to be yanked.
+    {
+      matchManagers: ["github-actions"],
+      minimumReleaseAge: "7 days",
+    },
+    {
+      matchDatasources: ["github-tags"],
+      minimumReleaseAge: "7 days",
     },
     // Scaffolds resolve only releases a week old (uv exclude-newer, pnpm
     // minimumReleaseAge), so a floor raised sooner would not resolve there.
@@ -102,16 +111,15 @@
       matchFileNames: ["copier.yml"],
       minimumReleaseAge: "7 days",
     },
-    // The uv image and uv_build ship from one release. widen, because the cap
-    // is what has to move on a minor; the floor would drop installed uvs for
-    // nothing.
+    // The uv image and uv_build ship from one release. `widen` raises the cap and
+    // keeps the floor, so older installed uv versions keep working.
     {
       matchPackageNames: ["ghcr.io/astral-sh/uv", "uv_build"],
       groupName: "uv",
       rangeStrategy: "widen",
     },
-    // Maintained (commits in 2026-08), but tags only about once a year, which
-    // trips the 1-year abandonment threshold.
+    // Maintained (commits in 2026-08) but tagged about once a year, which trips
+    // the 1-year abandonment threshold.
     {
       matchPackageNames: ["pre-commit/pre-commit-hooks"],
       abandonmentThreshold: null,

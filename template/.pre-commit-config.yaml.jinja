@@ -1,7 +1,7 @@
-{#- Hooks run from the repo root with repo-root-relative filenames, so a nested
-    package is reached by pointing each tool at it rather than cd-ing there.
-    --project keeps the cwd so filenames still resolve; --directory moves it, and
-    is only used where the hook passes no filenames. Both render bare at '.'. -#}
+{#- Hooks run from the repo root with repo-root-relative filenames, so point each
+    tool at a nested package instead of cd-ing into it. --project keeps the cwd so
+    filenames still resolve. --directory moves it, so use it only where the hook
+    passes no filenames. Both render bare at '.'. -#}
 {%- set uv_project = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --project ' ~ python_dir %}
 {%- set uv_cd = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --directory ' ~ python_dir %}
 {%- set pnpm = 'pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir %}
@@ -12,9 +12,8 @@
 {%- set go_run = 'golangci-lint run' if go_dir == '.' else "sh -c 'cd " ~ go_dir ~ " && exec golangci-lint run'" -%}
 # Run with prek, a drop-in pre-commit replacement: prek install && prek run -a
 #
-# Python projects get prek from `uv tool install prek`; TypeScript-only projects
-# get the same binary from the @j178/prek devDependency. Dependabot keeps the
-# pinned revs current (see the pre-commit ecosystem in .github/dependabot.yml).
+# Python projects get prek from `uv tool install prek`. TypeScript-only projects
+# get it from the @j178/prek devDependency. Dependabot keeps the pinned revs current.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -29,7 +28,7 @@ repos:
       - id: check-toml
 {%- if 'ts' in stacks %}
 
-  # JSON5 superset check: tolerates JSONC configs (tsconfig, VS Code settings).
+  # Tolerates JSONC configs (tsconfig, VS Code settings).
   - repo: https://github.com/simonvanlierde/check-json5
     rev: v1.2.0
     hooks:
@@ -47,16 +46,16 @@ repos:
     hooks:
       - id: betterleaks
 
-  # Static analysis of .github/: template injection, credential leakage, cache
-  # poisoning, impostor commits behind a pinned digest. Set GH_TOKEN to enable
-  # the audits that need the API; the offline subset runs without it.
+  # Audits .github/ for template injection, credential leakage, cache poisoning
+  # and impostor commits. Set GH_TOKEN to enable the audits that need the API;
+  # without it only the offline subset runs.
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: v1.30.1
     hooks:
       - id: zizmor
 
-  # What zizmor doesn't check: unknown keys, bad `needs`, type errors in
-  # expressions, and shellcheck over every `run:` when shellcheck is on PATH.
+  # Checks what zizmor doesn't: unknown keys, bad `needs`, expression type errors,
+  # and shellcheck over every `run:` when shellcheck is on PATH.
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12
     hooks:
@@ -71,7 +70,7 @@ repos:
 {%- endif %}
 {%- if 'python' in stacks and kind in ('research', 'data-pipeline') %}
 
-  # CITATION.cff against the official schema; GitHub's "Cite this repository"
+  # CITATION.cff against the official schema. GitHub's "Cite this repository"
   # silently drops a file that fails it.
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.38.2
@@ -86,7 +85,7 @@ repos:
       - id: nbstripout
 {%- endif %}
   - repo: https://github.com/errata-ai/vale
-    rev: 16d3a7f
+    rev: v3.23.0
     hooks:
       - id: vale
         name: vale sync
@@ -106,9 +105,9 @@ repos:
     hooks:
 {%- endif %}
 {%- if 'python' in stacks %}
-      # From the project's venv, not the ruff-pre-commit mirror, so the hook
-      # lints with the exact ruff CI uses. --force-exclude keeps ruff's excludes
-      # honoured when the hook hands it explicit filenames.
+      # Runs from the project's venv, not the ruff-pre-commit mirror, so it uses the
+      # same ruff as CI. --force-exclude keeps ruff's excludes when the hook passes
+      # explicit filenames.
       - id: ruff-check
         name: ruff check
         entry: {{ uv_project }} ruff check --fix --force-exclude
@@ -136,8 +135,8 @@ repos:
 {%- if ts_dir == '.' %}
         entry: pnpm exec biome check --write --no-errors-on-unmatched
 {%- else %}
-        # biome has no --project, and pnpm -C moves the cwd out from under
-        # repo-root-relative paths, so check the whole package instead.
+        # biome has no --project, and pnpm -C moves the cwd away from repo-root-relative
+        # paths, so check the whole package.
         entry: {{ pnpm }} exec biome check --write --no-errors-on-unmatched
         pass_filenames: false
 {%- endif %}

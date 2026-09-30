@@ -1,16 +1,17 @@
 # syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 #
 # Follows https://docs.astral.sh/uv/guides/integration/docker/, in particular its
-# "non-editable install" multi-stage pattern, so the final image gets the venv and
-# nothing else: no source tree, no uv, no lockfile.
+# "non-editable install" multi-stage pattern. The final image gets the venv only:
+# no source tree, no uv, no lockfile.
 
 # ---- build ------------------------------------------------------------------
 FROM python:{{ python_version }}-slim-trixie AS builder
 
-# Astral's recommended install: copy the binary in rather than basing the image
-# on uv, so both stages share one base. Tag + digest, since a tag alone is
-# mutable. Dependabot cannot see this line, so bump it by hand alongside the
-# uv_build pin in pyproject.toml — they ship from the same release.
+# Astral's recommended install: copy the binary in instead of basing the image on
+# uv, so both stages share one base. Tag plus digest, since a tag alone is
+# mutable. No bot updates this line in a generated project: bump it by hand,
+# together with the uv_build pin in pyproject.toml, which ships from the same
+# release.
 COPY --from=ghcr.io/astral-sh/uv:0.12.19@sha256:04d046b13e60d6bcec73cbc5e1cad25d680dea90c8573340950a0ac2d1aef424 /uv /uvx /bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
@@ -20,8 +21,8 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Dependencies first, bind-mounted rather than copied: this layer stays cached
-# until the lockfile changes, and neither file lands in the image.
+# Dependencies first, bind-mounted instead of copied: the layer stays cached until
+# the lockfile changes, and neither file lands in the image.
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
@@ -46,7 +47,7 @@ RUN groupadd --system --gid 1001 app \
 
 WORKDIR /app
 
-# --no-editable installed the project INTO the venv, so the venv is the whole
+# --no-editable installed the project into the venv, so the venv is the whole
 # application and the source tree never enters this stage.
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 
@@ -55,7 +56,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1
 {%- if kind == 'web-service' %}
 
-# The app defaults to loopback; inside the container it has to listen on every
+# The app defaults to loopback; in the container it must listen on every
 # interface for the published port to reach it.
 ENV HOST=0.0.0.0 \
     PORT={{ app_port }}

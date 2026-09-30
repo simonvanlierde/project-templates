@@ -20,10 +20,9 @@ jobs:
   build:
     name: build
 {%- if publish_to_ghcr %}
-    # Builds and runs the image, holding no write scopes. `permissions` takes no
-    # expression, so splitting this from the pushing job below is the only way a
-    # pull request's Dockerfile steps — and every dependency they install — run
-    # without packages: write and id-token: write in their environment.
+    # Builds and runs the image with no write scopes. `permissions` takes no expression,
+    # so a separate push job is the only way to keep packages: write and id-token: write
+    # away from a pull request's Dockerfile steps and the dependencies they install.
     if: github.event_name == 'pull_request'
 {%- else %}
     # Build-only. To push, set publish_to_ghcr and re-run copier update.
@@ -54,23 +53,23 @@ jobs:
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: {% raw %}${{ matrix.context }}{% endraw %}
-          # Scoped per stack: the default gha scope is shared, so two images in
-          # one workflow would evict each other's layers on every run.
+          # Scoped per stack: two images sharing the default gha scope would evict each
+          # other's layers.
           cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
 {%- if publish_to_ghcr %}
-          # No cache-to: this job runs on pull requests only, and a PR-ref cache
-          # is dropped on merge. The push job below populates the shared scope.
+          # No cache-to: this job runs on pull requests only, and a PR-ref cache is dropped
+          # on merge. The push job below fills the shared scope.
 {%- else %}
-          # Export only on push: a PR-ref cache is readable only by that PR and
-          # dropped when it merges, so mode=max there uploads hundreds of MB
-          # nothing reads, against the budget that then evicts main's.
+          # Export only on push: a PR-ref cache is readable by that PR alone and dropped on
+          # merge, so mode=max there uploads hundreds of MB that nothing reads and that evict
+          # main's cache.
           cache-to: {% raw %}${{ github.event_name == 'push' && format('type=gha,mode=max,scope={0}', matrix.stack) || '' }}{% endraw %}
 {%- endif %}
           push: false
           load: true # so the smoke test below can run it
           tags: {% raw %}${{ matrix.tag }}{% endraw %}
-          # No provenance/sbom: the docker exporter cannot load attestations,
-          # and they are only meaningful once the image reaches a registry.
+          # No provenance/sbom: the docker exporter cannot load attestations, and they only
+          # matter once the image reaches a registry.
 
       # An image that cannot start is not a passing build. Matrix jobs get their
       # own runner, so both images can use {{ app_port }}.
@@ -88,8 +87,8 @@ jobs:
 {%- if publish_to_ghcr %}
 
   push:
-    # The write half: builds and smoke-tests again, then pushes from the tested
-    # build's cache, so nothing reaches the registry that never answered /health.
+    # The write half: builds and smoke-tests again, then pushes from the tested build's
+    # cache, so only an image that answered /health reaches the registry.
     name: push
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -122,9 +121,9 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # Build to the local store first and prove the image starts, before the
-      # registry login below puts any credential on this runner. This job runs
-      # on push only, so it is the one that populates the per-stack cache.
+      # Build to the local store and prove the image starts before the registry login puts
+      # a credential on this runner. This job runs on push only, so it fills the per-stack
+      # cache.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: {% raw %}${{ matrix.context }}{% endraw %}

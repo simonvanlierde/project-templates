@@ -1,10 +1,9 @@
-{#- vcs.root: biome looks for .gitignore beside biome.json unless told otherwise,
-    and .gitignore is one file at the repository root. Nested packages therefore
-    have to point back up at it. -#}
+{#- vcs.root: biome looks for .gitignore beside biome.json, and the only .gitignore
+    is at the repository root, so nested packages point back up at it. -#}
 {
   "$schema": "https://biomejs.dev/schemas/latest/schema.json",
   "files": { "includes": ["**", "!.vscode"] },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
-  "formatter": { "indentStyle": "space", "lineWidth": 100 },
+  "formatter": { "indentStyle": "space", "lineWidth": 120 },
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true{% if ts_dir != '.' %}, "root": "{{ (['..'] * ts_dir.split('/') | length) | join('/') }}"{% endif %} }
 }

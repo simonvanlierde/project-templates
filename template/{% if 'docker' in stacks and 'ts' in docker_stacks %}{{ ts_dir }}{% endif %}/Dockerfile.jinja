@@ -1,11 +1,10 @@
 # syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 #
 # Follows https://pnpm.io/docker, in particular its prod-deps / build stage
-# split, so the production node_modules is built by pnpm rather than pruned
-# after the fact.
+# split: pnpm builds the production node_modules instead of pruning it afterwards.
 #
 # One deviation: that page installs pnpm with `corepack enable`, which Node
-# stopped shipping in v25; `npm i -g pnpm@<version>` replaces it, pinned to the
+# stopped shipping in v25. `npm i -g pnpm@<version>` replaces it, pinned to the
 # `packageManager` version in package.json. Renovate bumps both together.
 
 # ---- base -------------------------------------------------------------------

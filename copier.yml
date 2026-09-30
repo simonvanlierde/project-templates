@@ -1,14 +1,17 @@
 _subdirectory: template
-# 9.1.0: `stacks`, a multiselect, needs it.
+# `stacks` is a multiselect, which needs 9.1.0.
 _min_copier_version: "9.1.0"
 
 project_name:
   type: str
   help: Project name (directory / repo name)
   default: "{{ _copier_conf.dst_path.name }}"
+  validator: >-
+    {% if not (project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '')|regex_search('^[a-z0-9]')) %}
+    The name needs a leading ASCII letter or digit: npm, PyPI and image tags are built from it.
+    {% endif %}
 
-# Computed, never asked. project_name is a display name; this is the form npm,
-# PyPI, compose and image tags require, hence the regex_replace.
+# Computed, not asked. npm, PyPI, compose and image tags need this normalized form.
 slug:
   type: str
   when: false
@@ -26,10 +29,12 @@ github_user:
 
 author_name:
   type: str
+  help: Author name, for package metadata and the license
   default: Simon van Lierde
 
 author_email:
   type: str
+  help: Author email, for package metadata
   default: simonvanlierde@gmail.com
 
 license:
@@ -55,26 +60,37 @@ stacks:
   choices: [python, ts, rust, go, docker]
   default: [python]
 
-# Where each stack's package lives. `.` is a plain single-package repo; anything
-# else nests only the package, leaving the workflows, hooks, justfile and
-# answers file at the root.
+# `.` is a single-package repo. Any other value nests only the package; workflows,
+# hooks, justfile and answers file stay at the root.
 python_dir:
   type: str
   when: "{{ 'python' in stacks }}"
   help: Directory holding the Python package (`.` for the repo root, `apps/api` for a monorepo)
   default: "."
+  validator: >-
+    {% if python_dir != '.' and (python_dir.startswith(('.', '/')) or python_dir.endswith('/') or '..' in python_dir) %}
+    Give a plain relative path such as `apps/api`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% endif %}
 
 ts_dir:
   type: str
   when: "{{ 'ts' in stacks }}"
   help: Directory holding the TypeScript package (`.` for the repo root, `apps/web` for a monorepo)
   default: "."
+  validator: >-
+    {% if ts_dir != '.' and (ts_dir.startswith(('.', '/')) or ts_dir.endswith('/') or '..' in ts_dir) %}
+    Give a plain relative path such as `apps/web`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% endif %}
 
 rust_dir:
   type: str
   when: "{{ 'rust' in stacks }}"
   help: Directory holding the Rust crate (`.` for the repo root, `crates/core` for a monorepo)
   default: "."
+  validator: >-
+    {% if rust_dir != '.' and (rust_dir.startswith(('.', '/')) or rust_dir.endswith('/') or '..' in rust_dir) %}
+    Give a plain relative path such as `crates/core`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% endif %}
 
 go_dir:
   type: str
@@ -109,6 +125,10 @@ module_name:
   when: "{{ 'python' in stacks }}"
   help: Importable Python module name
   default: "{{ slug|replace('-', '_')|replace('.', '_') }}"
+  validator: >-
+    {% if not module_name|regex_search('^[a-z_][a-z0-9_]*$') %}
+    A module name is lower-case letters, digits and `_`, and cannot start with a digit.
+    {% endif %}
 
 author_orcid:
   type: str
@@ -120,7 +140,12 @@ author_orcid:
 python_version:
   type: str
   when: "{{ 'python' in stacks }}"
+  help: Python version (3.12 or later)
   default: "3.14"
+  validator: >-
+    {% if not python_version|regex_search('^3\\.(1[2-9]|[2-9][0-9])$') %}
+    Give a version from 3.12 up, as `3.14`: the template uses `type` statements.
+    {% endif %}
 
 publish_to_pypi:
   type: bool
@@ -133,6 +158,7 @@ publish_to_pypi:
 ts_kind:
   type: str
   when: "{{ 'ts' in stacks }}"
+  help: What kind of TypeScript project
   choices:
     Library (publishes dist/ and type declarations): library
     Application (builds to dist/, not published): app
@@ -142,7 +168,8 @@ ts_kind:
 node_version:
   type: str
   when: "{{ 'ts' in stacks }}"
-  # Node 26 is Current; it becomes the active LTS in Oct 2026.
+  help: Node.js major version
+  # NOTE: Node 26 is Current; it becomes the active LTS in Oct 2026.
   default: "26"
 
 publish_to_npm:
@@ -160,6 +187,16 @@ rust_kind:
     Library (src/lib.rs, documented public API): library
     Binary (src/main.rs, may print): binary
   default: library
+  # crate_name is computed after this question and copier skips validators on
+  # computed questions, so its check lives here, derived from slug the same way. A library's doctest calls it by name, so a keyword
+  # breaks only the library kind.
+  validator: >-
+    {% set ident = slug|replace('.', '-')|replace('-', '_') %}
+    {% if ident|regex_search('^[0-9]') %}
+    Cargo rejects a crate name that starts with a digit (`{{ ident }}`): start the project name with a letter.
+    {% elif rust_kind == 'library' and ident in ['as', 'async', 'await', 'break', 'const', 'continue', 'crate', 'dyn', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'gen', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'self', 'Self', 'static', 'struct', 'super', 'trait', 'true', 'try', 'type', 'unsafe', 'use', 'where', 'while', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof', 'unsized', 'virtual', 'yield'] %}
+    `{{ ident }}` is a Rust keyword, so the library's doctest cannot name it: pick another project name.
+    {% endif %}
 
 # Computed, never asked. Cargo takes `-` and `_` but not the `.` a slug may carry.
 crate_name:
@@ -239,10 +276,12 @@ docker_stacks:
   help: Which stacks get an image (one Dockerfile each, one compose service each)
   choices: [python, ts]
   default: [python]
-  # An image is built from its stack's package, and two Dockerfiles cannot share
-  # one directory — the one place a monorepo is not optional.
+  # Each image builds from its stack's package, and two Dockerfiles cannot share a
+  # directory, so two images need a monorepo layout.
   validator: >-
-    {% if docker_stacks | reject('in', stacks) | list %}
+    {% if not docker_stacks %}
+    Pick at least one stack to build an image from.
+    {% elif docker_stacks | reject('in', stacks) | list %}
     An image needs its stack: add {{ docker_stacks | reject('in', stacks) | join(' and ') }} to `stacks` too.
     {% elif kind == 'web-service' and 'python' not in docker_stacks %}
     The web-service kind is the python image: add python to `docker_stacks`.

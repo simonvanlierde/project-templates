@@ -5,17 +5,19 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A starter template for new projects, built with [Copier](https://copier.readthedocs.io).
-One `copier copy`, and a `stacks` answer picks any mix of `python`, `ts`, `rust`, `go` and `docker`.
+One `copier copy` scaffolds any mix of `python`, `ts`, `rust`, `go` and `docker`, chosen by the `stacks` answer.
 
 ## Getting started
 
 ```sh
 mkdir myproject && cd myproject && git init
 copier copy gh:simonvanlierde/project-templates .
-uv sync && git add -A && git commit -m "chore: scaffold"
+just py-sync   # python stack: installs and writes uv.lock
+just ts-sync   # ts stack: installs and writes pnpm-lock.yaml
+git add -A && git commit -m "chore: scaffold"
 ```
 
-You don't need to clone this repo. Copier downloads and caches the template for you.
+Copier downloads the template, so you don't need to clone this repo.
 
 Commit the lockfile before your first push. CI runs `uv sync --locked`,
 `pnpm install --frozen-lockfile` and `cargo clippy --locked`, all of which fail without one.
@@ -46,7 +48,7 @@ top and reconcile with git.
 | `docker` | Per containerized stack: `Dockerfile`, `.dockerignore`, a runnable `/health` entrypoint. Plus `compose.yaml` at the repo root                        |
 
 Each stack also gets a CI workflow in `.github/workflows/`, a `just/<stack>.just`
-recipe file, and a release workflow if the matching publish answer is on. A package
+recipe file, and a release workflow if the matching publish answer is on. A Python package
 nested below the repo root gets its own `README.md` too.
 
 ## Picking a Python `kind`
@@ -76,39 +78,32 @@ A `data-pipeline` project gets:
   license doesn't cover those.
 - Tests that run the whole pipeline against a local file, with no network.
 - A CI workflow that runs the pipeline for real on the manifest's URLs, then uploads
-  only the fetch records. CI skips the tests that compare published values with
-  literal numbers unless you set `TRIPWIRE=1`, so a publisher revision doesn't turn
-  `main` red.
+  only the fetch records. The tests that compare published values with literal
+  numbers run only in its weekly scheduled run (`TRIPWIRE=1`), so a publisher
+  revision fails that run, not your PRs.
 
 The example source in `sources.toml` is about 1 kB. Replace it, and the tests that
 read its output, with your own sources.
 
-This variant comes from the first real project built on this template: a rebuild of
-a published research database from its public sources. That project started from
-the `research` kind and added the manifest, the data split, the recipes, the
-attribution file and the pipeline CI by hand. The generic parts of that work are now
-the template. The readers for each source stayed in that project.
+This kind comes from a rebuild of a published research database from its public
+sources. That project started from `research` and added the manifest, the data
+split, the recipes, the attribution file and the pipeline CI by hand. The generic
+parts are now the template. The readers for each source stayed in that project.
 
 A `web-service` project gets:
 
-- A FastAPI app built by `create_app()`, with one route: `GET /health`, a fixed
-  `{"status": "ok"}` that the image's `HEALTHCHECK` probes.
-- `config.py`: settings from plain environment variables (`HOST`, `PORT`,
-  `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`), no settings framework. The
-  app listens on `127.0.0.1` unless `HOST` says otherwise; the image sets
-  `HOST=0.0.0.0` and `compose.yaml` publishes the port on `127.0.0.1` only.
-- `telemetry.py`: OpenTelemetry request spans and a request-duration histogram
-  (`http.server.duration`; `http.server.request.duration` with
-  `OTEL_SEMCONV_STABILITY_OPT_IN=http`),
-  sent over OTLP/HTTP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Without
-  it, no provider is built, no middleware is added, and the SDK is not imported.
+- A FastAPI app with one route: `GET /health`, a fixed `{"status": "ok"}` that the
+  image's `HEALTHCHECK` probes.
+- An entrypoint that reads `HOST` and `PORT`. It listens on `127.0.0.1` unless
+  `HOST` says otherwise; the image sets `HOST=0.0.0.0` and `compose.yaml` publishes
+  the port on `127.0.0.1` only.
+- OpenTelemetry through zero-code instrumentation, on only when
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is set: request spans and a request-duration
+  histogram over OTLP/HTTP. The SDK reads every other `OTEL_*` variable itself.
+  Without the endpoint, nothing is imported.
 - `just serve`, and a `<slug>` console script, to run it outside Docker.
-- Tests for `/health`, the settings, telemetry off, and telemetry on (in-memory
-  exporters: one span and one duration point per request).
-
-It follows the deployment pattern of a production FastAPI service: config from the
-environment, an unauthenticated health route that leaks nothing, and telemetry that
-is off by default.
+- Tests for `/health`, telemetry off, and telemetry on (console exporters in a child
+  process: one span and one duration point per request).
 
 ## Layout: one package or a monorepo
 
@@ -187,10 +182,8 @@ lists every check, and what was left out and why.
 **Coverage** is opt-in: `just py-cov` and `just ts-cov` (not `just check`) print a
 summary and write `coverage.xml` / `coverage/lcov.info` for an uploader. No threshold.
 
-**Licenses** include Apache-2.0. The choices named `MIT` and `BSD-3-Clause`
-refer to licenses from the Massachusetts Institute of Technology and Berkeley
-Software Distribution. The texts come from the GitHub licenses API, with the
-copyright placeholders filled in.
+**Licenses** are `MIT`, `Apache-2.0`, `BSD-3-Clause` or none. The texts come from
+the GitHub licenses API, with the copyright placeholders filled in.
 
 **Dependency updates** in scaffolded projects go through Dependabot: no app to install,
 and it covers every ecosystem this template generates. Version updates wait through a
@@ -250,14 +243,14 @@ scripts/check-render.sh "$(mktemp -d)"
 ```
 
 A render of a tag from a local checkout records `gh:simonvanlierde/project-templates`
-as `_src_path` in `.copier-answers.yml`, not the local path. A local path would leak your
-home directory into the new repo, and `copier update` would fail on any other machine.
-A render of any other commit keeps the local path, because that commit may not exist on
-GitHub and `copier update` would fail to check it out. Render from a tag, or edit
-`_src_path` and `_commit`, before you commit the answers file of a real project.
-To test an update against a local checkout, set `_src_path` to the checkout's path for
-that run, as the CI `update` job does.
-The `_commit` it records is the checkout's commit, so render from a pushed tag:
-`copier update` can't check out a commit that only existed on your machine or on a
-deleted branch. The same goes for a tag you haven't pushed, or one that exists only in a
-fork. The answers file names this repository on GitHub, and that tag isn't there.
+as `_src_path` in `.copier-answers.yml`, not the local path. A local path would leak
+your home directory and break `copier update` on any other machine.
+
+A render of any other commit keeps the local path, because that commit may not exist
+on GitHub. `_commit` is then the checkout's commit, and `copier update` can't check
+out a commit that exists only on your machine (an unpushed tag, a deleted branch) or
+in a fork. Before you commit a real project's answers file, render from a tag pushed
+to this repository, or edit `_src_path` and `_commit`.
+
+To test an update against a local checkout, set `_src_path` to the checkout's path
+for that run, as the CI `update` job does.

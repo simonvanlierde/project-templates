@@ -1,6 +1,6 @@
 # cargo-deny: `just rs-check` and CI run `cargo deny check` against this file.
 
-# Vulnerabilities always fail; yanked and unmaintained crates are reported too.
+# Vulnerabilities and unmaintained crates fail the check; yanked crates only warn.
 [advisories]
 
 [licenses]
