@@ -12,8 +12,9 @@
     // workflow env blocks.
     "customManagers:githubActionsVersions",
   ],
-  // Its 3-day npm wait would beat the 7-day minimumReleaseAge below.
-  ignorePresets: ["security:minimumReleaseAgeNpm"],
+  // From config:best-practices. The npm preset's 3-day wait would beat the 7-day
+  // minimumReleaseAge below, and this repo commits no lockfiles to maintain.
+  ignorePresets: ["security:minimumReleaseAgeNpm", ":maintainLockFilesWeekly"],
 
   // Everything automerges and then runs with CI tokens, on developer machines, or
   // in every new scaffold, which resolves only releases a week old (uv
