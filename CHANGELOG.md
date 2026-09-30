@@ -17,6 +17,7 @@ a minor release can break things; breaking changes are marked **Breaking**.
 ### Removed
 
 - The pull request template.
+- The `knip` script in `package.json`. `pnpm run check` already runs knip.
 
 ## [0.6.0] - 2026-09-30
 
