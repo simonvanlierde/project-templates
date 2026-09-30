@@ -25,9 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 {%- if ts_dir != '.' %}
-    # Only `run:` steps take this, so the two setup actions are pointed at the
-    # package separately: pnpm/action-setup reads `packageManager` from a
-    # package.json, and setup-node hashes a lockfile to key its cache.
+    # Only `run:` steps take this. Point the setup actions at the package separately:
+    # pnpm/action-setup reads `packageManager` from a package.json, and setup-node hashes
+    # a lockfile to key its cache.
     defaults:
       run:
         working-directory: {{ ts_dir }}

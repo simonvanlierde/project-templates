@@ -1,6 +1,6 @@
-# Keep the build context small: everything here is either rebuilt in the image,
-# irrelevant to it, or a secret. Each image carries its own next to its
-# Dockerfile, since Docker reads this from the root of the build context.
+# Keep the build context small: everything here is rebuilt in the image,
+# irrelevant to it, or a secret. Each image has its own file next to its
+# Dockerfile, because Docker reads it from the root of the build context.
 
 # VCS / tooling metadata
 .git
@@ -15,10 +15,10 @@ dist
 coverage
 *.tsbuildinfo
 
-# Not in the image, and `COPY . .` would otherwise put them in the layer hash:
+# Left out of the image. With `COPY . .` they would enter the layer hash, so
 # touching a test would re-run the whole dependency install, which `docker compose
 # up --watch` does on every source change. tsconfig.build.json already keeps them
-# out of the build itself.
+# out of the build.
 src/**/*.test.ts
 .editorconfig
 .pre-commit-config.yaml

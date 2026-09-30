@@ -1,6 +1,6 @@
 {#- just runs every recipe from the root justfile's directory, so a nested package
-    is reached with pnpm's own -C rather than with a cd. It renders empty for the
-    flat layout, where the root already is the package. -#}
+    is reached with pnpm's -C, not a cd. It renders empty for the flat layout,
+    where the root is the package. -#}
 {%- set pnpm = 'pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir -%}
 # Install node_modules from pnpm-lock.yaml.
 ts-sync:

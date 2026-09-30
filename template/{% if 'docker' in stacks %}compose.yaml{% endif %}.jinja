@@ -1,9 +1,9 @@
-# `docker compose up --watch` rebuilds on source changes. No live reload: a
-# runtime image ships the built artifact, not its ./src.
+# `docker compose up --watch` rebuilds on source changes. There is no live reload:
+# a runtime image ships the built artifact, not ./src.
 #
-# Ports are loopback-bound because Docker's iptables rules run ahead of the host
+# Ports bind to loopback because Docker's iptables rules run ahead of the host
 # firewall, so a bare "{{ app_port }}:{{ app_port }}" reaches the LAN even on a deny-by-default
-# machine. Drop the 127.0.0.1 when you do want a service published.
+# machine. Drop the 127.0.0.1 to publish a service.
 name: {{ slug }}
 
 services:
@@ -25,8 +25,8 @@ services:
         required: false
 {%- if stack == 'python' and kind == 'web-service' %}
     environment:
-      # Fixed here, not in .env: the port mapping above and the image's HEALTHCHECK
-      # both expect the app on 0.0.0.0:{{ app_port }} inside the container.
+      # Fixed here, not in .env: the port mapping and the image's HEALTHCHECK both
+      # expect the app on 0.0.0.0:{{ app_port }} in the container.
       HOST: 0.0.0.0
       PORT: "{{ app_port }}"
       # Telemetry stays off unless this names an OTLP/HTTP collector, for example
@@ -36,8 +36,8 @@ services:
 {%- endif %}
     restart: unless-stopped
 {%- if loop.first %}
-    # The image already runs as a non-root uid; these stop it from regaining what
-    # it dropped. Free here: the entrypoint needs no capability to bind {{ app_port }}.
+    # The image already runs as a non-root uid. These options stop it regaining what
+    # it dropped, at no cost: the entrypoint needs no capability to bind {{ app_port }}.
 {%- endif %}
     security_opt:
       - no-new-privileges:true

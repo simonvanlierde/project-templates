@@ -1,16 +1,40 @@
 {%- if kind == 'web-service' -%}
 """Entrypoint: `python -m {{ module_name }}` (the image's CMD) or `{{ slug }}`."""
 
+import os
+
 import uvicorn
 
-from {{ module_name }}.app import create_app
-from {{ module_name }}.config import Settings
+# Loopback by default, so a bare `python -m {{ module_name }}` is not reachable from the
+# network. The image sets HOST=0.0.0.0; compose publishes the port on 127.0.0.1 only.
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = {{ app_port }}
+
+
+def start_telemetry() -> bool:
+    """Turn on OpenTelemetry if OTEL_EXPORTER_OTLP_ENDPOINT is set, and say whether it did.
+
+    Zero-code instrumentation: the distro builds the providers and exporters from the
+    OTEL_* variables. Without an endpoint nothing is imported and nothing is recorded.
+    """
+    if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        return False
+    # The distro defaults to gRPC; the HTTP exporter is the one installed.
+    os.environ.setdefault("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+    from opentelemetry.instrumentation.auto_instrumentation import initialize  # noqa: PLC0415
+
+    initialize()
+    return True
 
 
 def main() -> None:
     """Serve until stopped, on HOST:PORT from the environment."""
-    settings = Settings.from_env()
-    uvicorn.run(create_app(settings), host=settings.host, port=settings.port)
+    start_telemetry()
+    # After start_telemetry: the instrumentor patches the FastAPI class, so the app
+    # must be built afterwards.
+    from {{ module_name }}.app import app  # noqa: PLC0415
+
+    uvicorn.run(app, host=os.environ.get("HOST") or DEFAULT_HOST, port=int(os.environ.get("PORT") or DEFAULT_PORT))
 
 
 if __name__ == "__main__":
@@ -19,7 +43,7 @@ if __name__ == "__main__":
 """Entrypoint for the container image.
 
 A stdlib HTTP server serving the /health endpoint the Dockerfile's HEALTHCHECK
-probes, so `docker run` works before you have written anything. Replace the
+probes, so `docker run` works before you write anything. Replace the
 handler with your real application.
 """
 

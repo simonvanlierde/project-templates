@@ -10,6 +10,11 @@ on:
 {%- if python_dir != '.' %}
     paths: ["{{ python_dir }}/**", ".github/workflows/python.yml"]
 {%- endif %}
+{%- if kind == 'data-pipeline' %}
+  # Weekly, to catch a publisher revision: the only run that sets TRIPWIRE.
+  schedule:
+    - cron: "0 6 * * 1"
+{%- endif %}
   workflow_dispatch:
 
 permissions:
@@ -25,8 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 {%- if python_dir != '.' %}
-    # Only `run:` steps take this. setup-uv needs no path of its own: its cache
-    # glob is **/uv.lock, which finds a nested lockfile.
+    # Only `run:` steps take this. setup-uv needs no path: its cache glob is **/uv.lock,
+    # which finds a nested lockfile.
     defaults:
       run:
         working-directory: {{ python_dir }}
@@ -52,19 +57,20 @@ jobs:
       - run: uv run ty check
 {%- if kind == 'data-pipeline' %}
 
-      # The pipeline runs for real against the URLs in sources.toml: not a dry run
-      # and not a fixture. Keep each URL a small cut of its source so this stays fast.
+      # Runs the pipeline against the URLs in sources.toml, not a fixture. Keep each URL a
+      # small cut of its source so this stays fast.
       - id: fetch
         run: uv run {{ slug }} fetch
       - run: uv run {{ slug }} build
       - run: uv run {{ slug }} validate
 
-      # tests/test_published.py fails rather than skips when the output is missing.
-      # GitHub sets CI, which skips the literal-value tripwire, so a publisher revision
-      # does not turn main red. Set TRIPWIRE=1 to assert the literals too.
+      # tests/test_published.py fails, not skips, when the output is missing. The
+      # literal-value tripwire runs only on the weekly schedule, so a publisher revision
+      # fails that run instead of a PR.
       - run: uv run pytest
         env:
           PIPELINE_OUTPUT_REQUIRED: "1"
+          TRIPWIRE: {% raw %}${{ github.event_name == 'schedule' && '1' || '' }}{% endraw %}
 
       # Fetch records only: URL, timestamp, checksum, byte count, vintage. They hold
       # no source values, so the artifact redistributes nothing (see ATTRIBUTION.md).

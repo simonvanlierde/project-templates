@@ -1,26 +1,26 @@
 extends: default
 
-# Tools write these files' formatting (copier, pnpm); ours to consume, not to lint.
-# A bare name matches at any depth, so a nested package's lockfile too.
+# Copier and pnpm write these files, so don't lint them. A bare name matches at
+# any depth, including a nested package's lockfile.
 ignore: |
   .copier-answers.yml
   pnpm-lock.yaml
 
 rules:
-  # No file in this repo opens with a `---` document marker, and comments
-  # (not code) are what occasionally run long — not worth a hard cap.
+  # No file here opens with `---`, and comments, not code, are what run long, so a
+  # hard cap is not worth it.
   document-start: disable
   line-length: disable
-  # House style, used throughout .github/dependabot.yml: `{ key: value }` flow
-  # mappings take a single space of padding.
+  # House style, as in .github/dependabot.yml: `{ key: value }` flow mappings take
+  # one space of padding.
   braces:
     min-spaces-inside: 1
     max-spaces-inside: 1
-  # `on:` is GitHub Actions' trigger key, not a YAML 1.1 boolean.
+  # `on:` is the GitHub Actions trigger key, not a YAML 1.1 boolean.
   truthy:
     ignore: |
       .github/workflows/
-  # `uses: ... # v1.2.3` pin comments use a single space, not two.
+  # `uses: ... # v1.2.3` pin comments take a single space, not two.
   comments:
     ignore: |
       .github/workflows/
