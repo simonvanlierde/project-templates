@@ -1,0 +1,35 @@
+# golangci-lint v2: `just go-check`, the hooks and CI all read this file. A
+# committed config replaces any user-wide ~/.golangci.yml entirely, so this one
+# carries the whole policy.
+version: "2"
+
+linters:
+  # errcheck, govet, ineffassign, staticcheck, unused.
+  default: standard
+  enable:
+    - bodyclose # unclosed HTTP response bodies
+    - errorlint # %w wrapping, errors.Is/As instead of == and type asserts
+    - gocritic # broad bug and style checks
+    - gosec # security
+    - misspell
+    - modernize # newer stdlib and language idioms (min, slices, range-over-int)
+    - nilerr # returning nil after checking err != nil
+    - noctx # HTTP and SQL calls without a context
+    - revive # golint's successor: naming and doc comments
+    - sloglint # consistent log/slog usage
+    - unconvert # needless type conversions
+    - unparam # parameters that always get the same value
+    - usestdlibvars # http.MethodGet over "GET"
+  exclusions:
+    presets:
+      - comments
+      - common-false-positives
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters: [gosec, noctx]
+
+formatters:
+  enable:
+    - gofumpt # stricter gofmt
+    - goimports # gofmt plus import grouping

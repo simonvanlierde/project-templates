@@ -1,6 +1,9 @@
 _subdirectory: template
 # `stacks` is a multiselect, which needs 9.1.0.
 _min_copier_version: "9.1.0"
+# Written once, then owned by the project: `copier update` leaves it alone.
+_skip_if_exists:
+  - CHANGELOG.md
 
 project_name:
   type: str
@@ -57,7 +60,7 @@ stacks:
   type: str
   multiselect: true
   help: Which stacks this repo uses
-  choices: [python, ts, rust, docker]
+  choices: [python, ts, rust, go, docker]
   default: [python]
 
 # `.` is a single-package repo. Any other value nests only the package; workflows,
@@ -90,6 +93,16 @@ rust_dir:
   validator: >-
     {% if rust_dir != '.' and (rust_dir.startswith(('.', '/')) or rust_dir.endswith('/') or '..' in rust_dir) %}
     Give a plain relative path such as `crates/core`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% endif %}
+
+go_dir:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  help: Directory holding the Go module (`.` for the repo root, `services/api` for a monorepo)
+  default: "."
+  validator: >-
+    {% if go_dir != '.' and (go_dir.startswith(('.', '/')) or go_dir.endswith('/') or '..' in go_dir) %}
+    Give a plain relative path such as `services/api`: no leading `./` or `/`, no trailing `/`, no `..`.
     {% endif %}
 
 # --- python -------------------------------------------------------------------
@@ -126,6 +139,7 @@ author_orcid:
   help: ORCID iD for CITATION.cff, as 0000-0000-0000-0000 (blank for none)
   default: "0009-0006-6953-909X"
 
+# renovate: datasource=python-version depName=python
 python_version:
   type: str
   when: "{{ 'python' in stacks }}"
@@ -153,6 +167,7 @@ ts_kind:
     Application (builds to dist/, not published): app
   default: library
 
+# renovate: datasource=node-version depName=node
 node_version:
   type: str
   when: "{{ 'ts' in stacks }}"
@@ -194,11 +209,76 @@ crate_name:
 
 # The crate's rust-version (MSRV); clippy reads it too, and skips lints that
 # suggest newer APIs. Defaults to the current stable minor.
+# renovate: datasource=github-releases depName=rust-lang/rust
 rust_version:
   type: str
   when: "{{ 'rust' in stacks }}"
   help: Minimum supported Rust version (Cargo.toml rust-version)
   default: "1.98"
+
+# --- go -----------------------------------------------------------------------
+
+go_kind:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  choices:
+    Library (a package at the module root, with an Example): library
+    Binary (package main at the module root): binary
+  default: library
+
+go_module:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  help: Go module path (go.mod `module`)
+  default: "github.com/{{ github_user }}/{{ slug }}"
+  # go_package is computed, and copier skips validators on computed questions,
+  # so its check lives here.
+  validator: >-
+    {% set pkg = slug|regex_replace('[^a-z0-9]', '') %}
+    {% if not pkg|regex_search('^[a-z_][a-z0-9_]*$') or pkg in ['break', 'case', 'chan', 'const', 'continue', 'default', 'defer', 'else', 'fallthrough', 'for', 'func', 'go', 'goto', 'if', 'import', 'interface', 'map', 'package', 'range', 'return', 'select', 'struct', 'switch', 'type', 'var'] %}
+    The Go package name would be `{{ pkg }}`, which is not a valid identifier: start the project name with a letter and avoid Go keywords.
+    {% endif %}
+
+# Computed, never asked. A package name is one lowercase identifier: no `-` or
+# `.`, which a slug may carry.
+go_package:
+  type: str
+  when: false
+  default: "{{ slug|regex_replace('[^a-z0-9]', '') }}"
+
+# go.mod's `go` directive: the oldest Go the module builds with, and the
+# language version the linters check against. Defaults to the current stable
+# minor. golangci-lint must be built with at least this Go.
+# renovate: datasource=golang-version depName=go versioning=semver-coerced
+go_version:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  help: Minimum Go version (go.mod `go` directive)
+  default: "1.27"
+
+# Computed, never asked: the uv the generated workflows install. Pinned because
+# CI runs `uv audit`, a preview command that can change in any uv release.
+# renovate: datasource=pypi depName=uv
+uv_version:
+  type: str
+  when: false
+  default: 0.12.19
+
+# Computed, never asked: the tool releases the README, `just go-check` and go.yml
+# pin, kept in one place. Renovate bumps them from the comments above each.
+# renovate: datasource=github-releases depName=golangci/golangci-lint
+golangci_lint_version:
+  type: str
+  when: false
+  default: v2.13.2
+
+# The govulncheck a new go.mod requires as a tool. Dependabot bumps it in the
+# project after that.
+# renovate: datasource=go depName=golang.org/x/vuln
+govulncheck_version:
+  type: str
+  when: false
+  default: v1.8.0
 
 # --- docker -------------------------------------------------------------------
 

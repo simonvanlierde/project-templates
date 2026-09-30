@@ -60,6 +60,14 @@ updates:
         update-types: [minor, patch]
         patterns: ["*"]
 {%- endif %}
+{%- if 'go' in stacks %}
+
+  # No dev-tooling group: go.mod has no development dependencies to split out.
+  - package-ecosystem: gomod
+    directory: {{ '/' if go_dir == '.' else '/' ~ go_dir }}
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7, semver-major-days: 30 }
+{%- endif %}
 
 # No docker ecosystem: it reads FROM lines only, and those tags are copier answers,
 # so its PRs would fight the next `copier update`.

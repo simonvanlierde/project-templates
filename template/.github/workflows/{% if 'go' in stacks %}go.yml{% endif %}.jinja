@@ -1,0 +1,56 @@
+{%- set d = '' if go_dir == '.' else go_dir ~ '/' -%}
+name: go
+
+on:
+  push:
+    branches: [main]
+{%- if go_dir != '.' %}
+    paths: ["{{ go_dir }}/**", ".github/workflows/go.yml"]
+{%- endif %}
+  pull_request:
+{%- if go_dir != '.' %}
+    paths: ["{{ go_dir }}/**", ".github/workflows/go.yml"]
+{%- endif %}
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: golangci-lint, tests, govulncheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+{%- if go_dir != '.' %}
+    # Only `run:` steps take this, so the two actions are pointed at the module separately.
+    defaults:
+      run:
+        working-directory: {{ go_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Go from go.mod's `go` directive.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: {{ d }}go.mod
+          cache-dependency-path: {{ d }}go.sum
+
+      # `run` also reports files the formatters in .golangci.yml would change,
+      # so this covers `golangci-lint fmt --diff` too.
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: {{ golangci_lint_version }}
+{%- if go_dir != '.' %}
+          working-directory: {{ go_dir }}
+{%- endif %}
+
+      # go test also runs every Example and checks its Output comment.
+      - run: go test -race ./...
+      - run: go tool govulncheck ./...

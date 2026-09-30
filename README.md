@@ -5,7 +5,7 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A starter template for new projects, built with [Copier](https://copier.readthedocs.io).
-One `copier copy` scaffolds any mix of `python`, `ts`, `rust` and `docker`, chosen by the `stacks` answer.
+One `copier copy` scaffolds any mix of `python`, `ts`, `rust`, `go` and `docker`, chosen by the `stacks` answer.
 
 ## Getting started
 
@@ -14,13 +14,15 @@ mkdir myproject && cd myproject && git init
 copier copy gh:simonvanlierde/project-templates .
 just py-sync   # python stack: installs and writes uv.lock
 just ts-sync   # ts stack: installs and writes pnpm-lock.yaml
+just go-sync   # go stack: writes go.sum
 git add -A && git commit -m "chore: scaffold"
 ```
 
 Copier downloads the template, so you don't need to clone this repo.
 
-Commit the lockfile before your first push. CI runs `uv sync --locked`,
-`pnpm install --frozen-lockfile` and `cargo clippy --locked`, all of which fail without one.
+Commit the lockfiles before your first push. CI runs `uv sync --locked`,
+`pnpm install --frozen-lockfile` and `cargo clippy --locked`, and Go needs `go.sum`. All of
+them fail without one.
 
 ## Pulling in template fixes
 
@@ -40,10 +42,11 @@ top and reconcile with git.
 
 | Stack    | What it writes                                                                                                                                       |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| always   | The repo furniture: `README.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot, `SECURITY.md`, and a PR template; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
+| always   | The repo furniture: `README.md`, a Keep a Changelog `CHANGELOG.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot, `SECURITY.md`, and a PR template; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
 | `python` | A Python package in `<python_dir>`: `pyproject.toml`, `.python-version`, `src/`, `tests/`, plus extra files for the `research` and `data-pipeline` kinds (see below) |
 | `ts`     | A TypeScript package in `<ts_dir>`: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `biome.json`, `pnpm-workspace.yaml`, `src/index.ts`, `src/index.test.ts`        |
 | `rust`   | A Rust crate in `<rust_dir>`: `Cargo.toml` with a strict lint policy (see below), `clippy.toml`, `deny.toml`, and `src/lib.rs` or `src/main.rs` by `rust_kind` |
+| `go`     | A Go module in `<go_dir>`: `go.mod`, `.golangci.yml` (see below), and by `go_kind` either a library package with a table test and an Example, or a `main.go` with its test |
 | `docker` | Per containerized stack: `Dockerfile`, `.dockerignore`, a runnable `/health` entrypoint. Plus `compose.yaml` at the repo root                        |
 
 Each stack also gets a CI workflow in `.github/workflows/`, a `just/<stack>.just`
@@ -106,7 +109,7 @@ A `web-service` project gets:
 
 ## Layout: one package or a monorepo
 
-`python_dir`, `ts_dir` and `rust_dir` all default to `.`, the repo root. At `.` you get a
+`python_dir`, `ts_dir`, `rust_dir` and `go_dir` all default to `.`, the repo root. At `.` you get a
 plain single-package repo. Any other value nests the package:
 
 ```text
@@ -137,6 +140,7 @@ that language's workspace tooling.
 | Python     | `ruff`          | `ty`  | `pytest` | `uv`, locked, `uv_build` backend |
 | TypeScript | `biome`         | `tsc` | `vitest` | `pnpm`                           |
 | Rust       | `rustfmt`, `clippy` | `rustc` | `cargo nextest`, plus `cargo test --doc` | `cargo`, checked by `cargo-deny` |
+| Go         | `golangci-lint` (`gofumpt`, `goimports`) | `go vet`, via golangci-lint | `go test -race`, Examples included | Go modules, checked by `govulncheck` |
 
 **Rust lints** live in the crate's `Cargo.toml` `[lints]` table, because clippy has no
 user-wide config. The policy is clippy's `pedantic` group plus restriction lints against
@@ -146,13 +150,21 @@ shortcuts: `unwrap_used`, `expect_used`, `dbg_macro`, `todo`, `unimplemented`, a
 `expect` and `dbg!` in tests, and `deny.toml` limits dependencies to crates.io and
 permissive licenses. Install `cargo-nextest` and `cargo-deny` once per machine.
 
+**Go lints** live in the module's `.golangci.yml`, for golangci-lint v2. The policy is the
+`standard` linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `misspell`,
+`modernize`, `nilerr`, `noctx`, `revive`, `sloglint`, `unconvert`, `unparam` and
+`usestdlibvars`, with `gosec` and `noctx` off in tests. `gofumpt` and `goimports` format.
+Install golangci-lint once per machine (the scaffold's README has the line). Its version
+comes from the template, so `copier update` moves it. `govulncheck` is a `tool` in
+`go.mod`, so it needs no install and Dependabot keeps it current.
+
 **Git hooks** run through [prek](https://prek.j178.dev): one runner and one
 `.pre-commit-config.yaml` covering every stack. Python projects install it with
 `uv tool install prek`. TypeScript-only projects get the same binary from the
 `@j178/prek` devDependency.
 
 **Tasks** run through [just](https://just.systems). The root `justfile` imports a
-`just/<stack>.just` from each stack. Recipes use the `py-`, `ts-` and `rs-` prefixes
+`just/<stack>.just` from each stack. Recipes use the `py-`, `ts-`, `rs-` and `go-` prefixes
 because those imports share one namespace. Your `stacks` answer builds
 `just check`, which runs everything.
 
@@ -186,9 +198,10 @@ base images. Those tags are copier answers, so bump them by hand.
 in `pyproject.toml` and pnpm's `minimumReleaseAge` in `pnpm-workspace.yaml` skip any
 release younger than that, so a `uv lock` or `pnpm install` can't pull in a release
 that Dependabot would still hold back. Both settings are per project, so every machine
-writes the same lockfile. `just check` and CI also audit dependencies for known
-advisories: `uv audit` (every locked dependency), `pnpm audit --prod` (what ships), and
-`cargo deny check`. Knip reports unused files, exports and dependencies in the TypeScript
+writes the same lockfile. Go has no such setting, so for a Go module Dependabot's cooldown
+is the only wait. `just check` and CI also audit dependencies for known
+advisories: `uv audit` (every locked dependency), `pnpm audit --prod` (what ships),
+`cargo deny check`, and `govulncheck` (advisories whose code the module reaches). Knip reports unused files, exports and dependencies in the TypeScript
 package.
 
 ## Publishing

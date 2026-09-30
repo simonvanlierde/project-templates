@@ -1,10 +1,11 @@
 # Task runner: https://just.systems. `just` lists the recipes, `just <name>` runs one.
 #
 # `import?` skips a recipe file you did not scaffold. Recipes are prefixed
-# (`py-`, `ts-`, `rs-`) because imports share one namespace.
+# (`py-`, `ts-`, `rs-`, `go-`) because imports share one namespace.
 import? 'just/python.just'
 import? 'just/ts.just'
 import? 'just/rust.just'
+import? 'just/go.just'
 import? 'just/docker.just'
 
 # List the recipes (what a bare `just` runs).
@@ -21,6 +22,9 @@ check:
 {%- endif %}
 {%- if 'rust' in stacks %}
     @just rs-check
+{%- endif %}
+{%- if 'go' in stacks %}
+    @just go-check
 {%- endif %}
 
 # Run every git hook over the whole repo, not just staged files.

@@ -12,7 +12,7 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # a: every stack, other answers at their defaults. module_name is not set,
 # so its slug-derived default renders.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=render-me --data 'stacks=[python,ts,rust,docker]' \
+  --data project_name=render-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data kind=research --data ts_kind=app \
   --data 'docker_stacks=[python]' . "$out/a"
 
@@ -25,13 +25,14 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'docker_stacks=[ts]' . "$out/b"
 
 # c: the only render with nested paths, at two depths to catch hardcoded
-# up-paths. The rust crate is the binary kind; a has the library. All publish
-# flags on, so the release workflows could collide and docker.yml renders its
-# push job.
+# up-paths. The rust crate and go module are the binary kind; a has the
+# libraries. All publish flags on, so the release workflows could collide and
+# docker.yml renders its push job.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=mono-me --data 'stacks=[python,ts,rust,docker]' \
+  --data project_name=mono-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data python_dir=api --data ts_dir=apps/web \
   --data rust_dir=crates/cli --data rust_kind=binary \
+  --data go_dir=services/tool --data go_kind=binary \
   --data publish_to_pypi=true --data publish_to_npm=true \
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
@@ -86,6 +87,8 @@ test -f a/src/render_me/__main__.py
 grep -q charliermarsh.ruff a/.vscode/extensions.json
 grep -q biomejs.biome a/.vscode/settings.json
 test -f a/.github/SECURITY.md
+grep -qx '## \[Unreleased\]' a/CHANGELOG.md
+(! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.
 test -f a/.github/workflows/hygiene.yml
 test -f b/.github/workflows/hygiene.yml
@@ -113,6 +116,19 @@ test ! -e a/src/main.rs
 grep -qx 'missing_docs = "warn"' a/Cargo.toml
 grep -q 'cargo test --doc' a/just/rust.just
 grep -qx '    @just rs-check' a/justfile
+# go library: a package named from the slug, its Example importing it under that
+# name, since render-me is not an identifier.
+test -f a/go.mod
+test -f a/.golangci.yml
+grep -qx 'tool golang.org/x/vuln/cmd/govulncheck' a/go.mod
+test -f a/renderme.go
+test ! -e a/main.go
+grep -qF 'renderme "github.com/simonvanlierde/render-me"' a/example_test.go
+grep -qx '    @just go-check' a/justfile
+grep -q 'id: golangci-lint$' a/.pre-commit-config.yaml
+grep -q golang.go a/.vscode/extensions.json
+grep -q 'package-ecosystem: gomod' a/.github/dependabot.yml
+(! grep -q working-directory a/just/go.just)
 # license=none: no file and no license key.
 test ! -e b/LICENSE
 (! grep -q '"license"' b/package.json)
@@ -140,6 +156,16 @@ test ! -e c/Cargo.toml
 grep -q 'cargo fmt --manifest-path crates/cli/Cargo.toml --check' c/just/rust.just
 grep -q 'working-directory: crates/cli' c/.github/workflows/rust.yml
 grep -q 'directory: /crates/cli' c/.github/dependabot.yml
+# go binary, nested: main.go, no Example package, and every tool reaches the module.
+test -f c/services/tool/go.mod
+test -f c/services/tool/main.go
+test ! -e c/services/tool/example_test.go
+test ! -e c/go.mod
+grep -qF "[working-directory: 'services/tool']" c/just/go.just
+grep -qF "cd services/tool && exec golangci-lint run" c/.pre-commit-config.yaml
+grep -q 'go-version-file: services/tool/go.mod' c/.github/workflows/go.yml
+grep -q 'directory: /services/tool' c/.github/dependabot.yml
+grep -qx '/services/tool/mono-me' c/.gitignore
 # Both release workflows exist.
 test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml

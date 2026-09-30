@@ -1,0 +1,30 @@
+package main
+
+import (
+	"fmt"
+	"testing"
+)
+
+func TestGreeting(t *testing.T) {
+	tests := []struct {
+		name string
+		want string
+	}{
+		{"world", "Hello, world!"},
+		{"Go", "Hello, Go!"},
+		{"", "Hello, !"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := greeting(tt.name); got != tt.want {
+				t.Errorf("greeting(%q) = %q, want %q", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+// go test runs every Example and compares its stdout with the Output comment.
+func Example_greeting() {
+	fmt.Println(greeting("world"))
+	// Output: Hello, world!
+}

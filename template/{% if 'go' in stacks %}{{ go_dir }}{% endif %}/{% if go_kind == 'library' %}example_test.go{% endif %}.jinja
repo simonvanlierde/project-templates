@@ -1,0 +1,16 @@
+{#- goimports names the import when the package name is not the import path's
+    last element, which a slug with `-` or `.` makes it. -#}
+package {{ go_package }}_test
+
+import (
+	"fmt"
+
+	{% if go_package != go_module.split('/')[-1] %}{{ go_package }} {% endif %}"{{ go_module }}"
+)
+
+// go test runs every Example and compares its stdout with the Output comment;
+// go doc shows it beside Add.
+func ExampleAdd() {
+	fmt.Println({{ go_package }}.Add(2, 3))
+	// Output: 5
+}

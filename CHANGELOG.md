@@ -1,73 +1,111 @@
 # Changelog
 
-What changes for a project rendered from this template. Run `copier update` to take a
-release. Dependency bumps and this repo's own CI are left out; `git log` has them.
+All notable changes to projects made from this template. Take a release with
+`copier update`.
 
-## v0.6.0
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
+project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Before 1.0.0,
+a minor release can break things; breaking changes are marked **Breaking**.
 
-### Updating from v0.5.0
+## [Unreleased]
 
-If you added dependencies, `copier update` reports a conflict in `pyproject.toml` next to
-`dependencies`: a comment below that line was reworded. Keep your `dependencies` list and
-take the new comment.
+## [0.6.0] - 2026-09-30
 
-The update also adds a one-week release age and knip, so the lockfiles no longer match:
-run `uv lock` and `pnpm install`, then commit them. Expect `uv lock` to downgrade any
-package released in the last week.
+### Upgrade notes
+
+1. Run `copier update`. If you added dependencies, you get one conflict in
+   `pyproject.toml`. Keep your dependencies and take the new comment below them.
+2. Run `uv lock` and `pnpm install`, then commit the lockfiles. `uv lock` can downgrade
+   packages released in the last week.
+3. If a `SKIP` list names `gitleaks`, change it to `betterleaks`.
+4. Delete the `.vale/` folder. Vale is gone, and so is the `.gitignore` entry that hid it.
 
 ### Added
 
-- `rust` stack: a crate in `rust_dir`, library or binary, with a strict clippy lint policy
-  in `Cargo.toml`'s `[lints]` table, `clippy.toml`, a `deny.toml` for cargo-deny, `rust.yml`,
-  `just rs-check`, cargo hooks, and a Dependabot cargo entry.
-- Dependency audits in `just check` and CI: `uv audit` for Python, `pnpm audit --prod` for
-  TypeScript, `cargo deny check` for Rust.
-- Knip in the TypeScript `check` script, for unused files, exports and dependencies.
-- A one-week minimum release age: `exclude-newer = "1 week"` under `[tool.uv]`, and
-  `minimumReleaseAge` in a new `pnpm-workspace.yaml`. It matches Dependabot's cooldown.
-- Python `web-service` kind: FastAPI with `/health` and OpenTelemetry, shipped as a container.
-- Python `data-pipeline` kind: `sources.toml`, a standard-library `fetch`, `build` and
-  `validate` pipeline that records a checksum for every download, and `ATTRIBUTION.md`.
-- `CITATION.cff` for the `research` and `data-pipeline` kinds, with an optional ORCID iD.
-- `hygiene.yml` workflow: runs the git hooks in CI and reviews new dependencies on PRs.
-- actionlint hook, and default VS Code formatters for Markdown, TOML and YAML.
-- The `data-pipeline` workflow runs weekly with `TRIPWIRE=1`, which runs the literal-value
-  tests that every other run skips.
-- Copier rejects answers that used to render a broken project: a name with no leading
-  ASCII letter or digit, a `module_name` that isn't an identifier (such as `2048_game`),
-  a `python_dir`, `ts_dir` or `rust_dir` with `./`, `/` or `..`, Python older than 3.12, and the
-  docker stack with no image picked. A Rust crate name can't start with a digit, and a
-  library's can't be a Rust keyword.
+- `rust` and `go` stacks, each as a library or a binary, with strict linting.
+- Python `web-service` kind: FastAPI in a container, with a `/health` endpoint.
+- Python `data-pipeline` kind: downloads third-party data and records a checksum for each
+  file.
+- Dependency audits in `just check` and CI for Python, TypeScript and Rust.
+- A `hygiene.yml` workflow that runs the git hooks in CI.
+- `CITATION.cff` for research and data-pipeline projects.
+- Knip for TypeScript, and an actionlint hook.
+- A `CHANGELOG.md` in the Keep a Changelog format. `copier update` never overwrites it.
+- Copier rejects answers that would build a broken project, such as a name that starts
+  with a digit or a directory with a trailing `/`.
 
 ### Changed
 
-- The secret-scan hook is Betterleaks, gitleaks' successor from the same authors, in place of
-  gitleaks, which now takes security fixes only. A `SKIP` list naming `gitleaks` names
-  `betterleaks` now.
-- `.copier-answers.yml` records `gh:simonvanlierde/project-templates` for a tagged render
-  from a local checkout, not the checkout's path.
-- The release workflows say to limit the `pypi` and `npm` environments to `v*` tags with a
-  required reviewer.
-- The vale hook is pinned to the v3.23.0 release instead of an old short commit.
-- `fetch` fails a download larger than 200 MiB instead of reading it whole.
-- The `web-service` kind uses zero-code OpenTelemetry: the entrypoint calls the distro's
-  `initialize()` when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. `config.py` and `telemetry.py`
-  are gone, and `app.py` exports a plain `app`.
-- `SECURITY.md` notes that its advisories link needs private vulnerability reporting on.
+- **Breaking:** secret scanning uses Betterleaks instead of gitleaks.
+- **Breaking:** the web service turns on OpenTelemetry only when
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
+- CI installs a pinned uv, because `uv audit` is a preview command that can change
+  between releases.
+- `pnpm audit` fails on moderate and higher advisories only.
+
+### Removed
+
+- **Breaking:** the web service's `config.py` and `telemetry.py`.
+- **Breaking:** the vale prose linter and its `.vale.ini`. rumdl still lints Markdown.
 
 ### Fixed
 
-- PyPI publishing from a nested `python_dir` failed: the wheels landed where the publish
-  action doesn't look.
-- A project name ending in `!` or other punctuation no longer fails rumdl and vale on the
-  generated README heading.
-- Both Dockerfiles pass hadolint 2.15.
-- A project name with quotes now renders.
+- PyPI releases failed when the Python package was in a subdirectory.
+- A project name with quotes or a trailing `!` broke the render or the README checks.
+- Both Dockerfiles pass hadolint.
 - yamllint skips `pnpm-lock.yaml`.
 
-## v0.5.0 and earlier
+### Security
 
-The first releases, July 2026: one template with Python (`library`, `app`, `research`),
-TypeScript and Docker stacks, pinned GitHub Actions audited by zizmor, PyPI and npm
-release workflows, Dependabot with a cooldown, and vale, yamllint and rumdl linting.
-`git log v0.5.0` has the detail.
+- uv and pnpm install a release only after it is a week old, the same as Dependabot.
+- Data-pipeline downloads stop at 200 MiB.
+- The release workflows and `SECURITY.md` list the GitHub settings to turn on.
+
+## [0.5.0] - 2026-07-30
+
+### Added
+
+- Markdown linting with rumdl, and YAML linting with yamllint.
+
+## [0.4.0] - 2026-07-28
+
+### Added
+
+- A JSON5 check for config files such as `tsconfig.json`.
+
+## [0.3.0] - 2026-07-28
+
+### Added
+
+- Prose linting with vale.
+
+## [0.2.0] - 2026-07-24
+
+### Changed
+
+- **Breaking:** the four templates are one template. A project made from 0.1.0 cannot
+  update to this release.
+
+### Fixed
+
+- The shipped `.gitignore` no longer hides template files.
+- biome accepts the rendered `.vscode/` files.
+
+## [0.1.0] - 2026-07-24
+
+### Added
+
+- Separate templates for a base repo and for Python, TypeScript and Docker, in any mix.
+- Python library, app and research projects, and TypeScript library and app projects.
+- CI for each stack, with GitHub Actions pinned to commits and audited by zizmor.
+- Optional releases to PyPI, npm and GitHub Container Registry.
+- Dependabot with a one-week cooldown.
+- Coverage recipes for Python and TypeScript.
+
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/simonvanlierde/project-templates/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/simonvanlierde/project-templates/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/simonvanlierde/project-templates/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/simonvanlierde/project-templates/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/simonvanlierde/project-templates/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/simonvanlierde/project-templates/releases/tag/v0.1.0
