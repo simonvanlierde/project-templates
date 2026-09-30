@@ -34,9 +34,9 @@ jobs:
       # trust anchor. The hook revs are pinned in .pre-commit-config.yaml.
       - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
         env:
-          # gitleaks scans staged changes only, and CI stages nothing; GitHub
+          # betterleaks scans staged changes only, and CI stages nothing; GitHub
           # secret scanning is the server-side check.
-          SKIP: gitleaks
+          SKIP: betterleaks
           # Enables zizmor's online audits (impostor commits, known-vulnerable
           # actions). Read-only, like the workflow's permissions.
           GH_TOKEN: ${{ github.token }}

@@ -24,8 +24,8 @@ compares against the ReLab production repository, which runs a heavier set.
 | Provenance on publish | release workflows | PyPI and npm trusted publishing attach attestations. Container images pushed to GHCR carry an SBOM and a provenance attestation. |
 
 The hooks job skips the hooks that need the project environment (`ruff`, `ty`,
-`biome`, `tsc`), because the stack workflows already run them. It also skips gitleaks.
-The gitleaks hook scans staged changes only, and CI stages nothing. GitHub secret
+`biome`, `tsc`), because the stack workflows already run them. It also skips betterleaks.
+The betterleaks hook scans staged changes only, and CI stages nothing. GitHub secret
 scanning is the server-side check.
 
 ## What is left out, and why
@@ -36,7 +36,7 @@ scanning is the server-side check.
 | OpenSSF Scorecard | Needs a public repo to publish, and mostly scores the practices in the first table. | You want the badge. Copy ReLab's `scorecard.yml`. |
 | Renovate from Actions | Needs a GitHub App and two secrets. Dependabot needs neither and covers every ecosystem here, including hook revs. | You need automerge or grouping Dependabot can't express. |
 | release-please | Research repos release rarely, and Zenodo archives a tagged release. A release PR on every push is noise. | Releases become frequent enough that writing the changelog by hand costs time. |
-| gitleaks over full history | GitHub secret scanning and push protection cover public repos at no cost. The hook covers local commits. | The repo is private without GitHub Advanced Security. |
+| Secret scan over full history | GitHub secret scanning and push protection cover public repos at no cost. The hook covers local commits. | The repo is private without GitHub Advanced Security. |
 | Scheduled audit job (`pip-audit`, `pnpm audit`) | Dependabot security alerts cover it. | The repo is private without Dependabot alerts. |
 | One required "CI result" job | A single workflow per stack is short enough to list its jobs in branch protection. | The job list grows past what you want to maintain by hand. |
 | CODEOWNERS, issue templates, CONTRIBUTING | Single-author repos. | Other people start contributing. |
