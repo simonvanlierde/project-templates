@@ -1,8 +1,8 @@
 """OpenTelemetry: request traces and a request-duration histogram, or nothing.
 
-Strictly opt-in. Without OTEL_EXPORTER_OTLP_ENDPOINT no provider is built, no
-middleware is added and nothing leaves the process. With it, spans and metrics go
-to that collector over OTLP/HTTP; the SDK reads the other OTEL_* variables itself.
+Opt-in. Without OTEL_EXPORTER_OTLP_ENDPOINT no provider is built, no middleware
+is added and nothing leaves the process. With it, spans and metrics go to that
+collector over OTLP/HTTP. The SDK reads the other OTEL_* variables itself.
 """
 
 from __future__ import annotations
@@ -36,8 +36,8 @@ class Telemetry:
             return
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor  # noqa: PLC0415
 
-        # Called before the app first serves, so the middleware enters the stack
-        # Starlette builds on startup; instrumenting later needs a rebuild.
+        # Call before the app first serves, so the middleware enters the stack
+        # Starlette builds on startup. Instrumenting later needs a rebuild.
         FastAPIInstrumentor.instrument_app(
             app, tracer_provider=self.tracer_provider, meter_provider=self.meter_provider
         )

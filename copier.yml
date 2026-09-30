@@ -1,5 +1,5 @@
 _subdirectory: template
-# 9.1.0: `stacks`, a multiselect, needs it.
+# `stacks` is a multiselect, which needs 9.1.0.
 _min_copier_version: "9.1.0"
 
 project_name:
@@ -11,8 +11,7 @@ project_name:
     The name needs a leading ASCII letter or digit: npm, PyPI and image tags are built from it.
     {% endif %}
 
-# Computed, never asked. project_name is a display name; this is the form npm,
-# PyPI, compose and image tags require, hence the regex_replace.
+# Computed, not asked. npm, PyPI, compose and image tags need this normalized form.
 slug:
   type: str
   when: false
@@ -30,10 +29,12 @@ github_user:
 
 author_name:
   type: str
+  help: Author name, for package metadata and the license
   default: Simon van Lierde
 
 author_email:
   type: str
+  help: Author email, for package metadata
   default: simonvanlierde@gmail.com
 
 license:
@@ -59,9 +60,8 @@ stacks:
   choices: [python, ts, docker]
   default: [python]
 
-# Where each stack's package lives. `.` is a plain single-package repo; anything
-# else nests only the package, leaving the workflows, hooks, justfile and
-# answers file at the root.
+# `.` is a single-package repo. Any other value nests only the package; workflows,
+# hooks, justfile and answers file stay at the root.
 python_dir:
   type: str
   when: "{{ 'python' in stacks }}"
@@ -137,6 +137,7 @@ publish_to_pypi:
 ts_kind:
   type: str
   when: "{{ 'ts' in stacks }}"
+  help: What kind of TypeScript project
   choices:
     Library (publishes dist/ and type declarations): library
     Application (builds to dist/, not published): app
@@ -145,7 +146,8 @@ ts_kind:
 node_version:
   type: str
   when: "{{ 'ts' in stacks }}"
-  # Node 26 is Current; it becomes the active LTS in Oct 2026.
+  help: Node.js major version
+  # NOTE: Node 26 is Current; it becomes the active LTS in Oct 2026.
   default: "26"
 
 publish_to_npm:
@@ -163,8 +165,8 @@ docker_stacks:
   help: Which stacks get an image (one Dockerfile each, one compose service each)
   choices: [python, ts]
   default: [python]
-  # An image is built from its stack's package, and two Dockerfiles cannot share
-  # one directory — the one place a monorepo is not optional.
+  # Each image builds from its stack's package, and two Dockerfiles cannot share a
+  # directory, so two images need a monorepo layout.
   validator: >-
     {% if not docker_stacks %}
     Pick at least one stack to build an image from.

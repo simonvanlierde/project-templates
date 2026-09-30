@@ -2,7 +2,7 @@
  * Entrypoint for the container image.
  *
  * Serves the /health endpoint the Dockerfile's HEALTHCHECK probes, so
- * `docker run` works before you have written anything. Replace the handler
+ * `docker run` works before you write anything. Replace the handler
  * with your real application.
  */
 import { createServer } from "node:http";

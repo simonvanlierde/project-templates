@@ -4,16 +4,16 @@ name: python release
 # https://pypi.org/manage/account/publishing/ for repo {{ github_user }}/{{ slug }},
 # workflow `python-release.yml`, environment `pypi`.
 #
-# In the repo's Settings > Environments, limit `pypi` to tags matching `v*` and
-# add yourself as a required reviewer. Without that, anyone who can push a
-# branch can dispatch an edited copy of this workflow and publish from it.
+# In the repo's Settings > Environments, limit `pypi` to tags matching `v*` and add
+# yourself as a required reviewer. Otherwise anyone who can push a branch can
+# dispatch an edited copy of this workflow and publish from it.
 #
-# The build job re-runs the full suite (a release tag can point at a commit that
-# never went green), then runs it again against the installed wheel — the only
-# place packaging faults like a wrong module-name show up.
+# The build job re-runs the full suite, since a release tag can point at a commit
+# that never went green. It then runs the suite against the installed wheel, the
+# only place packaging faults such as a wrong module name show up.
 #
-# `id-token: write` exposes an OIDC request token to every step in its job,
-# which is why publish is a separate job that runs no project code.
+# `id-token: write` exposes an OIDC request token to every step in its job, so
+# publish is a separate job that runs no project code.
 
 on:
   release:
@@ -52,7 +52,7 @@ jobs:
 
       - run: uv build
 
-      # The suite again, against the wheel instead of src/: --no-project stops uv
+      # The suite again, against the wheel instead of src/. --no-project stops uv
       # resolving the local tree, so the import can only come from dist/.
       - run: uv run --isolated --no-project --with dist/*.whl --with pytest pytest tests
 

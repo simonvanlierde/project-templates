@@ -3,14 +3,11 @@ name: ci
 # Renders the real answer combinations with copier, then runs the generated
 # project's own inner loop.
 
-# No push trigger: main only advances through a PR, so a push run repeats
-# the check that already passed on the PR head.
+# No push trigger: main only advances through a PR, so a push run repeats the PR check.
 on:
-  # No paths-ignore: `ci ok` is a required check, and a skipped workflow
-  # leaves it pending forever. The whole run takes under a minute anyway.
+  # No paths-ignore: `ci ok` is a required check, and a skipped workflow leaves it pending.
   pull_request:
-  # Scaffolds break when upstream moves (a new uv, pnpm or hook release), not
-  # when this repo does — so also run on a schedule.
+  # Also on a schedule: scaffolds break when upstream releases change, not when this repo does.
   schedule:
     - cron: "0 6 * * 1"
   workflow_dispatch:
@@ -18,7 +15,7 @@ on:
 permissions:
   contents: read
 
-# Pinned for reproducibility; Renovate bumps these via githubActionsVersions.
+# Renovate bumps these via githubActionsVersions.
 env:
   # renovate: datasource=pypi depName=copier
   COPIER_VERSION: 9.18.2
@@ -37,10 +34,10 @@ concurrency:
 
 jobs:
   python:
-    # The python stack (+ docker). The library row's module_name != project_name
-    # exercises the uv_build module-name path. The data-pipeline row also runs its
-    # pipeline, as its generated python.yml does. Images build nested (monorepo)
-    # and at the root (web-service).
+    # Python stack, with docker. The library row's module_name differs from project_name,
+    # which exercises the uv_build module-name path. The data-pipeline row also runs its
+    # pipeline, as its generated python.yml does. Images build nested (monorepo) and at
+    # the root (web-service).
     name: python (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -54,7 +51,7 @@ jobs:
             stacks: "[python]"
             python_dir: "."
             kind: library
-          # The nested layout built for real: the build context is a subdirectory.
+          # Nested layout: the build context is a subdirectory.
           - name: monorepo
             project_name: ci-mono-py
             module_name: ci_mono_py
@@ -80,7 +77,7 @@ jobs:
             stacks: "[python]"
             python_dir: "."
             kind: data-pipeline
-          # FastAPI behind the image: also started, and its /health probed.
+          # Also starts the FastAPI container and probes /health.
           - name: web-service
             project_name: ci-web
             module_name: ci_web
@@ -92,9 +89,9 @@ jobs:
         with:
           persist-credentials: false
 
-      # Default globs match nothing here (pins live in .jinja files), so key on
-      # the template. Rows of one kind share dependencies, so they share a key.
-      # Saved from main only: a PR-ref cache is readable by that PR alone.
+      # The default globs match nothing (pins live in .jinja files), so key on the template.
+      # Rows of one kind share dependencies. Saved from main only: a PR-ref cache is
+      # readable by that PR alone.
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
@@ -102,9 +99,8 @@ jobs:
           cache-suffix: ${{ github.job }}-${{ matrix.kind }}
           save-cache: ${{ github.event_name != 'pull_request' }}
 
-      # publish_to_pypi=true (asked only of a library) so the conditionally-named
-      # python-release.yml renders too. Matrix values reach the shell as env:
-      # project_name is free text.
+      # publish_to_pypi=true (asked only of a library) renders the conditionally named
+      # python-release.yml. Matrix values go through env: project_name is free text.
       - name: scaffold
         env:
           PROJECT_NAME: ${{ matrix.project_name }}
@@ -112,11 +108,11 @@ jobs:
           STACKS: ${{ matrix.stacks }}
           PYTHON_DIR: ${{ matrix.python_dir }}
           KIND: ${{ matrix.kind }}
-          # Derived from stacks so a row can't gain docker and skip its answers.
+          # Derived from stacks so a row can't add docker and skip its answers.
           DOCKER: ${{ contains(matrix.stacks, 'docker') }}
         run: |
           set -euo pipefail
-          # --vcs-ref=HEAD so CI tests the pushed commit, not the last tag.
+          # --vcs-ref=HEAD tests the pushed commit, not the last tag.
           C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
              --data "project_name=$PROJECT_NAME"
              --data "module_name=$MODULE_NAME"
@@ -129,9 +125,9 @@ jobs:
 
       - run: uv tool install "rust-just==$JUST_VERSION"
 
-      # The scaffold's own recipes, so the rendered justfile runs, not just
-      # renders. `check` is the same commands the generated python.yml runs.
-      # py-sync has no --locked: a fresh scaffold has no lockfile until it runs.
+      # The scaffold's own recipes, so the rendered justfile runs. `check` runs the same
+      # commands as the generated python.yml.
+      # py-sync has no --locked: a fresh scaffold has no lockfile.
       # just finds the root justfile from a nested package dir.
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
@@ -148,8 +144,7 @@ jobs:
           uv run pytest tests/test_published.py
           ls data/raw/*.fetch.json
 
-      # The runner's default builder loads the image, so the web-service row
-      # can run it below.
+      # The runner's default builder loads the image so the web-service row can run it.
       - if: contains(matrix.stacks, 'docker')
         name: docker build
         env:
@@ -173,8 +168,7 @@ jobs:
           curl -fsS http://127.0.0.1:8000/health | grep -q '"status":"ok"'
 
   render:
-    # Renders the branches the default answers reach, which the jobs above skip,
-    # and stops at "does the output parse".
+    # Renders the branches the jobs above skip and checks only that the output parses.
     name: render
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -183,7 +177,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # uv runs copier and the linters here, so key on this file, which pins them.
+      # uv runs copier and the linters here; key on this file, which pins them.
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
@@ -195,19 +189,18 @@ jobs:
       - name: render and check
         run: scripts/check-render.sh "$RUNNER_TEMP"
 
-      # The workflow templates are .jinja, and no linter can parse them. Their
-      # rendered output is ordinary YAML, so audit that instead — across all
-      # four renders, which between them cover every conditional branch.
-      # Scaffolded repos get the same audit as a git hook.
+      # No linter can parse the .jinja workflows, so audit the rendered output. The four
+      # renders together cover every conditional branch. Scaffolds get the same audit as a
+      # git hook.
       - name: zizmor
         env:
           GH_TOKEN: ${{ github.token }}
         run: uvx "zizmor@$ZIZMOR_VERSION" "$RUNNER_TEMP"/a "$RUNNER_TEMP"/b "$RUNNER_TEMP"/c "$RUNNER_TEMP"/d
 
-      # What zizmor doesn't check: unknown keys, bad `needs`, expression types,
-      # and shellcheck over every `run:` (shellcheck ships on the runner).
-      # Upstream's prebuilt binary, as the root hook runs upstream's source. Its
-      # releases are mutable, so the checksums file guards the download only.
+      # Checks what zizmor doesn't: unknown keys, bad `needs`, expression types, and
+      # shellcheck over every `run:` (shellcheck ships on the runner).
+      # Upstream's prebuilt binary. Its releases are mutable, so the checksums file only
+      # guards the download.
       - name: actionlint
         env:
           GH_TOKEN: ${{ github.token }}
@@ -226,8 +219,8 @@ jobs:
             --builtin-schema vendor.citation-file-format "$RUNNER_TEMP"/a/CITATION.cff "$RUNNER_TEMP"/d/CITATION.cff
 
   update:
-    # Scaffolds from the last tag, then `copier update`s to the pushed commit —
-    # the path scaffolded projects actually take.
+    # Scaffolds from the last tag, then runs `copier update` to the pushed commit, as a
+    # real project does.
     name: update from last tag
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -254,18 +247,17 @@ jobs:
           uvx "copier@$COPIER_VERSION" copy --vcs-ref="$TAG" --defaults --overwrite \
             --data project_name=update-me --data 'stacks=[python,ts,docker]' \
             --data 'docker_stacks=[python]' . "$PROJ"
-          # The answers name the canonical GitHub source; point this update at
-          # the pushed commit instead.
+          # The answers name the GitHub source; point the update at the pushed commit.
           sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
           git -C "$PROJ" add -A
           git -C "$PROJ" -c user.email=ci@invalid -c user.name=ci commit -qm scaffold
-          # --conflict rej: the default, inline, writes markers that no check sees.
+          # --conflict rej: the default inline markers would pass every check unseen.
           uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults --conflict rej "$PROJ"
           test -z "$(find "$PROJ" -name '*.rej' -print -quit)"
 
   typescript:
-    # The ts stack (+ docker). The image builds nested (monorepo); the root
-    # Dockerfile is the same template, rendered by the render job.
+    # Ts stack, with docker. The image builds nested (monorepo); the root Dockerfile is
+    # the same template and is rendered by the render job.
     name: typescript (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -273,7 +265,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # A project_name carrying the punctuation `slug` has to strip.
+          # A project_name with punctuation that `slug` strips.
           - name: library
             project_name: 'Ci "TS" Lib'
             stacks: "[ts]"
@@ -284,7 +276,7 @@ jobs:
             stacks: "[ts]"
             ts_dir: "."
             ts_kind: app
-          # The nested package installed and built, not only rendered.
+          # Installs and builds the nested package, not only renders it.
           - name: monorepo
             project_name: ci-mono-ts
             stacks: "[ts,docker]"
@@ -295,7 +287,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # uv only runs copier here, so key on this file, which pins it.
+      # uv only runs copier here; key on this file, which pins it.
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
@@ -303,16 +295,15 @@ jobs:
           cache-suffix: copier
           save-cache: ${{ github.event_name != 'pull_request' }}
 
-      # publish_to_npm=true (asked only of a library) so the conditionally-named
-      # ts-release.yml renders too. project_name via env: one row's value
-      # contains quotes.
+      # publish_to_npm=true (asked only of a library) renders the conditionally named
+      # ts-release.yml. project_name goes through env: one row's value contains quotes.
       - name: scaffold
         env:
           PROJECT_NAME: ${{ matrix.project_name }}
           STACKS: ${{ matrix.stacks }}
           TS_DIR: ${{ matrix.ts_dir }}
           TS_KIND: ${{ matrix.ts_kind }}
-          # Derived from stacks so a row can't gain docker and skip its answers.
+          # Derived from stacks so a row can't add docker and skip its answers.
           DOCKER: ${{ contains(matrix.stacks, 'docker') }}
         run: |
           set -euo pipefail
@@ -325,9 +316,9 @@ jobs:
           if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[ts]'); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
-      # Read by hand: pnpm/setup resolves paths relative to GITHUB_WORKSPACE,
-      # and the scaffold lives in RUNNER_TEMP. pnpm from the packageManager pin;
-      # node from the answer copier recorded, not engines.node, an open range.
+      # Read by hand: pnpm/setup resolves paths against GITHUB_WORKSPACE, and the scaffold
+      # lives in RUNNER_TEMP. pnpm comes from the packageManager pin; node from the copier
+      # answer, since engines.node is an open range.
       - name: versions
         id: v
         env:
@@ -357,9 +348,8 @@ jobs:
 
       - run: uv tool install "rust-just==$JUST_VERSION"
 
-      # The scaffold's own recipes; `check` is the same commands the generated
-      # ts.yml runs. ts-sync has no --frozen-lockfile: a fresh scaffold has no
-      # pnpm-lock.yaml until this install writes it.
+      # The scaffold's own recipes; `check` runs the same commands as the generated
+      # ts.yml. ts-sync has no --frozen-lockfile: the install writes pnpm-lock.yaml.
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just ts-sync check

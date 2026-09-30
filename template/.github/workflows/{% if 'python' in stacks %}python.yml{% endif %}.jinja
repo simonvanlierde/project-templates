@@ -30,8 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 {%- if python_dir != '.' %}
-    # Only `run:` steps take this. setup-uv needs no path of its own: its cache
-    # glob is **/uv.lock, which finds a nested lockfile.
+    # Only `run:` steps take this. setup-uv needs no path: its cache glob is **/uv.lock,
+    # which finds a nested lockfile.
     defaults:
       run:
         working-directory: {{ python_dir }}
@@ -53,16 +53,16 @@ jobs:
       - run: uv run ty check
 {%- if kind == 'data-pipeline' %}
 
-      # The pipeline runs for real against the URLs in sources.toml: not a dry run
-      # and not a fixture. Keep each URL a small cut of its source so this stays fast.
+      # Runs the pipeline against the URLs in sources.toml, not a fixture. Keep each URL a
+      # small cut of its source so this stays fast.
       - id: fetch
         run: uv run {{ slug }} fetch
       - run: uv run {{ slug }} build
       - run: uv run {{ slug }} validate
 
-      # tests/test_published.py fails rather than skips when the output is missing.
-      # The literal-value tripwire runs on the weekly schedule only, so a publisher
-      # revision fails that run instead of turning a PR red.
+      # tests/test_published.py fails, not skips, when the output is missing. The
+      # literal-value tripwire runs only on the weekly schedule, so a publisher revision
+      # fails that run instead of a PR.
       - run: uv run pytest
         env:
           PIPELINE_OUTPUT_REQUIRED: "1"

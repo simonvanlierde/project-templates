@@ -1,7 +1,7 @@
 {#- `readme` and `license-files` resolve against this file's directory and cannot
-    escape it, so a nested package gets its own README and drops license-files
-    rather than pointing at a LICENSE it cannot reach. The SPDX expression below
-    still records the license; only the bundled copy of the text goes. -#}
+    escape it. A nested package therefore gets its own README and drops
+    license-files instead of pointing at an unreachable LICENSE. The SPDX
+    expression below still records the license. -#}
 [project]
 name = "{{ slug }}"
 version = "0.1.0"
@@ -27,8 +27,8 @@ dependencies = [
 dependencies = []
 {%- endif %}
 {%- if not publish_to_pypi %}
-# PyPI rejects unknown classifiers, so this one makes an accidental upload fail.
-# Delete it (and set publish_to_pypi) when you do want to publish.
+# PyPI rejects unknown classifiers, so this one blocks an accidental upload.
+# Delete it (and set publish_to_pypi) to publish.
 classifiers = ["Private :: Do Not Upload"]
 {%- endif %}
 {% if kind == 'data-pipeline' %}
@@ -59,7 +59,7 @@ dev = [
 ]
 
 # Research projects are packaged too, so notebooks can `import {{ module_name }}`
-# without sys.path games.
+# without sys.path edits.
 [build-system]
 requires = ["uv_build>=0.12.19,<0.13.0"]
 build-backend = "uv_build"
@@ -114,9 +114,9 @@ testpaths = ["tests"]
 filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]
 {%- endif %}
 
-# Coverage is opt-in, via `pytest --cov` (`just py-cov`), not addopts: it costs
-# every plain test run for a number you only look at now and then. No fail_under
-# until there is a suite worth setting one against.
+# Coverage is opt-in via `pytest --cov` (`just py-cov`), not addopts, because it
+# slows every plain test run. No fail_under until there is a suite worth setting
+# one against.
 [tool.coverage.run]
 source = ["src"]
 branch = true

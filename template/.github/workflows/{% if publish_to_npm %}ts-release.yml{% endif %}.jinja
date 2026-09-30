@@ -4,19 +4,19 @@ name: ts release
 # https://www.npmjs.com/package/{{ slug }}/access for repo
 # {{ github_user }}/{{ slug }}, workflow `ts-release.yml`, environment `npm`.
 #
-# In the repo's Settings > Environments, limit `npm` to tags matching `v*` and
-# add yourself as a required reviewer. Without that, anyone who can push a
-# branch can dispatch an edited copy of this workflow and publish from it.
+# In the repo's Settings > Environments, limit `npm` to tags matching `v*` and add
+# yourself as a required reviewer. Otherwise anyone who can push a branch can
+# dispatch an edited copy of this workflow and publish from it.
 #
 # The package must already exist on npm: trusted publishing cannot create it, so
 # publish the first version manually (`pnpm publish`). npm adds the provenance
-# attestation itself over OIDC — no --provenance flag.
+# attestation itself over OIDC; there is no --provenance flag.
 #
-# The build job re-runs the full suite: a release tag can point at any commit,
-# including one that never went green.
+# The build job re-runs the full suite because a release tag can point at any
+# commit, including one that never went green.
 #
-# `id-token: write` reaches every step of its job, where any dependency script or
-# test could mint a token and publish under this name. So the publish job runs no
+# `id-token: write` reaches every step in its job, so any dependency script or test
+# could mint a token and publish under this name. The publish job therefore runs no
 # project code: it downloads the tarball `build` produced and uploads it.
 
 on:
@@ -88,14 +88,14 @@ jobs:
         with:
           name: package
 
-      # setup-node's cache detection is on by default — exactly what zizmor's
-      # cache-poisoning audit flags in a publishing job. Off explicitly.
+      # setup-node's cache detection is on by default, which zizmor's cache-poisoning
+      # audit flags in a publishing job. Turn it off explicitly.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "{{ node_version }}"
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
-      # npm, not pnpm: a prebuilt tarball needs no checkout, install or lockfile,
-      # and npm ships with Node with OIDC support since 11.5.1 (Node 24+).
+      # npm, not pnpm: a prebuilt tarball needs no checkout, install or lockfile. npm
+      # ships with Node 24+ and supports OIDC since 11.5.1.
       - run: npm publish --access public ./*.tgz

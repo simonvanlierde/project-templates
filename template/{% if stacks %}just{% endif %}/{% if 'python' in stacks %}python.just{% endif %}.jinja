@@ -1,6 +1,6 @@
 {#- just runs every recipe from the root justfile's directory, so a nested package
-    is reached with uv's own --directory rather than with a cd. It renders empty
-    for the flat layout, where the root already is the package. -#}
+    is reached with uv's --directory, not a cd. It renders empty for the flat
+    layout, where the root is the package. -#}
 {%- set uv = 'uv' if python_dir == '.' else 'uv --directory ' ~ python_dir -%}
 # Install the venv, writing uv.lock if it is missing or stale. CI uses --locked.
 py-sync:

@@ -1,14 +1,14 @@
-{#- A render from a local checkout records its path as `_src_path`, which in a
-    publishable repo leaks the author's home directory and breaks `copier update`
-    on every other machine. Record the canonical URL instead, but only for a render
-    from an exact tag: `_commit` is `git describe --tags --always`, and a
-    `<tag>-<n>-g<sha>` or bare sha from a local commit may not exist upstream, where
-    `copier update` would fail to check it out. A remote source is kept as given. -#}
+{#- A render from a local checkout records its path as `_src_path`, which leaks the
+    author's home directory and breaks `copier update` on other machines. Record the
+    canonical URL instead, but only for a render from an exact tag. `_commit` is
+    `git describe --tags --always`; a `<tag>-<n>-g<sha>` or bare sha from a local
+    commit may not exist upstream, so `copier update` could not check it out. A
+    remote source is kept as given. -#}
 {%- set src = _copier_answers._src_path -%}
 {%- set commit = _copier_answers._commit | default('', true) -%}
 {%- set parts = commit.split('-') -%}
 {%- set past_tag = parts | length > 2 and parts[-2].isdigit() and parts[-1][:1] == 'g' -%}
-{#- A prefix of the checked-out hash is a bare sha, whatever a tag's name looks like. -#}
+{#- A prefix of the checked-out hash is a bare sha, even if it looks like a tag name. -#}
 {%- set bare_sha = commit != '' and (_copier_conf.vcs_ref_hash or '').startswith(commit) -%}
 {%- set tagged = commit != '' and not (past_tag or bare_sha) -%}
 {%- set local = ':' not in src or src[1:3] in (':\\', ':/') -%}
