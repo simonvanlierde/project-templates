@@ -81,6 +81,10 @@ go_dir:
   when: "{{ 'go' in stacks }}"
   help: Directory holding the Go module (`.` for the repo root, `services/api` for a monorepo)
   default: "."
+  validator: >-
+    {% if go_dir != '.' and (go_dir.startswith(('.', '/')) or go_dir.endswith('/') or '..' in go_dir) %}
+    Give a plain relative path such as `services/api`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% endif %}
 
 # --- python -------------------------------------------------------------------
 
@@ -187,6 +191,13 @@ go_module:
   when: "{{ 'go' in stacks }}"
   help: Go module path (go.mod `module`)
   default: "github.com/{{ github_user }}/{{ slug }}"
+  # go_package is computed, and copier skips validators on computed questions,
+  # so its check lives here.
+  validator: >-
+    {% set pkg = slug|regex_replace('[^a-z0-9]', '') %}
+    {% if not pkg|regex_search('^[a-z_][a-z0-9_]*$') or pkg in ['break', 'case', 'chan', 'const', 'continue', 'default', 'defer', 'else', 'fallthrough', 'for', 'func', 'go', 'goto', 'if', 'import', 'interface', 'map', 'package', 'range', 'return', 'select', 'struct', 'switch', 'type', 'var'] %}
+    The Go package name would be `{{ pkg }}`, which is not a valid identifier: start the project name with a letter and avoid Go keywords.
+    {% endif %}
 
 # Computed, never asked. A package name is one lowercase identifier: no `-` or
 # `.`, which a slug may carry.
