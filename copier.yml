@@ -6,6 +6,10 @@ project_name:
   type: str
   help: Project name (directory / repo name)
   default: "{{ _copier_conf.dst_path.name }}"
+  validator: >-
+    {% if not (project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '')|regex_search('^[a-z0-9]')) %}
+    The name needs a leading ASCII letter or digit: npm, PyPI and image tags are built from it.
+    {% endif %}
 
 # Computed, never asked. project_name is a display name; this is the form npm,
 # PyPI, compose and image tags require, hence the regex_replace.
@@ -63,12 +67,20 @@ python_dir:
   when: "{{ 'python' in stacks }}"
   help: Directory holding the Python package (`.` for the repo root, `apps/api` for a monorepo)
   default: "."
+  validator: >-
+    {% if python_dir != '.' and (python_dir.startswith(('.', '/')) or python_dir.endswith('/') or '..' in python_dir) %}
+    Give a plain relative path such as `apps/api`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% endif %}
 
 ts_dir:
   type: str
   when: "{{ 'ts' in stacks }}"
   help: Directory holding the TypeScript package (`.` for the repo root, `apps/web` for a monorepo)
   default: "."
+  validator: >-
+    {% if ts_dir != '.' and (ts_dir.startswith(('.', '/')) or ts_dir.endswith('/') or '..' in ts_dir) %}
+    Give a plain relative path such as `apps/web`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% endif %}
 
 # --- python -------------------------------------------------------------------
 
@@ -93,6 +105,10 @@ module_name:
   when: "{{ 'python' in stacks }}"
   help: Importable Python module name
   default: "{{ slug|replace('-', '_')|replace('.', '_') }}"
+  validator: >-
+    {% if not module_name|regex_search('^[a-z_][a-z0-9_]*$') %}
+    A module name is lower-case letters, digits and `_`, and cannot start with a digit.
+    {% endif %}
 
 author_orcid:
   type: str
@@ -103,7 +119,12 @@ author_orcid:
 python_version:
   type: str
   when: "{{ 'python' in stacks }}"
+  help: Python version (3.12 or later)
   default: "3.14"
+  validator: >-
+    {% if not python_version|regex_search('^3\\.(1[2-9]|[2-9][0-9])$') %}
+    Give a version from 3.12 up, as `3.14`: the template uses `type` statements.
+    {% endif %}
 
 publish_to_pypi:
   type: bool
@@ -145,7 +166,9 @@ docker_stacks:
   # An image is built from its stack's package, and two Dockerfiles cannot share
   # one directory — the one place a monorepo is not optional.
   validator: >-
-    {% if docker_stacks | reject('in', stacks) | list %}
+    {% if not docker_stacks %}
+    Pick at least one stack to build an image from.
+    {% elif docker_stacks | reject('in', stacks) | list %}
     An image needs its stack: add {{ docker_stacks | reject('in', stacks) | join(' and ') }} to `stacks` too.
     {% elif kind == 'web-service' and 'python' not in docker_stacks %}
     The web-service kind is the python image: add python to `docker_stacks`.
