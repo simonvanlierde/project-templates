@@ -27,8 +27,8 @@ dependencies = [
 dependencies = []
 {%- endif %}
 {%- if not publish_to_pypi %}
-# PyPI rejects unknown classifiers, so this one makes an accidental upload fail.
-# Delete it (and set publish_to_pypi) when you do want to publish.
+# PyPI rejects unknown classifiers, so this one blocks an accidental upload.
+# Delete it (and set publish_to_pypi) to publish.
 classifiers = ["Private :: Do Not Upload"]
 {%- endif %}
 {% if kind == 'data-pipeline' %}
