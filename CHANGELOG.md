@@ -31,6 +31,10 @@ release. Dependency bumps and this repo's own CI are left out; `git log` has the
   required reviewer.
 - The vale hook is pinned to the v3.23.0 release instead of an old short commit.
 - `fetch` fails a download larger than 200 MiB instead of reading it whole.
+- The `web-service` kind uses zero-code OpenTelemetry: the entrypoint calls the distro's
+  `initialize()` when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. `config.py` and `telemetry.py`
+  are gone, and `app.py` exports a plain `app`.
+- `SECURITY.md` notes that its advisories link needs private vulnerability reporting on.
 
 ### Fixed
 
