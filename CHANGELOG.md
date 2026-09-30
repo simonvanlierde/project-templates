@@ -18,6 +18,7 @@ a minor release can break things; breaking changes are marked **Breaking**.
   coverage.
 - CI takes the Python version from `.python-version` instead of repeating it in the
   workflows.
+- Ship `.tombi.toml` in place of `.taplo.toml`: tombi replaced taplo as the TOML formatter.
 
 ### Removed
 
