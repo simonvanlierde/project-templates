@@ -31,7 +31,7 @@ take the new comment.
   tests that every other run skips.
 - Copier rejects answers that used to render a broken project: a name with no leading
   ASCII letter or digit, a `module_name` that isn't an identifier (such as `2048_game`),
-  a `python_dir` or `ts_dir` with `./`, `/` or `..`, Python older than 3.12, and the
+  a `python_dir`, `ts_dir` or `rust_dir` with `./`, `/` or `..`, Python older than 3.12, and the
   docker stack with no image picked.
 
 ### Changed

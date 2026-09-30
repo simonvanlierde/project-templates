@@ -87,6 +87,10 @@ rust_dir:
   when: "{{ 'rust' in stacks }}"
   help: Directory holding the Rust crate (`.` for the repo root, `crates/core` for a monorepo)
   default: "."
+  validator: >-
+    {% if rust_dir != '.' and (rust_dir.startswith(('.', '/')) or rust_dir.endswith('/') or '..' in rust_dir) %}
+    Give a plain relative path such as `crates/core`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% endif %}
 
 # --- python -------------------------------------------------------------------
 
