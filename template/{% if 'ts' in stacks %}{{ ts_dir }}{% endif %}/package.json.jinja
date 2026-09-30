@@ -42,6 +42,11 @@
   "knip": {
     "ignoreDependencies": [
       "@j178/prek"
+{#- Only ts-release.yml runs publint. knip finds it there from a root package,
+    but a nested one never sees .github/. #}
+{%- if publish_to_npm and ts_dir != '.' %},
+      "publint"
+{%- endif %}
     ]
   },
   "devDependencies": {
