@@ -18,6 +18,7 @@ a minor release can break things; breaking changes are marked **Breaking**.
 2. Run `uv lock` and `pnpm install`, then commit the lockfiles. `uv lock` can downgrade
    packages released in the last week.
 3. If a `SKIP` list names `gitleaks`, change it to `betterleaks`.
+4. Delete the `.vale/` folder. Vale is gone, and so is the `.gitignore` entry that hid it.
 
 ### Added
 
@@ -29,6 +30,7 @@ a minor release can break things; breaking changes are marked **Breaking**.
 - A `hygiene.yml` workflow that runs the git hooks in CI.
 - `CITATION.cff` for research and data-pipeline projects.
 - Knip for TypeScript, and an actionlint hook.
+- A `CHANGELOG.md` in the Keep a Changelog format. `copier update` never overwrites it.
 - Copier rejects answers that would build a broken project, such as a name that starts
   with a digit or a directory with a trailing `/`.
 
@@ -41,6 +43,7 @@ a minor release can break things; breaking changes are marked **Breaking**.
 ### Removed
 
 - **Breaking:** the web service's `config.py` and `telemetry.py`.
+- **Breaking:** the vale prose linter and its `.vale.ini`. rumdl still lints Markdown.
 
 ### Fixed
 
