@@ -9,6 +9,16 @@ a minor release can break things; breaking changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- A yamlfmt hook with a `.yamlfmt` config; yamllint now checks yamlfmt's output.
+
+### Changed
+
+- Hook revs are commit SHAs with a `# frozen:` tag comment, since tags are mutable.
+  Dependabot moves both together.
+- Flow mappings are written `{key: value}`, as yamlfmt formats them.
+
 ## [0.7.0] - 2026-09-30
 
 ### Upgrade notes
