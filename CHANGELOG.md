@@ -9,9 +9,30 @@ a minor release can break things; breaking changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-30
+
+### Upgrade notes
+
+1. Run `copier update`. It replaces `hygiene.yml` with `checks.yml`, swaps
+   `.taplo.toml` for `.tombi.toml`, and deletes the pull request template.
+2. If something uploads `coverage.xml` or `coverage/lcov.info`, add the reporter flag
+   back to `just py-cov` or `just ts-cov`.
+
 ### Changed
 
-- Ship `.tombi.toml` in place of `.taplo.toml`: tombi replaced taplo as the TOML formatter.
+- The `hygiene.yml` workflow is now `checks.yml`. Its job names are unchanged, so
+  required status checks still match.
+- `.tombi.toml` replaces `.taplo.toml`, because tombi replaced taplo as the TOML
+  formatter.
+- `just py-cov` and `just ts-cov` print a coverage summary only. They no longer write
+  report files.
+- CI reads the Python version from `.python-version` instead of repeating it.
+
+### Removed
+
+- The pull request template.
+- The `knip` script in `package.json`. `pnpm run check` already runs knip.
+- The copier checks that rejected a project name that is a Rust or Go keyword.
 
 ## [0.6.0] - 2026-09-30
 
@@ -106,7 +127,8 @@ a minor release can break things; breaking changes are marked **Breaking**.
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/simonvanlierde/project-templates/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/simonvanlierde/project-templates/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/simonvanlierde/project-templates/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/simonvanlierde/project-templates/compare/v0.3.0...v0.4.0

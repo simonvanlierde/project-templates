@@ -50,6 +50,7 @@ handler with your real application.
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = {{ app_port }}
+# A named constant, not a literal in the comparison: ruff's PLR2004 flags the latter.
 HEALTH_PATH = "/health"
 
 

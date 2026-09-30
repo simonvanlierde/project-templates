@@ -78,7 +78,6 @@ def test_vintage_is_always_a_string() -> None:
     garbled = Message()
     garbled["Last-Modified"] = "yesterday"
     assert pipeline.vintage(dated, garbled) == ("2024-06-01", "manifest")
-    json.dumps(pipeline.vintage(dated, garbled))
 
 
 def test_an_empty_manifest_is_no_sources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

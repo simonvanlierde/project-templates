@@ -1,12 +1,8 @@
 {#- Trailing punctuation in a heading trips rumdl (MD026). -#}
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
-{% if 'python' in stacks %}[![python](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/python.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/python.yml)
-{% endif %}{% if 'ts' in stacks %}[![ts](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/ts.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/ts.yml)
-{% endif %}{% if 'rust' in stacks %}[![rust](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/rust.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/rust.yml)
-{% endif %}{% if 'go' in stacks %}[![go](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/go.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/go.yml)
-{% endif %}{% if 'docker' in stacks %}[![docker](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/docker.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/docker.yml)
-{% endif %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license }}-blue.svg)](LICENSE)
+{% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}[![{{ s }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml)
+{% endfor %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license }}-blue.svg)](LICENSE)
 {% endif %}{% if project_description %}
 {{ project_description }}
 {% endif %}

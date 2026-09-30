@@ -42,7 +42,7 @@ top and reconcile with git.
 
 | Stack    | What it writes                                                                                                                                       |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| always   | The repo furniture: `README.md`, a Keep a Changelog `CHANGELOG.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot, `SECURITY.md`, and a PR template; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
+| always   | The repo furniture: `README.md`, a Keep a Changelog `CHANGELOG.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot and `SECURITY.md`; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
 | `python` | A Python package in `<python_dir>`: `pyproject.toml`, `.python-version`, `src/`, `tests/`, plus extra files for the `research` and `data-pipeline` kinds (see below) |
 | `ts`     | A TypeScript package in `<ts_dir>`: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `biome.json`, `pnpm-workspace.yaml`, `src/index.ts`, `src/index.test.ts`        |
 | `rust`   | A Rust crate in `<rust_dir>`: `Cargo.toml` with a strict lint policy (see below), `clippy.toml`, `deny.toml`, and `src/lib.rs` or `src/main.rs` by `rust_kind` |
@@ -176,13 +176,13 @@ cache mounts, a non-root runtime user, and Open Container Initiative labels.
 trailing comment. Every workflow declares least-privilege `permissions`. A
 [zizmor](https://docs.zizmor.sh) git hook audits `.github/` for template injection,
 credential leakage, cache poisoning, and impostor digests, and an actionlint hook
-checks keys, expressions, and shell. A `hygiene.yml` workflow runs the hooks in CI, so
+checks keys, expressions, and shell. A `checks.yml` workflow runs the hooks in CI, so
 the workflows you add later meet the same standard. CI renders the templates before it
 audits them. `.jinja` isn't YAML, but its output is. [docs/ci-baseline.md](docs/ci-baseline.md)
 lists every check, and what was left out and why.
 
 **Coverage** is opt-in: `just py-cov` and `just ts-cov` (not `just check`) print a
-summary and write `coverage.xml` / `coverage/lcov.info` for an uploader. No threshold.
+summary. No threshold, and no report files until something uploads them.
 
 **Licenses** are `MIT`, `Apache-2.0`, `BSD-3-Clause` or none. The texts come from
 the GitHub licenses API, with the copyright placeholders filled in.

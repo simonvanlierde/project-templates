@@ -14,10 +14,10 @@ compares against the ReLab production repository, which runs a heavier set.
 | `timeout-minutes` on every job | every workflow | A hung job stops in minutes, not six hours. |
 | `persist-credentials: false` on checkout | every workflow | Later steps can't reuse the checkout token. |
 | Stack checks: lint, format, types, tests, dependency audit | `python.yml`, `ts.yml`, `rust.yml`, `go.yml` | The same commands as `just check`. |
-| Git hooks run in CI | `hygiene.yml` | `prek install` is opt-in per clone. Without this job, a commit made without hooks reaches `main` unchecked. |
+| Git hooks run in CI | `checks.yml` | `prek install` is opt-in per clone. Without this job, a commit made without hooks reaches `main` unchecked. |
 | zizmor | hook, so also CI | Audits workflows for template injection, credential leaks, cache poisoning, and impostor commits. |
 | actionlint | hook, so also CI | Catches what zizmor doesn't: unknown keys, bad `needs`, expression type errors, and shellcheck findings in `run:` blocks. |
-| Dependency review | `hygiene.yml`, PRs only | Fails a PR that adds a dependency with a known advisory. |
+| Dependency review | `checks.yml`, PRs only | Fails a PR that adds a dependency with a known advisory. |
 | Dependabot with a one-week cooldown | `.github/dependabot.yml` | Updates wait until a compromised release has usually been yanked. Security updates skip the wait. |
 | `SECURITY.md` | `.github/` | Tells a reporter where to send a vulnerability privately. |
 | `CITATION.cff` | `research` and `data-pipeline` kinds | GitHub's "Cite this repository" button and Zenodo read it. A hook checks it against the schema. |

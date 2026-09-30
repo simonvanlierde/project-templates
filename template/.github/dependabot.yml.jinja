@@ -22,52 +22,30 @@ updates:
     cooldown: { default-days: 7 }
     groups:
       hooks: { patterns: ["*"] }
-{%- if 'python' in stacks %}
-
+{%- for eco, stack, dir in [
+      ('uv', 'python', python_dir),
+      ('npm', 'ts', ts_dir),
+      ('cargo', 'rust', rust_dir),
+      ('gomod', 'go', go_dir),
+    ] if stack in stacks %}
+{% if loop.first and eco != 'gomod' %}
   # Dev tooling lands as one PR. A runtime dependency gets its own, so a risky bump
   # is not buried in lint-tool churn.
-  - package-ecosystem: uv
-    directory: {{ '/' if python_dir == '.' else '/' ~ python_dir }}
-    schedule: { interval: weekly }
-    cooldown: { default-days: 7, semver-major-days: 30 }
-    groups:
-      dev-tooling:
-        dependency-type: development
-        update-types: [minor, patch]
-        patterns: ["*"]
-{%- endif %}
-{%- if 'ts' in stacks %}
-
-  - package-ecosystem: npm
-    directory: {{ '/' if ts_dir == '.' else '/' ~ ts_dir }}
-    schedule: { interval: weekly }
-    cooldown: { default-days: 7, semver-major-days: 30 }
-    groups:
-      dev-tooling:
-        dependency-type: development
-        update-types: [minor, patch]
-        patterns: ["*"]
-{%- endif %}
-{%- if 'rust' in stacks %}
-
-  - package-ecosystem: cargo
-    directory: {{ '/' if rust_dir == '.' else '/' ~ rust_dir }}
-    schedule: { interval: weekly }
-    cooldown: { default-days: 7, semver-major-days: 30 }
-    groups:
-      dev-tooling:
-        dependency-type: development
-        update-types: [minor, patch]
-        patterns: ["*"]
-{%- endif %}
-{%- if 'go' in stacks %}
-
+{%- elif eco == 'gomod' %}
   # No dev-tooling group: go.mod has no development dependencies to split out.
-  - package-ecosystem: gomod
-    directory: {{ '/' if go_dir == '.' else '/' ~ go_dir }}
+{%- endif %}
+  - package-ecosystem: {{ eco }}
+    directory: {{ '/' if dir == '.' else '/' ~ dir }}
     schedule: { interval: weekly }
     cooldown: { default-days: 7, semver-major-days: 30 }
+{%- if eco != 'gomod' %}
+    groups:
+      dev-tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+        patterns: ["*"]
 {%- endif %}
+{%- endfor %}
 
 # No docker ecosystem: it reads FROM lines only, and those tags are copier answers,
 # so its PRs would fight the next `copier update`.

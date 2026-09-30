@@ -33,9 +33,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "biome check && knip",
-    "coverage": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov",
+    "coverage": "vitest run --coverage --coverage.reporter=text",
     "fix": "biome check --write",
-    "knip": "knip",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

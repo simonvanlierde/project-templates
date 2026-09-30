@@ -191,14 +191,11 @@ rust_kind:
     Binary (src/main.rs, may print): binary
   default: library
   # crate_name is computed after this question and copier skips validators on
-  # computed questions, so its check lives here, derived from slug the same way. A library's doctest calls it by name, so a keyword
-  # breaks only the library kind.
+  # computed questions, so its check lives here, derived from slug the same way.
   validator: >-
     {% set ident = slug|replace('.', '-')|replace('-', '_') %}
     {% if ident|regex_search('^[0-9]') %}
     Cargo rejects a crate name that starts with a digit (`{{ ident }}`): start the project name with a letter.
-    {% elif rust_kind == 'library' and ident in ['as', 'async', 'await', 'break', 'const', 'continue', 'crate', 'dyn', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'gen', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'self', 'Self', 'static', 'struct', 'super', 'trait', 'true', 'try', 'type', 'unsafe', 'use', 'where', 'while', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof', 'unsized', 'virtual', 'yield'] %}
-    `{{ ident }}` is a Rust keyword, so the library's doctest cannot name it: pick another project name.
     {% endif %}
 
 # Computed, never asked. Cargo takes `-` and `_` but not the `.` a slug may carry.
@@ -235,8 +232,8 @@ go_module:
   # so its check lives here.
   validator: >-
     {% set pkg = slug|regex_replace('[^a-z0-9]', '') %}
-    {% if not pkg|regex_search('^[a-z_][a-z0-9_]*$') or pkg in ['break', 'case', 'chan', 'const', 'continue', 'default', 'defer', 'else', 'fallthrough', 'for', 'func', 'go', 'goto', 'if', 'import', 'interface', 'map', 'package', 'range', 'return', 'select', 'struct', 'switch', 'type', 'var'] %}
-    The Go package name would be `{{ pkg }}`, which is not a valid identifier: start the project name with a letter and avoid Go keywords.
+    {% if not pkg|regex_search('^[a-z_][a-z0-9_]*$') %}
+    The Go package name would be `{{ pkg }}`, which is not a valid identifier: start the project name with a letter.
     {% endif %}
 
 # Computed, never asked. A package name is one lowercase identifier: no `-` or

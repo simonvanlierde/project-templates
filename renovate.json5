@@ -1,7 +1,7 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
-    // Digest pins, a 3-day npm release age, and config-migration PRs.
+    // Digest pins and config-migration PRs.
     "config:best-practices",
     ":semanticCommits",
     "schedule:weekly",
@@ -11,10 +11,16 @@
     // `# renovate: datasource=... depName=...` comments above `X_VERSION:` in
     // workflow env blocks.
     "customManagers:githubActionsVersions",
-    // best-practices covers npm only. Copier, zizmor and the pyproject pins
-    // automerge too, so they get the same 3-day wait.
-    "security:minimumReleaseAgePypi",
   ],
+
+  // Everything automerges and then runs with CI tokens, on developer machines, or
+  // in every new scaffold, which resolves only releases a week old (uv
+  // exclude-newer, pnpm minimumReleaseAge). The wait gives a hijacked release
+  // time to be yanked, and matches Dependabot's cooldown in scaffolds.
+  minimumReleaseAge: "7 days",
+  // A datasource with no release timestamps (some image digests) updates without
+  // the wait instead of never.
+  minimumReleaseAgeBehaviour: "timestamp-optional",
 
   // Renovate runs here because the pins live in .jinja files, which only
   // Renovate can be pointed at. Generated projects use Dependabot.
@@ -96,26 +102,10 @@
       matchDepNames: ["python", "node", "go", "rust-lang/rust"],
       automerge: false,
     },
-    // Actions and hooks automerge and then run with CI tokens or on developer
-    // machines. The wait gives a hijacked release time to be yanked.
+    // config:best-practices sets npm to 3 days in a package rule, which beats the
+    // top-level setting.
     {
-      matchManagers: ["github-actions"],
-      minimumReleaseAge: "7 days",
-    },
-    {
-      matchDatasources: ["github-tags"],
-      minimumReleaseAge: "7 days",
-    },
-    // Scaffolds resolve only releases a week old (uv exclude-newer, pnpm
-    // minimumReleaseAge), so a floor raised sooner would not resolve there.
-    {
-      matchDatasources: ["pypi", "npm"],
-      minimumReleaseAge: "7 days",
-    },
-    // copier.yml's defaults land in every new scaffold, so hold them for the
-    // same week Dependabot's cooldown gives everything else.
-    {
-      matchFileNames: ["copier.yml"],
+      matchDatasources: ["npm"],
       minimumReleaseAge: "7 days",
     },
     // The uv image and uv_build ship from one release. `widen` raises the cap and
