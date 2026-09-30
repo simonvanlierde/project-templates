@@ -176,7 +176,7 @@ cache mounts, a non-root runtime user, and Open Container Initiative labels.
 trailing comment. Every workflow declares least-privilege `permissions`. A
 [zizmor](https://docs.zizmor.sh) git hook audits `.github/` for template injection,
 credential leakage, cache poisoning, and impostor digests, and an actionlint hook
-checks keys, expressions, and shell. A `hygiene.yml` workflow runs the hooks in CI, so
+checks keys, expressions, and shell. A `checks.yml` workflow runs the hooks in CI, so
 the workflows you add later meet the same standard. CI renders the templates before it
 audits them. `.jinja` isn't YAML, but its output is. [docs/ci-baseline.md](docs/ci-baseline.md)
 lists every check, and what was left out and why.
