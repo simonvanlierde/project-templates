@@ -80,6 +80,17 @@
       matchManagers: ["github-actions"],
       groupName: "actions",
     },
+    // Actions and hooks automerge too, and run with CI tokens and on developer
+    // machines in every generated project: give a hijacked release time to be
+    // yanked before it lands.
+    {
+      matchManagers: ["github-actions"],
+      minimumReleaseAge: "7 days",
+    },
+    {
+      matchDatasources: ["github-tags"],
+      minimumReleaseAge: "7 days",
+    },
     // The uv image and uv_build ship from one release. widen, because the cap
     // is what has to move on a minor; the floor would drop installed uvs for
     // nothing.
