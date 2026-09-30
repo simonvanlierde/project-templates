@@ -90,20 +90,18 @@ parts are now the template. The readers for each source stayed in that project.
 
 A `web-service` project gets:
 
-- A FastAPI app built by `create_app()`, with one route: `GET /health`, a fixed
-  `{"status": "ok"}` that the image's `HEALTHCHECK` probes.
-- `config.py`: settings from plain environment variables (`HOST`, `PORT`,
-  `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`), no settings framework. The
-  app listens on `127.0.0.1` unless `HOST` says otherwise; the image sets
-  `HOST=0.0.0.0` and `compose.yaml` publishes the port on `127.0.0.1` only.
-- `telemetry.py`: OpenTelemetry request spans and a request-duration histogram
-  (`http.server.duration`; `http.server.request.duration` with
-  `OTEL_SEMCONV_STABILITY_OPT_IN=http`),
-  sent over OTLP/HTTP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Without
-  it, no provider is built, no middleware is added, and the SDK is not imported.
+- A FastAPI app with one route: `GET /health`, a fixed `{"status": "ok"}` that the
+  image's `HEALTHCHECK` probes.
+- An entrypoint that reads `HOST` and `PORT`. It listens on `127.0.0.1` unless
+  `HOST` says otherwise; the image sets `HOST=0.0.0.0` and `compose.yaml` publishes
+  the port on `127.0.0.1` only.
+- OpenTelemetry through zero-code instrumentation, on only when
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is set: request spans and a request-duration
+  histogram over OTLP/HTTP. The SDK reads every other `OTEL_*` variable itself.
+  Without the endpoint, nothing is imported.
 - `just serve`, and a `<slug>` console script, to run it outside Docker.
-- Tests for `/health`, the settings, telemetry off, and telemetry on (in-memory
-  exporters: one span and one duration point per request).
+- Tests for `/health`, telemetry off, and telemetry on (console exporters in a child
+  process: one span and one duration point per request).
 
 ## Layout: one package or a monorepo
 

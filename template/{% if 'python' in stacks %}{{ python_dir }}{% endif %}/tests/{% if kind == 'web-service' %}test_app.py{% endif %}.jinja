@@ -1,42 +1,19 @@
-"""The app, its settings and its telemetry, all in process."""
+"""The app in process; its telemetry in a child process."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+import os
+import subprocess
+import sys
 
 import pytest
 from fastapi.testclient import TestClient
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import InMemoryMetricReader
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExportResult
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from {{ module_name }} import telemetry as otel
-from {{ module_name }}.app import create_app
-from {{ module_name }}.config import DEFAULT_PORT, Settings
-
-if TYPE_CHECKING:
-    from fastapi import FastAPI
-
-
-def middleware_names(app: FastAPI) -> list[str]:
-    """Class names down the ASGI stack Starlette builds on startup.
-
-    The instrumentor patches that build rather than calling add_middleware, so
-    `app.user_middleware` stays empty either way and cannot tell the two apart.
-    """
-    names: list[str] = []
-    node = app.middleware_stack
-    while node is not None:
-        names.append(type(node).__name__)
-        node = getattr(node, "app", None)
-    return names
+from {{ module_name }}.__main__ import start_telemetry
+from {{ module_name }}.app import app
 
 
 def test_health() -> None:
     """/health answers 200 with a fixed body."""
-    with TestClient(create_app(Settings())) as client:
+    with TestClient(app) as client:
         response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
@@ -44,56 +21,48 @@ def test_health() -> None:
 
 def test_title_is_the_project_name() -> None:
     """The OpenAPI title is the project name exactly, quotes included."""
-    assert create_app(Settings()).title == {{ project_name | pprint if '"' in project_name and "'" not in project_name else project_name | to_json }}
+    assert app.title == {{ project_name | pprint if '"' in project_name and "'" not in project_name else project_name | to_json }}
 
 
 def test_unknown_path_is_404() -> None:
     """Anything else is a 404."""
-    with TestClient(create_app(Settings())) as client:
+    with TestClient(app) as client:
         assert client.get("/nope").status_code == 404
 
 
-def test_settings_from_env() -> None:
-    """Each setting comes from its variable."""
-    settings = Settings.from_env({"HOST": "0.0.0.0", "PORT": "9000", "OTEL_EXPORTER_OTLP_ENDPOINT": "http://c:4318"})  # noqa: S104
-    assert settings == Settings(host="0.0.0.0", port=9000, otlp_endpoint="http://c:4318")  # noqa: S104
+@pytest.mark.parametrize("endpoint", [None, ""])
+def test_telemetry_is_off_without_an_endpoint(monkeypatch: pytest.MonkeyPatch, endpoint: str | None) -> None:
+    """No endpoint, or an empty one: telemetry stays off."""
+    if endpoint is None:
+        monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+    else:
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint)
+    assert not start_telemetry()
 
 
-@pytest.mark.parametrize("env", [{}, {"OTEL_EXPORTER_OTLP_ENDPOINT": ""}])
-def test_telemetry_is_off_without_an_endpoint(env: dict[str, str]) -> None:
-    """No endpoint, or an empty one: no providers and no middleware."""
-    settings = Settings.from_env(env)
-    assert settings.port == DEFAULT_PORT
-    assert settings.otlp_endpoint is None
-    telemetry = otel.from_settings(settings)
-    assert not telemetry.enabled
-    app = create_app(settings, telemetry)
-    with TestClient(app) as client:
-        assert client.get("/health").status_code == 200
-    # No OTel middleware in the stack: nothing is recorded, not merely nothing sent.
-    assert "OpenTelemetryMiddleware" not in middleware_names(app)
+# Instrumenting patches FastAPI for the rest of the process, so this runs in a child.
+# Console exporters stand in for the collector; the endpoint only switches telemetry on.
+CHILD = """
+from {{ module_name }}.__main__ import start_telemetry
+assert start_telemetry()
+from fastapi.testclient import TestClient
+from {{ module_name }}.app import app
+assert TestClient(app).get("/health").status_code == 200
+"""
 
 
 def test_telemetry_records_a_span_and_the_request_duration() -> None:
-    """With providers, a request leaves a span and a duration histogram point."""
-    spans = InMemorySpanExporter()
-    tracer_provider = TracerProvider()
-    tracer_provider.add_span_processor(SimpleSpanProcessor(spans))
-    reader = InMemoryMetricReader()
-    telemetry = otel.Telemetry(tracer_provider, MeterProvider(metric_readers=[reader]))
-
-    app = create_app(Settings(), telemetry)
-    with TestClient(app) as client:
-        assert client.get("/health").status_code == 200
-
-    # The positive case the test above negates, so that check cannot pass vacuously.
-    assert "OpenTelemetryMiddleware" in middleware_names(app)
-    assert "GET /health" in [span.name for span in spans.get_finished_spans()]
-    data = reader.get_metrics_data()
-    assert data is not None
-    names = {m.name for rm in data.resource_metrics for sm in rm.scope_metrics for m in sm.metrics}
+    """With an endpoint, a request leaves a span and a duration histogram point."""
+    env = os.environ | {
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://127.0.0.1:9",
+        "OTEL_TRACES_EXPORTER": "console",
+        "OTEL_METRICS_EXPORTER": "console",
+        "OTEL_LOGS_EXPORTER": "none",
+    }
+    child = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", CHILD], env=env, capture_output=True, text=True, check=True, timeout=60
+    )
+    assert '"name": "GET /health"' in child.stdout
     # The stable semantic-convention name, or the older one, depending on
     # OTEL_SEMCONV_STABILITY_OPT_IN.
-    assert names & {"http.server.request.duration", "http.server.duration"}
-    # Leaving the client ran the lifespan's shutdown, and a stopped exporter refuses spans.
-    assert spans.export(()) is SpanExportResult.FAILURE
+    assert "http.server.request.duration" in child.stdout or "http.server.duration" in child.stdout
