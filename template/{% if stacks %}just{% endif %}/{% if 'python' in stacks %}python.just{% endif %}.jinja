@@ -2,7 +2,7 @@
     is reached with uv's own --directory rather than with a cd. It renders empty
     for the flat layout, where the root already is the package. -#}
 {%- set uv = 'uv' if python_dir == '.' else 'uv --directory ' ~ python_dir -%}
-# Install the venv from uv.lock.
+# Install the venv, writing uv.lock if it is missing or stale. CI uses --locked.
 py-sync:
     {{ uv }} sync
 

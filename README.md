@@ -12,7 +12,9 @@ One `copier copy`, and a `stacks` answer picks any mix of `python`, `ts` and `do
 ```sh
 mkdir myproject && cd myproject && git init
 copier copy gh:simonvanlierde/project-templates .
-uv sync && git add -A && git commit -m "chore: scaffold"
+just py-sync   # python stack: installs and writes uv.lock
+just ts-sync   # ts stack: installs and writes pnpm-lock.yaml
+git add -A && git commit -m "chore: scaffold"
 ```
 
 You don't need to clone this repo. Copier downloads and caches the template for you.
@@ -44,7 +46,7 @@ top and reconcile with git.
 | `docker` | Per containerized stack: `Dockerfile`, `.dockerignore`, a runnable `/health` entrypoint. Plus `compose.yaml` at the repo root                        |
 
 Each stack also gets a CI workflow in `.github/workflows/`, a `just/<stack>.just`
-recipe file, and a release workflow if the matching publish answer is on. A package
+recipe file, and a release workflow if the matching publish answer is on. A Python package
 nested below the repo root gets its own `README.md` too.
 
 ## Picking a Python `kind`

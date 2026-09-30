@@ -10,7 +10,7 @@ import? 'just/docker.just'
 default:
     @just --list
 
-# Everything CI runs, for every stack in this repo{% if 'python' in stacks and kind == 'data-pipeline' %}, except the live `just pipeline`{% endif %}.
+# The stack checks CI runs{% if 'python' in stacks and kind == 'data-pipeline' %}, minus the live `just pipeline`{% endif %}. `just hooks` covers the rest.
 check:
 {%- if 'python' in stacks %}
     @just py-check

@@ -9,8 +9,8 @@ FROM python:{{ python_version }}-slim-trixie AS builder
 
 # Astral's recommended install: copy the binary in rather than basing the image
 # on uv, so both stages share one base. Tag + digest, since a tag alone is
-# mutable. Dependabot cannot see this line, so bump it by hand alongside the
-# uv_build pin in pyproject.toml — they ship from the same release.
+# mutable. No bot updates this line in a generated project: bump it by hand
+# with the uv_build pin in pyproject.toml, which ships from the same release.
 COPY --from=ghcr.io/astral-sh/uv:0.12.19@sha256:04d046b13e60d6bcec73cbc5e1cad25d680dea90c8573340950a0ac2d1aef424 /uv /uvx /bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
