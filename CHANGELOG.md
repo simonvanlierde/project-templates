@@ -5,6 +5,12 @@ release. Dependency bumps and this repo's own CI are left out; `git log` has the
 
 ## v0.6.0
 
+### Updating from v0.5.0
+
+If you added dependencies, `copier update` reports a conflict in `pyproject.toml` next to
+`dependencies`: a comment below that line was reworded. Keep your `dependencies` list and
+take the new comment.
+
 ### Added
 
 - Python `web-service` kind: FastAPI with `/health` and OpenTelemetry, shipped as a container.
