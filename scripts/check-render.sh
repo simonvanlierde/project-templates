@@ -35,18 +35,19 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
 # d: data-pipeline nested and beside docker: the nested paths reach .gitignore,
-# the workflow's artifact path and ATTRIBUTION.md.
+# the workflow's artifact path and ATTRIBUTION.md. Also the one Apache-2.0 license.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=pipe-me --data 'stacks=[python,docker]' \
-  --data kind=data-pipeline --data python_dir=pipe \
+  --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0 \
   --data 'docker_stacks=[python]' . "$out/d"
 
 # e: released scaffolds come from a tag, which the renders above are not. A
 # throwaway local tag on HEAD stands in for one.
-git tag check-render-tag
-# -C: the checks below cd out of the repo before this fires.
+# -C: the checks below cd out of the repo before this fires. -f and the trap
+# first: a killed run can leave the tag behind.
 repo=$PWD
-trap 'git -C "$repo" tag -d check-render-tag >/dev/null' EXIT
+trap 'git -C "$repo" tag -d check-render-tag >/dev/null 2>&1 || true' EXIT
+git tag -f check-render-tag >/dev/null
 "${copier[@]}" --vcs-ref=check-render-tag \
   --data project_name=tag-me --data 'stacks=[python]' . "$out/e"
 
@@ -137,6 +138,7 @@ test -f d/pipe/data/raw/.gitkeep
 test -f d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/README.md
+grep -q 'Apache License' d/LICENSE
 test ! -e d/pipe/notebooks
 grep -qx 'pipe/data/raw/\*' d/.gitignore
 grep -q 'path: pipe/data/raw/\*.fetch.json' d/.github/workflows/python.yml
