@@ -446,11 +446,11 @@ jobs:
 
       - *just
 
-      # The scaffold's own recipe; `rs-check` is the same commands the generated
-      # rust.yml runs. No --locked: a fresh scaffold has no Cargo.lock yet.
+      # The scaffold's own recipes. `rs-check` runs the same commands as the
+      # generated rust.yml. `rs-sync` writes the Cargo.lock a fresh scaffold lacks.
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
-        run: just rs-check
+        run: just rs-sync rs-check
 
   go:
     # The go stack, one row per module kind: the library flat, the binary nested.

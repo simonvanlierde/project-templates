@@ -9,6 +9,11 @@ a minor release can break things; breaking changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- `just rs-sync` downloads Rust dependencies and writes `Cargo.lock`, like `just py-sync`
+  and `just go-sync` do for their stacks.
+
 ## [0.7.0] - 2026-09-30
 
 ### Upgrade notes
