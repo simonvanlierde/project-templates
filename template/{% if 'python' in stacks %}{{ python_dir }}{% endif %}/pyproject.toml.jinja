@@ -85,11 +85,17 @@ ignore = [
   "CPY001", # missing copyright notice
   "D105",   # undocumented-magic-method
   "D107",   # undocumented-public-init
+  "TD002",  # missing-todo-author: a plain `# TODO:` is enough
+  "TD003",  # missing-todo-link
 ]
 
+# Tests assert, use literal expectations, and need no docstrings, return
+# annotations, or package __init__.py.
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["INP001"]              # tests are not a package
-"test*.py" = ["S101", "PLR2004"]     # allow assert and literals in tests
+"**/tests/**" = ["S101", "D1", "INP001", "PLR2004", "ANN201"]
+"**/test_*.py" = ["S101", "D1", "INP001", "PLR2004", "ANN201"]
+"**/*_test.py" = ["S101", "D1", "INP001", "PLR2004", "ANN201"]
+"**/conftest.py" = ["S101", "D1", "INP001", "PLR2004", "ANN201"]
 {%- if kind == 'research' %}
 "*.ipynb" = ["T201", "E402"] # notebooks print and import late
 {%- endif %}
