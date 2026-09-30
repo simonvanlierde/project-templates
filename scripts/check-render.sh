@@ -125,6 +125,8 @@ test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
 grep -q 'packages: write' c/.github/workflows/docker.yml
+# The publish job has no checkout: wheels land in the root dist/ the action reads.
+grep -qx '          path: dist/' c/.github/workflows/python-release.yml
 # The depth-derived up-paths, at both depths this render uses.
 grep -qF '](../README.md)' c/api/README.md
 grep -qF '"root": "../.."' c/apps/web/biome.json
