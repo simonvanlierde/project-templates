@@ -89,6 +89,13 @@
       matchManagers: ["github-actions"],
       groupName: "actions",
     },
+    // A new language release becomes every new scaffold's default, before its
+    // ecosystem may have caught up: merge those by hand.
+    {
+      matchFileNames: ["copier.yml"],
+      matchDepNames: ["python", "node", "go", "rust-lang/rust"],
+      automerge: false,
+    },
     // Actions and hooks automerge and then run with CI tokens or on developer
     // machines. The wait gives a hijacked release time to be yanked.
     {
@@ -114,7 +121,7 @@
     // The uv image and uv_build ship from one release. `widen` raises the cap and
     // keeps the floor, so older installed uv versions keep working.
     {
-      matchPackageNames: ["ghcr.io/astral-sh/uv", "uv_build"],
+      matchPackageNames: ["ghcr.io/astral-sh/uv", "uv_build", "uv"],
       groupName: "uv",
       rangeStrategy: "widen",
     },
