@@ -9,6 +9,10 @@ a minor release can break things; breaking changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- Ship `.tombi.toml` in place of `.taplo.toml`: tombi replaced taplo as the TOML formatter.
+
 ## [0.6.0] - 2026-09-30
 
 ### Upgrade notes
