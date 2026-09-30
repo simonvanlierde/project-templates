@@ -18,6 +18,7 @@ a minor release can break things; breaking changes are marked **Breaking**.
 
 - The pull request template.
 - The `knip` script in `package.json`. `pnpm run check` already runs knip.
+- The copier checks that rejected a project name that is a Rust or Go keyword.
 
 ## [0.6.0] - 2026-09-30
 
