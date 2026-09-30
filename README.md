@@ -182,7 +182,7 @@ audits them. `.jinja` isn't YAML, but its output is. [docs/ci-baseline.md](docs/
 lists every check, and what was left out and why.
 
 **Coverage** is opt-in: `just py-cov` and `just ts-cov` (not `just check`) print a
-summary and write `coverage.xml` / `coverage/lcov.info` for an uploader. No threshold.
+summary. No threshold, and no report files until something uploads them.
 
 **Licenses** are `MIT`, `Apache-2.0`, `BSD-3-Clause` or none. The texts come from
 the GitHub licenses API, with the copyright placeholders filled in.

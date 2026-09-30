@@ -13,6 +13,9 @@ a minor release can break things; breaking changes are marked **Breaking**.
 
 - The `hygiene.yml` workflow is now `checks.yml`. Its job names are unchanged, so
   required status checks still match.
+- `just py-cov` and `just ts-cov` print a coverage summary only. They no longer write
+  `coverage.xml` or `coverage/lcov.info`; add the reporter flag back if you upload
+  coverage.
 
 ### Removed
 
