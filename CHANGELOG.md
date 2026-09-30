@@ -16,9 +16,13 @@ changes are marked **Breaking**.
 
 - `just rs-sync` downloads Rust dependencies and writes `Cargo.lock`, like `just py-sync`
   and `just go-sync` do for their stacks.
+- A yamlfmt hook with a `.yamlfmt` config. yamllint now checks yamlfmt's output.
 
 ### Changed
 
+- Hook revs are commit SHAs with a `# frozen:` tag comment, since tags are mutable.
+  Dependabot moves both together.
+- Flow mappings are written `{key: value}`, as yamlfmt formats them.
 - Comments and docstrings in generated files are shorter and plainer. Two
   `.dockerignore` comments now describe the Docker layer cache correctly.
 

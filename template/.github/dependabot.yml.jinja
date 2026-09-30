@@ -5,23 +5,26 @@
 # `cooldown` holds a version update back until the release has been public for a
 # week, long enough for a compromised release to be caught and yanked. Security
 # updates ignore it. github-actions and pre-commit take default-days only.
+#
+# No docker ecosystem: it reads FROM lines only, and those tags are copier answers,
+# so its PRs would fight the next `copier update`.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
-    schedule: { interval: weekly }
-    cooldown: { default-days: 7 }
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7}
     groups:
-      actions: { patterns: ["*"] }
+      actions: {patterns: ["*"]}
 
   # Version updates only. Dependabot has no security updates for this ecosystem.
   # Hook revs group wholesale: all dev tooling.
   - package-ecosystem: pre-commit
     directory: /
-    schedule: { interval: weekly }
-    cooldown: { default-days: 7 }
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7}
     groups:
-      hooks: { patterns: ["*"] }
+      hooks: {patterns: ["*"]}
 {%- for eco, stack, dir in [
       ('uv', 'python', python_dir),
       ('npm', 'ts', ts_dir),
@@ -34,10 +37,10 @@ updates:
 {%- elif eco == 'gomod' %}
   # No dev-tooling group: go.mod has no development dependencies to split out.
 {%- endif %}
-  - package-ecosystem: {{ eco }}
-    directory: {{ '/' if dir == '.' else '/' ~ dir }}
-    schedule: { interval: weekly }
-    cooldown: { default-days: 7, semver-major-days: 30 }
+  - package-ecosystem: {{eco}}
+    directory: {{'/' if dir == '.' else '/' ~ dir}}
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7, semver-major-days: 30}
 {%- if eco != 'gomod' %}
     groups:
       dev-tooling:
@@ -46,6 +49,3 @@ updates:
         patterns: ["*"]
 {%- endif %}
 {%- endfor %}
-
-# No docker ecosystem: it reads FROM lines only, and those tags are copier answers,
-# so its PRs would fight the next `copier update`.

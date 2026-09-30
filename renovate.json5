@@ -46,7 +46,11 @@
       // Includes the root config: the built-in pre-commit manager is off by default.
       customType: "regex",
       managerFilePatterns: ["/(^|/)\\.pre-commit-config\\.yaml(\\.jinja)?$/"],
-      matchStrings: ["repo: https://github\\.com/(?<depName>\\S+)\\s+rev: (?<currentValue>\\S+)"],
+      // Revs are commit SHAs with the tag in a `# frozen:` comment: tags are
+      // mutable. The SHA and the comment move together.
+      matchStrings: [
+        "repo: https://github\\.com/(?<depName>\\S+)\\s+rev: (?<currentDigest>[0-9a-f]{40}) # frozen: (?<currentValue>\\S+)",
+      ],
       datasourceTemplate: "github-tags",
     },
     {

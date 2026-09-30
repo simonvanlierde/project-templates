@@ -15,7 +15,7 @@
 {%- endmacro %}
 {%- macro smoke_test() %}
       - name: smoke test
-        run: |
+        run: |-
           docker run -d --name ci -p {{ app_port }}:{{ app_port }} {% raw %}${{ matrix.tag }}{% endraw %}
           ok=""
           for _ in $(seq 1 30); do
