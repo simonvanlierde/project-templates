@@ -50,6 +50,8 @@ handler with your real application.
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = {{ app_port }}
+# A named constant, not a literal in the comparison: ruff's PLR2004 flags the latter.
+HEALTH_PATH = "/health"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -58,7 +60,7 @@ class Handler(BaseHTTPRequestHandler):
     # do_GET, not do_get: the stdlib dispatches on this exact name.
     def do_GET(self) -> None:
         """Handle a GET request."""
-        healthy = self.path == "/health"
+        healthy = self.path == HEALTH_PATH
         body = b'{"status":"ok"}' if healthy else b"not found"
         self.send_response(200 if healthy else 404)
         self.send_header("Content-Type", "application/json")
