@@ -23,7 +23,7 @@ scripts/check-render.sh "$(mktemp -d)"
 
 `copier update` in a generated project only sees tagged releases. Tag this repository
 after each change you want projects to receive, and add an entry to
-[CHANGELOG.md](CHANGELOG.md).
+[CHANGELOG.md](CHANGELOG.md). Its introduction says which part of the version to bump.
 
 ## How the answers file records the source
 

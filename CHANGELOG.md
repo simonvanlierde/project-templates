@@ -5,9 +5,12 @@ All notable changes to projects made from this template. Take a release with
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Before 1.0.0,
-a minor release can break things; breaking changes are marked **Breaking**.
+a breaking change bumps the minor version and anything else bumps the patch. Breaking
+changes are marked **Breaking**.
 
 ## [Unreleased]
+
+## [0.7.1] - 2026-09-30
 
 ### Added
 
@@ -137,7 +140,8 @@ a minor release can break things; breaking changes are marked **Breaking**.
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/simonvanlierde/project-templates/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/simonvanlierde/project-templates/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/simonvanlierde/project-templates/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/simonvanlierde/project-templates/compare/v0.4.0...v0.5.0
