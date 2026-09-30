@@ -23,6 +23,11 @@
   // A datasource with no release timestamps (some image digests) updates without
   // the wait instead of never.
   minimumReleaseAgeBehaviour: "timestamp-optional",
+  // Scaffolds' resolvers apply the same week, so a younger release fails CI. strict
+  // drops pending updates from a group with any mature ones and creates no branch
+  // when all are pending; not-pending holds the PR until the age check passes.
+  internalChecksFilter: "strict",
+  prCreation: "not-pending",
 
   // Renovate runs here because the pins live in .jinja files, which only
   // Renovate can be pointed at. Generated projects use Dependabot.
