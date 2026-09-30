@@ -4,6 +4,10 @@ name: python release
 # https://pypi.org/manage/account/publishing/ for repo {{ github_user }}/{{ slug }},
 # workflow `python-release.yml`, environment `pypi`.
 #
+# In the repo's Settings > Environments, limit `pypi` to tags matching `v*` and
+# add yourself as a required reviewer. Without that, anyone who can push a
+# branch can dispatch an edited copy of this workflow and publish from it.
+#
 # The build job re-runs the full suite (a release tag can point at a commit that
 # never went green), then runs it again against the installed wheel — the only
 # place packaging faults like a wrong module-name show up.

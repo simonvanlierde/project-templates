@@ -4,6 +4,10 @@ name: ts release
 # https://www.npmjs.com/package/{{ slug }}/access for repo
 # {{ github_user }}/{{ slug }}, workflow `ts-release.yml`, environment `npm`.
 #
+# In the repo's Settings > Environments, limit `npm` to tags matching `v*` and
+# add yourself as a required reviewer. Without that, anyone who can push a
+# branch can dispatch an edited copy of this workflow and publish from it.
+#
 # The package must already exist on npm: trusted publishing cannot create it, so
 # publish the first version manually (`pnpm publish`). npm adds the provenance
 # attestation itself over OIDC — no --provenance flag.
