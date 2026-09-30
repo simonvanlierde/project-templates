@@ -40,7 +40,7 @@ top and reconcile with git.
 
 | Stack    | What it writes                                                                                                                                       |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| always   | The repo furniture: `README.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot, `SECURITY.md`, and a PR template; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
+| always   | The repo furniture: `README.md`, a Keep a Changelog `CHANGELOG.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot, `SECURITY.md`, and a PR template; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
 | `python` | A Python package in `<python_dir>`: `pyproject.toml`, `.python-version`, `src/`, `tests/`, plus extra files for the `research` and `data-pipeline` kinds (see below) |
 | `ts`     | A TypeScript package in `<ts_dir>`: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `biome.json`, `pnpm-workspace.yaml`, `src/index.ts`, `src/index.test.ts`        |
 | `rust`   | A Rust crate in `<rust_dir>`: `Cargo.toml` with a strict lint policy (see below), `clippy.toml`, `deny.toml`, and `src/lib.rs` or `src/main.rs` by `rust_kind` |

@@ -87,6 +87,8 @@ test -f a/src/render_me/__main__.py
 grep -q charliermarsh.ruff a/.vscode/extensions.json
 grep -q biomejs.biome a/.vscode/settings.json
 test -f a/.github/SECURITY.md
+grep -qx '## \[Unreleased\]' a/CHANGELOG.md
+(! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.
 test -f a/.github/workflows/hygiene.yml
 test -f b/.github/workflows/hygiene.yml

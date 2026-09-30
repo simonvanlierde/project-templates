@@ -1,6 +1,9 @@
 _subdirectory: template
 # `stacks` is a multiselect, which needs 9.1.0.
 _min_copier_version: "9.1.0"
+# Written once, then owned by the project: `copier update` leaves it alone.
+_skip_if_exists:
+  - CHANGELOG.md
 
 project_name:
   type: str
