@@ -14,13 +14,15 @@ mkdir myproject && cd myproject && git init
 copier copy gh:simonvanlierde/project-templates .
 just py-sync   # python stack: installs and writes uv.lock
 just ts-sync   # ts stack: installs and writes pnpm-lock.yaml
+just go-sync   # go stack: writes go.sum
 git add -A && git commit -m "chore: scaffold"
 ```
 
 Copier downloads the template, so you don't need to clone this repo.
 
-Commit the lockfile before your first push. CI runs `uv sync --locked`,
-`pnpm install --frozen-lockfile` and `cargo clippy --locked`, all of which fail without one.
+Commit the lockfiles before your first push. CI runs `uv sync --locked`,
+`pnpm install --frozen-lockfile` and `cargo clippy --locked`, and Go needs `go.sum`. All of
+them fail without one.
 
 ## Pulling in template fixes
 
@@ -152,9 +154,9 @@ permissive licenses. Install `cargo-nextest` and `cargo-deny` once per machine.
 `standard` linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `misspell`,
 `modernize`, `nilerr`, `noctx`, `revive`, `sloglint`, `unconvert`, `unparam` and
 `usestdlibvars`, with `gosec` and `noctx` off in tests. `gofumpt` and `goimports` format.
-Install golangci-lint once per machine (the scaffold's README has the line);
-`govulncheck` runs through `go run` at a pinned version, so it needs no install.
-Both tool versions come from the template, so `copier update` moves them, not Dependabot.
+Install golangci-lint once per machine (the scaffold's README has the line). Its version
+comes from the template, so `copier update` moves it. `govulncheck` is a `tool` in
+`go.mod`, so it needs no install and Dependabot keeps it current.
 
 **Git hooks** run through [prek](https://prek.j178.dev): one runner and one
 `.pre-commit-config.yaml` covering every stack. Python projects install it with

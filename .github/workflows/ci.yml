@@ -552,7 +552,7 @@ jobs:
       # plus the separate format check that its golangci-lint run folds in.
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
-        run: just go-check
+        run: just go-sync go-check
 
   ok:
     # The one check the main ruleset requires, so matrix rows can change

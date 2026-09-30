@@ -36,12 +36,11 @@ jobs:
         with:
           persist-credentials: false
 
-      # Go from go.mod's `go` directive. The cache keys on go.mod, not the
-      # default go.sum: a module with no dependencies has no go.sum.
+      # Go from go.mod's `go` directive.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: {{ d }}go.mod
-          cache-dependency-path: {{ d }}go.mod
+          cache-dependency-path: {{ d }}go.sum
 
       # `run` also reports files the formatters in .golangci.yml would change,
       # so this covers `golangci-lint fmt --diff` too.
@@ -54,4 +53,4 @@ jobs:
 
       # go test also runs every Example and checks its Output comment.
       - run: go test -race ./...
-      - run: go run golang.org/x/vuln/cmd/govulncheck@{{ govulncheck_version }} ./...
+      - run: go tool govulncheck ./...

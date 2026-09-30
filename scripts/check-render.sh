@@ -120,6 +120,7 @@ grep -qx '    @just rs-check' a/justfile
 # name, since render-me is not an identifier.
 test -f a/go.mod
 test -f a/.golangci.yml
+grep -qx 'tool golang.org/x/vuln/cmd/govulncheck' a/go.mod
 test -f a/renderme.go
 test ! -e a/main.go
 grep -qF 'renderme "github.com/simonvanlierde/render-me"' a/example_test.go

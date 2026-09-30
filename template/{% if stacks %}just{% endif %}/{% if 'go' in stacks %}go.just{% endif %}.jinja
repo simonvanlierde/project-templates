@@ -8,7 +8,11 @@
     golangci-lint fmt --diff
     golangci-lint run
     go test -race ./...
-    go run golang.org/x/vuln/cmd/govulncheck@{{ govulncheck_version }} ./...
+    go tool govulncheck ./...
+
+# Resolve go.mod's requirements, govulncheck's included, and write go.sum.
+{{ wd }}go-sync:
+    go mod tidy
 
 # Format, then apply golangci-lint's fixes.
 {{ wd }}go-fmt:
