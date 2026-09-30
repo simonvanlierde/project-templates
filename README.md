@@ -5,7 +5,7 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A starter template for new projects, built with [Copier](https://copier.readthedocs.io).
-One `copier copy`, and a `stacks` answer picks any mix of `python`, `ts` and `docker`.
+One `copier copy`, and a `stacks` answer picks any mix of `python`, `ts`, `rust` and `docker`.
 
 ## Getting started
 
@@ -17,8 +17,8 @@ uv sync && git add -A && git commit -m "chore: scaffold"
 
 You don't need to clone this repo. Copier downloads and caches the template for you.
 
-Commit the lockfile before your first push. CI runs `uv sync --locked` and
-`pnpm install --frozen-lockfile`, both of which fail without one.
+Commit the lockfile before your first push. CI runs `uv sync --locked`,
+`pnpm install --frozen-lockfile` and `cargo clippy --locked`, all of which fail without one.
 
 ## Pulling in template fixes
 
@@ -41,6 +41,7 @@ top and reconcile with git.
 | always   | The repo furniture: `README.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot, `SECURITY.md`, and a PR template; `.pre-commit-config.yaml`; `.vscode/` recommendations; and a `justfile` |
 | `python` | A Python package in `<python_dir>`: `pyproject.toml`, `.python-version`, `src/`, `tests/`, plus extra files for the `research` and `data-pipeline` kinds (see below) |
 | `ts`     | A TypeScript package in `<ts_dir>`: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `biome.json`, `src/index.ts`, `src/index.test.ts`        |
+| `rust`   | A Rust crate in `<rust_dir>`: `Cargo.toml` with a strict lint policy (see below), `clippy.toml`, `deny.toml`, and `src/lib.rs` or `src/main.rs` by `rust_kind` |
 | `docker` | Per containerized stack: `Dockerfile`, `.dockerignore`, a runnable `/health` entrypoint. Plus `compose.yaml` at the repo root                        |
 
 Each stack also gets a CI workflow in `.github/workflows/`, a `just/<stack>.just`
@@ -110,7 +111,7 @@ is off by default.
 
 ## Layout: one package or a monorepo
 
-`python_dir` and `ts_dir` both default to `.`, the repo root. At `.` you get a
+`python_dir`, `ts_dir` and `rust_dir` all default to `.`, the repo root. At `.` you get a
 plain single-package repo. Any other value nests the package:
 
 ```text
@@ -140,6 +141,15 @@ that language's workspace tooling.
 | ---------- | --------------- | ----- | -------- | -------------------------------- |
 | Python     | `ruff`          | `ty`  | `pytest` | `uv`, locked, `uv_build` backend |
 | TypeScript | `biome`         | `tsc` | `vitest` | `pnpm`                           |
+| Rust       | `rustfmt`, `clippy` | `rustc` | `cargo nextest`, plus `cargo test --doc` | `cargo`, checked by `cargo-deny` |
+
+**Rust lints** live in the crate's `Cargo.toml` `[lints]` table, because clippy has no
+user-wide config. The policy is clippy's `pedantic` group plus restriction lints against
+shortcuts: `unwrap_used`, `expect_used`, `dbg_macro`, `todo`, `unimplemented`, and
+`allow_attributes_without_reason`. `unsafe_code` is forbidden. A library also warns on
+`missing_docs` and on printing to stdout or stderr. `clippy.toml` allows `unwrap`,
+`expect` and `dbg!` in tests, and `deny.toml` limits dependencies to crates.io and
+permissive licenses. Install `cargo-nextest` and `cargo-deny` once per machine.
 
 **Git hooks** run through [prek](https://prek.j178.dev): one runner and one
 `.pre-commit-config.yaml` covering every stack. Python projects install it with
@@ -147,7 +157,7 @@ that language's workspace tooling.
 `@j178/prek` devDependency.
 
 **Tasks** run through [just](https://just.systems). The root `justfile` imports a
-`just/<stack>.just` from each stack. Recipes use the `py-` and `ts-` prefixes
+`just/<stack>.just` from each stack. Recipes use the `py-`, `ts-` and `rs-` prefixes
 because those imports share one namespace. Your `stacks` answer builds
 `just check`, which runs everything.
 

@@ -10,10 +10,10 @@ set -euo pipefail
 out=${1:?usage: scripts/check-render.sh OUT_DIR}
 copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwrite)
 
-# a: all three stacks at once, everything else at its defaults. module_name is
+# a: every stack at once, everything else at its defaults. module_name is
 # withheld so its slug-derived default is what renders.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=render-me --data 'stacks=[python,ts,docker]' \
+  --data project_name=render-me --data 'stacks=[python,ts,rust,docker]' \
   --data kind=research --data ts_kind=app \
   --data 'docker_stacks=[python]' . "$out/a"
 
@@ -26,11 +26,12 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'docker_stacks=[ts]' . "$out/b"
 
 # c: the only render with nested paths, at two depths to catch hardcoded
-# up-paths. All three publish flags on: the only render where the two release
+# up-paths. The rust crate is the binary kind, a) has the library. All three publish flags on: the only render where the two release
 # workflows could collide, and where docker.yml grows its pushing half.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=mono-me --data 'stacks=[python,ts,docker]' \
+  --data project_name=mono-me --data 'stacks=[python,ts,rust,docker]' \
   --data python_dir=api --data ts_dir=apps/web \
+  --data rust_dir=crates/cli --data rust_kind=binary \
   --data publish_to_pypi=true --data publish_to_npm=true \
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
@@ -99,10 +100,18 @@ grep -q check-citation-file-format a/.pre-commit-config.yaml
 grep -qx '_src_path: gh:simonvanlierde/project-templates' e/.copier-answers.yml
 grep -qx '_commit: check-render-tag' e/.copier-answers.yml
 (! grep -q '^_src_path: gh:' a/.copier-answers.yml)
-# All three stacks at once: every hook block present together.
+# Every stack at once: every hook block present together.
 grep -q hadolint a/.pre-commit-config.yaml
 grep -q 'ruff check' a/.pre-commit-config.yaml
 grep -q 'biome check' a/.pre-commit-config.yaml
+grep -q 'cargo clippy' a/.pre-commit-config.yaml
+grep -q rust-lang.rust-analyzer a/.vscode/extensions.json
+# rust library: lib.rs, the library-only lints, and the doctest run nextest skips.
+test -f a/src/lib.rs
+test ! -e a/src/main.rs
+grep -qx 'missing_docs = "warn"' a/Cargo.toml
+grep -q 'cargo test --doc' a/just/rust.just
+grep -qx '    @just rs-check' a/justfile
 # license=none: no file, and no license key in either place that carries one.
 test ! -e b/LICENSE
 (! grep -q '"license"' b/package.json)
@@ -120,6 +129,16 @@ test ! -e c/pyproject.toml
 grep -q 'working-directory: api' c/.github/workflows/python.yml
 grep -q 'context: apps/web' c/compose.yaml
 grep -q 'uv --directory api' c/just/python.just
+# rust binary, nested: main.rs, no library-only lints, no doctest step.
+test -f c/crates/cli/Cargo.toml
+test -f c/crates/cli/deny.toml
+test -f c/crates/cli/src/main.rs
+test ! -e c/Cargo.toml
+(! grep -q missing_docs c/crates/cli/Cargo.toml)
+(! grep -q -- '--doc' c/just/rust.just)
+grep -q 'cargo fmt --manifest-path crates/cli/Cargo.toml --check' c/just/rust.just
+grep -q 'working-directory: crates/cli' c/.github/workflows/rust.yml
+grep -q 'directory: /crates/cli' c/.github/dependabot.yml
 # Both stacks publishing: two release workflows, neither overwritten.
 test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml

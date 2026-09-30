@@ -1,0 +1,48 @@
+[package]
+name = "{{ crate_name }}"
+version = "0.1.0"
+edition = "2024"
+rust-version = "{{ rust_version }}"
+description = {{ project_description | to_json }}
+authors = ["{{ author_name }} <{{ author_email }}>"]
+repository = "https://github.com/{{ github_user }}/{{ slug }}"
+{%- if license != 'none' %}
+license = "{{ license }}"
+{%- endif %}
+# Makes an accidental `cargo publish` fail. Delete it when you do want to publish.
+publish = false
+
+[dependencies]
+
+# Clippy has no user-wide config: lint levels take effect only from this table.
+[lints.rust]
+unsafe_code = "forbid"
+# `pub` on an item nothing outside the crate can reach; use pub(crate).
+unreachable_pub = "warn"
+{%- if rust_kind == 'library' %}
+missing_docs = "warn"
+{%- endif %}
+
+[lints.clippy]
+# Priority -1 so the single-lint levels below override the group.
+pedantic = { level = "warn", priority = -1 }
+# Restriction picks, off by default: each one flags a shortcut that should not
+# reach main. clippy.toml allows unwrap, expect and dbg! in tests.
+allow_attributes_without_reason = "warn"
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+{%- if rust_kind == 'library' %}
+# A library reports through its return values, never the caller's terminal.
+print_stdout = "warn"
+print_stderr = "warn"
+{%- endif %}
+# Pedantic's noisiest: it wants #[must_use] on nearly every function.
+must_use_candidate = "allow"
+{%- if rust_kind == 'binary' %}
+# Docs sections written for API consumers, which a binary has none of.
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+{%- endif %}

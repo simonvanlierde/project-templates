@@ -1,0 +1,5 @@
+# Lint levels live in Cargo.toml's [lints] table; this file only tunes lints.
+# The MSRV comes from Cargo.toml's rust-version, so it is not repeated here.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-dbg-in-tests = true

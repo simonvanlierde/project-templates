@@ -13,7 +13,7 @@ compares against the ReLab production repository, which runs a heavier set.
 | `concurrency` group with `cancel-in-progress` | every workflow | A new push cancels the stale run. |
 | `timeout-minutes` on every job | every workflow | A hung job stops in minutes, not six hours. |
 | `persist-credentials: false` on checkout | every workflow | Later steps can't reuse the checkout token. |
-| Stack checks: lint, format, types, tests | `python.yml`, `ts.yml` | The same commands as `just check`. |
+| Stack checks: lint, format, types, tests | `python.yml`, `ts.yml`, `rust.yml` | The same commands as `just check`. |
 | Git hooks run in CI | `hygiene.yml` | `prek install` is opt-in per clone. Without this job, a commit made without hooks reaches `main` unchecked. |
 | zizmor | hook, so also CI | Audits workflows for template injection, credential leaks, cache poisoning, and impostor commits. |
 | actionlint | hook, so also CI | Catches what zizmor doesn't: unknown keys, bad `needs`, expression type errors, and shellcheck findings in `run:` blocks. |

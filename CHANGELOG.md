@@ -5,6 +5,12 @@ release. Dependency bumps and this repo's own CI are left out; `git log` has the
 
 ## Unreleased
 
+### Added
+
+- `rust` stack: a crate in `rust_dir`, library or binary, with a strict clippy lint policy
+  in `Cargo.toml`'s `[lints]` table, `clippy.toml`, a `deny.toml` for cargo-deny, `rust.yml`,
+  `just rs-check`, cargo hooks, and a Dependabot cargo entry.
+
 ### Changed
 
 - The secret-scan hook is Betterleaks, gitleaks' successor from the same authors, in place of
