@@ -1,0 +1,22 @@
+{#- just runs every recipe from the root justfile's directory, so a nested crate
+    is reached with cargo's own --manifest-path rather than with a cd. It renders
+    empty for the flat layout, where the root already is the crate. -#}
+{%- set mp = '' if rust_dir == '.' else ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' -%}
+# What CI runs: format check, clippy, tests{% if rust_kind == 'library' %} (nextest, then the doctests it skips){% endif %}, cargo-deny.
+rs-check:
+    cargo fmt{{ mp }} --check
+    cargo clippy{{ mp }} --all-targets --all-features -- -D warnings
+    cargo nextest run{{ mp }} --all-features
+{%- if rust_kind == 'library' %}
+    cargo test{{ mp }} --doc --all-features
+{%- endif %}
+    cargo deny{{ mp }} check
+
+# Apply clippy's machine-applicable fixes, then format.
+rs-fmt:
+    cargo clippy{{ mp }} --all-targets --all-features --fix --allow-dirty --allow-staged
+    cargo fmt{{ mp }}
+
+# Tests only; extra arguments reach nextest (`just rs-test name`).
+rs-test *args:
+    cargo nextest run{{ mp }} {% raw %}{{ args }}{% endraw %}

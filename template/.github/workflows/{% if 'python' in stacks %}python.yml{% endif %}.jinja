@@ -42,6 +42,10 @@ jobs:
           python-version: "{{ python_version }}"
 
       - run: uv sync --locked
+      # Known vulnerabilities, and deprecated or quarantined projects, in every
+      # locked dependency, dev group included, from OSV. Experimental in uv 0.12,
+      # hence the preview flag.
+      - run: uv audit --locked --preview-features audit-command
 
       - run: uv run ruff check --output-format=github
       - run: uv run ruff format --check

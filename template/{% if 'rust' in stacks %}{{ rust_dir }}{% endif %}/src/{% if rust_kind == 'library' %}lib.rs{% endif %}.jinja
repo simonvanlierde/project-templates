@@ -1,0 +1,20 @@
+//! {{ project_description or project_name }}
+
+/// Adds two numbers.
+///
+/// ```
+/// assert_eq!({{ crate_name | replace('-', '_') }}::add(2, 3), 5);
+/// ```
+pub fn add(left: u64, right: u64) -> u64 {
+    left + right
+}
+
+#[cfg(test)]
+mod tests {
+    use super::add;
+
+    #[test]
+    fn adds() {
+        assert_eq!(add(2, 2), 4);
+    }
+}

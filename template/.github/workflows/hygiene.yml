@@ -35,7 +35,7 @@ jobs:
           # betterleaks scans staged changes only, and CI stages nothing: GitHub
           # secret scanning is the server-side check, free on public repos only
           # (a private repo needs GitHub Advanced Security).
-          SKIP: ruff-check,ruff-format,ty,biome,tsc,betterleaks
+          SKIP: ruff-check,ruff-format,ty,biome,tsc,cargo-fmt,cargo-clippy,betterleaks
           # Enables zizmor's online audits (impostor commits, known-vulnerable
           # actions). Read-only, like the workflow's permissions.
           GH_TOKEN: ${{ github.token }}

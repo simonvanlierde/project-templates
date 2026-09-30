@@ -5,6 +5,17 @@ release. Dependency bumps and this repo's own CI are left out; `git log` has the
 
 ## Unreleased
 
+### Added
+
+- `rust` stack: a crate in `rust_dir`, library or binary, with a strict clippy lint policy
+  in `Cargo.toml`'s `[lints]` table, `clippy.toml`, a `deny.toml` for cargo-deny, `rust.yml`,
+  `just rs-check`, cargo hooks, and a Dependabot cargo entry.
+- Dependency audits in `just check` and CI: `uv audit` for Python, `pnpm audit --prod` for
+  TypeScript, `cargo deny check` for Rust.
+- Knip in the TypeScript `check` script, for unused files, exports and dependencies.
+- A one-week minimum release age: `exclude-newer = "1 week"` under `[tool.uv]`, and
+  `minimumReleaseAge` in a new `pnpm-workspace.yaml`. It matches Dependabot's cooldown.
+
 ### Changed
 
 - The secret-scan hook is Betterleaks, gitleaks' successor from the same authors, in place of
