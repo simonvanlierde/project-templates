@@ -112,6 +112,7 @@ author_orcid:
   help: ORCID iD for CITATION.cff, as 0000-0000-0000-0000 (blank for none)
   default: "0009-0006-6953-909X"
 
+# renovate: datasource=python-version depName=python
 python_version:
   type: str
   when: "{{ 'python' in stacks }}"
@@ -133,6 +134,7 @@ ts_kind:
     Application (builds to dist/, not published): app
   default: library
 
+# renovate: datasource=node-version depName=node
 node_version:
   type: str
   when: "{{ 'ts' in stacks }}"
@@ -163,6 +165,7 @@ crate_name:
 
 # The crate's rust-version (MSRV); clippy reads it too, and skips lints that
 # suggest newer APIs. Defaults to the current stable minor.
+# renovate: datasource=github-releases depName=rust-lang/rust
 rust_version:
   type: str
   when: "{{ 'rust' in stacks }}"
@@ -195,6 +198,7 @@ go_package:
 # go.mod's `go` directive: the oldest Go the module builds with, and the
 # language version the linters check against. Defaults to the current stable
 # minor. golangci-lint must be built with at least this Go.
+# renovate: datasource=golang-version depName=go versioning=semver-coerced
 go_version:
   type: str
   when: "{{ 'go' in stacks }}"

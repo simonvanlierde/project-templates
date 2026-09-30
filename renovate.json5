@@ -68,12 +68,13 @@
       datasourceTemplate: "npm",
     },
     {
-      // The go stack's tool pins: computed copier.yml questions, each under a
-      // `# renovate: datasource=... depName=...` comment.
+      // copier.yml defaults Renovate can bump: the language versions and the go
+      // stack's tool pins, each under a `# renovate: datasource=... depName=...`
+      // comment. Quotes around the value stay outside the capture.
       customType: "regex",
       managerFilePatterns: ["/^copier\\.yml$/"],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\w+:\\n(?:  .*\\n)*?  default: (?<currentValue>\\S+)",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?\\n\\w+:\\n(?:  .*\\n)*?  default: \"?(?<currentValue>[^\"\\s]+)",
       ],
     },
   ],
@@ -95,10 +96,10 @@
       matchDatasources: ["pypi", "npm"],
       minimumReleaseAge: "7 days",
     },
-    // Scaffolds pin these outright, so hold them for the same week Dependabot's
-    // cooldown gives everything else.
+    // copier.yml's defaults land in every new scaffold, so hold them for the
+    // same week Dependabot's cooldown gives everything else.
     {
-      matchPackageNames: ["golangci/golangci-lint", "golang.org/x/vuln"],
+      matchFileNames: ["copier.yml"],
       minimumReleaseAge: "7 days",
     },
     // The uv image and uv_build ship from one release. widen, because the cap
