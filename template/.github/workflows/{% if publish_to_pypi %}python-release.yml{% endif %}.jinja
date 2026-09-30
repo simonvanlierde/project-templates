@@ -41,7 +41,6 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: false
-          python-version: "{{ python_version }}"
           version: "{{ uv_version }}"
 
       # Publish only what passes, on the exact commit being released.

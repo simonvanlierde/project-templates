@@ -16,6 +16,8 @@ a minor release can break things; breaking changes are marked **Breaking**.
 - `just py-cov` and `just ts-cov` print a coverage summary only. They no longer write
   `coverage.xml` or `coverage/lcov.info`; add the reporter flag back if you upload
   coverage.
+- CI takes the Python version from `.python-version` instead of repeating it in the
+  workflows.
 
 ### Removed
 
