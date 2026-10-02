@@ -24,6 +24,9 @@ changes are marked **Breaking**.
   in a different case is no longer an error.
 - The web-service's `/docs`, `/redoc` and `/openapi.json` are off unless `API_DOCS` is
   set.
+- VS Code formats TOML with the Tombi extension (`tombi-toml.tombi`), which reads the
+  shipped `.tombi.toml`. Even Better TOML ignored it. Install the new recommendation
+  after updating.
 
 ### Removed
 

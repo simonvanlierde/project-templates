@@ -93,6 +93,8 @@ test -f a/src/render_me/__main__.py
 # .vscode recommendations per stack.
 grep -q charliermarsh.ruff a/.vscode/extensions.json
 grep -q biomejs.biome a/.vscode/settings.json
+# TOML formats with tombi, which reads the shipped .tombi.toml; taplo would not.
+grep -q tombi-toml.tombi a/.vscode/settings.json
 test -f a/.github/SECURITY.md
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
 (! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)

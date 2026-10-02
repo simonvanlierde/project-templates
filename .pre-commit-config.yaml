@@ -11,6 +11,8 @@ repos:
     hooks:
       - id: check-added-large-files
       - id: check-merge-conflict
+      # Parses template/.rumdl.toml, .tombi.toml, clippy.toml and deny.toml.
+      - id: check-toml
       - id: check-yaml
       - id: end-of-file-fixer
       - id: mixed-line-ending
@@ -37,6 +39,17 @@ repos:
     hooks:
       - id: yamllint
         args: [-c, template/.yamllint.yml]
+
+  # scripts/check-render.sh; actionlint covers only workflow `run:` blocks.
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: a6564f5d57444e123433a5c9af733e3975c77229 # frozen: v0.11.0.1-1
+    hooks:
+      - id: shellcheck
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: 479be5958357ba5ab65ce47172117348516860e9 # frozen: v3.14.1-1
+    hooks:
+      - id: shfmt
 
   # Successor to gitleaks, which now gets security fixes only.
   - repo: https://github.com/betterleaks/betterleaks
