@@ -93,10 +93,10 @@ jobs:
           set -euo pipefail
           npx -y "renovate@$RENOVATEBOT_VERSION" --platform=local --dry-run=extract > extract.log 2>&1 \
             || { tail -n 50 extract.log; exit 1; }
-          # One anchor per manager block. copier and renovate come from the
+          # One anchor per manager block (rust-lang/rust: copier.yml). copier and renovate come from the
           # githubActionsVersions preset, which also matches nothing silently when it drifts.
           for dep in actions/checkout ghcr.io/astral-sh/uv pre-commit/pre-commit-hooks \
-                     uv_build pytest pnpm @biomejs/biome copier renovate; do
+                     uv_build pytest pnpm @biomejs/biome rust-lang/rust copier renovate; do
             grep -qF "\"depName\": \"$dep\"" extract.log \
               || { echo "not extracted: $dep — a manager pattern in renovate.json5 broke"; exit 1; }
           done
