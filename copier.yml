@@ -267,7 +267,7 @@ uv_version:
 golangci_lint_version:
   type: str
   when: false
-  default: v2.13.2
+  default: v2.14.0
 
 # The govulncheck a new go.mod requires as a tool. Dependabot bumps it in the
 # project after that.
