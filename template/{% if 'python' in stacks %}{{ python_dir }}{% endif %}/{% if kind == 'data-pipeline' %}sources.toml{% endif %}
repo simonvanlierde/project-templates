@@ -13,8 +13,10 @@
 #              `just validate` fails if it ever produces any.
 #   url        what `just fetch` downloads. Change it and `just build` refuses the old
 #              download until you fetch again.
-#   release    optional: the edition you expect, recorded as the vintage when the
-#              server sends no Last-Modified date
+#   release    optional: the edition you expect, recorded as the vintage
+#   sha256     optional: the SHA-256 the download must have. Pin it for a fixed release
+#              and `just fetch` refuses bytes that changed upstream. Leave it out for a
+#              URL that tracks a moving source.
 #   terms      the publisher's reuse terms, in their words, plus `terms_url`. Required
 #              for every implemented source, and listed again in ATTRIBUTION.md.
 
@@ -25,7 +27,6 @@ id = "example-co2"
 name = "Mauna Loa CO2 annual mean (EXAMPLE)"
 status = "implemented"
 url = "https://raw.githubusercontent.com/datasets/co2-ppm/main/data/co2-annmean-mlo.csv"
-# The server sends no Last-Modified date, so this is recorded as the vintage.
 release = "unversioned, main branch"
 terms = "ODC-PDDL-1.0 (datasets/co2-ppm package; original data from NOAA GML)"
 terms_url = "https://opendatacommons.org/licenses/pddl/"

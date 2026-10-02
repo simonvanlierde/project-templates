@@ -3,7 +3,8 @@
     canonical URL instead, but only for a render from an exact tag. `_commit` is
     `git describe --tags --always`. A `<tag>-<n>-g<sha>` or bare sha from a local
     commit may not exist upstream, so `copier update` could not check it out. A
-    remote source is kept as given. -#}
+    remote source is kept as given. NOTE: a tag is trusted to be pushed; one that
+    exists only locally fails `copier update` the same way, so push it first. -#}
 {%- set src = _copier_answers._src_path -%}
 {%- set commit = _copier_answers._commit | default('', true) -%}
 {%- set parts = commit.split('-') -%}

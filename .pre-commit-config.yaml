@@ -1,7 +1,7 @@
 # Run with prek, a drop-in pre-commit replacement: prek install && prek run -a
 #
-# The local half of CI: hygiene, secrets and workflow audits. lint.yml runs
-# these hooks on every PR. ci.yml runs scripts/check-render.sh separately.
+# The local half of CI: hygiene, secrets and workflow audits. ci.yml's git hooks
+# job runs these on every PR, beside scripts/check-render.sh.
 #
 # Revs are commit SHAs, since tags are mutable; Renovate moves each SHA and its
 # `# frozen:` tag together.
@@ -11,6 +11,8 @@ repos:
     hooks:
       - id: check-added-large-files
       - id: check-merge-conflict
+      # Parses template/.rumdl.toml, .tombi.toml, clippy.toml and deny.toml.
+      - id: check-toml
       - id: check-yaml
       - id: end-of-file-fixer
       - id: mixed-line-ending
@@ -38,13 +40,27 @@ repos:
       - id: yamllint
         args: [-c, template/.yamllint.yml]
 
+  # scripts/check-render.sh; actionlint covers only workflow `run:` blocks.
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: a6564f5d57444e123433a5c9af733e3975c77229 # frozen: v0.11.0.1-1
+    hooks:
+      - id: shellcheck
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: 479be5958357ba5ab65ce47172117348516860e9 # frozen: v3.14.1-1
+    hooks:
+      - id: shfmt
+        # The repo root has no .editorconfig, so the style is pinned here; otherwise
+        # shfmt takes it from whatever .editorconfig sits above the clone.
+        args: [--write, --indent=2]
+
   # Successor to gitleaks, which now gets security fixes only.
   - repo: https://github.com/betterleaks/betterleaks
     rev: 81aff7a638638aae3a659845d089043e1d8fe9ac # frozen: v1.9.0
     hooks:
       - id: betterleaks
 
-  # Sees only ci.yml and lint.yml: .jinja workflows are not YAML. CI audits the
+  # Sees only ci.yml: .jinja workflows are not YAML. CI audits the
   # rendered output.
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: fa412071e4f5d44d44f9e365f4676f9df92456a2 # frozen: v1.30.1

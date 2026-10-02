@@ -17,7 +17,9 @@
 {% else %}uv tool install prek   # once per machine
 prek install     # git hooks
 {% endif %}```
-
+{% if 'docker' in stacks %}
+The hadolint hook runs from its Docker image, so the git hooks need Docker running.
+{% endif %}
 `just` lists the tasks. They mirror what [.github/workflows/](.github/workflows/) runs.
 
 ```sh

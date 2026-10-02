@@ -15,10 +15,11 @@ name: python release
 # `id-token: write` exposes an OpenID Connect (OIDC) request token to every step
 # in its job, so publish is a separate job that runs no project code.
 
+# No workflow_dispatch: a manual run can target any branch, and neither trusted
+# publishing nor the environment checks which ref it publishes.
 on:
   release:
     types: [published]
-  workflow_dispatch:
 
 permissions:
   contents: read

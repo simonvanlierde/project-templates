@@ -9,6 +9,7 @@ compares against ReLab, a larger production repository that runs a heavier set.
 | Piece | Where | Why |
 | --- | --- | --- |
 | Actions pinned to a commit digest, version in a trailing comment | every workflow | A tag can move; a digest can't. Dependabot bumps both. |
+| Hook revs pinned to a commit SHA, tag in a `# frozen:` comment | `.pre-commit-config.yaml` | The same reason: hooks run in CI and on every contributor's machine. Dependabot bumps both. |
 | `permissions: contents: read` at the top, wider grants per job only | every workflow | The token can do only what the job needs. |
 | `concurrency` group with `cancel-in-progress` | every workflow except the release ones, which must not stop halfway | A new push cancels the stale run. |
 | `timeout-minutes` on every job | every workflow | A hung job stops in minutes, not six hours. |
@@ -22,6 +23,7 @@ compares against ReLab, a larger production repository that runs a heavier set.
 | `SECURITY.md` | `.github/` | Tells a reporter where to send a vulnerability privately. |
 | `CITATION.cff` | `research` and `data-pipeline` kinds | GitHub's "Cite this repository" button and Zenodo read it. A hook checks it against the schema. |
 | Provenance on publish | release workflows | PyPI and npm trusted publishing attach attestations. Container images pushed to GHCR carry an SBOM and a provenance attestation. |
+| Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
 The hooks job skips the hooks that need the project environment (`ruff`, `ty`,
 `biome`, `tsc`), because the stack workflows already run them. It also skips betterleaks.
@@ -38,6 +40,7 @@ scanning is the server-side check.
 | release-please | Research repos release rarely, and Zenodo archives a tagged release. A release PR on every push is noise. | Releases become frequent enough that writing the changelog by hand costs time. |
 | Secret scan over full history | GitHub secret scanning and push protection cover public repos at no cost. The hook covers local commits. | The repo is private without GitHub Advanced Security. |
 | Scheduled audit job | The stack workflows audit on every push and PR (`uv audit`, `pnpm audit --prod`, `cargo deny check`, `govulncheck`), and Dependabot security alerts cover the time between. | A dependency sits unchanged for months in a repo with few pushes. |
+| Base images pinned to a digest | The `FROM` tags are copier answers (`python_version`, `node_version`), so Dependabot's docker ecosystem would fight `copier update` over them. | The image runs in production: pin `FROM ...@sha256:` and add a docker entry to `dependabot.yml`. |
 | One required "CI result" job | A single workflow per stack is short enough to list its jobs in branch protection. | The job list grows past what you want to maintain by hand. |
 | CODEOWNERS, issue templates, CONTRIBUTING | Single-author repos. | Other people start contributing. |
 
@@ -48,6 +51,8 @@ scanning is the server-side check.
 - zizmor needs a token for its online audits: impostor commits and known-vulnerable actions. The
   hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN` to get them;
   without it, the offline subset runs.
+- The hadolint hook runs from its Docker image, so with the docker stack `prek run -a`
+  needs a running Docker daemon. CI runners have one.
 - The `data-pipeline` kind fetches its sources' live URLs in CI, this template's own CI
   included. A publisher outage or a moved file fails the run whatever the diff; re-run it.
 - This template's own CI renders the templates with `scripts/check-render.sh`. Then it

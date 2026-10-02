@@ -10,6 +10,29 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- A `data-pipeline` source can pin a `sha256`. `fetch` refuses a download that
+  doesn't match it.
+
+### Changed
+
+- **Breaking:** `data-pipeline` drops the `vintage_basis` column and the per-source
+  `encoding` key. The vintage is the manifest's `release`, and every source is read
+  as UTF-8. Re-run `just pipeline` after updating.
+- `data-pipeline` rejects a row with fewer fields than the header, and an id repeated
+  in a different case is no longer an error.
+- The web-service's `/docs`, `/redoc` and `/openapi.json` are off unless `API_DOCS` is
+  set.
+- VS Code formats TOML with the Tombi extension (`tombi-toml.tombi`), which reads the
+  shipped `.tombi.toml`. Even Better TOML ignored it. Install the new recommendation
+  after updating.
+
+### Removed
+
+- `workflow_dispatch` from the release workflows: a manual run could publish any
+  branch.
+
 ## [0.7.1] - 2026-09-30
 
 ### Added

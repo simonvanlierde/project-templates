@@ -40,7 +40,7 @@
 
   // The pre-commit, pep621 and npm managers parse their files, and Jinja breaks
   // the parse. These read raw text instead. They match nothing when a pattern
-  // drifts, which lint.yml checks.
+  // drifts, which ci.yml's renovate extract job checks.
   customManagers: [
     {
       // Includes the root config: the built-in pre-commit manager is off by default.

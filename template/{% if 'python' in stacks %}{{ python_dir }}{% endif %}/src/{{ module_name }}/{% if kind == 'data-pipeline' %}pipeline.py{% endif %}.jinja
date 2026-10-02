@@ -6,16 +6,14 @@ A starting point: standard library only, one function per stage.
 Raw files stay in data/raw/ and outputs in data/processed/, both gitignored, so the
 repository never redistributes source data. Each fetch leaves a `<file>.fetch.json`
 record beside its raw file: the URL, when it was retrieved, the SHA-256 of the bytes,
-and the source's vintage together with who states it.
+and the vintage the manifest declares.
 """
 
 from __future__ import annotations
 
 import argparse
-import contextlib
 import csv
 import dataclasses
-import email.utils
 import hashlib
 import io
 import json
@@ -25,11 +23,8 @@ import tomllib
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import urlsplit
-
-if TYPE_CHECKING:
-    from email.message import Message
 
 # Relative to the working directory, which `just` and CI set to the project root.
 MANIFEST = Path("sources.toml")
@@ -55,7 +50,6 @@ class FetchRecord:
     sha256: str
     bytes: int
     vintage: str
-    vintage_basis: str
 
 
 def load_manifest(path: Path = MANIFEST) -> list[Source]:
@@ -69,10 +63,8 @@ def load_manifest(path: Path = MANIFEST) -> list[Source]:
     if bad := [i for i in ids if not re.fullmatch(r"[\w-]+", i)]:
         msg = f"ids {bad} in sources.toml may hold only letters, digits, _ and -"
         raise ValueError(msg)
-    # Case-insensitive: macOS and Windows file names are, so `A` and `a` share a file.
-    folded = [i.casefold() for i in ids]
-    if dupes := sorted({i for i in ids if folded.count(i.casefold()) > 1}):
-        msg = f"ids {dupes} appear more than once in sources.toml, ignoring case"
+    if dupes := sorted({i for i in ids if ids.count(i) > 1}):
+        msg = f"ids {dupes} appear more than once in sources.toml"
         raise ValueError(msg)
     if no_url := [s["id"] for s in implemented(sources) if not isinstance(s.get("url"), str)]:
         msg = f"implemented sources {no_url} in sources.toml have no url"
@@ -90,22 +82,6 @@ def raw_name(source: Source) -> str:
     return source["id"] + PurePosixPath(urlsplit(source["url"]).path).suffix
 
 
-def vintage(source: Source, headers: Message) -> tuple[str, str]:
-    """(vintage, basis): how current the data is, and who says so.
-
-    The server's Last-Modified date if it sends a readable one, else the release the
-    manifest declares. The basis names which, so a manifest string is never passed off
-    as a statement by the source.
-    """
-    modified = headers.get("Last-Modified")
-    if modified:
-        # A header that is not a date falls through to the manifest.
-        with contextlib.suppress(TypeError, ValueError):
-            return email.utils.parsedate_to_datetime(modified).date().isoformat(), "last-modified"
-    # str(): a TOML date (`release = 2024-06-01`) loads as a datetime.date.
-    return str(source.get("release", "not stated")), "manifest"
-
-
 def _write_atomic(path: Path, data: bytes) -> None:
     """Write a sibling temp file, then rename it: a reader never sees half a file."""
     part = path.with_name(path.name + ".part")
@@ -114,7 +90,11 @@ def _write_atomic(path: Path, data: bytes) -> None:
 
 
 def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
-    """Download each implemented source into `raw`, with a fetch record beside it."""
+    """Download each implemented source into `raw`, with a fetch record beside it.
+
+    Raises ValueError for a download over the size cap, or one whose SHA-256 differs
+    from the `sha256` the manifest pins. Nothing is written for that source.
+    """
     raw.mkdir(parents=True, exist_ok=True)
     records = []
     for source in implemented(sources):
@@ -122,19 +102,22 @@ def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
         # The URLs come from sources.toml, which is as trusted as the code.
         request = urllib.request.Request(source["url"], headers={"User-Agent": "{{ slug }}"})  # noqa: S310
         with urllib.request.urlopen(request, timeout=_TIMEOUT_S) as response:  # noqa: S310
-            payload, headers = response.read(_MAX_BYTES + 1), response.headers
+            payload = response.read(_MAX_BYTES + 1)
         if len(payload) > _MAX_BYTES:
             msg = f"{source['id']}: download exceeds {_MAX_BYTES} bytes"
             raise ValueError(msg)
-        stated, basis = vintage(source, headers)
+        digest = hashlib.sha256(payload).hexdigest()
+        if source.get("sha256", digest) != digest:
+            msg = f"{source['id']}: downloaded bytes hash to {digest}, not the sha256 in sources.toml"
+            raise ValueError(msg)
         record = FetchRecord(
             source_id=source["id"],
             url=source["url"],
             retrieved_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            sha256=hashlib.sha256(payload).hexdigest(),
+            sha256=digest,
             bytes=len(payload),
-            vintage=stated,
-            vintage_basis=basis,
+            # str(): a TOML date (`release = 2024-06-01`) loads as a datetime.date.
+            vintage=str(source.get("release", "not stated")),
         )
         name = raw_name(source)
         _write_atomic(raw / name, payload)
@@ -170,10 +153,10 @@ def parse(source: Source, payload: bytes) -> tuple[list[str], list[dict[str, str
 
     Every source is read as CSV here. Branch on `source["id"]` for a source that is not.
 
-    Raises ValueError for a repeated column name, or a row with more fields than the header.
+    Raises ValueError for a repeated column name, or a row with more or fewer fields than the header.
     """
     # utf-8-sig drops the byte-order mark that spreadsheet exports start with. Plain UTF-8 reads the same.
-    text = payload.decode(source.get("encoding", "utf-8-sig"))
+    text = payload.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(text, newline=""))
     columns = list(reader.fieldnames or [])
     # DictReader keeps only the last of two same-named columns, silently dropping the other.
@@ -185,6 +168,10 @@ def parse(source: Source, payload: bytes) -> tuple[list[str], list[dict[str, str
         # DictReader files the surplus fields of a long row under the key None.
         if None in row:
             msg = f"{source['id']}: line {reader.line_num} has more fields than the header"
+            raise ValueError(msg)
+        # It fills the missing fields of a short row with None, which would publish as "".
+        if None in row.values():
+            msg = f"{source['id']}: line {reader.line_num} has fewer fields than the header"
             raise ValueError(msg)
         rows.append(row)
     return columns, rows
@@ -201,7 +188,6 @@ def build(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED) -
             "source_url": record.url,
             "retrieved_at": record.retrieved_at,
             "vintage": record.vintage,
-            "vintage_basis": record.vintage_basis,
             "raw_sha256": record.sha256,
         }
         columns, rows = parse(source, payload)
@@ -277,16 +263,16 @@ def main(argv: list[str] | None = None) -> int:
         match stage:
             case "fetch":
                 for r in fetch(sources):
-                    print(f"{r.source_id}  {r.bytes:>9,} B  {r.sha256[:12]}  {r.vintage} ({r.vintage_basis})  {r.url}")
+                    print(f"{r.source_id}  {r.bytes:>9,} B  {r.sha256[:12]}  {r.vintage}  {r.url}")
             case "build":
                 for path in build(sources):
                     print(f"{len(read_output(path))} rows -> {path}")
             case _:
                 problems = validate(sources)
                 print(f"{len(problems)} problems")
-    # OSError: a missing file or a failed download. ValueError: a bad manifest or a stale fetch.
-    # LookupError: an unknown `encoding`. csv.Error: a source that is not readable CSV.
-    except (OSError, ValueError, LookupError, csv.Error) as error:
+    # OSError: a missing file or a failed download. ValueError: a bad manifest, a download
+    # that fails its checks, or a stale fetch. csv.Error: a source that is not readable CSV.
+    except (OSError, ValueError, csv.Error) as error:
         print(f"{stage}: {_message(error)}", file=sys.stderr)
         return 1
     for problem in problems:
