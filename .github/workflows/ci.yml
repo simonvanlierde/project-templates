@@ -1,13 +1,15 @@
 name: ci
 
-# Renders the real answer combinations with copier, then runs the generated
-# project's own inner loop.
+# This repo's own git hooks and Renovate config, then the real answer combinations
+# rendered with copier and run through the generated project's own inner loop.
+# `ci ok` gates main on all of it.
 
 # No push trigger: main only advances through a PR, so a push run repeats the PR check.
 on:
   # No paths-ignore: `ci ok` is a required check, and a skipped workflow leaves it pending.
   pull_request:
   # Also on a schedule: scaffolds break when upstream releases change, not when this repo does.
+  # The scheduled run on main also seeds the caches every PR can read.
   schedule:
     - cron: "0 6 * * 1"
   workflow_dispatch:
@@ -33,6 +35,72 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  hooks:
+    # `prek install` is opt-in per clone, so a commit made without hooks would reach
+    # main unchecked. Scaffolds get the same job in checks.yml.
+    name: git hooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # prek is the action author's own binary, so the digest pin is the trust anchor.
+      # Hook revs are pinned in .pre-commit-config.yaml.
+      - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        env:
+          # betterleaks scans staged changes only and CI stages nothing. GitHub secret
+          # scanning covers the server side.
+          SKIP: betterleaks
+          # Enables zizmor's online audits (impostor commits, known-vulnerable actions).
+          # Read-only.
+          GH_TOKEN: ${{ github.token }}
+
+  renovate:
+    # The regex managers in renovate.json5 match nothing when a pattern drifts. Run the
+    # extraction and assert each manager still finds its anchor dependency.
+    name: renovate extract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Renovate bumps it via githubActionsVersions.
+      # renovate: datasource=npm depName=renovate
+      RENOVATEBOT_VERSION: 44.116.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Renovate supports only the active node LTS line.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # Without this cache, the cold npx install is the longest step in this job.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-renovate-${{ env.RENOVATEBOT_VERSION }}
+          # A bump PR still reuses the previous version's shared tarballs.
+          restore-keys: npm-renovate-
+
+      - name: extract and assert anchors
+        env:
+          RENOVATE_CONFIG_FILE: renovate.json5
+          LOG_LEVEL: debug
+        run: |-
+          set -euo pipefail
+          npx -y "renovate@$RENOVATEBOT_VERSION" --platform=local --dry-run=extract > extract.log 2>&1 \
+            || { tail -n 50 extract.log; exit 1; }
+          # One anchor per manager block. copier and renovate come from the
+          # githubActionsVersions preset, which also matches nothing silently when it drifts.
+          for dep in actions/checkout ghcr.io/astral-sh/uv pre-commit/pre-commit-hooks \
+                     uv_build pytest pnpm @biomejs/biome copier renovate; do
+            grep -qF "\"depName\": \"$dep\"" extract.log \
+              || { echo "not extracted: $dep — a manager pattern in renovate.json5 broke"; exit 1; }
+          done
+
   python:
     # Python stack, with docker. The library row's module_name differs from project_name,
     # which exercises the uv_build module-name path. The data-pipeline row also runs its
@@ -519,11 +587,11 @@ jobs:
         run: just go-sync go-check
 
   ok:
-    # The one check the main ruleset requires, so matrix rows can change
+    # The one check the main ruleset requires, so jobs and matrix rows can change
     # without touching repo settings. always(): a skipped job must fail it.
     name: ci ok
     if: always()
-    needs: [python, render, update, typescript, rust, go, fullstack]
+    needs: [hooks, renovate, python, render, update, typescript, rust, go, fullstack]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
