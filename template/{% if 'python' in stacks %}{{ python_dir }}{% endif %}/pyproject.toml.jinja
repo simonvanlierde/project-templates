@@ -17,11 +17,11 @@ license-files = ["LICENSE"]
 {%- endif %}
 {%- if kind == 'web-service' %}
 dependencies = [
-  "fastapi>=0.141.1",
+  "fastapi>=0.142.2",
   "opentelemetry-distro>=0.65b0",
-  "opentelemetry-exporter-otlp-proto-http>=1.44",
+  "opentelemetry-exporter-otlp-proto-http>=1.45.0",
   "opentelemetry-instrumentation-fastapi>=0.65b0",
-  "uvicorn>=0.53",
+  "uvicorn>=0.54.0",
 ]
 {%- else %}
 dependencies = []
@@ -48,7 +48,7 @@ Issues = "https://github.com/{{ github_user }}/{{ slug }}/issues"
 dev = [
   "pytest>=9.1.1",
   "pytest-cov>=7.1.0",
-  "ruff>=0.16.9",
+  "ruff>=0.16.10",
   "ty>=0.0.84",
 {%- if kind == 'research' %}
   "jupyterlab>=4.6.4",

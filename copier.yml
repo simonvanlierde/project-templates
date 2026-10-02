@@ -211,7 +211,7 @@ rust_version:
   type: str
   when: "{{ 'rust' in stacks }}"
   help: Minimum supported Rust version (Cargo.toml rust-version)
-  default: "1.98"
+  default: "1.99.0"
 
 # --- go -----------------------------------------------------------------------
 
@@ -259,7 +259,7 @@ go_version:
 uv_version:
   type: str
   when: false
-  default: 0.12.19
+  default: 0.12.22
 
 # Computed, never asked: the golangci-lint release that the README, `just go-check`
 # and go.yml pin, kept in one place. Renovate bumps it from its `# renovate:` line.
