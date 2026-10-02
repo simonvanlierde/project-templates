@@ -29,6 +29,8 @@ env:
   CHECK_JSONSCHEMA_VERSION: 0.38.2
   # renovate: datasource=pypi depName=rust-just
   JUST_VERSION: 1.58.0
+  # renovate: datasource=npm depName=renovate
+  RENOVATEBOT_VERSION: 44.116.1
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,7 +44,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -63,14 +66,8 @@ jobs:
     name: renovate extract
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      # Renovate bumps it via githubActionsVersions.
-      # renovate: datasource=npm depName=renovate
-      RENOVATEBOT_VERSION: 44.116.1
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - *checkout
 
       # Renovate supports only the active node LTS line.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -140,10 +137,7 @@ jobs:
             stacks: "[python,docker]"
             kind: web-service
     steps:
-      - &checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - *checkout
 
       # The default globs match nothing (pins live in .jinja files), so key on the template.
       # Rows of one kind share dependencies. Saved from main only: a PR-ref cache is
@@ -322,7 +316,8 @@ jobs:
 
   typescript:
     # TS stack, with docker. The image builds nested (monorepo). The root Dockerfile is
-    # the same template, and the render job renders it.
+    # the same template, and the render job renders it. A row leaves out an answer that
+    # keeps its default: stacks [ts] and ts_dir `.`.
     name: typescript (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -333,13 +328,9 @@ jobs:
           # A project_name with punctuation that `slug` strips.
           - name: library
             project_name: 'Ci "TS" Lib'
-            stacks: "[ts]"
-            ts_dir: "."
             ts_kind: library
           - name: app
             project_name: ci-ts-app
-            stacks: "[ts]"
-            ts_dir: "."
             ts_kind: app
           # Installs and builds the nested package, not only renders it.
           - name: monorepo
@@ -347,6 +338,8 @@ jobs:
             stacks: "[ts,docker]"
             ts_dir: apps/web
             ts_kind: library
+    env:
+      TS_DIR: ${{ matrix.ts_dir }}
     steps:
       - *checkout
 
@@ -357,8 +350,7 @@ jobs:
       - name: scaffold
         env:
           PROJECT_NAME: ${{ matrix.project_name }}
-          STACKS: ${{ matrix.stacks }}
-          TS_DIR: ${{ matrix.ts_dir }}
+          STACKS: ${{ matrix.stacks || '[ts]' }}
           TS_KIND: ${{ matrix.ts_kind }}
           # Derived from stacks so a row can't add docker and skip its answers.
           DOCKER: ${{ contains(matrix.stacks, 'docker') }}
@@ -367,19 +359,19 @@ jobs:
           C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
              --data "project_name=$PROJECT_NAME"
              --data "stacks=$STACKS"
-             --data "ts_dir=$TS_DIR"
              --data "ts_kind=$TS_KIND")
+          if [ -n "$TS_DIR" ]; then C+=(--data "ts_dir=$TS_DIR"); fi
           if [ "$TS_KIND" = library ]; then C+=(--data publish_to_npm=true); fi
           if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[ts]'); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
-      # Read by hand: pnpm/setup resolves paths against GITHUB_WORKSPACE, and the scaffold
-      # lives in RUNNER_TEMP. pnpm comes from the packageManager pin. Node comes from the
-      # copier answer, since engines.node is an open range.
-      - name: versions
+      - &ts-versions
+        # Read by hand: pnpm/setup resolves paths against GITHUB_WORKSPACE, and the scaffold
+        # lives in RUNNER_TEMP. pnpm comes from the packageManager pin. Node comes from the
+        # copier answer, since engines.node is an open range.
+        # The fullstack job reuses this step and the next, with its own TS_DIR.
+        name: versions
         id: v
-        env:
-          TS_DIR: ${{ matrix.ts_dir }}
         run: |
           set -euo pipefail
           pnpm=$(jq -er '.packageManager | ltrimstr("pnpm@")' "$RUNNER_TEMP/proj/$TS_DIR/package.json")
@@ -387,7 +379,8 @@ jobs:
           test -n "$pnpm" && test -n "$node"
           { echo "pnpm=$pnpm"; echo "node=$node"; } >> "$GITHUB_OUTPUT"
 
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      - &pnpm-setup
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
         with:
           version: ${{ steps.v.outputs.pnpm }}
           runtime: node@${{ steps.v.outputs.node }}
@@ -423,6 +416,8 @@ jobs:
     name: python + ts + docker
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      TS_DIR: web
     steps:
       - *checkout
 
@@ -440,21 +435,9 @@ jobs:
             --data python_dir=api --data ts_dir=web \
             --data 'docker_stacks=[python,ts]' --data app_port=9000 . "$RUNNER_TEMP/proj"
 
-      # Read by hand for the same reason as in the typescript job.
-      - name: versions
-        id: v
-        run: |
-          set -euo pipefail
-          pnpm=$(jq -er '.packageManager | ltrimstr("pnpm@")' "$RUNNER_TEMP/proj/web/package.json")
-          node=$(sed -n 's/^node_version: *//p' "$RUNNER_TEMP/proj/.copier-answers.yml" | tr -d "\"'")
-          test -n "$pnpm" && test -n "$node"
-          { echo "pnpm=$pnpm"; echo "node=$node"; } >> "$GITHUB_OUTPUT"
+      - *ts-versions
 
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
-        with:
-          version: ${{ steps.v.outputs.pnpm }}
-          runtime: node@${{ steps.v.outputs.node }}
-          install: false
+      - *pnpm-setup
 
       - *just
 
@@ -472,7 +455,8 @@ jobs:
           curl -fsS http://127.0.0.1:9001/health
 
   rust:
-    # The rust stack, one row per crate kind: the library flat, the binary nested.
+    # The rust stack, one row per crate kind: the library flat (rust_dir left at its
+    # default `.`), the binary nested.
     name: rust (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -482,7 +466,6 @@ jobs:
         include:
           - name: library
             project_name: ci-rs-lib
-            rust_dir: "."
             rust_kind: library
           - name: binary
             project_name: ci-rs-bin
@@ -499,9 +482,12 @@ jobs:
           RUST_DIR: ${{ matrix.rust_dir }}
           RUST_KIND: ${{ matrix.rust_kind }}
         run: |
-          uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
-            --data "project_name=$PROJECT_NAME" --data 'stacks=[rust]' \
-            --data "rust_dir=$RUST_DIR" --data "rust_kind=$RUST_KIND" . "$RUNNER_TEMP/proj"
+          set -euo pipefail
+          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
+             --data "project_name=$PROJECT_NAME" --data 'stacks=[rust]'
+             --data "rust_kind=$RUST_KIND")
+          if [ -n "$RUST_DIR" ]; then C+=(--data "rust_dir=$RUST_DIR"); fi
+          "${C[@]}" . "$RUNNER_TEMP/proj"
 
       # The toolchain the generated rust.yml installs, at the same pins.
       - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # v1
@@ -522,7 +508,8 @@ jobs:
         run: just rs-sync rs-check
 
   go:
-    # The go stack, one row per module kind: the library flat, the binary nested.
+    # The go stack, one row per module kind: the library flat (go_dir left at its
+    # default `.`), the binary nested.
     # The library's hyphenated name makes its package name differ from its
     # import path, which the Example's import has to handle.
     name: go (${{ matrix.name }})
@@ -534,7 +521,6 @@ jobs:
         include:
           - name: library
             project_name: ci-go-lib
-            go_dir: "."
             go_kind: library
           - name: binary
             project_name: ci-go-bin
@@ -551,9 +537,12 @@ jobs:
           GO_DIR: ${{ matrix.go_dir }}
           GO_KIND: ${{ matrix.go_kind }}
         run: |
-          uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
-            --data "project_name=$PROJECT_NAME" --data 'stacks=[go]' \
-            --data "go_dir=$GO_DIR" --data "go_kind=$GO_KIND" . "$RUNNER_TEMP/proj"
+          set -euo pipefail
+          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
+             --data "project_name=$PROJECT_NAME" --data 'stacks=[go]'
+             --data "go_kind=$GO_KIND")
+          if [ -n "$GO_DIR" ]; then C+=(--data "go_dir=$GO_DIR"); fi
+          "${C[@]}" . "$RUNNER_TEMP/proj"
 
       # The golangci-lint the generated go.yml pins: a computed copier answer,
       # so read from copier.yml rather than the answers file.
