@@ -17,12 +17,14 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'docker_stacks=[python]' . "$out/a"
 
 # b: license=none, and a name and description with punctuation that `slug`
-# strips and `to_json` escapes.
+# strips and `to_json` escapes. A nested web-service beside the root ts package,
+# so the name also reaches the FastAPI title as a Python literal.
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'project_name=Odd "Name" & Co!' \
   --data 'project_description=A "quoted" one' \
-  --data license=none --data 'stacks=[ts,docker]' \
-  --data 'docker_stacks=[ts]' . "$out/b"
+  --data license=none --data 'stacks=[python,ts,docker]' \
+  --data kind=web-service --data python_dir=svc \
+  --data 'docker_stacks=[python,ts]' . "$out/b"
 
 # c: the only render with nested paths, at two depths to catch hardcoded
 # up-paths. The rust crate and go module are the binary kind. Render a has the
@@ -53,12 +55,13 @@ git tag -f check-render-tag >/dev/null
   --data project_name=tag-me --data 'stacks=[python]' . "$out/e"
 
 OUT=$out uv run --no-project --with pyyaml python - <<'PY'
-import json, os, pathlib, tomllib, yaml
+import ast, json, os, pathlib, tomllib, yaml
 
 load = {".json": json.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
 seen = 0
-for path in sorted(pathlib.Path(os.environ["OUT"]).glob("[abcd]/**/*")):
+out = pathlib.Path(os.environ["OUT"])
+for path in sorted(out.glob("[abcd]/**/*")):
     parse = load.get(path.suffix)
     if parse and path.is_file():
         parse(path.read_text())
@@ -66,6 +69,10 @@ for path in sorted(pathlib.Path(os.environ["OUT"]).glob("[abcd]/**/*")):
 print(f"parsed {seen} files")
 # Catches a copier run that rendered nothing.
 assert seen > 20, f"only {seen} structured files rendered"
+# The title literal, in whichever quote style Jinja picked, evaluates back to the name.
+app = next(out.glob("b/svc/src/*/app.py"))
+title = next(k for k in ast.walk(ast.parse(app.read_text())) if isinstance(k, ast.keyword) and k.arg == "title")
+assert ast.literal_eval(title.value) == 'Odd "Name" & Co!', ast.unparse(title.value)
 PY
 
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.
@@ -100,10 +107,16 @@ test ! -e c/CITATION.cff
 grep -q check-citation-file-format a/.pre-commit-config.yaml
 (! grep -q check-citation-file-format c/.pre-commit-config.yaml)
 # From a tag, the answers file names the canonical source. From any other
-# commit it keeps the local path, since GitHub has no such commit.
+# commit it keeps the local path, since GitHub has no such commit. HEAD may
+# itself be a release tag, so render a is held to whichever its _commit is.
 grep -qx '_src_path: gh:simonvanlierde/project-templates' e/.copier-answers.yml
 grep -qx '_commit: check-render-tag' e/.copier-answers.yml
-(! grep -q '^_src_path: gh:' a/.copier-answers.yml)
+commit=$(sed -n 's/^_commit: //p' a/.copier-answers.yml)
+if git -C "$repo" rev-parse -q --verify "refs/tags/$commit" >/dev/null; then
+  grep -qx '_src_path: gh:simonvanlierde/project-templates' a/.copier-answers.yml
+else
+  (! grep -q '^_src_path: gh:' a/.copier-answers.yml)
+fi
 # Every stack: every hook block is present.
 grep -q hadolint a/.pre-commit-config.yaml
 grep -q 'ruff check' a/.pre-commit-config.yaml
@@ -133,6 +146,8 @@ grep -q 'package-ecosystem: gomod' a/.github/dependabot.yml
 test ! -e b/LICENSE
 (! grep -q '"license"' b/package.json)
 (! grep -q 'image.licenses' b/Dockerfile)
+(! grep -q 'image.licenses' b/svc/Dockerfile)
+(! grep -q '^license' b/svc/pyproject.toml)
 # The awkward project name became a valid npm name.
 grep -q '"name": "odd-name--co"' b/package.json
 # Monorepo: packages nested, root files at the root, one Dockerfile each.
