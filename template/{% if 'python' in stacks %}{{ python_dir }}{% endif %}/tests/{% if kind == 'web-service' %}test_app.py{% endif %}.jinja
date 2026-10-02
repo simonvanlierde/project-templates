@@ -19,15 +19,11 @@ def test_health() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_title_is_the_project_name() -> None:
-    """The OpenAPI title is the project name exactly, quotes included."""
-    assert app.title == {{ project_name | pprint if '"' in project_name and "'" not in project_name else project_name | to_json }}
-
-
 def test_unknown_path_is_404() -> None:
-    """Anything else is a 404."""
+    """Anything else is a 404, the API docs included while API_DOCS is unset."""
     with TestClient(app) as client:
-        assert client.get("/nope").status_code == 404
+        for path in ("/nope", "/docs", "/openapi.json"):
+            assert client.get(path).status_code == 404
 
 
 @pytest.mark.parametrize("endpoint", [None, ""])

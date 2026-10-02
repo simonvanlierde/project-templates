@@ -17,6 +17,8 @@ each value must trace back to a download. A `data-pipeline` project gets:
 - A small module, standard library only, with three stages:
   - `fetch` writes each download atomically. Beside it, it records the URL, the
     retrieval time, the SHA-256 checksum and the vintage.
+    It refuses a download that misses the `sha256` a source may pin, or one over the
+    size cap.
   - `build` verifies the checksums before it parses. It also refuses a download that
     was made for a different request than the manifest now makes.
   - `validate` re-reads the published output and re-hashes the raw files.
@@ -44,6 +46,8 @@ stack. A `web-service` project gets:
 - An entrypoint that reads `HOST` and `PORT`. It listens on `127.0.0.1` unless `HOST`
   says otherwise. The image sets `HOST=0.0.0.0`, and `compose.yaml` publishes the port
   on `127.0.0.1` only.
+- `/docs`, `/redoc` and `/openapi.json` stay off unless `API_DOCS` is set, since they
+  list every route to anyone who asks.
 - OpenTelemetry through zero-code instrumentation. It turns on only when
   `OTEL_EXPORTER_OTLP_ENDPOINT` is set, and then sends request spans and a
   request-duration histogram over OTLP/HTTP. The SDK reads every other `OTEL_*`

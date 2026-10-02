@@ -2,9 +2,13 @@
 {%- set title = project_name | pprint if '"' in project_name and "'" not in project_name else project_name | to_json -%}
 """The FastAPI application."""
 
+import os
+
 from fastapi import FastAPI
 
-app = FastAPI(title={{ title }})
+# /docs, /redoc and /openapi.json list every route to anyone who asks, so they are off
+# unless API_DOCS is set (to anything), e.g. for local development.
+app = FastAPI(title={{ title }}, openapi_url="/openapi.json" if os.environ.get("API_DOCS") else None)
 
 
 @app.get("/health")

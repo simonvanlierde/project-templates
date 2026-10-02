@@ -56,7 +56,8 @@ in `go.mod`, so it needs no install, and Dependabot keeps it current.
 Hooks run through [prek](https://prek.j178.dev), a drop-in replacement for pre-commit. One
 `.pre-commit-config.yaml` covers every stack. Python projects install prek with
 `uv tool install prek`. TypeScript-only projects get the same binary from the
-`@j178/prek` devDependency.
+`@j178/prek` devDependency. With the docker stack, the hadolint hook runs from its
+image, so the hooks need a running Docker daemon.
 
 ## Tasks
 
