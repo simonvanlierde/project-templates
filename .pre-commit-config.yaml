@@ -50,6 +50,9 @@ repos:
     rev: 479be5958357ba5ab65ce47172117348516860e9 # frozen: v3.14.1-1
     hooks:
       - id: shfmt
+        # The repo root has no .editorconfig, so the style is pinned here; otherwise
+        # shfmt takes it from whatever .editorconfig sits above the clone.
+        args: [--write, --indent=2]
 
   # Successor to gitleaks, which now gets security fixes only.
   - repo: https://github.com/betterleaks/betterleaks
