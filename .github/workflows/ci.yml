@@ -504,7 +504,7 @@ jobs:
             --data "rust_dir=$RUST_DIR" --data "rust_kind=$RUST_KIND" . "$RUNNER_TEMP/proj"
 
       # The toolchain the generated rust.yml installs, at the same pins.
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # v1
         with:
           toolchain: stable
           components: clippy, rustfmt
