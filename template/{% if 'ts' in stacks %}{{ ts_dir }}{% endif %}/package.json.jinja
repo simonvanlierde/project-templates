@@ -26,7 +26,7 @@
 {%- if not publish_to_npm %}
   "private": true,
 {%- endif %}
-  "packageManager": "pnpm@12.6.0",
+  "packageManager": "pnpm@12.7.0",
   "engines": {
     "node": ">={{ node_version }}"
   },
@@ -51,13 +51,13 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
     "@j178/prek": "^0.5.3",
-    "@types/node": "^26.6.2",
-    "@vitest/coverage-v8": "^5.0.1",
+    "@types/node": "^26.6.3",
+    "@vitest/coverage-v8": "^5.0.2",
     "knip": "^6.38.0",
 {%- if publish_to_npm %}
     "publint": "^0.3.24",
 {%- endif %}
     "typescript": "^7.0.2",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.2"
   }
 }
