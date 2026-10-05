@@ -13,7 +13,7 @@ FROM node:{{ node_version }}-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="/pnpm/bin:$PATH"
 ENV CI=1
-RUN npm i -g pnpm@12.6.0
+RUN npm i -g pnpm@12.7.0
 
 WORKDIR /app
 
