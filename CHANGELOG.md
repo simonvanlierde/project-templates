@@ -33,6 +33,11 @@ changes are marked **Breaking**.
 - `workflow_dispatch` from the release workflows: a manual run could publish any
   branch.
 
+### Security
+
+- The Python workflow sets `UV_MALWARE_CHECK`, so uv checks every package against
+  OSV's malware advisories before its code runs. A CI run fails if OSV is unreachable.
+
 ## [0.7.1] - 2026-09-30
 
 ### Added

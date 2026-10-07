@@ -24,6 +24,13 @@ concurrency:
   group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
   cancel-in-progress: true
 
+env:
+  # uv checks every package against OSV's malware advisories before its code
+  # runs, and fails if OSV is unreachable. The preview flag only silences the
+  # "experimental" warning.
+  UV_MALWARE_CHECK: "1"
+  UV_PREVIEW_FEATURES: malware-check
+
 jobs:
   check:
     name: lint, types, {% if kind == 'data-pipeline' %}pipeline, {% endif %}tests
