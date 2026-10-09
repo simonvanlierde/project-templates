@@ -7,6 +7,7 @@ on:
     paths: ["{{ python_dir }}/**", ".github/workflows/python.yml"]
 {%- endif %}
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 {%- if python_dir != '.' %}
     paths: ["{{ python_dir }}/**", ".github/workflows/python.yml"]
 {%- endif %}
@@ -34,6 +35,7 @@ env:
 jobs:
   check:
     name: lint, types, {% if kind == 'data-pipeline' %}pipeline, {% endif %}tests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 10
 {%- if python_dir != '.' %}

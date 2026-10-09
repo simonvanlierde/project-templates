@@ -27,6 +27,8 @@ changes are marked **Breaking**.
 - VS Code formats TOML with the Tombi extension (`tombi-toml.tombi`), which reads the
   shipped `.tombi.toml`. Even Better TOML ignored it. Install the new recommendation
   after updating.
+- CI no longer runs on draft pull requests; it runs when a pull request is marked ready
+  for review. This saves Actions minutes on private repositories.
 
 ### Removed
 

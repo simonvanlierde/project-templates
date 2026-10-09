@@ -7,6 +7,7 @@ on:
     paths: ["{{ rust_dir }}/**", ".github/workflows/rust.yml"]
 {%- endif %}
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 {%- if rust_dir != '.' %}
     paths: ["{{ rust_dir }}/**", ".github/workflows/rust.yml"]
 {%- endif %}
@@ -22,6 +23,7 @@ concurrency:
 jobs:
   check:
     name: fmt, clippy, tests, deny
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 15
 {%- if rust_dir != '.' %}

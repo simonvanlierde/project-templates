@@ -35,6 +35,7 @@ on:
     tags: ["v*"]
 {%- endif %}
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -51,9 +52,10 @@ jobs:
     # Builds and runs the image with no write scopes. `permissions` takes no expression,
     # so only a separate push job keeps packages: write and id-token: write away from a
     # pull request's Dockerfile steps and the dependencies they install.
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
 {%- else %}
     # Build-only. To push, set publish_to_ghcr and re-run copier update.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
 {%- endif %}
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -7,6 +7,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -18,6 +19,7 @@ concurrency:
 
 jobs:
   hooks:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     name: git hooks
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -43,7 +45,7 @@ jobs:
     name: dependency review
     # Fails a PR that adds a dependency with a known advisory. Needs the dependency
     # graph: on by default for public repos, GitHub Advanced Security for private ones.
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
