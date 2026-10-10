@@ -44,8 +44,6 @@ Python, `pnpm` for TypeScript, `cargo` for Rust, or `go` for Go.
    copier copy gh:simonvanlierde/project-templates .
    ```
 
-   Copier downloads the template itself, so you don't need to clone this repository.
-
 3. Install dependencies and write the lockfiles. Run the line for each stack you
    picked:
 
@@ -63,15 +61,12 @@ Python, `pnpm` for TypeScript, `cargo` for Rust, or `go` for Go.
    just check
    ```
 
-5. Commit everything, lockfiles included:
+5. Commit everything. CI installs exactly what the lockfiles list, so it fails
+   without them:
 
    ```sh
    git add -A && git commit -m "chore: scaffold"
    ```
-
-Commit the lockfiles before your first push. CI installs exactly what they list
-(`uv sync --locked`, `pnpm install --frozen-lockfile`, `cargo clippy --locked`, and
-`go.sum` for Go), so it fails without them.
 
 The new project's README also shows how to turn on the git hooks.
 
@@ -166,14 +161,9 @@ registry needs to trust your repository first. To turn publishing on:
    package through trusted publishing.
 3. Run `copier update`, and answer yes to the publish option.
 
-## How it works
+## More
 
-[docs/tooling.md](docs/tooling.md) covers the tools each stack uses, the lint policies,
-the Docker images, dependency updates and the release workflows.
-[docs/ci-baseline.md](docs/ci-baseline.md) lists every CI check, and what was left out
-and why.
-
-## Contributing
-
-[CONTRIBUTING.md](CONTRIBUTING.md) explains how to test changes to the template before
-you tag a release.
+- [docs/tooling.md](docs/tooling.md): the tools, lint policies, Docker images,
+  dependency updates and release workflows.
+- [docs/ci-baseline.md](docs/ci-baseline.md): every CI check, and what was left out.
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to test a template change before you tag it.

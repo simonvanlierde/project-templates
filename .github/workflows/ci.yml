@@ -235,7 +235,6 @@ jobs:
           cache-suffix: ${{ github.job }}
           save-cache: ${{ github.event_name != 'pull_request' }}
 
-      # Also runnable locally; see the script's header.
       - name: render and check
         run: scripts/check-render.sh "$RUNNER_TEMP"
 

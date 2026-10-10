@@ -1,8 +1,7 @@
 # Python project kinds
 
-The `library`, `app` and `research` kinds are described in the
-[README](../README.md#python-project-kinds). This page covers the two kinds that
-generate more: `data-pipeline` and `web-service`.
+What the `data-pipeline` and `web-service` kinds generate. The
+[README](../README.md#python-project-kinds) covers the other kinds.
 
 ## data-pipeline
 

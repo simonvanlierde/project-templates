@@ -1,8 +1,7 @@
 # CI baseline
 
 Every repository scaffolded from this template gets the same checks. The tables below
-say what each piece is, why it's there, and what I left out on purpose. The point of
-comparison is ReLab, a larger production repository that runs more checks.
+say what each piece is, why it's there, and what I left out on purpose.
 
 ## What every scaffold gets
 
@@ -35,7 +34,7 @@ scanning covers the server side.
 | Left out | Reason | Add it when |
 | --- | --- | --- |
 | CodeQL | Minutes per run and gigabytes of memory, for little signal on a small repo that already runs ruff and ty. | The repo grows a web surface or outside contributors. Default setup is a toggle in the repository settings; it needs no YAML. |
-| OpenSSF Scorecard | Needs a public repo to publish, and mostly scores the practices in the first table. | You want the badge. Copy ReLab's `scorecard.yml`. |
+| OpenSSF Scorecard | Needs a public repo to publish, and mostly scores the practices in the first table. | You want the badge. |
 | Renovate from Actions | Needs a GitHub App and two secrets. Dependabot needs neither and covers every ecosystem here, including hook revs. | You need automerge or grouping Dependabot can't express. |
 | release-please | Research repos release rarely, and Zenodo archives a tagged release. A release PR on every push is noise. | Releases become frequent enough that writing the changelog by hand costs time. |
 | Secret scan over full history | GitHub secret scanning and push protection cover public repos at no cost. The hook covers local commits. | The repo is private without GitHub Advanced Security. |
@@ -51,8 +50,6 @@ scanning covers the server side.
 - zizmor needs a token for its online audits: impostor commits and known-vulnerable
   actions. The hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN`
   to get them; without it, only the offline audits run.
-- The hadolint hook runs from its Docker image, so with the docker stack `prek run -a`
-  needs a running Docker daemon. CI runners have one.
 - The `data-pipeline` kind fetches its sources' live URLs in CI, this template's own CI
   included. A publisher outage or a moved file fails the run, whatever the diff.
   Re-run it.
