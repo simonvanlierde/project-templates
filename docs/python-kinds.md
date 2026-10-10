@@ -16,11 +16,11 @@ each value must trace back to a download. A `data-pipeline` project gets:
   redistributes source data.
 - A small module, standard library only, with three stages:
   - `fetch` writes each download atomically. Beside it, it records the URL, the
-    retrieval time, the SHA-256 checksum and the vintage.
+    retrieval time, the SHA-256 checksum and the data release the manifest names.
     It refuses a download that misses the `sha256` a source may pin, or one over the
     size cap.
-  - `build` verifies the checksums before it parses. It also refuses a download that
-    was made for a different request than the manifest now makes.
+  - `build` verifies the checksums before it parses. It also refuses a download whose
+    URL no longer matches the manifest, so you re-fetch after changing a source.
   - `validate` re-reads the published output and re-hashes the raw files.
 - `just fetch`, `just build` and `just validate`, and `just pipeline` to run all three.
 - `ATTRIBUTION.md`, which states what the repository reuses and on what terms. The

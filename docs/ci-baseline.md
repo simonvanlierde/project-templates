@@ -1,8 +1,8 @@
 # CI baseline
 
-Every repository scaffolded from this template gets the same checks. The list below
-says what each piece is, why it is there, and what was left out on purpose. It
-compares against ReLab, a larger production repository that runs a heavier set.
+Every repository scaffolded from this template gets the same checks. The tables below
+say what each piece is, why it's there, and what I left out on purpose. The point of
+comparison is ReLab, a larger production repository that runs more checks.
 
 ## What every scaffold gets
 
@@ -48,13 +48,14 @@ scanning is the server-side check.
 
 - Dependency review needs the dependency graph. It is on by default for public repos.
   A private repo needs GitHub Advanced Security, or the job fails.
-- zizmor needs a token for its online audits: impostor commits and known-vulnerable actions. The
-  hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN` to get them;
-  without it, the offline subset runs.
+- zizmor needs a token for its online audits: impostor commits and known-vulnerable
+  actions. The hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN`
+  to get them; without it, only the offline audits run.
 - The hadolint hook runs from its Docker image, so with the docker stack `prek run -a`
   needs a running Docker daemon. CI runners have one.
 - The `data-pipeline` kind fetches its sources' live URLs in CI, this template's own CI
-  included. A publisher outage or a moved file fails the run whatever the diff; re-run it.
+  included. A publisher outage or a moved file fails the run, whatever the diff.
+  Re-run it.
 - This template's own CI renders the templates with `scripts/check-render.sh`. Then it
   runs zizmor, actionlint, and the CITATION.cff schema check over the output, because
   `.jinja` files aren't YAML.

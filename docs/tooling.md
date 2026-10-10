@@ -67,8 +67,8 @@ carry a stack prefix: `py-`, `ts-`, `rs-` or `go-`. `just check` runs the checks
 every stack you picked.
 
 Coverage is opt-in. `just py-cov` and `just ts-cov` print a summary. `just check`
-doesn't run them. They set no threshold, and they write no report files until
-something needs to upload them.
+doesn't run them. They set no threshold and write no report files, because nothing
+uploads one yet.
 
 ## Docker images
 
@@ -79,7 +79,7 @@ BuildKit cache mounts, a non-root runtime user, and Open Container Initiative la
 ## GitHub Actions
 
 Every action is pinned to a commit digest, with its version in a trailing comment.
-Every workflow declares least-privilege `permissions`.
+Every workflow grants its token only the `permissions` its jobs need.
 
 Two git hooks audit `.github/`:
 
