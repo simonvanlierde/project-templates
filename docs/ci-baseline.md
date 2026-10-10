@@ -26,9 +26,9 @@ comparison is ReLab, a larger production repository that runs more checks.
 | Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
 The hooks job skips the hooks that need the project environment (`ruff`, `ty`,
-`biome`, `tsc`), because the stack workflows already run them. It also skips betterleaks.
-The betterleaks hook scans staged changes only, and CI stages nothing. GitHub secret
-scanning is the server-side check.
+`biome`, `tsc`), because the stack workflows already run them. It also skips
+betterleaks, which scans only staged changes, and CI stages nothing. GitHub secret
+scanning covers the server side.
 
 ## What is left out, and why
 

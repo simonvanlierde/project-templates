@@ -29,6 +29,7 @@ changes are marked **Breaking**.
   after updating.
 - CI no longer runs on draft pull requests; it runs when a pull request is marked ready
   for review. This saves Actions minutes on private repositories.
+- Plainer wording in the generated `README.md`, `data/README.md` and `ATTRIBUTION.md`.
 
 ### Removed
 

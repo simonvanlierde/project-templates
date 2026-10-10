@@ -88,8 +88,8 @@ The `stacks` question is a multi-select. Pick any combination:
 | `docker` | A `Dockerfile` for the Python or TypeScript package, and a root `compose.yaml` |
 
 Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
-`just/<stack>.just`. The files every project gets, whatever it picks, are listed in
-[What you get](#what-you-get).
+`just/<stack>.just`. [What you get](#what-you-get) lists the files that every project
+gets.
 
 ### Python project kinds
 
@@ -139,8 +139,8 @@ copier update
 Copier needs a clean working tree. It updates to the latest tagged release of this
 template, and [CHANGELOG.md](CHANGELOG.md) lists what each release changes.
 
-The same command changes your earlier answers. Add a stack to `stacks`, or turn a
-publish option on, and Copier writes the new files.
+The same command also lets you change your answers. If you add a stack to `stacks` or
+turn on a publish option, Copier writes the new files.
 
 To move a package to another directory, run `copier update` with the new directory.
 Then delete the old directory by hand. Copier removes files that left the template,
@@ -148,7 +148,8 @@ but not files that moved because an answer changed.
 
 ## Publishing
 
-Publishing is off by default, and each off state blocks an accidental release:
+Publishing is off by default. While an option is off, something blocks an accidental
+release:
 
 | Option            | While off                                                   | When on                                                  |
 | ----------------- | ----------------------------------------------------------- | -------------------------------------------------------- |

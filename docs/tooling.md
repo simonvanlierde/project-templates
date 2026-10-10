@@ -48,7 +48,7 @@ the `standard` linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `miss
 format the code.
 
 Install golangci-lint once per machine. The generated README has the install command.
-The template sets its version, so `copier update` moves it. `govulncheck` is a `tool`
+The template pins the golangci-lint version, so `copier update` bumps it. `govulncheck` is a `tool`
 in `go.mod`, so it needs no install, and Dependabot keeps it current.
 
 ## Git hooks
@@ -95,8 +95,8 @@ and why.
 
 Generated projects use Dependabot. It needs no app to install, and it covers every
 ecosystem this template generates. Version updates wait through a `cooldown` of one
-week, or one month for major versions. A compromised release is usually yanked within
-that time. Security updates skip the wait.
+week, or one month for major versions. Maintainers usually yank a compromised release
+within that time. Security updates skip the wait.
 
 Neither Dependabot nor Renovate tracks the `FROM` base images in the Dockerfiles.
 Those tags are Copier answers, so update them by hand.

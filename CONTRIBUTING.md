@@ -41,8 +41,8 @@ A render from a local checkout writes `_src_path` and `_commit` into the project
   machine.
 - **Any other commit.** `_src_path` stays the local path, because that commit may not
   exist on GitHub. `_commit` is the checkout's commit. `copier update` can't check out
-  a commit that exists only on your machine, such as an unpushed tag or a deleted
-  branch, or only in a fork.
+  a commit that exists only on your machine (an unpushed tag, a deleted branch) or
+  only in a fork.
 
 Before you commit the answers file of a real project, render from a tag that is pushed
 to this repository. Otherwise, edit `_src_path` and `_commit` by hand.

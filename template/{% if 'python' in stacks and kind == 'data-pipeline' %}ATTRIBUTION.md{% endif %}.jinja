@@ -21,10 +21,10 @@ repository and commit, and state the license. Delete the section if nothing is r
 
 ## Source data
 
-Source data is not redistributed. `{{ d }}data/raw/` and `{{ d }}data/processed/` are
-gitignored, and `just pipeline` downloads from each publisher on every run. The CI
-artifact holds only the `*.fetch.json` records (URL, timestamp, checksum, byte
-count, vintage), not values.
+This repository doesn't redistribute source data. `{{ d }}data/raw/` and
+`{{ d }}data/processed/` are gitignored, and `just pipeline` downloads from each
+publisher on every run. The CI artifact holds only the `*.fetch.json` records (URL,
+timestamp, checksum, byte count, vintage), not values.
 
 Each source's terms are in [`{{ d }}sources.toml`]({{ d }}sources.toml) (`terms` and
 `terms_url`), and `just validate` fails when an implemented source has none. Keep
