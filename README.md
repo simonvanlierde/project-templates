@@ -44,8 +44,6 @@ Python, `pnpm` for TypeScript, `cargo` for Rust, or `go` for Go.
    copier copy gh:simonvanlierde/project-templates .
    ```
 
-   Copier downloads the template itself, so you don't need to clone this repository.
-
 3. Install dependencies and write the lockfiles. Run the line for each stack you
    picked:
 
@@ -63,15 +61,12 @@ Python, `pnpm` for TypeScript, `cargo` for Rust, or `go` for Go.
    just check
    ```
 
-5. Commit everything, lockfiles included:
+5. Commit everything. CI installs exactly what the lockfiles list, so it fails
+   without them:
 
    ```sh
    git add -A && git commit -m "chore: scaffold"
    ```
-
-Commit the lockfiles before your first push. CI installs exactly what they list
-(`uv sync --locked`, `pnpm install --frozen-lockfile`, `cargo clippy --locked`, and
-`go.sum` for Go), so it fails without them.
 
 The new project's README also shows how to turn on the git hooks.
 
@@ -88,8 +83,8 @@ The `stacks` question is a multi-select. Pick any combination:
 | `docker` | A `Dockerfile` for the Python or TypeScript package, and a root `compose.yaml` |
 
 Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
-`just/<stack>.just`. The files every project gets, whatever it picks, are listed in
-[What you get](#what-you-get).
+`just/<stack>.just`. [What you get](#what-you-get) lists the files that every project
+gets.
 
 ### Python project kinds
 
@@ -139,8 +134,8 @@ copier update
 Copier needs a clean working tree. It updates to the latest tagged release of this
 template, and [CHANGELOG.md](CHANGELOG.md) lists what each release changes.
 
-The same command changes your earlier answers. Add a stack to `stacks`, or turn a
-publish option on, and Copier writes the new files.
+The same command also lets you change your answers. If you add a stack to `stacks` or
+turn on a publish option, Copier writes the new files.
 
 To move a package to another directory, run `copier update` with the new directory.
 Then delete the old directory by hand. Copier removes files that left the template,
@@ -148,7 +143,8 @@ but not files that moved because an answer changed.
 
 ## Publishing
 
-Publishing is off by default, and each off state blocks an accidental release:
+Publishing is off by default. While an option is off, something blocks an accidental
+release:
 
 | Option            | While off                                                   | When on                                                  |
 | ----------------- | ----------------------------------------------------------- | -------------------------------------------------------- |
@@ -165,14 +161,9 @@ registry needs to trust your repository first. To turn publishing on:
    package through trusted publishing.
 3. Run `copier update`, and answer yes to the publish option.
 
-## How it works
+## More
 
-[docs/tooling.md](docs/tooling.md) covers the tools each stack uses, the lint policies,
-the Docker images, dependency updates and the release workflows.
-[docs/ci-baseline.md](docs/ci-baseline.md) lists every CI check, and what was left out
-and why.
-
-## Contributing
-
-[CONTRIBUTING.md](CONTRIBUTING.md) explains how to test changes to the template before
-you tag a release.
+- [docs/tooling.md](docs/tooling.md): the tools, lint policies, Docker images,
+  dependency updates and release workflows.
+- [docs/ci-baseline.md](docs/ci-baseline.md): every CI check, and what was left out.
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to test a template change before you tag it.

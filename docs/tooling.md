@@ -1,21 +1,7 @@
 # Tooling
 
-What each stack generates, which tools it uses, and why the defaults are what they are.
-
-## Files per stack
-
-| Stack    | What it writes                                                                                                                                       |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| always   | `README.md`, a Keep a Changelog `CHANGELOG.md`, `LICENSE`, `.gitignore`, `.editorconfig`, `.github/` with Dependabot and `SECURITY.md`, `.pre-commit-config.yaml`, `.vscode/` recommendations, and a `justfile` |
-| `python` | A Python package in `<python_dir>`: `pyproject.toml`, `.python-version`, `src/`, `tests/`, plus extra files for the `research`, `data-pipeline` and `web-service` kinds ([python-kinds.md](python-kinds.md)) |
-| `ts`     | A TypeScript package in `<ts_dir>`: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `biome.json`, `pnpm-workspace.yaml`, `src/index.ts`, `src/index.test.ts` |
-| `rust`   | A Rust crate in `<rust_dir>`: `Cargo.toml` with a strict lint policy, `clippy.toml`, `deny.toml`, and `src/lib.rs` or `src/main.rs`, depending on `rust_kind` |
-| `go`     | A Go module in `<go_dir>`: `go.mod`, `.golangci.yml`, and, depending on `go_kind`, a library package with a table test and an Example, or a `main.go` with its test |
-| `docker` | For each containerized stack: a `Dockerfile`, a `.dockerignore`, and a runnable `/health` entrypoint. Plus `compose.yaml` at the repository root |
-
-Each stack also gets a CI workflow in `.github/workflows/` and a `just/<stack>.just`
-recipe file. It gets a release workflow too, if its publish option is on. A Python
-package in a subdirectory gets its own `README.md`.
+Which tools each stack uses, and why the defaults are what they are. The
+[README](../README.md#what-you-get) lists the files each stack writes.
 
 ## Tools per stack
 
@@ -48,7 +34,7 @@ the `standard` linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `miss
 format the code.
 
 Install golangci-lint once per machine. The generated README has the install command.
-The template sets its version, so `copier update` moves it. `govulncheck` is a `tool`
+The template pins the golangci-lint version, so `copier update` bumps it. `govulncheck` is a `tool`
 in `go.mod`, so it needs no install, and Dependabot keeps it current.
 
 ## Git hooks
@@ -67,8 +53,8 @@ carry a stack prefix: `py-`, `ts-`, `rs-` or `go-`. `just check` runs the checks
 every stack you picked.
 
 Coverage is opt-in. `just py-cov` and `just ts-cov` print a summary. `just check`
-doesn't run them. They set no threshold, and they write no report files until
-something needs to upload them.
+doesn't run them. They set no threshold and write no report files, because nothing
+uploads one yet.
 
 ## Docker images
 
@@ -78,42 +64,21 @@ BuildKit cache mounts, a non-root runtime user, and Open Container Initiative la
 
 ## GitHub Actions
 
-Every action is pinned to a commit digest, with its version in a trailing comment.
-Every workflow declares least-privilege `permissions`.
+[ci-baseline.md](ci-baseline.md) lists every workflow check, and what was left out.
 
-Two git hooks audit `.github/`:
+## Dependencies
 
-- [zizmor](https://docs.zizmor.sh) checks for template injection, credential leaks,
-  cache poisoning and impostor commits.
-- actionlint checks keys, expressions and shell scripts.
+Generated projects use Dependabot, which needs no app and covers every ecosystem
+here. Version updates wait a week, or a month for majors. Security updates skip the
+wait. uv's `exclude-newer = "1 week"` and pnpm's `minimumReleaseAge` hold back the
+same releases, so `uv lock` or `pnpm install` can't pull in one that Dependabot is
+still waiting on. Go has no such setting.
 
-A `checks.yml` workflow runs the hooks in CI, so workflows you add later meet the same
-standard. [ci-baseline.md](ci-baseline.md) lists every check, and what was left out
-and why.
+Nothing tracks the `FROM` base images in the Dockerfiles. Those tags are Copier
+answers, so update them by hand. This template repository uses Renovate instead,
+because Dependabot can't parse `.jinja` files.
 
-## Dependency updates
-
-Generated projects use Dependabot. It needs no app to install, and it covers every
-ecosystem this template generates. Version updates wait through a `cooldown` of one
-week, or one month for major versions. A compromised release is usually yanked within
-that time. Security updates skip the wait.
-
-Neither Dependabot nor Renovate tracks the `FROM` base images in the Dockerfiles.
-Those tags are Copier answers, so update them by hand.
-
-This template repository uses Renovate instead of Dependabot, because its version pins
-sit inside `.jinja` files that Dependabot can't parse.
-
-## Dependency age and audits
-
-The package managers wait a week too. uv's `exclude-newer = "1 week"` in
-`pyproject.toml` and pnpm's `minimumReleaseAge` in `pnpm-workspace.yaml` skip any
-release younger than a week. So `uv lock` or `pnpm install` can't pull in a release
-that Dependabot would still hold back. Both settings live in the project, so every
-machine writes the same lockfile. Go has no such setting. For a Go module,
-Dependabot's cooldown is the only wait.
-
-`just check` and CI also audit dependencies for known advisories:
+`just check` and CI audit dependencies for known advisories:
 
 - `uv audit` checks every locked Python dependency.
 - `pnpm audit --prod` checks the TypeScript dependencies that ship.
@@ -121,11 +86,6 @@ Dependabot's cooldown is the only wait.
 - `govulncheck` reports Go advisories whose code the module actually reaches.
 
 Knip reports unused files, exports and dependencies in the TypeScript package.
-
-## Licenses
-
-The license options are `MIT`, `Apache-2.0`, `BSD-3-Clause` or none. The texts come
-from the GitHub licenses API, with the copyright placeholders filled in.
 
 ## Release workflows
 

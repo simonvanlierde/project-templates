@@ -32,9 +32,9 @@ just up          # run each service in its container, rebuilt on source changes{
 
 [`{{ d }}sources.toml`]({{ d }}sources.toml) declares every input: its URL, its reuse
 terms, and whether the pipeline reads it yet (`status`). `just fetch` downloads each
-implemented source to `{{ d }}data/raw/` with a fetch record, `just build` writes
-`{{ d }}data/processed/`, and `just validate` checks the published output against those
-records. Neither directory is committed. [ATTRIBUTION.md](ATTRIBUTION.md) lists what
+implemented source to `{{ d }}data/raw/` with a fetch record. `just build` writes
+`{{ d }}data/processed/`. `just validate` checks the published output against the fetch
+records. Neither directory goes into git. [ATTRIBUTION.md](ATTRIBUTION.md) lists what
 this repository reuses, and on what terms.
 {% endif %}
 ## License

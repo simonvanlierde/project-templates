@@ -1,8 +1,7 @@
 # CI baseline
 
-Every repository scaffolded from this template gets the same checks. The list below
-says what each piece is, why it is there, and what was left out on purpose. It
-compares against ReLab, a larger production repository that runs a heavier set.
+Every repository scaffolded from this template gets the same checks. The tables below
+say what each piece is, why it's there, and what I left out on purpose.
 
 ## What every scaffold gets
 
@@ -26,16 +25,16 @@ compares against ReLab, a larger production repository that runs a heavier set.
 | Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
 The hooks job skips the hooks that need the project environment (`ruff`, `ty`,
-`biome`, `tsc`), because the stack workflows already run them. It also skips betterleaks.
-The betterleaks hook scans staged changes only, and CI stages nothing. GitHub secret
-scanning is the server-side check.
+`biome`, `tsc`), because the stack workflows already run them. It also skips
+betterleaks, which scans only staged changes, and CI stages nothing. GitHub secret
+scanning covers the server side.
 
 ## What is left out, and why
 
 | Left out | Reason | Add it when |
 | --- | --- | --- |
 | CodeQL | Minutes per run and gigabytes of memory, for little signal on a small repo that already runs ruff and ty. | The repo grows a web surface or outside contributors. Default setup is a toggle in the repository settings; it needs no YAML. |
-| OpenSSF Scorecard | Needs a public repo to publish, and mostly scores the practices in the first table. | You want the badge. Copy ReLab's `scorecard.yml`. |
+| OpenSSF Scorecard | Needs a public repo to publish, and mostly scores the practices in the first table. | You want the badge. |
 | Renovate from Actions | Needs a GitHub App and two secrets. Dependabot needs neither and covers every ecosystem here, including hook revs. | You need automerge or grouping Dependabot can't express. |
 | release-please | Research repos release rarely, and Zenodo archives a tagged release. A release PR on every push is noise. | Releases become frequent enough that writing the changelog by hand costs time. |
 | Secret scan over full history | GitHub secret scanning and push protection cover public repos at no cost. The hook covers local commits. | The repo is private without GitHub Advanced Security. |
@@ -48,13 +47,12 @@ scanning is the server-side check.
 
 - Dependency review needs the dependency graph. It is on by default for public repos.
   A private repo needs GitHub Advanced Security, or the job fails.
-- zizmor needs a token for its online audits: impostor commits and known-vulnerable actions. The
-  hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN` to get them;
-  without it, the offline subset runs.
-- The hadolint hook runs from its Docker image, so with the docker stack `prek run -a`
-  needs a running Docker daemon. CI runners have one.
+- zizmor needs a token for its online audits: impostor commits and known-vulnerable
+  actions. The hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN`
+  to get them; without it, only the offline audits run.
 - The `data-pipeline` kind fetches its sources' live URLs in CI, this template's own CI
-  included. A publisher outage or a moved file fails the run whatever the diff; re-run it.
+  included. A publisher outage or a moved file fails the run, whatever the diff.
+  Re-run it.
 - This template's own CI renders the templates with `scripts/check-render.sh`. Then it
   runs zizmor, actionlint, and the CITATION.cff schema check over the output, because
   `.jinja` files aren't YAML.
