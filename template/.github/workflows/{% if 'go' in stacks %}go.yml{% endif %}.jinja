@@ -8,6 +8,7 @@ on:
     paths: ["{{ go_dir }}/**", ".github/workflows/go.yml"]
 {%- endif %}
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 {%- if go_dir != '.' %}
     paths: ["{{ go_dir }}/**", ".github/workflows/go.yml"]
 {%- endif %}
@@ -23,6 +24,7 @@ concurrency:
 jobs:
   check:
     name: golangci-lint, tests, govulncheck
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 15
 {%- if go_dir != '.' %}

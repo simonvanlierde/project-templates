@@ -7,6 +7,7 @@ on:
     paths: ["{{ rust_dir }}/**", ".github/workflows/rust.yml"]
 {%- endif %}
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 {%- if rust_dir != '.' %}
     paths: ["{{ rust_dir }}/**", ".github/workflows/rust.yml"]
 {%- endif %}
@@ -22,6 +23,7 @@ concurrency:
 jobs:
   check:
     name: fmt, clippy, tests, deny
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 15
 {%- if rust_dir != '.' %}
@@ -35,7 +37,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # v1
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # v1
         with:
           toolchain: stable
           components: clippy, rustfmt
