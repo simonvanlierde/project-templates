@@ -25,6 +25,12 @@ scripts/check-render.sh "$(mktemp -d)"
 after each change you want projects to receive, and add an entry to
 [CHANGELOG.md](CHANGELOG.md). Its introduction says which part of the version to bump.
 
+## Write pull requests for any reader
+
+This repository is public. A pull request body is one line on its purpose and a few
+bullets on what changed. Leave out steps for the maintainer, such as tagging after the
+merge, and long check logs.
+
 ## How the answers file records the source
 
 A render from a local checkout writes `_src_path` and `_commit` into the project's
