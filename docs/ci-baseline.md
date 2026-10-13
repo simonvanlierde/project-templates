@@ -48,14 +48,14 @@ scanning covers the server side.
 ## Caveats
 
 - Dependency review needs the dependency graph. It is on by default for public repos.
-  A private repo needs GitHub Advanced Security, so the job skips private repos. Their
-  stack workflows' dependency audits still run.
+  A private repo needs GitHub Advanced Security for it, so the job skips private repos.
+  The dependency audits in their stack workflows still run.
 - zizmor needs a token for its online audits: impostor commits and known-vulnerable
   actions. The hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN`
-  to get them; without it, only the offline audits run.
-- The `data-pipeline` kind fetches its sources' live URLs in CI, this template's own CI
-  included. A publisher outage or a moved file fails the run, whatever the diff.
-  Re-run it.
+  to get them. Without it, only the offline audits run.
+- A `data-pipeline` project fetches its sources from their live URLs in CI, and so
+  does this template's own CI. A publisher outage or a moved file then fails the run,
+  whatever the diff. Re-run it.
 - This template's own CI renders the templates with `scripts/check-render.sh`. Then it
   runs zizmor, actionlint, and the CITATION.cff schema check over the output, because
   `.jinja` files aren't YAML.
