@@ -2,7 +2,7 @@
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
 {% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}[![{{ s }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml)
-{% endfor %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license }}-blue.svg)](LICENSE)
+{% endfor %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license | replace('-', '--') }}-blue.svg)](LICENSE)
 {% endif %}{% if project_description %}
 {{ project_description }}
 {% endif %}

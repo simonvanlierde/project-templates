@@ -10,6 +10,11 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Fixed
+
+- The README's licence badge shows a hyphenated licence such as BSD-3-Clause.
+  shields.io read each hyphen as a field separator, so the badge broke.
+
 ## [0.9.0] - 2026-10-13
 
 ### Added
