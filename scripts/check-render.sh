@@ -32,13 +32,13 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # c: the only render with nested paths, at two depths to catch hardcoded
 # up-paths. The rust crate and go module are the binary kind. Render a has the
 # libraries. All publish flags on, so the release workflows could collide and
-# docker.yml renders its push job.
+# docker.yml renders its push job. The only render with Codecov.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mono-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data python_dir=api --data ts_dir=apps/web \
   --data rust_dir=crates/cli --data rust_kind=binary \
   --data go_dir=services/tool --data go_kind=binary \
-  --data publish_to_pypi=true --data publish_to_npm=true \
+  --data publish_to_pypi=true --data publish_to_npm=true --data codecov=true \
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
@@ -133,6 +133,18 @@ min=$(sed -n 's/^python_min: *//p' c/.copier-answers.yml | tr -d "\"'")
 grep -qx "requires-python = \">=$min\"" c/api/pyproject.toml
 grep -q "python: \[\"$min\"" c/.github/workflows/python.yml
 (! grep -q 'matrix' a/.github/workflows/python.yml)
+# Codecov (c only): one upload per stack, from the nested paths, with a flag each,
+# and the Python one from a single matrix job.
+test -f c/codecov.yml
+test ! -e a/codecov.yml
+grep -q -- 'uv run pytest --cov --cov-report=xml' c/.github/workflows/python.yml
+grep -qx '          files: api/coverage.xml' c/.github/workflows/python.yml
+grep -qx "        if: matrix.python == '$(sed -n 's/^python_version: *//p' c/.copier-answers.yml | tr -d "\"'")'" c/.github/workflows/python.yml
+grep -qx '          flags: python' c/.github/workflows/python.yml
+grep -qx '          files: apps/web/coverage/lcov.info' c/.github/workflows/ts.yml
+grep -qx '          flags: ts' c/.github/workflows/ts.yml
+(! grep -q codecov a/.github/workflows/python.yml a/.github/workflows/ts.yml)
+grep -qx '      - run: pnpm run test' a/.github/workflows/ts.yml
 # From a tag, the answers file names the canonical source. From any other
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
 # itself be a release tag, so render a is held to whichever its _commit is.

@@ -22,6 +22,7 @@ say what each piece is, why it's there, and what I left out on purpose.
 | `SECURITY.md` | `.github/` | Tells a reporter where to send a vulnerability privately. |
 | `CITATION.cff`, `.zenodo.json`, `codemeta.json` | `library`, `research` and `data-pipeline` kinds | GitHub's "Cite this repository" button reads `CITATION.cff`, Zenodo reads `.zenodo.json` when it archives a release, and software indexes read `codemeta.json` (CodeMeta 4.0). A hook checks `CITATION.cff` against its schema. |
 | Tests on every supported Python | `python.yml`, `library` kind | A library declares `requires-python >= python_min` and CI tests each minor from there to `python_version`. The default floor is two minors below, after [SPEC 0](https://scientific-python.org/specs/spec-0000/). |
+| Coverage upload, gated only on a drop of over 2 points | `python.yml`, `ts.yml`, `codecov.yml`, with the `codecov` option | Coverage shows per pull request without blocking one over a few untested lines. Codecov comments only when the check fails. |
 | Provenance on publish | release workflows | PyPI and npm trusted publishing attach attestations. Container images pushed to GHCR carry an SBOM and a provenance attestation. |
 | Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 

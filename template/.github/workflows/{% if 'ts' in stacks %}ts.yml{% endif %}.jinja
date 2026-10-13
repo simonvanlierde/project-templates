@@ -57,7 +57,20 @@ jobs:
 
       - run: pnpm run check
       - run: pnpm run typecheck
+{%- if codecov %}
+      - run: pnpm run coverage --coverage.reporter=lcov
+
+      # Dependabot pull requests get no secrets, so their upload fails without failing CI.
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: {% raw %}${{ secrets.CODECOV_TOKEN }}{% endraw %}
+          files: {% if ts_dir != '.' %}{{ ts_dir }}/{% endif %}coverage/lcov.info
+{%- if 'python' in stacks %}
+          flags: ts
+{%- endif %}
+{%- else %}
       - run: pnpm run test
+{%- endif %}
       - run: pnpm run build
       # Known advisories, moderate and up, in what ships: dependencies, not dev tooling.
       - run: pnpm audit --prod --audit-level=moderate

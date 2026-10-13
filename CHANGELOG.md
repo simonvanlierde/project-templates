@@ -10,6 +10,13 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- A `codecov` option for the Python and TS stacks: CI uploads test coverage to Codecov,
+  and a `codecov.yml` fails a pull request only when total coverage drops by more than
+  2 points. Codecov comments only then. It needs a `CODECOV_TOKEN` repository secret
+  (see the README).
+
 ## [0.8.1] - 2026-10-13
 
 ### Fixed
