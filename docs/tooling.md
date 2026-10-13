@@ -1,7 +1,7 @@
 # Tooling
 
 Which tools each stack uses, and why the defaults are what they are. The
-[README](../README.md#what-you-get) lists the files each stack writes.
+[README](../README.md#choosing-your-stacks) lists the files each stack writes.
 
 ## Tools per stack
 
@@ -53,8 +53,8 @@ carry a stack prefix: `py-`, `ts-`, `rs-` or `go-`. `just check` runs the checks
 every stack you picked.
 
 Coverage is opt-in. `just py-cov` and `just ts-cov` print a summary. `just check`
-doesn't run them. They set no threshold and write no report files, because nothing
-uploads one yet.
+doesn't run them. They set no threshold and write no report files. With the `codecov`
+option, CI writes its own report and uploads it to Codecov.
 
 ## Docker images
 
@@ -69,10 +69,10 @@ BuildKit cache mounts, a non-root runtime user, and Open Container Initiative la
 ## Dependencies
 
 Generated projects use Dependabot, which needs no app and covers every ecosystem
-here. Version updates wait a week, or a month for majors. Security updates skip the
-wait. uv's `exclude-newer = "1 week"` and pnpm's `minimumReleaseAge` hold back the
-same releases, so `uv lock` or `pnpm install` can't pull in one that Dependabot is
-still waiting on. Go has no such setting.
+here. Version updates wait a week, or a month for a major version of a package
+dependency. Security updates skip the wait. uv's `exclude-newer = "1 week"` and
+pnpm's `minimumReleaseAge` hold back the same releases, so `uv lock` or
+`pnpm install` can't pull in one that Dependabot is still waiting on. Go has no such setting.
 
 Nothing tracks the `FROM` base images in the Dockerfiles. Those tags are Copier
 answers, so update them by hand. This template repository uses Renovate instead,
