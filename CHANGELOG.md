@@ -14,6 +14,8 @@ changes are marked **Breaking**.
 
 - The README's licence badge now shows a hyphenated licence such as BSD-3-Clause.
   Before, shields.io read each hyphen as a field separator, so the badge broke.
+- The Apache-2.0 and BSD-3-Clause LICENSE files now end in one newline, not two, so the
+  end-of-file-fixer hook no longer rewrites LICENSE on its first run in a new project.
 
 ## [0.9.0] - 2026-10-13
 
