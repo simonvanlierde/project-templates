@@ -1,0 +1,30 @@
+{%- set name = author_name.split(' ', 1) -%}
+{
+  "@context": "https://w3id.org/codemeta/4.0",
+  "@type": "SoftwareSourceCode",
+  "name": {{ project_name | to_json }},
+{%- if project_description %}
+  "description": {{ project_description | to_json }},
+{%- endif %}
+  "author": [
+    {
+      "@type": "Person",
+{%- if author_orcid %}
+      "@id": "https://orcid.org/{{ author_orcid }}",
+{%- endif %}
+{%- if name | length > 1 %}
+      "givenName": {{ name[0] | to_json }},
+      "familyName": {{ name[1] | to_json }},
+{%- else %}
+      "familyName": {{ name[0] | to_json }},
+{%- endif %}
+      "email": {{ author_email | to_json }}
+    }
+  ],
+  "codeRepository": "https://github.com/{{ github_user }}/{{ slug }}",
+  "issueTracker": "https://github.com/{{ github_user }}/{{ slug }}/issues",
+{%- if license != 'none' %}
+  "license": "https://spdx.org/licenses/{{ license }}",
+{%- endif %}
+  "programmingLanguage": "Python"
+}

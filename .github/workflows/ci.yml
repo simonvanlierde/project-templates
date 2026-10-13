@@ -19,6 +19,8 @@ permissions:
 
 # Renovate bumps these via githubActionsVersions.
 env:
+  # The identity answers copier.yml leaves blank, for every render below.
+  COPIER_SETTINGS_PATH: ${{ github.workspace }}/.github/ci-copier-settings.yml
   # renovate: datasource=pypi depName=copier
   COPIER_VERSION: 9.18.2
   # renovate: datasource=pypi depName=zizmor
@@ -184,6 +186,16 @@ jobs:
         working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
         run: just py-sync check
 
+      # The library's python.yml tests every version from python_min up. Run the
+      # tests on each, so a floor the code can't meet fails here.
+      - if: matrix.kind == 'library'
+        name: tests on every supported python
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
+        run: |
+          set -euo pipefail
+          versions=$(yq -o=tsv '.jobs.check.strategy.matrix.python' "$RUNNER_TEMP/proj/.github/workflows/python.yml")
+          for v in $versions; do UV_PYTHON=$v just py-sync py-test; done
+
       # Runs the pipeline against the example source's live URL, then the tests that
       # read its output.
       - if: matrix.kind == 'data-pipeline'
@@ -265,7 +277,7 @@ jobs:
       - name: CITATION.cff schema
         run: |
           uvx --from "check-jsonschema==$CHECK_JSONSCHEMA_VERSION" check-jsonschema \
-            --builtin-schema vendor.citation-file-format "$RUNNER_TEMP"/a/CITATION.cff "$RUNNER_TEMP"/d/CITATION.cff
+            --builtin-schema vendor.citation-file-format "$RUNNER_TEMP"/[acd]/CITATION.cff
 
   update:
     # Scaffolds from the last tag, then runs `copier update` to the pushed commit, as a

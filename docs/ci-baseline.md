@@ -20,7 +20,8 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Dependency review | `checks.yml`, PRs only | Fails a PR that adds a dependency with a known advisory. |
 | Dependabot with a one-week cooldown | `.github/dependabot.yml` | Updates wait until a compromised release has usually been yanked. Security updates skip the wait. |
 | `SECURITY.md` | `.github/` | Tells a reporter where to send a vulnerability privately. |
-| `CITATION.cff` | `research` and `data-pipeline` kinds | GitHub's "Cite this repository" button and Zenodo read it. A hook checks it against the schema. |
+| `CITATION.cff`, `.zenodo.json`, `codemeta.json` | `library`, `research` and `data-pipeline` kinds | GitHub's "Cite this repository" button reads `CITATION.cff`, Zenodo reads `.zenodo.json` when it archives a release, and software indexes read `codemeta.json` (CodeMeta 4.0). A hook checks `CITATION.cff` against its schema. |
+| Tests on every supported Python | `python.yml`, `library` kind | A library declares `requires-python >= python_min` and CI tests each minor from there to `python_version`. The default floor is two minors below, after [SPEC 0](https://scientific-python.org/specs/spec-0000/). |
 | Provenance on publish | release workflows | PyPI and npm trusted publishing attach attestations. Container images pushed to GHCR carry an SBOM and a provenance attestation. |
 | Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 

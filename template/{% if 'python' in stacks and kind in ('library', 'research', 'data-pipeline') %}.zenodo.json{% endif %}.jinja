@@ -1,0 +1,20 @@
+{%- set name = author_name.split(' ', 1) -%}
+{
+  "upload_type": "software",
+  "title": {{ project_name | to_json }},
+  "description": {{ (project_description or project_name) | to_json }},
+  "creators": [
+    {
+      "name": {{ (name[1] ~ ', ' ~ name[0] if name | length > 1 else name[0]) | to_json }}
+{%- if author_orcid %},
+      "orcid": "{{ author_orcid }}"
+{%- endif %}
+    }
+  ],
+{%- if license == 'none' %}
+  "access_right": "closed"
+{%- else %}
+  "access_right": "open",
+  "license": "{{ license | lower }}"
+{%- endif %}
+}

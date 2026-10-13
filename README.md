@@ -70,6 +70,23 @@ Python, `pnpm` for TypeScript, `cargo` for Rust, or `go` for Go.
 
 The new project's README also shows how to turn on the git hooks.
 
+### Your details
+
+Copier asks for your GitHub user, name and email, and for some Python kinds your ORCID
+iD. They have no defaults, so nobody publishes the template author's details by
+accident. To skip the questions, save your answers once in Copier's
+[settings file](https://copier.readthedocs.io/en/stable/settings/):
+`~/.config/copier/settings.yml` on Linux, `~/Library/Application Support/copier/settings.yml`
+on macOS, or wherever `COPIER_SETTINGS_PATH` points.
+
+```yaml
+defaults:
+  github_user: your-github-name
+  author_name: Your Name
+  author_email: you@example.com
+  author_orcid: "0000-0000-0000-0000"
+```
+
 ## Choosing your stacks
 
 The `stacks` question is a multi-select. Pick any combination:
@@ -92,11 +109,15 @@ A Python project also asks for a `kind`:
 
 | `kind`          | Pick it when                                                      | It adds                                          |
 | --------------- | ----------------------------------------------------------------- | ------------------------------------------------ |
-| `library`       | Other projects install and import your package                    | Project URLs, and the option to publish to PyPI  |
+| `library`       | Other projects install and import your package                    | Project URLs, citation files, tests on every supported Python, and the option to publish to PyPI |
 | `app`           | You run the code yourself, and nothing imports it                 | Nothing beyond the package                       |
-| `research`      | You analyse data in notebooks and manage the data files by hand   | `notebooks/`, `data/`, JupyterLab, `CITATION.cff` |
-| `data-pipeline` | You rebuild a dataset from public sources, traceable to each download | A source manifest and fetch, build and validate steps |
+| `research`      | You analyse data in notebooks and manage the data files by hand   | `notebooks/`, `data/`, JupyterLab, citation files |
+| `data-pipeline` | You rebuild a dataset from public sources, traceable to each download | A source manifest, fetch, build and validate steps, citation files |
 | `web-service`   | You run an HTTP service in a container (needs the `docker` stack)  | A FastAPI app with a `/health` endpoint          |
+
+The citation files are `CITATION.cff`, `.zenodo.json` and `codemeta.json`, rendered from
+the same answers. A library also asks for `python_min`, the oldest Python it supports:
+`requires-python` starts there and CI tests every version up to `python_version`.
 
 [docs/python-kinds.md](docs/python-kinds.md) describes what the `data-pipeline` and
 `web-service` kinds generate.
