@@ -3,6 +3,7 @@
 [![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-black.json)](https://github.com/copier-org/copier)
 [![CI](https://github.com/simonvanlierde/project-templates/actions/workflows/ci.yml/badge.svg)](https://github.com/simonvanlierde/project-templates/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![release](https://img.shields.io/github/v/release/simonvanlierde/project-templates)](https://github.com/simonvanlierde/project-templates/releases/latest)
 
 Start a new project with linting, tests, CI and releases already set up.
 
