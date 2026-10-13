@@ -1,12 +1,22 @@
 # Python project kinds
 
-What the `data-pipeline` and `web-service` kinds generate. The
-[README](../README.md#python-project-kinds) covers the other kinds.
+A Python project also asks for a `kind`:
+
+| `kind`          | Pick it when                                                      | It adds                                          |
+| --------------- | ----------------------------------------------------------------- | ------------------------------------------------ |
+| `library`       | Other projects install and import your package                    | Project URLs, citation files, tests on every supported Python, and the option to publish to PyPI |
+| `app`           | You run the code yourself, and nothing imports it                 | Nothing beyond the package                       |
+| `research`      | You analyse data in notebooks and manage the data files by hand   | `notebooks/`, `data/`, JupyterLab, citation files |
+| `data-pipeline` | You rebuild a dataset from public sources, traceable to each download | A source manifest, fetch, build and validate steps, citation files |
+| `web-service`   | You run an HTTP service in a container (needs the `docker` stack)  | A FastAPI app with a `/health` endpoint          |
+
+The citation files are `CITATION.cff`, `.zenodo.json` and `codemeta.json`, rendered from
+the same answers. A library also asks for `python_min`, the oldest Python it supports:
+`requires-python` starts there and CI tests every version up to `python_version`.
 
 ## data-pipeline
 
-Pick this kind when the repository rebuilds a dataset from third-party sources, and
-each value must trace back to a download. A `data-pipeline` project gets:
+A `data-pipeline` project gets:
 
 - `sources.toml`, a manifest of every input. Each source has a URL, the publisher's
   reuse terms (`terms`, `terms_url`), and a `status`. A source marked
@@ -37,8 +47,7 @@ and replace the tests that read its output.
 
 ## web-service
 
-Pick this kind for an HTTP service that runs as a container. It needs the `docker`
-stack. A `web-service` project gets:
+A `web-service` project gets:
 
 - A FastAPI app with one route: `GET /health`. It returns a fixed `{"status": "ok"}`,
   which the image's `HEALTHCHECK` probes.
