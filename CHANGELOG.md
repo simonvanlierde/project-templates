@@ -10,6 +10,13 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-13
+
+### Fixed
+
+- The dependency review job is skipped in private repositories. GitHub supports it
+  there only with Advanced Security, so it failed every pull request.
+
 ## [0.8.0] - 2026-10-13
 
 Upgrade steps:
@@ -201,7 +208,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/simonvanlierde/project-templates/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/simonvanlierde/project-templates/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/simonvanlierde/project-templates/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/simonvanlierde/project-templates/compare/v0.6.0...v0.7.0
