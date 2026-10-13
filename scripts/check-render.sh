@@ -238,6 +238,12 @@ test -f d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/README.md
 grep -q 'Apache License' d/LICENSE
+# Each license text ends in exactly one newline (MIT in a, Apache-2.0 in d), so the
+# end-of-file-fixer hook has nothing to rewrite in a new project.
+for lic in a/LICENSE d/LICENSE; do
+  end=$(tail -c 2 "$lic" | od -An -tx1 | tr -d ' \n')
+  [[ $end == ??0a && $end != 0a0a ]]
+done
 test ! -e d/pipe/notebooks
 grep -qx 'pipe/data/raw/\*' d/.gitignore
 grep -q 'path: pipe/data/raw/\*.fetch.json' d/.github/workflows/python.yml
