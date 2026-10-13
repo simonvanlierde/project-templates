@@ -320,11 +320,7 @@ jobs:
           git -C "$PROJ" add -A
           git -C "$PROJ" -c user.email=ci@invalid -c user.name=ci commit -qm scaffold
           # --conflict rej: the default inline markers would pass every check unseen.
-          # TODO: drop the python_min pin once v0.8.0 or later is the last tag. 0.8.0
-          # moves requires-python, three lines above the dependency `uv add` writes,
-          # so that one hunk conflicts by design (see the 0.8.0 upgrade steps).
-          uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults --conflict rej \
-            --data python_min=3.14 "$PROJ"
+          uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults --conflict rej "$PROJ"
           test -z "$(find "$PROJ" -name '*.rej' -print -quit)"
           grep -q '"attrs>=25' "$PROJ/api/pyproject.toml"
           cd "$PROJ/api" && just py-sync py-check
