@@ -47,7 +47,8 @@ scanning covers the server side.
 ## Caveats
 
 - Dependency review needs the dependency graph. It is on by default for public repos.
-  A private repo needs GitHub Advanced Security, or the job fails.
+  A private repo needs GitHub Advanced Security, so the job skips private repos. Their
+  stack workflows' dependency audits still run.
 - zizmor needs a token for its online audits: impostor commits and known-vulnerable
   actions. The hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN`
   to get them; without it, only the offline audits run.

@@ -43,9 +43,12 @@ jobs:
 
   dependency-review:
     name: dependency review
-    # Fails a PR that adds a dependency with a known advisory. Needs the dependency
-    # graph: on by default for public repos, GitHub Advanced Security for private ones.
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+    # Fails a PR that adds a dependency with a known advisory. It needs the dependency
+    # graph, which a private repo has only with GitHub Advanced Security, so it is
+    # skipped there instead of failing every PR. The stack workflows' audits still run.
+    if: >-
+      github.event_name == 'pull_request' && !github.event.pull_request.draft
+      && !github.event.repository.private
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
