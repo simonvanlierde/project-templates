@@ -20,7 +20,8 @@ Upgrade steps:
   answers you already gave.
 - A `library` project is asked for `python_min`. Its `requires-python` drops to that
   version and CI tests every version from there up, so check the code still runs on
-  the oldest one.
+  the oldest one. If you added a dependency, `copier update` can't merge the new
+  `requires-python` next to it: take the new floor and keep your `dependencies`.
 - In a `data-pipeline` project, re-run `just pipeline` after updating (see the
   Breaking change below).
 
