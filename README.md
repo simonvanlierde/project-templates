@@ -171,7 +171,7 @@ the commit you started from.
 
 ## Publishing
 
-Publishing is off by default. While an option is off, something blocks an accidental
+Publishing is off by default. While an option is off, a guard stops an accidental
 release:
 
 | Option            | While off                                                   | When on                                                  |

@@ -45,8 +45,8 @@ stack. A `web-service` project gets:
 - An entrypoint that reads `HOST` and `PORT`. It listens on `127.0.0.1` unless `HOST`
   says otherwise. The image sets `HOST=0.0.0.0`, and `compose.yaml` publishes the port
   on `127.0.0.1` only.
-- `/docs`, `/redoc` and `/openapi.json` stay off unless `API_DOCS` is set, since they
-  list every route to anyone who asks.
+- `/docs`, `/redoc` and `/openapi.json` stay off unless `API_DOCS` is set, because
+  they list every route to anyone who asks.
 - OpenTelemetry through zero-code instrumentation. It turns on only when
   `OTEL_EXPORTER_OTLP_ENDPOINT` is set, and then sends request spans and a
   request-duration histogram over OTLP/HTTP. The SDK reads every other `OTEL_*`
