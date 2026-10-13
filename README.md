@@ -162,6 +162,12 @@ To move a package to another directory, run `copier update` with the new directo
 Then delete the old directory by hand. Copier removes files that left the template,
 but not files that moved because an answer changed.
 
+If `copier update` can't check out the `_commit` in `.copier-answers.yml`, the project
+was rendered from a commit that was never pushed or tagged. Set `_commit` to the oldest
+tag that offers every answer in the file, such as the first tag with your `kind`, and
+commit that. Then run `copier update`. Expect conflicts where that tag differs from
+the commit you started from.
+
 ## Publishing
 
 Publishing is off by default. While an option is off, something blocks an accidental
