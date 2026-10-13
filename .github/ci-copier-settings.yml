@@ -1,0 +1,9 @@
+# Copier user settings for CI and scripts/check-render.sh. They fill the identity
+# answers that copier.yml leaves blank, so `--defaults` renders. Both point
+# COPIER_SETTINGS_PATH here.
+defaults:
+  github_user: example-org
+  author_name: Ada Lovelace
+  author_email: ada@example.com
+  # ORCID's own test iD (Josiah Carberry), so the orcid fields render.
+  author_orcid: "0000-0002-1825-0097"

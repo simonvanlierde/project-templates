@@ -7,6 +7,9 @@
 set -euo pipefail
 
 out=${1:?usage: scripts/check-render.sh OUT_DIR}
+# The identity answers have no defaults. CI's settings file fills them, and
+# replaces your own copier settings for this run.
+export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
 copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwrite)
 
 # a: every stack, other answers at their defaults. module_name is not set,
@@ -54,6 +57,13 @@ git tag -f check-render-tag >/dev/null
 "${copier[@]}" --vcs-ref=check-render-tag \
   --data project_name=tag-me --data 'stacks=[python]' . "$out/e"
 
+# Without the settings file, --defaults must stop at the blank identity answers.
+if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=anon-me . "$out/f" >/dev/null 2>&1; then
+  echo "rendered without an author: copier.yml has a personal default again" >&2
+  exit 1
+fi
+
 OUT=$out uv run --no-project --with pyyaml python - <<'PY'
 import ast, json, os, pathlib, tomllib, yaml
 
@@ -73,6 +83,12 @@ assert seen > 20, f"only {seen} structured files rendered"
 app = next(out.glob("b/svc/src/*/app.py"))
 title = next(k for k in ast.walk(ast.parse(app.read_text())) if isinstance(k, ast.keyword) and k.arg == "title")
 assert ast.literal_eval(title.value) == 'Odd "Name" & Co!', ast.unparse(title.value)
+# No schema covers these two, so check what Zenodo requires and the CodeMeta context.
+zenodo = json.loads((out / "c/.zenodo.json").read_text())
+assert {"upload_type", "title", "description", "creators", "license"} <= zenodo.keys(), zenodo
+assert zenodo["creators"][0]["name"] == "Lovelace, Ada", zenodo
+codemeta = json.loads((out / "a/codemeta.json").read_text())
+assert codemeta["@context"] == "https://w3id.org/codemeta/4.0", codemeta
 PY
 
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.
@@ -101,13 +117,22 @@ grep -qx '## \[Unreleased\]' a/CHANGELOG.md
 # Every render runs the hooks in CI.
 test -f a/.github/workflows/checks.yml
 test -f b/.github/workflows/checks.yml
-# CITATION.cff only for research kinds, at the root even when nested.
-test -f a/CITATION.cff
-test -f d/CITATION.cff
-test ! -e b/CITATION.cff
-test ! -e c/CITATION.cff
-grep -q check-citation-file-format a/.pre-commit-config.yaml
-(! grep -q check-citation-file-format c/.pre-commit-config.yaml)
+# Citation files for the library, research and data-pipeline kinds, at the root
+# even when nested.
+for f in CITATION.cff .zenodo.json codemeta.json; do
+  test -f "a/$f"
+  test -f "c/$f"
+  test -f "d/$f"
+  test ! -e "b/$f"
+done
+grep -q check-citation-file-format c/.pre-commit-config.yaml
+(! grep -q check-citation-file-format b/.pre-commit-config.yaml)
+# The library (c) is tested from python_min up and declares that floor; other
+# kinds pin python_version and run once.
+min=$(sed -n 's/^python_min: *//p' c/.copier-answers.yml | tr -d "\"'")
+grep -qx "requires-python = \">=$min\"" c/api/pyproject.toml
+grep -q "python: \[\"$min\"" c/.github/workflows/python.yml
+(! grep -q 'matrix' a/.github/workflows/python.yml)
 # From a tag, the answers file names the canonical source. From any other
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
 # itself be a release tag, so render a is held to whichever its _commit is.
@@ -138,7 +163,7 @@ test -f a/.golangci.yml
 grep -qx 'tool golang.org/x/vuln/cmd/govulncheck' a/go.mod
 test -f a/renderme.go
 test ! -e a/main.go
-grep -qF 'renderme "github.com/simonvanlierde/render-me"' a/example_test.go
+grep -qF 'renderme "github.com/example-org/render-me"' a/example_test.go
 grep -qx '    @just go-check' a/justfile
 grep -q 'id: golangci-lint$' a/.pre-commit-config.yaml
 grep -q golang.go a/.vscode/extensions.json

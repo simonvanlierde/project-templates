@@ -28,17 +28,31 @@ project_description:
 github_user:
   type: str
   help: GitHub user or org
-  default: simonvanlierde
+  # No personal defaults: `copier copy --defaults` would publish them. Set your own
+  # once under `defaults:` in copier's settings.yml (see README).
+  default: ""
+  validator: >-
+    {% if not github_user|regex_search('^[A-Za-z0-9][A-Za-z0-9-]*$') %}
+    Give the GitHub user or org that will own the repo.
+    {% endif %}
 
 author_name:
   type: str
   help: Author name, for package metadata and the license
-  default: Simon van Lierde
+  default: ""
+  validator: >-
+    {% if not author_name|trim %}
+    Give an author name: the license and package metadata need one.
+    {% endif %}
 
 author_email:
   type: str
-  help: Author email, for package metadata
-  default: simonvanlierde@gmail.com
+  help: Author email, for package metadata and SECURITY.md
+  default: ""
+  validator: >-
+    {% if not author_email|regex_search('^[^@\\s]+@[^@\\s]+$') %}
+    Give an email address: SECURITY.md sends vulnerability reports to it.
+    {% endif %}
 
 license:
   type: str
@@ -54,7 +68,7 @@ copyright_year:
   type: str
   when: "{{ license != 'none' }}"
   help: Copyright year
-  default: "2026"
+  default: "{{ '%Y' | strftime }}"
 
 stacks:
   type: str
@@ -135,9 +149,13 @@ module_name:
 
 author_orcid:
   type: str
-  when: "{{ 'python' in stacks and kind in ('research', 'data-pipeline') }}"
-  help: ORCID iD for CITATION.cff, as 0000-0000-0000-0000 (blank for none)
-  default: "0009-0006-6953-909X"
+  when: "{{ 'python' in stacks and kind in ('library', 'research', 'data-pipeline') }}"
+  help: ORCID iD for the citation files, as 0000-0000-0000-0000 (blank for none)
+  default: ""
+  validator: >-
+    {% if author_orcid and not author_orcid|regex_search('^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$') %}
+    Give the bare iD, as 0000-0000-0000-0000, without the https://orcid.org/ prefix.
+    {% endif %}
 
 # renovate: datasource=python-version depName=python
 python_version:
@@ -148,6 +166,21 @@ python_version:
   validator: >-
     {% if not python_version|regex_search('^3\\.(1[2-9]|[2-9][0-9])$') %}
     Give a version from 3.12 up, as `3.14`: the template uses `type` statements.
+    {% endif %}
+
+# A library's requires-python floor and the oldest version its CI tests. SPEC 0
+# supports a Python release for three years, about three minors, so the default is
+# two minors below python_version, and never below the template's own 3.12.
+python_min:
+  type: str
+  when: "{{ 'python' in stacks and kind == 'library' }}"
+  help: Oldest Python the library supports (requires-python, tested in CI)
+  default: "3.{{ [python_version.split('.')[1] | int - 2, 12] | max }}"
+  validator: >-
+    {% if not python_min|regex_search('^3\\.(1[2-9]|[2-9][0-9])$') %}
+    Give a version from 3.12 up, as `3.13`: the template uses `type` statements.
+    {% elif python_min.split('.')[1]|int > python_version.split('.')[1]|int %}
+    The oldest supported version can't be newer than python_version ({{ python_version }}).
     {% endif %}
 
 publish_to_pypi:
@@ -172,7 +205,6 @@ node_version:
   type: str
   when: "{{ 'ts' in stacks }}"
   help: Node.js major version
-  # NOTE: Node 26 is Current; it becomes the active LTS in Oct 2026.
   default: "26"
 
 publish_to_npm:
