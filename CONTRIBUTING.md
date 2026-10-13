@@ -12,7 +12,8 @@ copier copy --vcs-ref=HEAD gh:simonvanlierde/project-templates .
 ## Run the checks before you push
 
 Run the git hooks and the same render checks CI runs. The render script includes
-uncommitted edits:
+uncommitted edits. CI then runs zizmor, actionlint and the CITATION.cff schema check over
+the rendered output, because `.jinja` files aren't YAML:
 
 ```sh
 prek run -a
@@ -33,12 +34,11 @@ merge, and long check logs.
 
 ## Render real projects from a pushed tag
 
-A render from a local checkout records its source in the project's
-`.copier-answers.yml`. From a tag, `_src_path` becomes
-`gh:simonvanlierde/project-templates`, so `copier update` works on any machine. From any
-other commit, it keeps your local path, which leaks your home directory and breaks
-`copier update` everywhere else. So render a real project from a tag pushed to this
-repository, or fix `_src_path` and `_commit` by hand.
+Rendered from a tag, `.copier-answers.yml` records `_src_path` as
+`gh:simonvanlierde/project-templates`, so `copier update` works on any machine. Rendered
+from any other local commit, it keeps your local path, which leaks your home directory and
+breaks `copier update` everywhere else. So render a real project from a pushed tag, or fix
+`_src_path` and `_commit` by hand.
 
 To test an update against a local checkout, point `_src_path` at it for that run, as
 the CI `update` job does.

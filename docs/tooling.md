@@ -1,7 +1,8 @@
 # Tooling
 
-Which tools each stack uses, and why the defaults are what they are. The
-[README](../README.md#choosing-your-stacks) lists the files each stack writes.
+Which tools each stack uses, and why the defaults are what they are.
+[usage.md](usage.md#choosing-your-stacks) lists the files each stack writes, and
+[ci-baseline.md](ci-baseline.md) every workflow check.
 
 ## Tools per stack
 
@@ -61,10 +62,6 @@ option, CI writes its own report and uploads it to Codecov.
 The Dockerfiles follow the upstream [uv](https://docs.astral.sh/uv/guides/integration/docker/)
 and [pnpm](https://pnpm.io/docker) guides: multi-stage builds on `-slim` base images,
 BuildKit cache mounts, a non-root runtime user, and Open Container Initiative labels.
-
-## GitHub Actions
-
-[ci-baseline.md](ci-baseline.md) lists every workflow check, and what was left out.
 
 ## Dependencies
 
