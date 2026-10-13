@@ -10,13 +10,38 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-13
+
+Upgrade steps:
+
+- `copier copy --defaults` now stops at the GitHub user, author name and email, which
+  have no defaults any more. Pass them with `--data`, or save them once under
+  `defaults:` in Copier's settings file (see the README). `copier update` keeps the
+  answers you already gave.
+- A `library` project is asked for `python_min`. Its `requires-python` drops to that
+  version and CI tests every version from there up, so check the code still runs on
+  the oldest one.
+- In a `data-pipeline` project, re-run `just pipeline` after updating (see the
+  Breaking change below).
+
 ### Added
 
+- The `library` kind gets a `CITATION.cff`, like `research` and `data-pipeline`.
+- `library`, `research` and `data-pipeline` projects also get `.zenodo.json`, which
+  Zenodo reads when it archives a release, and a CodeMeta 4.0 `codemeta.json`.
+- A `library` project tests every Python from `python_min` to `python_version` in CI.
+  `python_min` defaults to two minors below `python_version`, after SPEC 0.
 - A `data-pipeline` source can pin a `sha256`. `fetch` refuses a download that
   doesn't match it.
 
 ### Changed
 
+- **Breaking:** the GitHub user, author name, author email and ORCID iD have no
+  defaults. They used to default to the template author's details, which a
+  `--defaults` run published in the new project.
+- The copyright year defaults to the current year instead of a fixed one.
+- The generated README installs golangci-lint with `go install`, which checks the
+  download against the Go checksum database, instead of piping a script into `sh`.
 - **Breaking:** `data-pipeline` drops the `vintage_basis` column and the per-source
   `encoding` key. The vintage is the manifest's `release`, and every source is read
   as UTF-8. Re-run `just pipeline` after updating.
@@ -175,7 +200,8 @@ changes are marked **Breaking**.
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/simonvanlierde/project-templates/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/simonvanlierde/project-templates/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/simonvanlierde/project-templates/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/simonvanlierde/project-templates/compare/v0.5.0...v0.6.0
