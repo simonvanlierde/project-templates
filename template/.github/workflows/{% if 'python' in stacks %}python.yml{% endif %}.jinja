@@ -87,7 +87,7 @@ jobs:
       # tests/test_published.py fails, not skips, when the output is missing. The
       # literal-value tripwire runs only on the weekly schedule, so a publisher revision
       # fails that run instead of a PR.
-      - run: uv run pytest
+      - run: uv run pytest{% if codecov %} --cov --cov-report=xml{% endif %}
         env:
           PIPELINE_OUTPUT_REQUIRED: "1"
           TRIPWIRE: {% raw %}${{ github.event_name == 'schedule' && '1' || '' }}{% endraw %}
@@ -102,5 +102,20 @@ jobs:
           path: {% if python_dir != '.' %}{{ python_dir }}/{% endif %}data/raw/*.fetch.json
           if-no-files-found: error
 {%- else %}
-      - run: uv run pytest
+      - run: uv run pytest{% if codecov %} --cov --cov-report=xml{% endif %}
+{%- endif %}
+{%- if codecov %}
+
+      # Dependabot pull requests get no secrets, so their upload fails without failing CI.
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+{%- if kind == 'library' %}
+        # Once per run: every matrix job measures the same code.
+        if: matrix.python == '{{ python_version }}'
+{%- endif %}
+        with:
+          token: {% raw %}${{ secrets.CODECOV_TOKEN }}{% endraw %}
+          files: {% if python_dir != '.' %}{{ python_dir }}/{% endif %}coverage.xml
+{%- if 'ts' in stacks %}
+          flags: python
+{%- endif %}
 {%- endif %}

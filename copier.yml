@@ -119,6 +119,12 @@ go_dir:
     Give a plain relative path such as `services/api`: no leading `./` or `/`, no trailing `/`, no `..`.
     {% endif %}
 
+codecov:
+  type: bool
+  when: "{{ 'python' in stacks or 'ts' in stacks }}"
+  help: Upload test coverage to Codecov (needs a CODECOV_TOKEN repository secret)
+  default: false
+
 # --- python -------------------------------------------------------------------
 
 kind:

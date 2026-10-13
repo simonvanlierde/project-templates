@@ -182,6 +182,17 @@ registry needs to trust your repository first. To turn publishing on:
    package through trusted publishing.
 3. Run `copier update`, and answer yes to the publish option.
 
+## Coverage on Codecov
+
+`codecov` (off by default, Python and TS stacks) uploads each stack's test coverage to
+[Codecov](https://codecov.io) and adds a `codecov.yml`. A pull request fails only when
+total coverage drops by more than 2 points, and Codecov comments only then. The share of
+new lines covered is shown but never fails a pull request. To turn it on:
+
+1. Add the repository on codecov.io and copy its upload token.
+2. Save it as the `CODECOV_TOKEN` repository secret (`gh secret set CODECOV_TOKEN`).
+3. Run `copier update`, and answer yes to `codecov`.
+
 ## More
 
 - [docs/tooling.md](docs/tooling.md): the tools, lint policies, Docker images,
