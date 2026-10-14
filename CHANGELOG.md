@@ -10,6 +10,14 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- A `dependency_bot` question: Dependabot (the default, as before) or Renovate. Renovate
+  gets a `renovate.json5` with the same rules as the Dependabot config: weekly, a one-week
+  cooldown, grouped actions, hooks and dev tooling, and no updates to the copier-owned
+  `FROM` tags. It needs the Renovate GitHub App on the repository. Existing projects keep
+  Dependabot unless they answer `renovate` on the next `copier update`.
+
 ### Fixed
 
 - With both the Python and TS stacks and the `codecov` option, a pull request no longer

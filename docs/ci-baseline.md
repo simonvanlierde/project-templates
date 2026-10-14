@@ -18,7 +18,7 @@ say what each piece is, why it's there, and what I left out on purpose.
 | zizmor | hook, so also CI | Audits workflows for template injection, credential leaks, cache poisoning, and impostor commits. |
 | actionlint | hook, so also CI | Catches what zizmor doesn't: unknown keys, bad `needs`, expression type errors, and shellcheck findings in `run:` blocks. |
 | Dependency review | `checks.yml`, PRs only | Fails a PR that adds a dependency with a known advisory. |
-| Dependabot with a one-week cooldown | `.github/dependabot.yml` | Updates wait until a compromised release has usually been yanked. Security updates skip the wait. |
+| Dependabot (or Renovate) with a one-week cooldown | `.github/dependabot.yml`, or `renovate.json5` with `dependency_bot=renovate` | Updates wait until a compromised release has usually been yanked. Security updates skip the wait. |
 | `SECURITY.md` | `.github/` | Tells a reporter where to send a vulnerability privately. |
 | `CITATION.cff`, `.zenodo.json`, `codemeta.json` | `library`, `research` and `data-pipeline` kinds | GitHub's "Cite this repository" button reads `CITATION.cff`, Zenodo reads `.zenodo.json` when it archives a release, and software indexes read `codemeta.json` (CodeMeta 4.0). A hook checks `CITATION.cff` against its schema. |
 | Tests on every supported Python | `python.yml`, `library` kind | A library declares `requires-python >= python_min` and CI tests each minor from there to `python_version`. The default floor is two minors below, after [SPEC 0](https://scientific-python.org/specs/spec-0000/). |
@@ -37,7 +37,7 @@ scanning covers the server side.
 | --- | --- | --- |
 | CodeQL | Minutes per run and gigabytes of memory, for little signal on a small repo that already runs ruff and ty. | The repo grows a web surface or outside contributors. Default setup is a toggle in the repository settings; it needs no YAML. |
 | OpenSSF Scorecard | Needs a public repo to publish, and mostly scores the practices in the first table. | You want the badge. |
-| Renovate from Actions | Needs a GitHub App and two secrets. Dependabot needs neither and covers every ecosystem here, including hook revs. | You need automerge or grouping Dependabot can't express. |
+| Renovate from Actions | Needs a GitHub App and two secrets. Dependabot needs neither and covers every ecosystem here, including hook revs. The hosted Renovate app is the `dependency_bot=renovate` answer. | You need automerge, or Renovate options the hosted app doesn't run. |
 | release-please | Research repos release rarely, and Zenodo archives a tagged release. A release PR on every push is noise. | Releases become frequent enough that writing the changelog by hand costs time. |
 | Secret scan over full history | GitHub secret scanning and push protection cover public repos at no cost. The hook covers local commits. | The repo is private without GitHub Advanced Security. |
 | Scheduled audit job | The stack workflows audit on every push and PR (`uv audit`, `pnpm audit --prod`, `cargo deny check`, `govulncheck`), and Dependabot security alerts cover the time between. | A dependency sits unchanged for months in a repo with few pushes. |

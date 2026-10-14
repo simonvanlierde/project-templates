@@ -14,7 +14,7 @@ The `stacks` question is a multi-select. Pick any combination:
 
 Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
 `just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`,
-`SECURITY.md`, `.gitignore`, `.editorconfig`, Dependabot, git hooks and VS Code
+`SECURITY.md`, `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
 recommendations. A Python project also picks a [kind](python-kinds.md).
 
 ## One package or a monorepo
@@ -85,3 +85,12 @@ new lines covered is shown but never fails a pull request. To turn it on:
 1. Add the repository on codecov.io and copy its upload token.
 2. Save it as the `CODECOV_TOKEN` repository secret (`gh secret set CODECOV_TOKEN`).
 3. Run `copier update`, and answer yes to `codecov`.
+
+## Dependency updates
+
+`dependency_bot` picks who opens dependency-update PRs: Dependabot (the default, built
+into GitHub) or Renovate. Both follow the same rules, described in
+[tooling](tooling.md#dependencies). Renovate needs its GitHub App on the repository:
+install it from [github.com/apps/renovate](https://github.com/apps/renovate), choosing
+only this repository, then run `copier update` and answer `renovate`. That writes
+`renovate.json5` and removes `.github/dependabot.yml`, so Renovate skips its onboarding PR.

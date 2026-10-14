@@ -65,11 +65,13 @@ BuildKit cache mounts, a non-root runtime user, and Open Container Initiative la
 
 ## Dependencies
 
-Generated projects use Dependabot, which needs no app and covers every ecosystem
-here. Version updates wait a week, or a month for a major version of a package
-dependency. Security updates skip the wait. uv's `exclude-newer = "1 week"` and
+Generated projects use Dependabot by default, which needs no app and covers every
+ecosystem here. The `dependency_bot` answer switches to Renovate, with the same rules in
+`renovate.json5`. Either way, version updates come weekly, grouped into one PR for actions,
+one for hooks and one for dev tooling, and wait a week, or a month for a major version of
+a package dependency. Security updates skip the wait. uv's `exclude-newer = "1 week"` and
 pnpm's `minimumReleaseAge` hold back the same releases, so `uv lock` or
-`pnpm install` can't pull in one that Dependabot is still waiting on. Go has no such setting.
+`pnpm install` can't pull in one that the bot is still waiting on. Go has no such setting.
 
 Nothing tracks the `FROM` base images in the Dockerfiles. Those tags are Copier
 answers, so update them by hand. This template repository uses Renovate instead,
