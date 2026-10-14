@@ -14,3 +14,10 @@ coverage:
 # Comment only when the project check fails: coverage_drop honours its 2-point threshold.
 comment:
   require_changes: "coverage_drop"
+
+# With both stacks, CI uploads one report per stack. Codecov compares as soon as the
+# first arrives, so the other stack's lines would count as a drop. Carryforward fills a
+# missing report with the base commit's numbers for that flag.
+flag_management:
+  default_rules:
+    carryforward: true
