@@ -12,6 +12,9 @@ changes are marked **Breaking**.
 
 ### Fixed
 
+- With both the Python and TS stacks and the `codecov` option, a pull request no longer
+  gets a false coverage drop, with its comment, while the second stack's report is
+  still on its way. `codecov.yml` now carries each stack's last numbers forward.
 - The README's licence badge now shows a hyphenated licence such as BSD-3-Clause.
   Before, shields.io read each hyphen as a field separator, so the badge broke.
 - The Apache-2.0 and BSD-3-Clause LICENSE files now end in one newline, not two, so the
