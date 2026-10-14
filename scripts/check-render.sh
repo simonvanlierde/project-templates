@@ -42,10 +42,12 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
-# workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render.
+# workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, and the
+# only one with Renovate.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=pipe-me --data 'stacks=[python,docker]' \
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0 \
+  --data dependency_bot=renovate \
   --data 'docker_stacks=[python]' . "$out/d"
 
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
@@ -64,10 +66,10 @@ if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
   exit 1
 fi
 
-OUT=$out uv run --no-project --with pyyaml python - <<'PY'
-import ast, json, os, pathlib, tomllib, yaml
+OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
+import ast, json, json5, os, pathlib, tomllib, yaml
 
-load = {".json": json.loads, ".toml": tomllib.loads,
+load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
 seen = 0
 out = pathlib.Path(os.environ["OUT"])
@@ -180,6 +182,10 @@ grep -qx '    @just go-check' a/justfile
 grep -q 'id: golangci-lint$' a/.pre-commit-config.yaml
 grep -q golang.go a/.vscode/extensions.json
 grep -q 'package-ecosystem: gomod' a/.github/dependabot.yml
+# dependency_bot: Dependabot by default, Renovate in d, never both.
+test ! -e a/renovate.json5
+test -f d/renovate.json5
+test ! -e d/.github/dependabot.yml
 (! grep -q working-directory a/just/go.just)
 # license=none: no file and no license key.
 test ! -e b/LICENSE
