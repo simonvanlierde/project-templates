@@ -27,7 +27,8 @@ A `data-pipeline` project gets:
   - `fetch` writes each download atomically, so a failed download leaves no partial
     file. Beside each file it writes a record: the URL, the retrieval time, the
     SHA-256 checksum and the data release the manifest names. It refuses a download
-    over the size cap, or one that doesn't match the `sha256` a source may pin.
+    over the size cap (200 MiB, or a source's own `max_bytes`), or one that doesn't
+    match the `sha256` a source may pin.
   - `build` verifies the checksums before it parses. It also refuses a download whose
     URL no longer matches the manifest, so you re-fetch after changing a source.
   - `validate` re-reads the published output and re-hashes the raw files.

@@ -17,6 +17,8 @@
 #   sha256     optional: the SHA-256 the download must have. Pin it for a fixed release
 #              and `just fetch` refuses bytes that changed upstream. Leave it out for a
 #              URL that tracks a moving source.
+#   max_bytes  optional: the largest download `just fetch` accepts, 200 MiB unless set.
+#              Raise it for a source that is bigger than that on purpose.
 #   terms      the publisher's reuse terms, in their words, plus `terms_url`. Required
 #              for every implemented source, and listed again in ATTRIBUTION.md.
 

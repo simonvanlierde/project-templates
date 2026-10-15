@@ -17,6 +17,8 @@ changes are marked **Breaking**.
   cooldown, grouped actions, hooks and dev tooling, and no updates to the copier-owned
   `FROM` tags. It needs the Renovate GitHub App on the repository. Existing projects keep
   Dependabot unless they answer `renovate` on the next `copier update`.
+- A `data-pipeline` source can set `max_bytes` in `sources.toml` to accept a download
+  over the 200 MiB default cap.
 
 ### Changed
 

@@ -92,6 +92,26 @@ def test_fetch_refuses_a_download_over_the_size_cap(
     assert not RAW.exists()
 
 
+def test_a_source_over_the_default_cap_fetches_with_its_own_max_bytes(
+    upstream: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A source bigger than the default on purpose raises its own cap in sources.toml."""
+    monkeypatch.setattr(pipeline, "_MAX_BYTES", len(FIXTURE) - 1)
+    _manifest(tmp_path, upstream.as_uri(), terms=f"max_bytes = {len(FIXTURE)}")
+    assert _run("fetch") == [0]
+    assert RAW.read_text(encoding="utf-8") == FIXTURE
+
+
+@pytest.mark.parametrize("cap", ["0", "true", '"1 GB"'])
+def test_max_bytes_must_be_a_positive_whole_number(
+    upstream: Path, tmp_path: Path, cap: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A cap that is not a byte count is a manifest error, not a silent 0- or 1-byte limit."""
+    _manifest(tmp_path, upstream.as_uri(), terms=f"max_bytes = {cap}")
+    assert _run("fetch") == [1]
+    assert "max_bytes" in capsys.readouterr().err
+
+
 def test_an_empty_manifest_is_no_sources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A manifest with no `[[source]]` yet is valid: nothing to fetch, build or check."""
     (tmp_path / "sources.toml").write_text("# no sources yet\n", encoding="utf-8")

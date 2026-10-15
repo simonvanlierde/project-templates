@@ -34,7 +34,8 @@ PROCESSED = Path("data/processed")
 IMPLEMENTED = "implemented"
 UNIMPLEMENTED = "unimplemented"
 _TIMEOUT_S = 120
-# A runaway or wrong URL fails the fetch instead of filling the disk. Raise it for a big source.
+# A runaway or wrong URL fails the fetch instead of filling the disk. A big source sets
+# its own `max_bytes` in sources.toml.
 _MAX_BYTES = 200 * 1024 * 1024
 
 type Source = dict[str, Any]
@@ -69,6 +70,11 @@ def load_manifest(path: Path = MANIFEST) -> list[Source]:
     if no_url := [s["id"] for s in implemented(sources) if not isinstance(s.get("url"), str)]:
         msg = f"implemented sources {no_url} in sources.toml have no url"
         raise ValueError(msg)
+    # Not isinstance: bool is an int subclass, so `max_bytes = true` would pass as a 1-byte cap.
+    caps = {s["id"]: s.get("max_bytes", _MAX_BYTES) for s in sources}
+    if bad_cap := [i for i, cap in caps.items() if type(cap) is not int or cap < 1]:
+        msg = f"sources {bad_cap} in sources.toml need max_bytes to be a positive whole number"
+        raise ValueError(msg)
     return sources
 
 
@@ -92,8 +98,9 @@ def _write_atomic(path: Path, data: bytes) -> None:
 def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
     """Download each implemented source into `raw`, with a fetch record beside it.
 
-    Raises ValueError for a download over the size cap, or one whose SHA-256 differs
-    from the `sha256` the manifest pins. Nothing is written for that source.
+    Raises ValueError for a download over the source's `max_bytes` (default 200 MiB), or
+    one whose SHA-256 differs from the `sha256` the manifest pins. Nothing is written for
+    that source.
     """
     raw.mkdir(parents=True, exist_ok=True)
     records = []
@@ -101,10 +108,11 @@ def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
         # NOTE: urlopen follows any scheme, file:// included, which the tests use for fixtures.
         # The URLs come from sources.toml, which is as trusted as the code.
         request = urllib.request.Request(source["url"], headers={"User-Agent": "{{ slug }}"})  # noqa: S310
+        cap = source.get("max_bytes", _MAX_BYTES)
         with urllib.request.urlopen(request, timeout=_TIMEOUT_S) as response:  # noqa: S310
-            payload = response.read(_MAX_BYTES + 1)
-        if len(payload) > _MAX_BYTES:
-            msg = f"{source['id']}: download exceeds {_MAX_BYTES} bytes"
+            payload = response.read(cap + 1)
+        if len(payload) > cap:
+            msg = f"{source['id']}: download exceeds {cap} bytes; raise max_bytes in sources.toml if that is expected"
             raise ValueError(msg)
         digest = hashlib.sha256(payload).hexdigest()
         if source.get("sha256", digest) != digest:
