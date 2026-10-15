@@ -18,6 +18,13 @@ changes are marked **Breaking**.
   `FROM` tags. It needs the Renovate GitHub App on the repository. Existing projects keep
   Dependabot unless they answer `renovate` on the next `copier update`.
 
+### Changed
+
+- With the `codecov` option, Codecov comments only when a pull request adds lines no test
+  runs. It used to comment on any drop in total coverage, however small, although the
+  docs said it waited for the 2-point threshold. A drop of over 2 points still fails the
+  pull request's Codecov check.
+
 ### Fixed
 
 - With both the Python and TS stacks and the `codecov` option, a pull request no longer
