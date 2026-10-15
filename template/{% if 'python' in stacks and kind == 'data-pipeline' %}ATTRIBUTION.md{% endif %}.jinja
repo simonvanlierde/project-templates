@@ -24,7 +24,8 @@ repository and commit, and state the license. Delete the section if nothing is r
 This repository doesn't redistribute source data. `{{ d }}data/raw/` and
 `{{ d }}data/processed/` are gitignored, and `just pipeline` downloads from each
 publisher on every run. The CI artifact holds only the `*.fetch.json` records (URL,
-timestamp, checksum, byte count, vintage), not values.
+timestamp, checksum, byte count, vintage, the server's Last-Modified and ETag), not
+values.
 
 Each source's terms are in [`{{ d }}sources.toml`]({{ d }}sources.toml) (`terms` and
 `terms_url`), and `just validate` fails when an implemented source has none. Keep
