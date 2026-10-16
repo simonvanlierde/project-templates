@@ -17,6 +17,8 @@ changes are marked **Breaking**.
   cooldown, grouped actions, hooks and dev tooling, and no updates to the copier-owned
   `FROM` tags. It needs the Renovate GitHub App on the repository. Existing projects keep
   Dependabot unless they answer `renovate` on the next `copier update`.
+- A `data-pipeline` source can set `max_bytes` in `sources.toml` to accept a download
+  over the 200 MiB default cap.
 
 ### Changed
 
@@ -34,6 +36,8 @@ changes are marked **Breaking**.
   Before, shields.io read each hyphen as a field separator, so the badge broke.
 - The Apache-2.0 and BSD-3-Clause LICENSE files now end in one newline, not two, so the
   end-of-file-fixer hook no longer rewrites LICENSE on its first run in a new project.
+- A `data-pipeline` project's `pyproject.toml` no longer explains its packaging as if
+  it were a research project with notebooks.
 
 ## [0.9.0] - 2026-10-13
 
