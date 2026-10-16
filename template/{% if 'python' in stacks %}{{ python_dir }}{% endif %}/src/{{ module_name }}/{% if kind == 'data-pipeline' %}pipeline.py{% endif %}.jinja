@@ -25,12 +25,10 @@ import tomllib
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
+from http import HTTPStatus
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import urlsplit
-
-if TYPE_CHECKING:
-    from email.message import Message
 
 # Relative to the working directory, which `just` and CI set to the project root.
 MANIFEST = Path("sources.toml")
@@ -43,10 +41,9 @@ _TIMEOUT_S = 120
 # Waits of 5, 10 and 20 s between four attempts ride out a brief publisher outage.
 _ATTEMPTS = 4
 _BACKOFF_S = 5
-_SERVER_ERROR = 500
-_TOO_MANY_REQUESTS = 429
-# A network error or timeout, or a connection dropped or garbled mid-response. A named tuple,
-# because `except A, B:` without parentheses is a syntax error before Python 3.14.
+# A network error or timeout, or a connection dropped or garbled mid-response. Named,
+# because ruff format drops the parentheses of an inline tuple on Python 3.14, and the
+# resulting `except A, B:` will not parse on the 3.12 and 3.13 a project may answer.
 _TRANSIENT = (OSError, http.client.HTTPException)
 # A runaway or wrong URL fails the fetch instead of filling the disk. A big source sets
 # its own `max_bytes` in sources.toml.
@@ -112,7 +109,7 @@ def _write_atomic(path: Path, data: bytes) -> None:
     part.replace(path)
 
 
-def _get(source: Source) -> tuple[bytes, Message]:
+def _get(source: Source) -> tuple[bytes, http.client.HTTPMessage]:
     """GET one source's URL and its headers, retrying failures a publisher recovers from.
 
     Server errors, rate limits, network errors and a body shorter than its Content-Length
@@ -140,10 +137,11 @@ def _get(source: Source) -> tuple[bytes, Message]:
                     raise http.client.IncompleteRead(payload, int(expected) - len(payload))
                 return payload, response.headers
         except urllib.error.HTTPError as error:
-            if last or (error.code < _SERVER_ERROR and error.code != _TOO_MANY_REQUESTS):
+            if last or (error.code < HTTPStatus.INTERNAL_SERVER_ERROR and error.code != HTTPStatus.TOO_MANY_REQUESTS):
                 raise
             retry_after = error.headers.get("Retry-After", "") if error.headers else ""
-            wait = max(wait, int(retry_after)) if retry_after.isdigit() else wait
+            if retry_after.isdigit():
+                wait = max(wait, int(retry_after))
         except _TRANSIENT:
             if last:
                 raise
