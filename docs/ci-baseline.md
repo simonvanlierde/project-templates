@@ -54,5 +54,6 @@ scanning covers the server side.
   actions. The hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN`
   to get them. Without it, only the offline audits run.
 - A `data-pipeline` project fetches its sources from their live URLs in CI, and so
-  does this template's own CI. A publisher outage or a moved file then fails the run,
-  whatever the diff. Re-run it.
+  does this template's own CI. `fetch` retries a server error, a rate limit or a
+  dropped connection three times over about 35 seconds, so only a longer outage or a
+  moved file fails the run, whatever the diff. Re-run it.

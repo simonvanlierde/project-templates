@@ -6,7 +6,7 @@ A starting point: standard library only, one function per stage.
 Raw files stay in data/raw/ and outputs in data/processed/, both gitignored, so the
 repository never redistributes source data. Each fetch leaves a `<file>.fetch.json`
 record beside its raw file: the URL, when it was retrieved, the SHA-256 of the bytes,
-and the vintage the manifest declares.
+the vintage the manifest declares, and the server's Last-Modified and ETag headers.
 """
 
 from __future__ import annotations
@@ -15,13 +15,17 @@ import argparse
 import csv
 import dataclasses
 import hashlib
+import http.client
 import io
 import json
 import re
 import sys
+import time
 import tomllib
+import urllib.error
 import urllib.request
 from datetime import UTC, datetime
+from http import HTTPStatus
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlsplit
@@ -34,6 +38,13 @@ PROCESSED = Path("data/processed")
 IMPLEMENTED = "implemented"
 UNIMPLEMENTED = "unimplemented"
 _TIMEOUT_S = 120
+# Waits of 5, 10 and 20 s between four attempts ride out a brief publisher outage.
+_ATTEMPTS = 4
+_BACKOFF_S = 5
+# A network error or timeout, or a connection dropped or garbled mid-response. Named,
+# because ruff format drops the parentheses of an inline tuple on Python 3.14, and the
+# resulting `except A, B:` will not parse on the 3.12 and 3.13 a project may answer.
+_TRANSIENT = (OSError, http.client.HTTPException)
 # A runaway or wrong URL fails the fetch instead of filling the disk. A big source sets
 # its own `max_bytes` in sources.toml.
 _MAX_BYTES = 200 * 1024 * 1024
@@ -51,6 +62,9 @@ class FetchRecord:
     sha256: str
     bytes: int
     vintage: str
+    # Empty when the server sends none. Defaults keep records written before these fields readable.
+    last_modified: str = ""
+    etag: str = ""
 
 
 def load_manifest(path: Path = MANIFEST) -> list[Source]:
@@ -95,25 +109,58 @@ def _write_atomic(path: Path, data: bytes) -> None:
     part.replace(path)
 
 
+def _get(source: Source) -> tuple[bytes, http.client.HTTPMessage]:
+    """GET one source's URL and its headers, retrying failures a publisher recovers from.
+
+    Server errors, rate limits, network errors and a body shorter than its Content-Length
+    are retried with exponential backoff. A 429 waits at least the server's Retry-After, in
+    seconds. Any other 4xx is raised at once: it will not fix itself.
+
+    Raises ValueError for a body over the source's `max_bytes` (default 200 MiB).
+    """
+    cap = source.get("max_bytes", _MAX_BYTES)
+    # NOTE: urlopen follows any scheme, file:// included, which the tests use for fixtures.
+    # The URLs come from sources.toml, which is as trusted as the code.
+    request = urllib.request.Request(source["url"], headers={"User-Agent": "{{ slug }}"})  # noqa: S310
+    for attempt in range(_ATTEMPTS):
+        last = attempt == _ATTEMPTS - 1
+        wait = _BACKOFF_S * 2**attempt
+        try:
+            with urllib.request.urlopen(request, timeout=_TIMEOUT_S) as response:  # noqa: S310
+                payload = response.read(cap + 1)
+                if len(payload) > cap:
+                    msg = f"{source['id']}: download exceeds {cap} bytes; raise max_bytes in sources.toml if expected"
+                    raise ValueError(msg)
+                # A connection dropped mid-body can end the read early without an error.
+                expected = response.headers.get("Content-Length")
+                if expected is not None and int(expected) != len(payload):
+                    raise http.client.IncompleteRead(payload, int(expected) - len(payload))
+                return payload, response.headers
+        except urllib.error.HTTPError as error:
+            if last or (error.code < HTTPStatus.INTERNAL_SERVER_ERROR and error.code != HTTPStatus.TOO_MANY_REQUESTS):
+                raise
+            retry_after = error.headers.get("Retry-After", "") if error.headers else ""
+            if retry_after.isdigit():
+                wait = max(wait, int(retry_after))
+        except _TRANSIENT:
+            if last:
+                raise
+        time.sleep(wait)
+    raise AssertionError  # unreachable: the last attempt returns or raises
+
+
 def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
     """Download each implemented source into `raw`, with a fetch record beside it.
 
     Raises ValueError for a download over the source's `max_bytes` (default 200 MiB), or
-    one whose SHA-256 differs from the `sha256` the manifest pins. Nothing is written for
-    that source.
+    one whose SHA-256 differs from the `sha256` the manifest pins, and OSError or
+    http.client.HTTPException for one that still fails after its retries. Nothing is
+    written for that source.
     """
     raw.mkdir(parents=True, exist_ok=True)
     records = []
     for source in implemented(sources):
-        # NOTE: urlopen follows any scheme, file:// included, which the tests use for fixtures.
-        # The URLs come from sources.toml, which is as trusted as the code.
-        request = urllib.request.Request(source["url"], headers={"User-Agent": "{{ slug }}"})  # noqa: S310
-        cap = source.get("max_bytes", _MAX_BYTES)
-        with urllib.request.urlopen(request, timeout=_TIMEOUT_S) as response:  # noqa: S310
-            payload = response.read(cap + 1)
-        if len(payload) > cap:
-            msg = f"{source['id']}: download exceeds {cap} bytes; raise max_bytes in sources.toml if that is expected"
-            raise ValueError(msg)
+        payload, headers = _get(source)
         digest = hashlib.sha256(payload).hexdigest()
         if source.get("sha256", digest) != digest:
             msg = f"{source['id']}: downloaded bytes hash to {digest}, not the sha256 in sources.toml"
@@ -126,6 +173,9 @@ def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
             bytes=len(payload),
             # str(): a TOML date (`release = 2024-06-01`) loads as a datetime.date.
             vintage=str(source.get("release", "not stated")),
+            # Kept for a conditional request (If-Modified-Since, If-None-Match) on a later run.
+            last_modified=headers.get("Last-Modified", ""),
+            etag=headers.get("ETag", ""),
         )
         name = raw_name(source)
         _write_atomic(raw / name, payload)
@@ -278,9 +328,10 @@ def main(argv: list[str] | None = None) -> int:
             case _:
                 problems = validate(sources)
                 print(f"{len(problems)} problems")
-    # OSError: a missing file or a failed download. ValueError: a bad manifest, a download
-    # that fails its checks, or a stale fetch. csv.Error: a source that is not readable CSV.
-    except (OSError, ValueError, csv.Error) as error:
+    # OSError: a missing file or a failed download. HTTPException: a download cut short or
+    # garbled on every attempt. ValueError: a bad manifest, a download that fails its
+    # checks, or a stale fetch. csv.Error: a source that is not readable CSV.
+    except (OSError, http.client.HTTPException, ValueError, csv.Error) as error:
         print(f"{stage}: {_message(error)}", file=sys.stderr)
         return 1
     for problem in problems:

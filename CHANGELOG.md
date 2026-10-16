@@ -19,6 +19,12 @@ changes are marked **Breaking**.
   Dependabot unless they answer `renovate` on the next `copier update`.
 - A `data-pipeline` source can set `max_bytes` in `sources.toml` to accept a download
   over the 200 MiB default cap.
+- A `data-pipeline` fetch retries a server error, a 429 (waiting at least its
+  `Retry-After`), a network error or a body shorter than its `Content-Length`, up to
+  four attempts with 5, 10 and 20 s between them. A brief publisher outage no longer
+  fails CI. Any other 4xx still fails at once.
+- Fetch records also hold the server's `last_modified` and `etag`, empty when it sends
+  none. Records written before keep working.
 
 ### Changed
 
