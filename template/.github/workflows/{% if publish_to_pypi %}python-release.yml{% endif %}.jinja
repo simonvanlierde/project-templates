@@ -24,6 +24,12 @@ on:
 permissions:
   contents: read
 
+# One group per release tag: a second run for the same tag waits, and no release
+# cancels or replaces another.
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest

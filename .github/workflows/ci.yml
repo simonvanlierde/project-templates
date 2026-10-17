@@ -261,7 +261,7 @@ jobs:
       # Checks what zizmor doesn't: unknown keys, bad `needs`, expression types, and
       # shellcheck over every `run:` (shellcheck ships on the runner).
       # Upstream's prebuilt binary. Its releases are mutable, so the checksums file only
-      # guards the download. The correctness profile, as the rendered hook runs it.
+      # guards the download.
       - name: jactionlint
         env:
           GH_TOKEN: ${{ github.token }}
@@ -271,7 +271,7 @@ jobs:
             -p "$asset" -p "jactionlint_${JACTIONLINT_VERSION}_checksums.txt"
           (cd "$bin" && sha256sum --check --ignore-missing "jactionlint_${JACTIONLINT_VERSION}_checksums.txt")
           tar -xzf "$bin/$asset" -C "$bin" jactionlint
-          "$bin/jactionlint" --profile correctness "$RUNNER_TEMP"/[abcd]/.github/workflows/*.yml
+          "$bin/jactionlint" "$RUNNER_TEMP"/[abcd]/.github/workflows/*.yml
 
       # The same schema the rendered hook validates against.
       - name: CITATION.cff schema

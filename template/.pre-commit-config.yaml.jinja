@@ -70,12 +70,11 @@ repos:
 
   # Checks what zizmor doesn't: unknown keys, bad `needs`, expression type errors,
   # and shellcheck over every `run:` when shellcheck is on PATH. jactionlint is a
-  # maintained fork of actionlint; the correctness profile runs the checks actionlint ran.
+  # maintained fork of actionlint that adds release, cache and concurrency checks.
   - repo: https://github.com/jdx/jactionlint
     rev: 1027f0a131ab98bc7e191d995bfa15dbed5bbf8f # frozen: v2.2.0
     hooks:
       - id: jactionlint
-        args: [--profile, correctness]
 {%- if 'docker' in stacks %}
 
   # Runs from its own image: nothing to install, but it needs the Docker daemon.

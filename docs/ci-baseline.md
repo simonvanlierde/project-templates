@@ -16,7 +16,7 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Stack checks: lint, format, types, tests, dependency audit | `python.yml`, `ts.yml`, `rust.yml`, `go.yml` | The same commands as `just check`. |
 | Git hooks run in CI | `checks.yml` | `prek install` is opt-in per clone. Without this job, a commit made without hooks reaches `main` unchecked. |
 | zizmor | hook, so also CI | Audits workflows for template injection, credential leaks, cache poisoning, and impostor commits. |
-| jactionlint (correctness profile) | hook, so also CI | Catches what zizmor doesn't: unknown keys, bad `needs`, expression type errors, and shellcheck findings in `run:` blocks. |
+| jactionlint | hook, so also CI | Catches what zizmor doesn't: unknown keys, bad `needs`, expression type errors, and shellcheck findings in `run:` blocks. |
 | Dependency review | `checks.yml`, PRs only | Fails a PR that adds a dependency with a known advisory. |
 | Dependabot (or Renovate) with a one-week cooldown | `.github/dependabot.yml`, or `renovate.json5` with `dependency_bot=renovate` | Updates wait until a compromised release has usually been yanked. Security updates skip the wait. Dependabot groups npm security updates into one pull request. |
 | `SECURITY.md` | `.github/` | Tells a reporter where to send a vulnerability privately. |

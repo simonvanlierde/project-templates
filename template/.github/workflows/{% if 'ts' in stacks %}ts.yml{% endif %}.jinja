@@ -96,8 +96,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # The browser and its system libraries come with the image, at the version the
-    # check job read from the lockfile, so a Playwright bump needs no edit here.
+    # check job read from the lockfile, so a Playwright bump needs no edit here. That
+    # tag comes from the lockfile, so no digest can be pinned next to it.
     container:
+      # jactionlint ignore=unpinned-images
       image: mcr.microsoft.com/playwright:v{% raw %}${{ needs.check.outputs.playwright }}{% endraw %}-noble
 {%- if ts_dir != '.' %}
     defaults:
