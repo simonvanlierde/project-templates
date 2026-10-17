@@ -24,12 +24,14 @@ A `data-pipeline` project gets:
 - `data/raw/` and `data/processed/`. Both are gitignored, so the repository never
   redistributes source data.
 - A small module, standard library only, with three stages:
-  - `fetch` retries server errors, rate limits (waiting for `Retry-After`), network
-    errors and a body shorter than its `Content-Length`, with backoff. It writes each
+  - `fetch` retries server errors, rate limits (waiting for `Retry-After`, up to
+    2 minutes), network errors and a body shorter than its `Content-Length`, with
+    backoff. A fetch that still fails names its source and URL. It writes each
     download atomically, so a failed download leaves no partial file. Beside each file
     it writes a record: the URL, the retrieval time, the SHA-256 checksum, the data
-    release the manifest names, and the server's `Last-Modified` and `ETag` for a
-    later conditional request. It refuses a download
+    release the manifest names, and the server's `Last-Modified` and `ETag`. The next
+    fetch sends those back, and when the server answers that nothing changed, it keeps
+    the file and its record. It refuses a download
     over the size cap (200 MiB, or a source's own `max_bytes`), or one that doesn't
     match the `sha256` a source may pin.
   - `build` verifies the checksums before it parses. It also refuses a download whose
