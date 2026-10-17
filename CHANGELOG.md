@@ -37,6 +37,24 @@ changes are marked **Breaking**.
 
 ### Added
 
+- A `data-pipeline` fetch sends the recorded `etag` and `last_modified` back as
+  `If-None-Match` and `If-Modified-Since`. When the server answers 304 Not Modified,
+  the raw file and its fetch record stay as they were. A raw file edited since its
+  fetch, or one that no longer matches the source's pinned `sha256`, is fetched in full.
+
+### Changed
+
+- A `data-pipeline` fetch waits at most 2 minutes for a 429's `Retry-After`, so a
+  server asking for hours cannot hold the run until CI's 10-minute job timeout kills it.
+- A fetch that still fails after its retries names the source and its URL, instead of
+  printing only the bare network error.
+- Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor
+  stays, so older uv versions still build them.
+
+## [0.10.0] - 2026-10-16
+
+### Added
+
 - A `dependency_bot` question: Dependabot (the default, as before) or Renovate. Renovate
   gets a `renovate.json5` with the same rules as the Dependabot config: weekly, a one-week
   cooldown, grouped actions, hooks and dev tooling, and no updates to the copier-owned
