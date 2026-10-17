@@ -12,6 +12,8 @@ changes are marked **Breaking**.
 
 ### Added
 
+- VS Code formats `.tsx`, `.jsx` and `.css` files with Biome, and the Biome hook also
+  checks HTML.
 - Dependabot groups npm security updates into one pull request, instead of one per
   advisory.
 - A `dependency_bot` question: Dependabot (the default, as before) or Renovate. Renovate
