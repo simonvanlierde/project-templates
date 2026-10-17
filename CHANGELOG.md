@@ -10,49 +10,6 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
-### Changed
-
-- Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor
-  stays, so older uv versions still build them.
-
-## [0.10.0] - 2026-10-16
-
-### Added
-
-- A `data-pipeline` fetch sends the recorded `etag` and `last_modified` back as
-  `If-None-Match` and `If-Modified-Since`. When the server answers 304 Not Modified,
-  the raw file and its fetch record stay as they were. A raw file edited since its
-  fetch, or one that no longer matches the source's pinned `sha256`, is fetched in full.
-
-### Changed
-
-- A `data-pipeline` fetch waits at most 2 minutes for a 429's `Retry-After`, so a
-  server asking for hours cannot hold the run until CI's 10-minute job timeout kills it.
-- A fetch that still fails after its retries names the source and its URL, instead of
-  printing only the bare network error.
-- Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor
-  stays, so older uv versions still build them.
-
-## [0.10.0] - 2026-10-16
-
-### Added
-
-- A `data-pipeline` fetch sends the recorded `etag` and `last_modified` back as
-  `If-None-Match` and `If-Modified-Since`. When the server answers 304 Not Modified,
-  the raw file and its fetch record stay as they were. A raw file edited since its
-  fetch, or one that no longer matches the source's pinned `sha256`, is fetched in full.
-
-### Changed
-
-- A `data-pipeline` fetch waits at most 2 minutes for a 429's `Retry-After`, so a
-  server asking for hours cannot hold the run until CI's 10-minute job timeout kills it.
-- A fetch that still fails after its retries names the source and its URL, instead of
-  printing only the bare network error.
-- Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor
-  stays, so older uv versions still build them.
-
-## [0.10.0] - 2026-10-16
-
 ### Added
 
 - A `web-app` TypeScript kind: a Vite single-page app with React or Preact (the new
@@ -71,6 +28,30 @@ changes are marked **Breaking**.
   advisory.
 - VS Code formats `.tsx`, `.jsx` and `.css` files with Biome, and the Biome hook also
   checks HTML.
+- A `data-pipeline` fetch sends the recorded `etag` and `last_modified` back as
+  `If-None-Match` and `If-Modified-Since`. When the server answers 304 Not Modified,
+  the raw file and its fetch record stay as they were. A raw file edited since its
+  fetch, or one that no longer matches the source's pinned `sha256`, is fetched in full.
+
+### Changed
+
+- A `data-pipeline` fetch waits at most 2 minutes for a 429's `Retry-After`, so a
+  server asking for hours cannot hold the run until CI's 10-minute job timeout kills it.
+- A fetch that still fails after its retries names the source and its URL, instead of
+  printing only the bare network error.
+- Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor
+  stays, so older uv versions still build them.
+
+### Fixed
+
+- The `check-yaml` hook no longer fails on `pnpm-lock.yaml`. pnpm 12 writes its own
+  version into the lockfile as a second YAML document, which the hook rejected, so
+  every TS project failed its `checks` workflow once the lockfile was committed.
+
+## [0.10.0] - 2026-10-16
+
+### Added
+
 - A `dependency_bot` question: Dependabot (the default, as before) or Renovate. Renovate
   gets a `renovate.json5` with the same rules as the Dependabot config: weekly, a one-week
   cooldown, grouped actions, hooks and dev tooling, and no updates to the copier-owned
@@ -94,9 +75,6 @@ changes are marked **Breaking**.
 
 ### Fixed
 
-- The `check-yaml` hook no longer fails on `pnpm-lock.yaml`. pnpm 12 writes its own
-  version into the lockfile as a second YAML document, which the hook rejected, so
-  every TS project failed its `checks` workflow once the lockfile was committed.
 - With both the Python and TS stacks and the `codecov` option, a pull request no longer
   gets a false coverage drop, with its comment, while the second stack's report is
   still on its way. `codecov.yml` now carries each stack's last numbers forward.
