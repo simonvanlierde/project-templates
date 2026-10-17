@@ -41,6 +41,10 @@ changes are marked **Breaking**.
   printing only the bare network error.
 - Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor
   stays, so older uv versions still build them.
+- With `dependency_bot: renovate`, Renovate's copier manager opens a PR for each new
+  template release. Before, the one-week release age held those PRs back for good,
+  because template tags carry no release date. The docs say how Dependabot users hear
+  about releases instead.
 
 ### Fixed
 
