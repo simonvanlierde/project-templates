@@ -1,0 +1,12 @@
+export const title = {{ project_name | to_json }};
+
+export function App() {
+  return (
+    <main>
+      <h1>{title}</h1>
+{%- if project_description %}
+      <p>{{ "{" }}{{ project_description | to_json }}{{ "}" }}</p>
+{%- endif %}
+    </main>
+  );
+}

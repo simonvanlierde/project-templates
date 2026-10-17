@@ -31,6 +31,13 @@ node_modules/
 .pnpm-store/
 *.tsbuildinfo
 coverage/
+{%- if 'ts' in stacks and ts_kind == 'web-app' %}
+playwright-report/
+test-results/
+blob-report/
+.wrangler/
+dev-dist/
+{%- endif %}
 
 # Rust
 target/

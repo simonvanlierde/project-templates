@@ -1,0 +1,26 @@
+{%- if web_framework == 'preact' -%}
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  resolve: {
+    // Code written for React, including libraries, imports react and react-dom.
+    // preact/compat answers those imports. The longer paths come first: each
+    // key also matches the paths below it.
+    alias: {
+      "react/jsx-runtime": "preact/jsx-runtime",
+      "react/jsx-dev-runtime": "preact/jsx-dev-runtime",
+      "react-dom/test-utils": "preact/test-utils",
+      "react-dom/client": "preact/compat/client",
+      "react-dom": "preact/compat",
+      react: "preact/compat",
+    },
+  },
+});
+{%- else -%}
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [react()],
+});
+{%- endif %}

@@ -1,3 +1,37 @@
+{%- if ts_kind == 'web-app' -%}
+{#- One file for the app, its tests and the config files: Vite bundles and
+    vitest runs the code, so tsc only checks types (noEmit), and `tsc` with no
+    arguments checks everything the project holds. -#}
+{
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+{%- if web_framework == 'preact' %}
+    "paths": {
+      "react": ["./node_modules/preact/compat/"],
+      "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],
+      "react/jsx-dev-runtime": ["./node_modules/preact/jsx-dev-runtime"],
+      "react-dom": ["./node_modules/preact/compat/"],
+      "react-dom/*": ["./node_modules/preact/compat/*"]
+    },
+{%- endif %}
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true
+  },
+  "include": ["src", "tests", "*.config.ts"]
+}
+{%- else -%}
 {
   "compilerOptions": {
     "target": "es2025",
@@ -21,3 +55,4 @@
   },
   "include": ["src"]
 }
+{%- endif %}

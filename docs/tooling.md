@@ -9,7 +9,7 @@ Which tools each stack uses, and why the defaults are what they are.
 |            | Lint and format                          | Types                        | Tests                                    | Packaging                            |
 | ---------- | ---------------------------------------- | ---------------------------- | ---------------------------------------- | ------------------------------------ |
 | Python     | `ruff`                                   | `ty`                         | `pytest`                                 | `uv`, locked, `uv_build` backend     |
-| TypeScript | `biome`                                  | `tsc`                        | `vitest`                                 | `pnpm`                               |
+| TypeScript | `biome`                                  | `tsc`                        | `vitest`, plus Playwright and axe for a `web-app` | `pnpm`, plus Vite for a `web-app` |
 | Rust       | `rustfmt`, `clippy`                      | `rustc`                      | `cargo nextest`, plus `cargo test --doc` | `cargo`, checked by `cargo-deny`     |
 | Go         | `golangci-lint` (`gofumpt`, `goimports`) | `go vet`, via golangci-lint  | `go test -race`, Examples included       | Go modules, checked by `govulncheck` |
 

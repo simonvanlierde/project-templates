@@ -7,7 +7,7 @@ The `stacks` question is a multi-select. Pick any combination:
 | Stack    | What it adds                                                                   |
 | -------- | ------------------------------------------------------------------------------ |
 | `python` | A Python package with `pyproject.toml`, `src/` and `tests/`                     |
-| `ts`     | A TypeScript package with `package.json`, `tsconfig.json` and a test           |
+| `ts`     | A TypeScript package or a Vite web app ([kinds](#typescript-kinds)), with a test |
 | `rust`   | A Rust crate, as a library or a binary, with strict clippy lints               |
 | `go`     | A Go module, as a library or a binary, with golangci-lint                      |
 | `docker` | A `Dockerfile` for the Python or TypeScript package, and a root `compose.yaml` |
@@ -16,6 +16,57 @@ Each stack also gets its own CI workflow in `.github/workflows/` and its own rec
 `just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`,
 `SECURITY.md`, `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
 recommendations. A Python project also picks a [kind](python-kinds.md).
+
+## TypeScript kinds
+
+`ts_kind` picks what the TypeScript package is:
+
+| Kind      | What it is                                                                                    |
+| --------- | --------------------------------------------------------------------------------------------- |
+| `library` | An ES module package compiled by `tsc` to `dist/`, with type declarations, publishable to npm |
+| `app`     | The same Node package, built to `dist/` and never published                                   |
+| `web-app` | A Vite single-page app for the browser, deployed to Cloudflare Pages                           |
+
+A `web-app` asks one more question, `web_framework`: React, or Preact for a smaller
+bundle. Preact runs React code through `preact/compat`, set up as aliases in
+`vite.config.ts` and `tsconfig.json`. On top of the TS stack's checks, a web app gets:
+
+- `index.html`, `src/main.tsx` and an `App` component with a unit test (Vitest with jsdom).
+- Playwright specs in `tests/e2e/` that run against the production build: an axe
+  accessibility check of every route in light and dark mode, and a check that the app
+  runs under its own Content-Security-Policy. `just ts-e2e` runs them, and so does an
+  `e2e` job in `ts.yml`.
+- `public/_headers` with the response headers, and `wrangler.jsonc` with the build
+  output directory, for Cloudflare Pages.
+- A bundle budget in `scripts/checkBundleBudget.mjs`, which `just check` runs after the build.
+- A pre-push git hook that runs the unit tests.
+
+Cloudflare Pages deploys through its Git integration. Create a Pages project from the
+repository, with build command `pnpm build` and output directory `dist`. Set the root
+directory to `ts_dir` if the app is nested. No workflow deploys it, and no token is
+stored in GitHub. A web app is static files, so the docker stack can't build it an image.
+
+The starter files are the project's once written, and `copier update` leaves them
+alone: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`
+and `tests/e2e/routes.ts`. Every other file keeps receiving template changes.
+
+### Adopting the template in an existing web app
+
+1. On a clean branch of the existing repository, render over it:
+   `copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .`,
+   answering `ts_kind=web-app` and the framework the app uses.
+2. A first copy has nothing to merge with, so it overwrites every file it writes.
+   Review `git diff` and restore the app's own versions of the starter files above,
+   and of any config it has extended: `vite.config.ts` and `vitest.config.ts` for
+   extra plugins or test setup, `public/_headers` for a looser policy the app needs,
+   the `name` in `package.json` and `wrangler.jsonc`, and the README.
+3. Move any inline script in `index.html` to a file under `public/`, so the app runs
+   under `script-src 'self'`. Then run `just check` and `just ts-e2e`.
+4. Delete the workflows the template replaces, and point branch protection at the
+   new job names. Commit, including `.copier-answers.yml`.
+
+Later `copier update` runs merge the template's changes since the recorded commit,
+so the edits from step 2 stay.
 
 ## One package or a monorepo
 

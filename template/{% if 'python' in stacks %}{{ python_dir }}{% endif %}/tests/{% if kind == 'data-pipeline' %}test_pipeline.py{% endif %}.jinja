@@ -74,13 +74,13 @@ class _Response(io.BytesIO):
         self.headers = _headers(Content_Length=str(len(body) if length is None else length), **headers)
 
 
-def _serve(monkeypatch: pytest.MonkeyPatch, *outcomes: _Response | Exception) -> list[str]:
-    """Answer each urlopen call with the next outcome, raising it if it is an exception. Returns the URLs asked for."""
-    calls: list[str] = []
+def _serve(monkeypatch: pytest.MonkeyPatch, *outcomes: _Response | Exception) -> list[urllib.request.Request]:
+    """Answer each urlopen call with the next outcome, raising it if it is an exception. Returns the requests made."""
+    calls: list[urllib.request.Request] = []
     queue = list(outcomes)
 
     def urlopen(request: urllib.request.Request, timeout: float) -> _Response:  # noqa: ARG001
-        calls.append(request.full_url)
+        calls.append(request)
         outcome = queue.pop(0)
         if isinstance(outcome, Exception):
             raise outcome
@@ -146,6 +146,50 @@ def test_fetch_waits_for_retry_after(monkeypatch: pytest.MonkeyPatch, sleeps: li
     _serve(monkeypatch, _http_error(429, Retry_After="30"), _Response(FIXTURE.encode()))
     assert _run("fetch") == [0]
     assert sleeps == [30]
+
+
+@pytest.mark.usefixtures("upstream")
+def test_fetch_caps_the_retry_after_wait(monkeypatch: pytest.MonkeyPatch, sleeps: list[float]) -> None:
+    """A server asking for a day's wait cannot stall the run for a day."""
+    _serve(monkeypatch, _http_error(429, Retry_After="86400"), _Response(FIXTURE.encode()))
+    assert _run("fetch") == [0]
+    assert sleeps == [120]
+
+
+@pytest.mark.usefixtures("upstream")
+def test_a_refetch_is_conditional_and_a_304_keeps_the_record(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unchanged source is not downloaded again, and its fetch record stays as it was."""
+    modified = "Wed, 13 Mar 2024 15:21:06 GMT"
+    calls = _serve(monkeypatch, _Response(FIXTURE.encode(), Last_Modified=modified, ETag='"abc123"'), _http_error(304))
+    assert _run("fetch") == [0]
+    record = Path("data/raw/example.csv.fetch.json").read_text(encoding="utf-8")
+    assert _run("fetch", "build", "validate") == [0, 0, 0]
+    assert calls[0].get_header("If-none-match") is None
+    assert (calls[1].get_header("If-none-match"), calls[1].get_header("If-modified-since")) == ('"abc123"', modified)
+    assert Path("data/raw/example.csv.fetch.json").read_text(encoding="utf-8") == record
+    assert RAW.read_text(encoding="utf-8") == FIXTURE
+
+
+@pytest.mark.usefixtures("upstream")
+def test_a_raw_file_changed_since_its_fetch_is_fetched_in_full(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Edited bytes are not kept on a 304: the request is unconditional."""
+    calls = _serve(monkeypatch, _Response(FIXTURE.encode(), ETag='"abc123"'), _Response(FIXTURE.encode()))
+    _run("fetch")
+    RAW.write_text("edited\n", encoding="utf-8")
+    assert _run("fetch") == [0]
+    assert calls[1].get_header("If-none-match") is None
+    assert RAW.read_text(encoding="utf-8") == FIXTURE
+
+
+def test_a_new_sha256_pin_makes_the_refetch_unconditional(
+    upstream: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A 304 cannot vouch for bytes the manifest no longer pins, so they are fetched and checked again."""
+    calls = _serve(monkeypatch, _Response(FIXTURE.encode(), ETag='"abc123"'), _Response(FIXTURE.encode()))
+    _run("fetch")
+    _manifest(tmp_path, upstream.as_uri(), terms=f'sha256 = "{"0" * 64}"')
+    assert _run("fetch") == [1]
+    assert calls[1].get_header("If-none-match") is None
 
 
 @pytest.mark.usefixtures("upstream")
@@ -350,7 +394,7 @@ def test_a_failed_download_is_one_line_and_a_failed_exit(
     _manifest(tmp_path, upstream.with_name("gone.csv").as_uri())
     assert _run("fetch") == [1]
     err = capsys.readouterr().err
-    assert err.startswith("fetch: ")
+    assert err.startswith("fetch: example: fetching ")
     assert len(err.strip().splitlines()) == 1
 
 

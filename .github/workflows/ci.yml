@@ -349,6 +349,17 @@ jobs:
             stacks: "[ts,docker]"
             ts_dir: apps/web
             ts_kind: library
+          # Both web frameworks, one at the root and one nested. Each also runs its
+          # Playwright specs.
+          - name: web-app (react)
+            project_name: ci-ts-web
+            ts_kind: web-app
+            web_framework: react
+          - name: web-app (preact, nested)
+            project_name: ci-ts-web-preact
+            ts_dir: apps/web
+            ts_kind: web-app
+            web_framework: preact
     env:
       TS_DIR: ${{ matrix.ts_dir }}
     steps:
@@ -363,6 +374,7 @@ jobs:
           PROJECT_NAME: ${{ matrix.project_name }}
           STACKS: ${{ matrix.stacks || '[ts]' }}
           TS_KIND: ${{ matrix.ts_kind }}
+          WEB_FRAMEWORK: ${{ matrix.web_framework }}
           # Derived from stacks so a row can't add docker and skip its answers.
           DOCKER: ${{ contains(matrix.stacks, 'docker') }}
         run: |
@@ -372,6 +384,7 @@ jobs:
              --data "stacks=$STACKS"
              --data "ts_kind=$TS_KIND")
           if [ -n "$TS_DIR" ]; then C+=(--data "ts_dir=$TS_DIR"); fi
+          if [ -n "$WEB_FRAMEWORK" ]; then C+=(--data "web_framework=$WEB_FRAMEWORK"); fi
           if [ "$TS_KIND" = library ]; then C+=(--data publish_to_npm=true); fi
           if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[ts]'); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
@@ -414,6 +427,15 @@ jobs:
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just ts-sync check
+
+      # The accessibility and CSP specs. Chromium installs on the runner here; the
+      # generated ts.yml runs the same specs in the Playwright container.
+      - if: matrix.ts_kind == 'web-app'
+        name: e2e
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.ts_dir }}
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          just ts-e2e
 
       - if: contains(matrix.stacks, 'docker')
         name: docker build

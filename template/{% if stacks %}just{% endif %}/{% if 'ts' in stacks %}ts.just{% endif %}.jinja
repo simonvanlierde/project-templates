@@ -6,12 +6,15 @@
 ts-sync:
     {{ pnpm }} install
 
-# What CI runs: lint and unused code, types, tests, build, dependency audit.
+# What CI runs: lint and unused code, types, tests, build{% if ts_kind == 'web-app' %}, bundle budget{% endif %}, dependency audit.
 ts-check:
     {{ pnpm }} run check
     {{ pnpm }} run typecheck
     {{ pnpm }} run test
     {{ pnpm }} run build
+{%- if ts_kind == 'web-app' %}
+    {{ pnpm }} run budget
+{%- endif %}
     {{ pnpm }} audit --prod --audit-level=moderate
 
 # Fix what biome can fix, then format.
@@ -25,3 +28,10 @@ ts-cov:
 # Tests only; extra arguments reach vitest (`just ts-test -t name`).
 ts-test *args:
     {{ pnpm }} exec vitest run {% raw %}{{ args }}{% endraw %}
+{%- if ts_kind == 'web-app' %}
+
+# Playwright against the production build: the accessibility and CSP specs.
+# Install the browser once per machine: `{{ pnpm }} exec playwright install chromium`.
+ts-e2e *args:
+    {{ pnpm }} run test:e2e {% raw %}{{ args }}{% endraw %}
+{%- endif %}
