@@ -52,6 +52,21 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data dependency_bot=renovate \
   --data 'docker_stacks=[python]' . "$out/d"
 
+# The web-app starter files belong to the project: rendering d again over edited
+# copies keeps them (_skip_if_exists), while a template-owned file is rewritten.
+echo '// project edit' >>"$out/d/web/src/App.tsx"
+echo '<!-- project edit -->' >>"$out/d/web/index.html"
+echo '// project edit' >>"$out/d/web/vite.config.ts"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=pipe-me --data 'stacks=[python,ts,docker]' \
+  --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0 \
+  --data ts_dir=web --data ts_kind=web-app --data web_framework=preact \
+  --data dependency_bot=renovate \
+  --data 'docker_stacks=[python]' . "$out/d" >/dev/null 2>&1
+grep -q 'project edit' "$out/d/web/src/App.tsx"
+grep -q 'project edit' "$out/d/web/index.html"
+(! grep -q 'project edit' "$out/d/web/vite.config.ts")
+
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
 # -f on `git tag` covers a killed run that left the tag behind.

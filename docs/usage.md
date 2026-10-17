@@ -46,6 +46,28 @@ repository, with build command `pnpm build` and output directory `dist`. Set the
 directory to `ts_dir` if the app is nested. No workflow deploys it, and no token is
 stored in GitHub. A web app is static files, so the docker stack can't build it an image.
 
+The starter files are the project's once written, and `copier update` leaves them
+alone: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`
+and `tests/e2e/routes.ts`. Every other file keeps receiving template changes.
+
+### Adopting the template in an existing web app
+
+1. On a clean branch of the existing repository, render over it:
+   `copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .`,
+   answering `ts_kind=web-app` and the framework the app uses.
+2. A first copy has nothing to merge with, so it overwrites every file it writes.
+   Review `git diff` and restore the app's own versions of the starter files above,
+   and of any config it has extended: `vite.config.ts` and `vitest.config.ts` for
+   extra plugins or test setup, `public/_headers` for a looser policy the app needs,
+   the `name` in `package.json` and `wrangler.jsonc`, and the README.
+3. Move any inline script in `index.html` to a file under `public/`, so the app runs
+   under `script-src 'self'`. Then run `just check` and `just ts-e2e`.
+4. Delete the workflows the template replaces, and point branch protection at the
+   new job names. Commit, including `.copier-answers.yml`.
+
+Later `copier update` runs merge the template's changes since the recorded commit,
+so the edits from step 2 stay.
+
 ## One package or a monorepo
 
 By default, each package sits at the repository root. To put several packages in one

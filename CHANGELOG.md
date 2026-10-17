@@ -21,6 +21,9 @@ changes are marked **Breaking**.
   `just ts-e2e` runs them locally. `just check` and CI also enforce a bundle budget,
   set in `scripts/checkBundleBudget.mjs`, and a pre-push git hook runs the unit tests.
   The docker stack can't build a web app an image, since it is static files.
+  Its starter files (`src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`,
+  `index.html` and `tests/e2e/routes.ts`) belong to the project once written:
+  `copier update` never touches them again.
 - Dependabot groups npm security updates into one pull request, instead of one per
   advisory.
 - VS Code formats `.tsx`, `.jsx` and `.css` files with Biome, and the Biome hook also

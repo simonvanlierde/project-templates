@@ -1,9 +1,16 @@
 _subdirectory: template
 # `stacks` is a multiselect, which needs 9.1.0.
 _min_copier_version: "9.1.0"
-# Written once, then owned by the project: `copier update` leaves it alone.
+# Written once, then owned by the project: `copier update` leaves them alone. The
+# web-app entries are its starter files, which the project rewrites from day one.
 _skip_if_exists:
   - CHANGELOG.md
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.tsx"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.test.tsx"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/main.tsx"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
 
 project_name:
   type: str
