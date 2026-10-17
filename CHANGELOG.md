@@ -10,6 +10,13 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor
+  stays, so older uv versions still build them.
+
+## [0.10.0] - 2026-10-16
+
 ### Added
 
 - A `dependency_bot` question: Dependabot (the default, as before) or Renovate. Renovate
@@ -38,12 +45,17 @@ changes are marked **Breaking**.
 - With both the Python and TS stacks and the `codecov` option, a pull request no longer
   gets a false coverage drop, with its comment, while the second stack's report is
   still on its way. `codecov.yml` now carries each stack's last numbers forward.
+- A `data-pipeline` project's `pyproject.toml` no longer explains its packaging as if
+  it were a research project with notebooks.
+
+## [0.9.1] - 2026-10-13
+
+### Fixed
+
 - The README's licence badge now shows a hyphenated licence such as BSD-3-Clause.
   Before, shields.io read each hyphen as a field separator, so the badge broke.
 - The Apache-2.0 and BSD-3-Clause LICENSE files now end in one newline, not two, so the
   end-of-file-fixer hook no longer rewrites LICENSE on its first run in a new project.
-- A `data-pipeline` project's `pyproject.toml` no longer explains its packaging as if
-  it were a research project with notebooks.
 
 ## [0.9.0] - 2026-10-13
 
@@ -252,7 +264,9 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/simonvanlierde/project-templates/compare/v0.9.1...v0.10.0
+[0.9.1]: https://github.com/simonvanlierde/project-templates/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/simonvanlierde/project-templates/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/simonvanlierde/project-templates/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/simonvanlierde/project-templates/compare/v0.7.1...v0.8.0
