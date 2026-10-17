@@ -96,6 +96,11 @@ need two packages in the same language, switch to that language's workspace tool
 this template. The same command lets you change your answers: add a stack or turn on a
 publish option, and Copier writes the new files.
 
+`CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`, `codemeta.json`)
+and a `web-app`'s starter files are written once and then belong to your project: an
+update never touches them, so your release tool or your own edits own them. A template release that
+changes them says so in the template's changelog, for you to copy over by hand.
+
 To move a package to another directory, run `copier update` with the new directory.
 Then delete the old directory by hand. Copier removes files that left the template,
 but not files that moved because an answer changed.

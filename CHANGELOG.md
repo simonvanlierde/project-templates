@@ -42,6 +42,10 @@ changes are marked **Breaking**.
   server asking for hours cannot hold the run until CI's 10-minute job timeout kills it.
 - A fetch that still fails after its retries names the source and its URL, instead of
   printing only the bare network error.
+- `copier update` no longer touches `CITATION.cff`, `.zenodo.json` or `codemeta.json`
+  once they exist, as with `CHANGELOG.md`. A release that adds its version, date or DOI
+  to them no longer conflicts with every update. Later template changes to these files
+  reach existing projects only by hand.
 - Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor
   stays, so older uv versions still build them.
 
