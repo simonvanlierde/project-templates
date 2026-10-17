@@ -1,0 +1,8 @@
+import { render, screen } from "@testing-library/{{ web_framework }}";
+import { expect, test } from "vitest";
+import { App, title } from "./App";
+
+test("renders the title as the page heading", () => {
+  render(<App />);
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(title);
+});

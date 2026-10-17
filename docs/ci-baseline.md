@@ -23,6 +23,10 @@ say what each piece is, why it's there, and what I left out on purpose.
 | `CITATION.cff`, `.zenodo.json`, `codemeta.json` | `library`, `research` and `data-pipeline` kinds | GitHub's "Cite this repository" button reads `CITATION.cff`, Zenodo reads `.zenodo.json` when it archives a release, and software indexes read `codemeta.json` (CodeMeta 4.0). A hook checks `CITATION.cff` against its schema. |
 | Tests on every supported Python | `python.yml`, `library` kind | A library declares `requires-python >= python_min` and CI tests each minor from there to `python_version`. The default floor is two minors below, after [SPEC 0](https://scientific-python.org/specs/spec-0000/). |
 | Coverage upload, gated only on a drop of over 2 points | `python.yml`, `ts.yml`, `codecov.yml`, with the `codecov` option | Coverage shows per pull request without blocking one over a few untested lines. Codecov comments only when a pull request adds lines no test runs. |
+| End-to-end tests in Chromium, in the Playwright container | `ts.yml`, `web-app` kind | The tests run against the production build, which is what users get. The image tag comes from the `@playwright/test` version the lockfile installed, so a Playwright bump needs no workflow edit. The job installs a Latin font: the image's fallback font has narrow Latin glyphs, which can hide text that overflows. A failed run uploads the HTML report. |
+| Accessibility check with axe | `tests/e2e/a11y.spec.ts`, `web-app` kind | Every route, in light and dark color schemes, against WCAG 2.0, 2.1 and 2.2 levels A and AA. Any violation fails, whatever its impact. |
+| Content-Security-Policy with no inline script | `public/_headers`, `tests/e2e/csp.spec.ts`, `web-app` kind | Cloudflare Pages serves the policy (`script-src 'self'`) with HSTS, frame and opener isolation. The spec runs the built app under that policy and fails on any violation, so a change that needs a looser policy fails in CI, not in production. |
+| Bundle budget | `scripts/checkBundleBudget.mjs`, `web-app` kind | Fails `just check` and CI when the largest JavaScript file, gzipped, passes the limit set in the script. A dependency that doubles the bundle shows up in its own pull request. |
 | Provenance on publish | release workflows | PyPI and npm trusted publishing attach attestations. Container images pushed to GHCR carry an SBOM and a provenance attestation. |
 | Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
@@ -44,6 +48,10 @@ scanning covers the server side.
 | Base images pinned to a digest | The `FROM` tags are copier answers (`python_version`, `node_version`), so Dependabot's docker ecosystem would fight `copier update` over them. | The image runs in production: pin `FROM ...@sha256:` and add a docker entry to `dependabot.yml`. |
 | One required "CI result" job | A single workflow per stack is short enough to list its jobs in branch protection. | The job list grows past what you want to maintain by hand. |
 | CODEOWNERS, issue templates, CONTRIBUTING | Single-author repos. | Other people start contributing. |
+| A deploy workflow for the `web-app` kind | Cloudflare Pages' Git integration builds every push and gives each pull request a preview URL, with no API token stored in GitHub. | You deploy somewhere without a Git integration, or need a check to pass before a deploy. |
+| Firefox, WebKit and mobile browsers in the e2e job | Each browser multiplies the job's time, and a small app rarely breaks in only one engine. | The app uses an API whose support differs between browsers. Add a project to `playwright.config.ts`. |
+| A build step that hashes inline scripts into the policy | The policy allows no inline script at all, so there is nothing to hash. Code that must run before first paint goes in a file under `public/`. | Never, while that rule holds. |
+| Offline support (a service worker) | It caches old builds, which makes a broken deploy harder to roll back. | Users need the app offline. `vite-plugin-pwa` is the usual choice. |
 
 ## Caveats
 

@@ -42,11 +42,13 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
-# workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, and the
-# only one with Renovate.
+# workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, the
+# only one with Renovate, and the only web-app: Preact, nested, so the e2e job's
+# paths are audited with the rest.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=pipe-me --data 'stacks=[python,docker]' \
+  --data project_name=pipe-me --data 'stacks=[python,ts,docker]' \
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0 \
+  --data ts_dir=web --data ts_kind=web-app --data web_framework=preact \
   --data dependency_bot=renovate \
   --data 'docker_stacks=[python]' . "$out/d"
 
@@ -58,6 +60,14 @@ trap 'git -C "$repo" tag -d check-render-tag >/dev/null 2>&1 || true' EXIT
 git tag -f check-render-tag >/dev/null
 "${copier[@]}" --vcs-ref=check-render-tag \
   --data project_name=tag-me --data 'stacks=[python]' . "$out/e"
+
+# A web app is static files, so the ts image (a Node service) is refused for it.
+if "${copier[@]}" --vcs-ref=HEAD --data project_name=web-docker \
+  --data 'stacks=[ts,docker]' --data ts_kind=web-app \
+  --data 'docker_stacks=[ts]' . "$out/g" >/dev/null 2>&1; then
+  echo "rendered a ts image for a web app: the docker_stacks validator lost its web-app check" >&2
+  exit 1
+fi
 
 # Without the settings file, --defaults must stop at the blank identity answers.
 if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
@@ -256,6 +266,36 @@ test ! -e d/pipe/notebooks
 grep -qx 'pipe/data/raw/\*' d/.gitignore
 grep -q 'path: pipe/data/raw/\*.fetch.json' d/.github/workflows/python.yml
 grep -q '^pipeline: fetch build validate' d/just/python.just
+# web-app (d, Preact, nested): the Vite app and its e2e specs replace the Node
+# package, the e2e job reads its container tag from the check job, and the
+# unit tests run before a push.
+test -f d/web/index.html
+test -f d/web/src/main.tsx
+test -f d/web/public/_headers
+test -f d/web/wrangler.jsonc
+test -f d/web/tests/e2e/a11y.spec.ts
+test -f d/web/tests/e2e/csp.spec.ts
+test ! -e d/web/src/index.ts
+test ! -e d/web/tsconfig.build.json
+test ! -e d/web/Dockerfile
+test ! -e a/index.html
+grep -q '"react": \["./node_modules/preact/compat/"\]' d/web/tsconfig.json
+grep -q 'react: "preact/compat"' d/web/vite.config.ts
+(! grep -q '"react":' d/web/package.json)
+grep -q 'script-src .self.;' d/web/public/_headers
+(! grep -q "'unsafe-inline'" d/web/public/_headers)
+grep -q '"budget": "node scripts/checkBundleBudget.mjs"' d/web/package.json
+grep -q 'pnpm -C web run budget' d/just/ts.just
+grep -qF 'image: mcr.microsoft.com/playwright:v' d/.github/workflows/ts.yml
+grep -qF 'needs.check.outputs.playwright }}-noble' d/.github/workflows/ts.yml
+grep -q 'fonts-dejavu-core' d/.github/workflows/ts.yml
+grep -qx '          path: web/playwright-report/' d/.github/workflows/ts.yml
+grep -q 'stages: \[pre-push\]' d/.pre-commit-config.yaml
+grep -qx 'default_install_hook_types: \[pre-commit, pre-push\]' d/.pre-commit-config.yaml
+(! grep -q 'pre-push' a/.pre-commit-config.yaml)
+grep -qx 'playwright-report/' d/.gitignore
+(! grep -q 'playwright-report' a/.gitignore)
+(! grep -q 'e2e' a/.github/workflows/ts.yml)
 grep -q 'applies-to: security-updates' a/.github/dependabot.yml
 # Only data-pipeline renders it.
 test ! -e a/sources.toml
