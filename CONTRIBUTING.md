@@ -12,7 +12,7 @@ copier copy --vcs-ref=HEAD gh:simonvanlierde/project-templates .
 ## Run the checks before you push
 
 Run the git hooks and the same render checks CI runs. The render script includes
-uncommitted edits. CI then runs zizmor, actionlint and the CITATION.cff schema check over
+uncommitted edits. CI then runs zizmor, jactionlint and the CITATION.cff schema check over
 the rendered output, because `.jinja` files aren't YAML:
 
 ```sh

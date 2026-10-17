@@ -28,6 +28,9 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- The workflow linter hook runs jactionlint, a maintained fork of actionlint, in place of
+  actionlint. Its `correctness` profile runs the checks actionlint ran, so existing workflows
+  get no new findings.
 - With the `codecov` option, Codecov comments only when a pull request adds lines no test
   runs. It used to comment on any drop in total coverage, however small, although the
   docs said it waited for the 2-point threshold. A drop of over 2 points still fails the

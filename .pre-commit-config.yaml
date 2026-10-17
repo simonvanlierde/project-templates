@@ -40,7 +40,7 @@ repos:
       - id: yamllint
         args: [-c, template/.yamllint.yml]
 
-  # scripts/check-render.sh; actionlint covers only workflow `run:` blocks.
+  # scripts/check-render.sh; jactionlint covers only workflow `run:` blocks.
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: a6564f5d57444e123433a5c9af733e3975c77229 # frozen: v0.11.0.1-1
     hooks:
@@ -67,10 +67,10 @@ repos:
     hooks:
       - id: zizmor
 
-  - repo: https://github.com/rhysd/actionlint
-    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca # frozen: v1.7.12
+  - repo: https://github.com/jdx/jactionlint
+    rev: 1027f0a131ab98bc7e191d995bfa15dbed5bbf8f # frozen: v2.2.0
     hooks:
-      - id: actionlint
+      - id: jactionlint
 
   # Uses the template's config, like yamllint.
   - repo: https://github.com/rvben/rumdl-pre-commit
