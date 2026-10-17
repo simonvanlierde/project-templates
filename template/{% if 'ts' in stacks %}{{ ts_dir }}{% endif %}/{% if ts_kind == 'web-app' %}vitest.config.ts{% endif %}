@@ -1,0 +1,13 @@
+import { defineConfig, mergeConfig } from "vitest/config";
+import viteConfig from "./vite.config.ts";
+
+// Unit tests only: Playwright runs tests/e2e/ against the built app.
+export default mergeConfig(
+  viteConfig,
+  defineConfig({
+    test: {
+      environment: "jsdom",
+      include: ["src/**/*.test.{ts,tsx}"],
+    },
+  }),
+);

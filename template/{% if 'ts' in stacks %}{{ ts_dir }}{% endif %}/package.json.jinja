@@ -1,3 +1,4 @@
+{%- set web = ts_kind == 'web-app' -%}
 {
   "name": "{{ slug }}",
   "version": "0.1.0",
@@ -31,12 +32,28 @@
     "node": ">={{ node_version }}"
   },
   "scripts": {
+{%- if web %}
+    "budget": "node scripts/checkBundleBudget.mjs",
+    "build": "vite build",
+{%- else %}
     "build": "tsc -p tsconfig.build.json",
+{%- endif %}
     "check": "biome check && knip",
     "coverage": "vitest run --coverage --coverage.reporter=text",
+{%- if web %}
+    "dev": "vite",
+{%- endif %}
     "fix": "biome check --write",
+{%- if web %}
+    "preview": "vite preview",
+{%- endif %}
     "test": "vitest run",
+{%- if web %}
+    "test:e2e": "playwright test",
+    "typecheck": "tsc"
+{%- else %}
     "typecheck": "tsc --noEmit"
+{%- endif %}
   },
   "knip": {
     "ignoreDependencies": [
@@ -48,16 +65,50 @@
 {%- endif %}
     ]
   },
+{%- if web %}
+  "dependencies": {
+{%- if web_framework == 'preact' %}
+    "preact": "^11.0.1"
+{%- else %}
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+{%- endif %}
+  },
+{%- endif %}
   "devDependencies": {
+{%- if web %}
+    "@axe-core/playwright": "^4.13.0",
+{%- endif %}
     "@biomejs/biome": "^2.5.15",
     "@j178/prek": "^0.5.5",
+{%- if web %}
+    "@playwright/test": "^1.64.0",
+{#- @testing-library/react takes the DOM library as a peer; the preact one bundles it. #}
+{%- if web_framework == 'preact' %}
+    "@testing-library/preact": "^3.2.4",
+{%- else %}
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+{%- endif %}
+{%- endif %}
     "@types/node": "^26.6.4",
+{%- if web and web_framework == 'react' %}
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+{%- endif %}
     "@vitest/coverage-v8": "^5.0.3",
+{%- if web %}
+    "jsdom": "^30.1.2",
+{%- endif %}
     "knip": "^6.39.0",
 {%- if publish_to_npm %}
     "publint": "^0.3.25",
 {%- endif %}
     "typescript": "^7.0.2",
+{%- if web %}
+    "vite": "^8.3.4",
+{%- endif %}
     "vitest": "^5.0.3"
   }
 }

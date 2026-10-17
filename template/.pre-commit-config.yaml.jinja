@@ -15,6 +15,11 @@
 # Python projects get prek from `uv tool install prek`. TypeScript-only projects
 # get it from the @j178/prek devDependency. Revs are commit SHAs, since tags are
 # mutable; Dependabot moves each SHA and its `# frozen:` tag together.
+{%- if 'ts' in stacks and ts_kind == 'web-app' %}
+
+# `prek install` sets up both: the unit tests run before each push.
+default_install_hook_types: [pre-commit, pre-push]
+{%- endif %}
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
@@ -22,6 +27,8 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: check-yaml
+        # pnpm writes its own version into the lockfile as a second YAML document.
+        exclude: (^|/)pnpm-lock\.yaml$
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
@@ -138,7 +145,7 @@ repos:
         pass_filenames: false
 {%- endif %}
         language: system
-        types_or: [javascript, jsx, ts, tsx, json, css]
+        types_or: [javascript, jsx, ts, tsx, json, css, html]
 
       - id: tsc
         name: tsc --noEmit
@@ -146,6 +153,17 @@ repos:
         language: system
         pass_filenames: false
         types_or: [ts, tsx]
+{%- if ts_kind == 'web-app' %}
+
+      # Before a push, not each commit: the unit tests take longer than a lint.
+      - id: vitest
+        name: vitest run
+        entry: {{ pnpm }} exec vitest run
+        language: system
+        pass_filenames: false
+        types_or: [javascript, jsx, ts, tsx, css]
+        stages: [pre-push]
+{%- endif %}
 {%- endif %}
 {%- if 'rust' in stacks %}
       # cargo takes no file list: both hooks work on the whole crate.

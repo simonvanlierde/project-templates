@@ -1,9 +1,16 @@
 _subdirectory: template
 # `stacks` is a multiselect, which needs 9.1.0.
 _min_copier_version: "9.1.0"
-# Written once, then owned by the project: `copier update` leaves it alone.
+# Written once, then owned by the project: `copier update` leaves them alone. The
+# web-app entries are its starter files, which the project rewrites from day one.
 _skip_if_exists:
   - CHANGELOG.md
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.tsx"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.test.tsx"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/main.tsx"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
 
 project_name:
   type: str
@@ -214,7 +221,19 @@ ts_kind:
   choices:
     Library (publishes dist/ and type declarations): library
     Application (builds to dist/, not published): app
+    Web app (Vite single-page app, Playwright e2e, Cloudflare Pages): web-app
   default: library
+
+# Only the web-app kind renders JSX. Preact runs the same code through its
+# React-compatible layer, aliased in vite.config.ts and tsconfig.json.
+web_framework:
+  type: str
+  when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+  help: Which UI library the web app uses
+  choices:
+    React: react
+    Preact (React API through preact/compat, a smaller bundle): preact
+  default: react
 
 # renovate: datasource=node-version depName=node
 node_version:
@@ -341,6 +360,9 @@ docker_stacks:
     Pick at least one stack to build an image from.
     {% elif docker_stacks | reject('in', stacks) | list %}
     An image needs its stack: add {{ docker_stacks | reject('in', stacks) | join(' and ') }} to `stacks` too.
+    {% elif 'ts' in docker_stacks and ts_kind == 'web-app' %}
+    The ts image is a Node service with /health. A web app is static files that
+    Cloudflare Pages serves: drop ts from `docker_stacks`.
     {% elif kind == 'web-service' and 'python' not in docker_stacks %}
     The web-service kind is the python image: add python to `docker_stacks`.
     {% elif docker_stacks | length > 1 and python_dir == ts_dir %}

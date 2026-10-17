@@ -55,6 +55,22 @@ changes are marked **Breaking**.
 
 ### Added
 
+- A `web-app` TypeScript kind: a Vite single-page app with React or Preact (the new
+  `web_framework` question), deployed by Cloudflare Pages' Git integration. It ships
+  Playwright specs that run against the production build: an axe check of every route
+  in light and dark mode against WCAG 2.2 AA, failing on any violation, and a check that
+  the app runs under the Content-Security-Policy in `public/_headers`, which allows no
+  inline script. `ts.yml` runs them in an `e2e` job in the Playwright container, and
+  `just ts-e2e` runs them locally. `just check` and CI also enforce a bundle budget,
+  set in `scripts/checkBundleBudget.mjs`, and a pre-push git hook runs the unit tests.
+  The docker stack can't build a web app an image, since it is static files.
+  Its starter files (`src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`,
+  `index.html` and `tests/e2e/routes.ts`) belong to the project once written:
+  `copier update` never touches them again.
+- Dependabot groups npm security updates into one pull request, instead of one per
+  advisory.
+- VS Code formats `.tsx`, `.jsx` and `.css` files with Biome, and the Biome hook also
+  checks HTML.
 - A `dependency_bot` question: Dependabot (the default, as before) or Renovate. Renovate
   gets a `renovate.json5` with the same rules as the Dependabot config: weekly, a one-week
   cooldown, grouped actions, hooks and dev tooling, and no updates to the copier-owned
@@ -78,6 +94,9 @@ changes are marked **Breaking**.
 
 ### Fixed
 
+- The `check-yaml` hook no longer fails on `pnpm-lock.yaml`. pnpm 12 writes its own
+  version into the lockfile as a second YAML document, which the hook rejected, so
+  every TS project failed its `checks` workflow once the lockfile was committed.
 - With both the Python and TS stacks and the `codecov` option, a pull request no longer
   gets a false coverage drop, with its comment, while the second stack's report is
   still on its way. `codecov.yml` now carries each stack's last numbers forward.
