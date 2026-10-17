@@ -10,6 +10,12 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+Upgrade steps:
+
+- In a `data-pipeline` project, give each implemented source in `sources.toml` a
+  `license` (an SPDX id, or `LicenseRef-<name>`) and `redistribute = true` or `false`.
+  `just validate` fails until you do (see the Breaking change below).
+
 ### Added
 
 - A `web-app` TypeScript kind: a Vite single-page app with React or Preact (the new
@@ -28,6 +34,9 @@ changes are marked **Breaking**.
   advisory.
 - VS Code formats `.tsx`, `.jsx` and `.css` files with Biome, and the Biome hook also
   checks HTML.
+- A `data-pipeline` fetch appends its record to `data/fetches.jsonl` whenever it brings
+  bytes a source has not had before. The file is committed, so it keeps every version
+  of every source the pipeline has seen. It holds checksums, not values.
 - A `data-pipeline` fetch sends the recorded `etag` and `last_modified` back as
   `If-None-Match` and `If-Modified-Since`. When the server answers 304 Not Modified,
   the raw file and its fetch record stay as they were. A raw file edited since its
@@ -35,6 +44,10 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- **Breaking:** `just validate` in a `data-pipeline` project needs each implemented
+  source to state `license` (an SPDX id) and `redistribute` (whether the raw file may
+  be republished), beside `terms`. The free-text terms stay for people; these two are
+  for a release step to check.
 - The workflow linter hook runs jactionlint, a maintained fork of actionlint, in place of
   actionlint. Its `correctness` profile runs the checks actionlint ran, so existing workflows
   get no new findings.

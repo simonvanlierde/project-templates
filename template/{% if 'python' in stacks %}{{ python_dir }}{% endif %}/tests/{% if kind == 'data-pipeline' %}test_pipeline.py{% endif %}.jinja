@@ -16,9 +16,11 @@ from {{ module_name }} import pipeline
 FIXTURE = "year,value\n2020,1.5\n2021,2.5\n"
 RAW = Path("data/raw/example.csv")
 OUT = Path("data/processed/example.csv")
+LOG = Path("data/fetches.jsonl")
+TERMS = 'terms = "CC0-1.0"\nterms_url = "https://example.org/terms"\nlicense = "CC0-1.0"\nredistribute = true'
 
 
-def _manifest(root: Path, url: str, terms: str = 'terms = "CC0-1.0"\nterms_url = "https://example.org/terms"') -> None:
+def _manifest(root: Path, url: str, terms: str = TERMS) -> None:
     """One implemented source at `url`, and one unimplemented source."""
     text = f"""
 [[source]]
@@ -167,6 +169,7 @@ def test_a_refetch_is_conditional_and_a_304_keeps_the_record(monkeypatch: pytest
     assert calls[0].get_header("If-none-match") is None
     assert (calls[1].get_header("If-none-match"), calls[1].get_header("If-modified-since")) == ('"abc123"', modified)
     assert Path("data/raw/example.csv.fetch.json").read_text(encoding="utf-8") == record
+    assert len(LOG.read_text(encoding="utf-8").splitlines()) == 1
     assert RAW.read_text(encoding="utf-8") == FIXTURE
 
 
@@ -472,6 +475,37 @@ def test_validate_requires_reuse_terms(upstream: Path, tmp_path: Path, capsys: p
     _run("fetch", "build")
     assert _run("validate") == [1]
     assert "example: no terms" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("key", "value", "expected"),
+    [
+        ("license", '""', "example: no license"),
+        ("redistribute", '"yes"', "example: redistribute must be true or false"),
+    ],
+)
+def test_validate_requires_machine_readable_terms(
+    upstream: Path, tmp_path: Path, key: str, value: str, expected: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A release step can only check terms it can read: an SPDX id and a yes-or-no on republishing."""
+    kept = "\n".join(t for t in TERMS.splitlines() if not t.startswith(key))
+    _manifest(tmp_path, upstream.as_uri(), terms=f"{kept}\n{key} = {value}")
+    _run("fetch", "build")
+    assert _run("validate") == [1]
+    assert expected in capsys.readouterr().err
+
+
+def test_the_fetch_log_keeps_each_new_version_once(upstream: Path) -> None:
+    """A re-download of the same bytes adds nothing; a publisher revision adds one line."""
+    _run("fetch", "fetch")
+    upstream.write_text(FIXTURE + "2022,3.5\n", encoding="utf-8")
+    _run("fetch")
+    lines = [json.loads(line) for line in LOG.read_text(encoding="utf-8").splitlines()]
+    assert [r["sha256"] for r in lines] == [
+        hashlib.sha256(FIXTURE.encode()).hexdigest(),
+        hashlib.sha256((FIXTURE + "2022,3.5\n").encode()).hexdigest(),
+    ]
+    assert lines[-1] == json.loads(Path("data/raw/example.csv.fetch.json").read_text(encoding="utf-8"))
 
 
 @pytest.mark.usefixtures("upstream")
