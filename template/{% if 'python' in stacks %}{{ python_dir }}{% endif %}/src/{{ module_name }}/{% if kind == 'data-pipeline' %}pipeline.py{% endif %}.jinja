@@ -9,6 +9,10 @@ record beside its raw file: the URL, when it was retrieved, the SHA-256 of the b
 the vintage the manifest declares, and the server's Last-Modified and ETag headers.
 A later fetch sends those headers back, and when the server answers 304 Not Modified it
 keeps the raw file and its record as they are.
+
+Each fetch that brings bytes a source has not had before also appends its record to
+data/fetches.jsonl. That log is committed: it holds no source values, and it keeps every
+version of every source the pipeline has seen.
 """
 
 from __future__ import annotations
@@ -36,6 +40,7 @@ from urllib.parse import urlsplit
 MANIFEST = Path("sources.toml")
 RAW = Path("data/raw")
 PROCESSED = Path("data/processed")
+FETCH_LOG = Path("data/fetches.jsonl")
 
 IMPLEMENTED = "implemented"
 UNIMPLEMENTED = "unimplemented"
@@ -180,17 +185,28 @@ def _conditional(previous: FetchRecord | None) -> dict[str, str]:
     return {name: value for name, value in headers.items() if value}
 
 
-def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
+def _last_logged(log: Path) -> dict[str, str]:
+    """The SHA-256 most recently logged for each source id, from the fetch log."""
+    if not log.exists():
+        return {}
+    records = (json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line.strip())
+    return {r["source_id"]: r["sha256"] for r in records}
+
+
+def fetch(sources: list[Source], raw: Path = RAW, log: Path = FETCH_LOG) -> list[FetchRecord]:
     """Download each implemented source into `raw`, with a fetch record beside it.
 
     A source the server reports unchanged since its last intact fetch keeps that raw file
-    and record, and its old record is returned.
+    and record, and its old record is returned. A record whose bytes differ from the last
+    ones logged for its source is appended to `log`.
 
     Raises ValueError for a download over the source's `max_bytes` (default 200 MiB), or
     one whose SHA-256 differs from the `sha256` the manifest pins, and OSError naming the
     source for one that still fails after its retries. Nothing is written for that source.
     """
     raw.mkdir(parents=True, exist_ok=True)
+    log.parent.mkdir(parents=True, exist_ok=True)
+    logged = _last_logged(log)
     records = []
     for source in implemented(sources):
         try:
@@ -221,6 +237,11 @@ def fetch(sources: list[Source], raw: Path = RAW) -> list[FetchRecord]:
         name = raw_name(source)
         _write_atomic(raw / name, payload)
         _write_atomic(raw / f"{name}.fetch.json", (json.dumps(dataclasses.asdict(record), indent=2) + "\n").encode())
+        # Appended, not rewritten: the log is history. A re-download of the same bytes adds nothing.
+        if logged.get(record.source_id) != record.sha256:
+            with log.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(dataclasses.asdict(record)) + "\n")
+            logged[record.source_id] = record.sha256
         records.append(record)
     return records
 
@@ -309,6 +330,19 @@ def read_output(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(fh))
 
 
+def _terms_problems(source: Source) -> list[str]:
+    """What an implemented source is missing of its reuse terms: in the publisher's words, and machine-readable."""
+    sid, problems = source["id"], []
+    if not (source.get("terms") and source.get("terms_url")):
+        problems.append(f"{sid}: no terms or terms_url; record the publisher's reuse terms")
+    license_ = source.get("license")
+    if not (isinstance(license_, str) and license_.strip()):
+        problems.append(f"{sid}: no license; give the SPDX id of the terms, or LicenseRef-<name> for custom ones")
+    if not isinstance(source.get("redistribute"), bool):
+        problems.append(f"{sid}: redistribute must be true or false: may the raw file be republished?")
+    return problems
+
+
 def validate(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED) -> list[str]:
     """Check the published output against the manifest and the fetch records, and return one string per problem."""
     problems = []
@@ -329,8 +363,7 @@ def validate(sources: list[Source], raw: Path = RAW, processed: Path = PROCESSED
         if status != IMPLEMENTED:
             problems.append(f"{sid}: status must be {IMPLEMENTED!r} or {UNIMPLEMENTED!r}, not {status!r}")
             continue
-        if not (source.get("terms") and source.get("terms_url")):
-            problems.append(f"{sid}: no terms or terms_url; record the publisher's reuse terms")
+        problems += _terms_problems(source)
         try:
             record, _ = verified(source, raw)
             rows = read_output(out)

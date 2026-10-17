@@ -19,7 +19,8 @@ the same answers. A library also asks for `python_min`, the oldest Python it sup
 A `data-pipeline` project gets:
 
 - `sources.toml`, a manifest of every input. Each source has a URL, the publisher's
-  reuse terms (`terms`, `terms_url`), and a `status`. A source marked
+  reuse terms (`terms`, `terms_url`), the same terms as an SPDX `license`, whether the
+  raw file may be republished (`redistribute`), and a `status`. A source marked
   `status = "unimplemented"` is one you know about but don't read yet.
 - `data/raw/` and `data/processed/`. Both are gitignored, so the repository never
   redistributes source data.
@@ -31,7 +32,8 @@ A `data-pipeline` project gets:
     it writes a record: the URL, the retrieval time, the SHA-256 checksum, the data
     release the manifest names, and the server's `Last-Modified` and `ETag`. The next
     fetch sends those back, and when the server answers that nothing changed, it keeps
-    the file and its record. It refuses a download
+    the file and its record. A fetch that brings new bytes also appends its record to
+    `data/fetches.jsonl`, which is committed. It refuses a download
     over the size cap (200 MiB, or a source's own `max_bytes`), or one that doesn't
     match the `sha256` a source may pin.
   - `build` verifies the checksums before it parses. It also refuses a download whose

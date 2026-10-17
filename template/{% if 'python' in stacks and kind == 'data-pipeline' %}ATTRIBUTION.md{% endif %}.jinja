@@ -27,9 +27,13 @@ publisher on every run. The CI artifact holds only the `*.fetch.json` records (U
 timestamp, checksum, byte count, vintage, the server's Last-Modified and ETag), not
 values.
 
-Each source's terms are in [`{{ d }}sources.toml`]({{ d }}sources.toml) (`terms` and
-`terms_url`), and `just validate` fails when an implemented source has none. Keep
-this table in step with that file.
+Each source's terms are in [`{{ d }}sources.toml`]({{ d }}sources.toml): `terms` and
+`terms_url` in the publisher's words, `license` as an SPDX id, and `redistribute`,
+whether the raw file may be republished. `just validate` fails when an implemented
+source lacks any of them. Keep this table in step with that file.
+
+[`{{ d }}data/fetches.jsonl`]({{ d }}data/fetches.jsonl) is committed. It lists each
+version of each source the pipeline has fetched, by checksum, and holds no values.
 
 | Source | Terms as stated by the publisher |
 | --- | --- |

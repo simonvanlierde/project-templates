@@ -6,6 +6,10 @@ derives from it. Both are gitignored. `just pipeline` rebuilds them from
 `sources.toml`, so the repository never redistributes source data. Never edit a
 raw file in place: `just build` and `just validate` both reject one whose checksum
 no longer matches its fetch record.
+
+`fetches.jsonl` is committed. `just fetch` appends a source's fetch record to it each
+time it brings bytes that source has not had before, so the file is the history of
+every version the pipeline has seen. Commit it after a fetch that changes it.
 {%- else %}
 `raw/` is read-only input: never edit it in place. The notebooks rebuild `processed/`
 from `raw/`, so you can delete it.
