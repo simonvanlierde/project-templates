@@ -35,6 +35,9 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- The workflow linter hook runs jactionlint, a maintained fork of actionlint, in place of
+  actionlint. Its `correctness` profile runs the checks actionlint ran, so existing workflows
+  get no new findings.
 - A `data-pipeline` fetch waits at most 2 minutes for a 429's `Retry-After`, so a
   server asking for hours cannot hold the run until CI's 10-minute job timeout kills it.
 - A fetch that still fails after its retries names the source and its URL, instead of

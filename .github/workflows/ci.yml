@@ -25,8 +25,8 @@ env:
   COPIER_VERSION: 9.18.2
   # renovate: datasource=pypi depName=zizmor
   ZIZMOR_VERSION: 1.30.1
-  # renovate: datasource=github-releases depName=rhysd/actionlint
-  ACTIONLINT_VERSION: 1.7.12
+  # renovate: datasource=github-releases depName=jdx/jactionlint
+  JACTIONLINT_VERSION: 2.2.0
   # renovate: datasource=pypi depName=check-jsonschema
   CHECK_JSONSCHEMA_VERSION: 0.38.2
   # renovate: datasource=pypi depName=rust-just
@@ -261,17 +261,17 @@ jobs:
       # Checks what zizmor doesn't: unknown keys, bad `needs`, expression types, and
       # shellcheck over every `run:` (shellcheck ships on the runner).
       # Upstream's prebuilt binary. Its releases are mutable, so the checksums file only
-      # guards the download.
-      - name: actionlint
+      # guards the download. The correctness profile, as the rendered hook runs it.
+      - name: jactionlint
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          bin="$RUNNER_TEMP/actionlint-bin" asset="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          gh release download "v$ACTIONLINT_VERSION" -R rhysd/actionlint -D "$bin" \
-            -p "$asset" -p "actionlint_${ACTIONLINT_VERSION}_checksums.txt"
-          (cd "$bin" && sha256sum --check --ignore-missing "actionlint_${ACTIONLINT_VERSION}_checksums.txt")
-          tar -xzf "$bin/$asset" -C "$bin" actionlint
-          "$bin/actionlint" "$RUNNER_TEMP"/[abcd]/.github/workflows/*.yml
+          bin="$RUNNER_TEMP/jactionlint-bin" asset="jactionlint_${JACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          gh release download "v$JACTIONLINT_VERSION" -R jdx/jactionlint -D "$bin" \
+            -p "$asset" -p "jactionlint_${JACTIONLINT_VERSION}_checksums.txt"
+          (cd "$bin" && sha256sum --check --ignore-missing "jactionlint_${JACTIONLINT_VERSION}_checksums.txt")
+          tar -xzf "$bin/$asset" -C "$bin" jactionlint
+          "$bin/jactionlint" --profile correctness "$RUNNER_TEMP"/[abcd]/.github/workflows/*.yml
 
       # The same schema the rendered hook validates against.
       - name: CITATION.cff schema
