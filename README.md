@@ -5,22 +5,60 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![release](https://img.shields.io/github/v/release/simonvanlierde/project-templates)](https://github.com/simonvanlierde/project-templates/releases/latest)
 
-Start a new project with linting, tests, CI and releases already set up.
+Build a dataset from public sources where every row says which download it came from.
 
-This is a [Copier](https://copier.readthedocs.io) template. You answer a few questions,
-and it writes a ready-to-commit repository for Python, TypeScript, Rust, Go, Docker, or
-any mix of them. When the template improves later, one command pulls the changes into
-your project.
+This is a [Copier](https://copier.readthedocs.io) template. Its `data-pipeline` kind
+writes a Python project around one manifest, `sources.toml`, which lists each input with
+its URL and the publisher's reuse terms. Three steps then run over it:
 
-You get a passing test on day one, `just check` running the same checks as CI, actions
-pinned to exact commits, and optional release workflows for PyPI, npm and the GitHub
-Container Registry with no tokens to store.
+- `just fetch` downloads each source and writes a record beside it: the URL, when it
+  was fetched, the SHA-256 and size of the bytes, the release you expect, and the
+  server's ETag. The next fetch asks the server whether the file changed and keeps the
+  record when it has not.
+- `just build` re-hashes each download against its record before it parses it, and
+  stamps every output row with that record.
+- `just validate` fails when an output came from an older download, a source has no
+  reuse terms, or a raw file changed after it was fetched.
+
+A row of the example output:
+
+```csv
+source_id,source_url,retrieved_at,vintage,raw_sha256,Year,Mean,Uncertainty
+example-co2,https://raw.githubusercontent.com/datasets/co2-ppm/main/data/co2-annmean-mlo.csv,2026-10-17T22:30:03Z,"unversioned, main branch",b1548ededea6f9b7eecac370753de8d8da6e0afafe1041f749a11db78c2e33c4,1959,315.98,0.12
+```
+
+CI runs the whole pipeline against the live URLs, and a weekly run fails when a
+publisher revises a value the tests pinned. The raw and processed data stay out of
+git, so the repository never redistributes a source. `CITATION.cff`, `.zenodo.json` and
+`codemeta.json` come from the same answers, ready for a Zenodo DOI.
+
+The same template also starts Python libraries, apps, research projects and web
+services, and TypeScript, Rust, Go and Docker projects, in any mix. Each gets a passing
+test on day one, `just check` running the same checks as CI, actions pinned to exact
+commits, and optional releases to PyPI, npm and the GitHub Container Registry with no
+tokens to store. When the template improves, `copier update` pulls the changes in.
 
 ## Quick start
 
-You need [Copier](https://copier.readthedocs.io/en/stable/#installation) 9.1 or later
-and [just](https://just.systems). Each language also needs its own toolchain: `uv` for
-Python, `pnpm` for TypeScript, `cargo` for Rust, or `go` for Go.
+A data pipeline needs [Copier](https://copier.readthedocs.io/en/stable/#installation)
+9.1 or later, [just](https://just.systems) and [uv](https://docs.astral.sh/uv/):
+
+```sh
+mkdir mydata && cd mydata && git init
+copier copy --data 'stacks=[python]' --data kind=data-pipeline gh:simonvanlierde/project-templates .
+just py-sync
+just pipeline  # fetch, build and validate the example source
+just check
+git add -A && git commit -m "chore: scaffold"
+```
+
+Then replace the example source in `sources.toml` with your own.
+
+### Any other project
+
+Leave out the `--data` answers and Copier asks which stacks and kinds you want. Each
+language needs its own toolchain: `uv` for Python, `pnpm` for TypeScript, `cargo` for
+Rust, or `go` for Go.
 
 ```sh
 mkdir myproject && cd myproject && git init
