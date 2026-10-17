@@ -41,9 +41,11 @@ on:
 permissions:
   contents: read
 
+# A newer push cancels a pull request's run, never a push to main or a tag: that run
+# may be halfway through pushing an image.
 concurrency:
   group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
-  cancel-in-progress: true
+  cancel-in-progress: {% raw %}${{ github.event_name == 'pull_request' }}{% endraw %}
 
 jobs:
   build:
@@ -126,11 +128,11 @@ jobs:
 
       # Build to the local store and prove the image starts before the registry login puts
       # a credential on this runner. This job runs on push only, so it fills the per-stack
-      # cache.
+      # cache. A tag build reads no cache: a poisoned entry would ship in the release image.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: {% raw %}${{ matrix.context }}{% endraw %}
-          cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
+          cache-from: {% raw %}${{ !startsWith(github.ref, 'refs/tags/') && format('type=gha,scope={0}', matrix.stack) || '' }}{% endraw %}
           cache-to: {% raw %}type=gha,mode=max,scope=${{ matrix.stack }}{% endraw %}
           push: false
           load: true # so the smoke test below can run it
@@ -161,7 +163,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: {% raw %}${{ matrix.context }}{% endraw %}
-          cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
+          cache-from: {% raw %}${{ !startsWith(github.ref, 'refs/tags/') && format('type=gha,scope={0}', matrix.stack) || '' }}{% endraw %}
           push: true
           tags: {% raw %}${{ steps.meta.outputs.tags }}{% endraw %}
           labels: {% raw %}${{ steps.meta.outputs.labels }}{% endraw %}

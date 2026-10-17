@@ -49,8 +49,14 @@ Upgrade steps:
   be republished), beside `terms`. The free-text terms stay for people; these two are
   for a release step to check.
 - The workflow linter hook runs jactionlint, a maintained fork of actionlint, in place of
-  actionlint. Its `correctness` profile runs the checks actionlint ran, so existing workflows
-  get no new findings.
+  actionlint. It adds checks for releases, caches and concurrency, so a workflow you
+  wrote or edited yourself may get new findings. The template's own workflows pass them.
+- The docker workflow cancels a superseded run only on a pull request, so a push to
+  `main` or a tag is never stopped halfway through pushing an image. A tag build no
+  longer restores the shared build cache, so a poisoned cache entry cannot reach a
+  release image. Release builds take longer as a result.
+- `python-release.yml` and `ts-release.yml` run one release per tag at a time, and a
+  second run for the same tag waits instead of starting alongside it.
 - A `data-pipeline` fetch waits at most 2 minutes for a 429's `Retry-After`, so a
   server asking for hours cannot hold the run until CI's 10-minute job timeout kills it.
 - A fetch that still fails after its retries names the source and its URL, instead of
