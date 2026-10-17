@@ -47,5 +47,12 @@ updates:
         dependency-type: development
         update-types: [minor, patch]
         patterns: ["*"]
+{%- if eco == 'npm' %}
+      # Advisories arrive outside the weekly window and ignore the group above, so
+      # without this each one opens its own pull request and its own CI run.
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+{%- endif %}
 {%- endif %}
 {%- endfor %}

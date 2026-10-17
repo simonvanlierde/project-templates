@@ -12,6 +12,8 @@ changes are marked **Breaking**.
 
 ### Added
 
+- Dependabot groups npm security updates into one pull request, instead of one per
+  advisory.
 - A `dependency_bot` question: Dependabot (the default, as before) or Renovate. Renovate
   gets a `renovate.json5` with the same rules as the Dependabot config: weekly, a one-week
   cooldown, grouped actions, hooks and dev tooling, and no updates to the copier-owned

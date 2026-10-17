@@ -256,6 +256,7 @@ test ! -e d/pipe/notebooks
 grep -qx 'pipe/data/raw/\*' d/.gitignore
 grep -q 'path: pipe/data/raw/\*.fetch.json' d/.github/workflows/python.yml
 grep -q '^pipeline: fetch build validate' d/just/python.just
+grep -q 'applies-to: security-updates' a/.github/dependabot.yml
 # Only data-pipeline renders it.
 test ! -e a/sources.toml
 test ! -e a/ATTRIBUTION.md
