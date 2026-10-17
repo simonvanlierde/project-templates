@@ -105,6 +105,18 @@ To move a package to another directory, run `copier update` with the new directo
 Then delete the old directory by hand. Copier removes files that left the template,
 but not files that moved because an answer changed.
 
+### Hearing about new releases
+
+With `dependency_bot: renovate`, Renovate's
+[copier manager](https://docs.renovatebot.com/modules/manager/copier/) watches
+`.copier-answers.yml`. When this template tags a release, it opens a PR that runs
+`copier update --skip-answered --defaults` to that tag. Read the PR before merging:
+Renovate commits merge conflicts with their markers in the file and lists the conflicted
+files in the PR body. The template runs no Copier tasks, so Renovate needs no `--trust`.
+
+Dependabot can't update a Copier template. With it, watch this repository's releases
+(Watch, Custom, Releases on GitHub) and run `copier update` when one appears.
+
 If `copier update` can't check out the `_commit` in `.copier-answers.yml`, the project
 was rendered from a commit that was never pushed or tagged. Set `_commit` to the oldest
 tag that offers every answer in the file, such as the first tag with your `kind`, and
