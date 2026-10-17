@@ -26,6 +26,12 @@ scripts/check-render.sh "$(mktemp -d)"
 after each change you want projects to receive, and add an entry to
 [CHANGELOG.md](CHANGELOG.md). Its introduction says which part of the version to bump.
 
+Before you tag, move the `[Unreleased]` entries under a `## [X.Y.Z] - YYYY-MM-DD`
+heading and add its compare link. Pushing the tag `vX.Y.Z` runs the release workflow,
+which publishes a GitHub release with that section as its notes. A tag with no section
+fails the workflow and publishes nothing. Releases here are immutable, so don't create
+one by hand first: the workflow leaves an existing release as it is.
+
 ## Write pull requests for any reader
 
 This repository is public. A pull request body is one line on its purpose and a few

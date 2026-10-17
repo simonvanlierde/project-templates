@@ -1,0 +1,51 @@
+name: release
+
+# A pushed version tag becomes a GitHub release whose notes are that version's
+# CHANGELOG.md section. Releases here are immutable, so the notes must be right the
+# first time: a tag with no section fails before anything is published.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: notes from the CHANGELOG section
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # index() rather than a regex, so the dots in the version match only dots.
+          awk -v head="## [${TAG#v}]" '
+            index($0, head) == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md >"$RUNNER_TEMP/notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
+            echo "::error file=CHANGELOG.md::no '## [${TAG#v}]' section; add it, then delete and re-push $TAG"
+            exit 1
+          fi
+
+      - name: create the release
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |-
+          set -euo pipefail
+          # A release made by hand before this run is left as it is: immutable releases can't be edited.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists; leaving it"
+            exit 0
+          fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
