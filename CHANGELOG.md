@@ -35,6 +35,9 @@ changes are marked **Breaking**.
 
 ### Fixed
 
+- The `check-yaml` hook no longer fails on `pnpm-lock.yaml`. pnpm 12 writes its own
+  version into the lockfile as a second YAML document, which the hook rejected, so
+  every TS project failed its `checks` workflow once the lockfile was committed.
 - With both the Python and TS stacks and the `codecov` option, a pull request no longer
   gets a false coverage drop, with its comment, while the second stack's report is
   still on its way. `codecov.yml` now carries each stack's last numbers forward.
