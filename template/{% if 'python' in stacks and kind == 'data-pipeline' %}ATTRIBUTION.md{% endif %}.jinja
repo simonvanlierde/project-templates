@@ -23,16 +23,16 @@ repository and commit, and state the license. Delete the section if nothing is r
 
 This repository doesn't redistribute source data. `{{ d }}data/raw/` and
 `{{ d }}data/processed/` are gitignored, and `just pipeline` downloads from each
-publisher on every run. The CI artifact holds only the `*.fetch.json` records (URL,
-timestamp, checksum, byte count, vintage, the server's Last-Modified and ETag), not
-values.
+publisher on every run. CI uploads only the `*.fetch.json` records (URL, timestamp,
+checksum, byte count, vintage, the server's Last-Modified and ETag) and, from the weekly
+run, a revisions report of old and new checksums. Neither holds values.
 
 Each source's terms are in [`{{ d }}sources.toml`]({{ d }}sources.toml): `terms` and
 `terms_url` in the publisher's words, `license` as an SPDX id, and `redistribute`,
 whether the raw file may be republished. `just validate` fails when an implemented
 source lacks any of them. Keep this table in step with that file.
 
-[`{{ d }}data/fetches.jsonl`]({{ d }}data/fetches.jsonl) is committed. It lists each
+`{{ d }}data/fetches.jsonl` is committed. It lists each
 version of each source the pipeline has fetched, by checksum, and holds no values.
 
 | Source | Terms as stated by the publisher |

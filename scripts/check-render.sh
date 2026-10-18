@@ -3,13 +3,16 @@
 # conditional file landed. Run from the repo root: scripts/check-render.sh "$(mktemp -d)"
 #
 # Renders HEAD plus uncommitted edits (--vcs-ref=HEAD). COPIER_VERSION pins
-# copier, as CI does. Unset, uvx takes the latest.
-set -euo pipefail
+# copier; unset, it is the version ci.yml pins.
+set -Eeuo pipefail
+# A bare test or grep below fails silently under set -e; say which line tripped.
+trap 'echo "check-render: failed at line $LINENO" >&2' ERR
 
 out=${1:?usage: scripts/check-render.sh OUT_DIR}
 # The identity answers have no defaults. CI's settings file fills them, and
 # replaces your own copier settings for this run.
 export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
+COPIER_VERSION=${COPIER_VERSION:-$(sed -n 's/^ *COPIER_VERSION: *//p' .github/workflows/ci.yml)}
 copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwrite)
 
 # a: every stack, other answers at their defaults. module_name is not set,

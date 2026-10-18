@@ -26,7 +26,8 @@ A `data-pipeline` project gets:
 - `data/raw/` and `data/processed/`, both gitignored, so the repository never
   redistributes source data, and `data/fetches.jsonl`, committed: the history of every
   version of every source the pipeline has fetched.
-- A `pipeline.py` that holds only `parse`, the reader for each raw file. The stages
+- A `pipeline.py` that holds `parse`, the reader for each raw file, and a two-line entry
+  point. The stages
   come from [sourceledger](https://github.com/simonvanlierde/sourceledger), a
   dependency with no dependencies of its own, so fixes to them arrive as a version bump.
   Its README says how each stage behaves:
@@ -41,7 +42,7 @@ A `data-pipeline` project gets:
 - Tests that run the whole pipeline against a local file, with no network. sourceledger
   tests the stages; these test the project's own parser and entry point.
 - A CI workflow that runs the pipeline for real on the manifest's URLs. It uploads only
-  the fetch records.
+  the fetch records and, from the weekly run, a revisions report of checksums.
 
 Some tests compare published values with literal numbers. They run only in the weekly
 scheduled CI run (`TRIPWIRE=1`). A publisher that revises its data then fails that run,

@@ -16,6 +16,10 @@ Upgrade steps:
   short file that imports sourceledger. If you added readers to `parse`, keep your
   `parse` function and take the rest of the new file. Your old `tests/test_pipeline.py`
   tested the copied stages: take the new one, and keep any tests of your own readers.
+- In a `data-pipeline` project, `pyproject.toml` gains the `sourceledger` dependency. If
+  you added dependencies of your own, keep them next to it where `copier update` can't
+  merge the two lists. Then run `uv lock` and commit `uv.lock`, or CI's
+  `uv sync --locked` fails.
 - In a `data-pipeline` project, rename `release` to `vintage` in `sources.toml`.
   sourceledger still reads `release`, with a warning.
 - In a `data-pipeline` project, give each implemented source in `sources.toml` a
@@ -36,7 +40,7 @@ Upgrade steps:
   inline script. `ts.yml` runs them in an `e2e` job in the Playwright container, and
   `just ts-e2e` runs them locally. `just check` and CI also enforce a bundle budget,
   set in `scripts/checkBundleBudget.mjs`, and a pre-push git hook runs the unit tests.
-  The docker stack can't build a web app an image, since it is static files.
+  The docker stack builds no image for a web app, since it is static files.
   Its starter files (`src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`,
   `index.html` and `tests/e2e/routes.ts`) belong to the project once written:
   `copier update` never touches them again.
@@ -54,6 +58,10 @@ Upgrade steps:
 
 ### Changed
 
+- A `data-pipeline` manifest names the edition `vintage`, as the fetch record and the
+  output column already did. `release` is still read, with a warning.
+- The generated README lists the tools the project needs, and `just hooks` next to
+  `just check`, since a pull request also runs the git hooks.
 - A library's release workflow runs its wheel tests with the test tools from `uv.lock`,
   hash-checked, instead of the newest pytest on PyPI, and turns on uv's malware check
   as `python.yml` does.
@@ -93,6 +101,11 @@ Upgrade steps:
 
 ### Fixed
 
+- A push to main no longer cancels the weekly scheduled run of a `data-pipeline`
+  project, which skipped that week's tripwire tests. `python.yml` now cancels only
+  superseded pull-request runs.
+- An empty `python_dir`, `ts_dir`, `rust_dir` or `go_dir` is refused. It used to render
+  a project with no package and workflows pointing at `/`.
 - The `check-yaml` hook no longer fails on `pnpm-lock.yaml`. pnpm 12 writes its own
   version into the lockfile as a second YAML document, which the hook rejected, so
   every TS project failed its `checks` workflow once the lockfile was committed.

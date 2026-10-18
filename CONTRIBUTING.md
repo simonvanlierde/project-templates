@@ -1,5 +1,8 @@
 # Working on the template
 
+You need [uv](https://docs.astral.sh/uv/) (it runs copier), [just](https://just.systems),
+git, and prek for the hooks (`uv tool install prek`, then `prek install`).
+
 ## Test an untagged change
 
 Copier renders the latest tag by default, so your edits never reach the output until
@@ -18,6 +21,15 @@ the rendered output, because `.jinja` files aren't YAML:
 ```sh
 prek run -a
 scripts/check-render.sh "$(mktemp -d)"
+```
+
+The render script checks which files each answer set produces. It doesn't run the
+generated projects' own checks, which CI does for each stack and kind. To run one locally,
+render into a directory and check it there, for example:
+
+```sh
+out=$(mktemp -d) && scripts/check-render.sh "$out"
+cd "$out/a" && git init -q && just py-sync check
 ```
 
 ## Tag every change

@@ -23,7 +23,9 @@ permissions:
 
 concurrency:
   group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
-  cancel-in-progress: true
+  # Only a newer push to the same pull request cancels a run. A push to main must not cancel
+  # the weekly scheduled run, or that week's revision report is lost.
+  cancel-in-progress: {% raw %}${{ github.event_name == 'pull_request' }}{% endraw %}
 
 env:
   # uv checks every package against OSV's malware advisories before its code
@@ -165,7 +167,7 @@ jobs:
             echo
             echo "Run \`just pipeline\` and commit \`{% if python_dir != '.' %}{{ python_dir }}/{% endif %}data/fetches.jsonl\` to record them."
           } >"$RUNNER_TEMP/body.md"
-          issue=$(gh issue list --state open --search "in:title \"$title\"" --json number -q '.[0].number')
+          issue=$(gh issue list --state open --author app/github-actions --search "in:title \"$title\"" --json number -q '.[0].number')
           if [ -n "$issue" ]; then
             gh issue comment "$issue" --body-file "$RUNNER_TEMP/body.md"
           else

@@ -8,6 +8,8 @@
 {% endif %}
 ## Development
 
+You need [uv](https://docs.astral.sh/uv/) and [just](https://just.systems){% if 'ts' in stacks %}, [pnpm](https://pnpm.io){% endif %}{% if 'rust' in stacks %}, [cargo](https://rustup.rs){% endif %}{% if 'go' in stacks %}, [Go](https://go.dev/dl/){% endif %}{% if 'docker' in stacks %} and Docker{% endif %}.
+
 ```sh
 {% if 'python' in stacks %}uv sync{% if python_dir != '.' %} --directory {{ python_dir }}{% endif %}
 {% endif %}{% if 'ts' in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} install
@@ -24,7 +26,8 @@ The hadolint hook runs from its Docker image, so the git hooks need Docker runni
 `just` lists the tasks. They mirror what [.github/workflows/](.github/workflows/) runs.
 
 ```sh
-just check       # lint, types and tests for every stack here{% if 'ts' in stacks and ts_kind == 'web-app' %}
+just check       # lint, types and tests for every stack here
+just hooks       # the git hooks, as the checks workflow runs them{% if 'ts' in stacks and ts_kind == 'web-app' %}
 just ts-e2e      # accessibility and CSP checks in Chromium, against the production build{% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}
 just pipeline    # fetch, build and validate every source in sources.toml{% endif %}{% if 'docker' in stacks %}
 just up          # run each service in its container, rebuilt on source changes{% endif %}
@@ -38,6 +41,11 @@ implemented source to `{{ d }}data/raw/` with a fetch record. `just build` write
 `{{ d }}data/processed/`. `just validate` checks the published output against the fetch
 records. Neither directory goes into git. [ATTRIBUTION.md](ATTRIBUTION.md) lists what
 this repository reuses, and on what terms.
+
+Commit `{{ d }}data/fetches.jsonl` after a fetch that changes it: it holds checksums, not
+data, and is the history of every version of each source. Once a week, CI fetches again
+and comments on a "Source data revised upstream" issue when a source changed, so keep
+Issues turned on for this repository.
 {% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}{% set d = '' if ts_dir == '.' else ts_dir ~ '/' %}
 ## Deploy
 
