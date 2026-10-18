@@ -23,6 +23,11 @@ dependencies = [
   "opentelemetry-instrumentation-fastapi>=0.65b0",
   "uvicorn>=0.54.0",
 ]
+{%- elif kind == 'data-pipeline' %}
+# fetch, build and validate. A git commit until sourceledger is on PyPI: bump it by hand.
+dependencies = [
+  "sourceledger @ git+https://github.com/simonvanlierde/sourceledger@1bfe101645705e42f4936a284289c16f218ffcf5",
+]
 {%- else %}
 dependencies = []
 {%- endif %}
@@ -61,7 +66,7 @@ dev = [
 {% if kind == 'data-pipeline' -%}
 # Packaged, so the `{{ slug }}` script and the tests import `{{ module_name }}`
 # without sys.path edits.
-{% else -%}
+{% elif kind == 'research' -%}
 # Research projects are packaged too, so notebooks can `import {{ module_name }}`
 # without sys.path edits.
 {% endif -%}
@@ -106,9 +111,6 @@ ignore = [
 "**/tests/**" = ["S101", "D1", "INP001", "PLR2004", "ANN201"]
 {%- if kind == 'research' %}
 "*.ipynb" = ["T201", "E402"] # notebooks print and import late
-{%- endif %}
-{%- if kind == 'data-pipeline' %}
-"src/{{ module_name }}/pipeline.py" = ["T201"] # a CLI reports by printing
 {%- endif %}
 
 [tool.ruff.lint.pydocstyle]

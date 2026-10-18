@@ -21,28 +21,25 @@ A `data-pipeline` project gets:
 - `sources.toml`, a manifest of every input. Each source has a URL, the publisher's
   reuse terms (`terms`, `terms_url`), the same terms as an SPDX `license`, whether the
   raw file may be republished (`redistribute`), and a `status`. A source marked
-  `status = "unimplemented"` is one you know about but don't read yet.
-- `data/raw/` and `data/processed/`. Both are gitignored, so the repository never
-  redistributes source data.
-- A small module, standard library only, with three stages:
-  - `fetch` retries server errors, rate limits (waiting for `Retry-After`, up to
-    2 minutes), network errors and a body shorter than its `Content-Length`, with
-    backoff. A fetch that still fails names its source and URL. It writes each
-    download atomically, so a failed download leaves no partial file. Beside each file
-    it writes a record: the URL, the retrieval time, the SHA-256 checksum, the data
-    release the manifest names, and the server's `Last-Modified` and `ETag`. The next
-    fetch sends those back, and when the server answers that nothing changed, it keeps
-    the file and its record. A fetch that brings new bytes also appends its record to
-    `data/fetches.jsonl`, which is committed. It refuses a download
-    over the size cap (200 MiB, or a source's own `max_bytes`), or one that doesn't
-    match the `sha256` a source may pin.
-  - `build` verifies the checksums before it parses. It also refuses a download whose
-    URL no longer matches the manifest, so you re-fetch after changing a source.
-  - `validate` re-reads the published output and re-hashes the raw files.
+  `status = "unimplemented"` is one you know about but don't read yet. The file's
+  comments list every key.
+- `data/raw/` and `data/processed/`, both gitignored, so the repository never
+  redistributes source data, and `data/fetches.jsonl`, committed: the history of every
+  version of every source the pipeline has fetched.
+- A `pipeline.py` that holds only `parse`, the reader for each raw file. The stages
+  come from [sourceledger](https://github.com/simonvanlierde/sourceledger), a
+  dependency with no dependencies of its own, so fixes to them arrive as a version bump.
+  Its README says how each stage behaves:
+  - `fetch` downloads each source with retries, writes a provenance record beside it,
+    and next time asks the server whether it changed.
+  - `build` re-hashes each download against its record, then writes the output with
+    five provenance columns in front.
+  - `validate` checks the output against the manifest, the records and the reuse terms.
 - `just fetch`, `just build` and `just validate`, and `just pipeline` to run all three.
 - `ATTRIBUTION.md`, which states what the repository reuses and on what terms. The
   code license doesn't cover those.
-- Tests that run the whole pipeline against a local file, with no network.
+- Tests that run the whole pipeline against a local file, with no network. sourceledger
+  tests the stages; these test the project's own parser and entry point.
 - A CI workflow that runs the pipeline for real on the manifest's URLs. It uploads only
   the fetch records.
 
