@@ -37,7 +37,8 @@ just up          # run each service in its container, rebuilt on source changes{
 
 Before the first release, set up the publishing environment
 ({% for name, on in [('pypi', publish_to_pypi), ('npm', publish_to_npm), ('ghcr', publish_to_ghcr)] if on %}`{{ name }}`{% if not loop.last %}, {% endif %}{% endfor %})
-in Settings > Environments: limit it to tags matching `v*`, and add a required reviewer.
+in Settings > Environments: limit it to tags matching `v*`{% if publish_to_ghcr %} (`ghcr` also to `main`,
+where the image is pushed too){% endif %}, and add a required reviewer.
 The release workflows explain the rest in their header comments.
 {% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}{% set d = '' if python_dir == '.' else python_dir ~ '/' %}
 ## Pipeline
