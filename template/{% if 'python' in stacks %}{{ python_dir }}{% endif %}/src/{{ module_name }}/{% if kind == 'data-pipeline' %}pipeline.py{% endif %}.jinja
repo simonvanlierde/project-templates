@@ -185,12 +185,31 @@ def _conditional(previous: FetchRecord | None) -> dict[str, str]:
     return {name: value for name, value in headers.items() if value}
 
 
-def _last_logged(log: Path) -> dict[str, str]:
-    """The SHA-256 most recently logged for each source id, from the fetch log."""
+def _last_records(log: Path) -> dict[str, dict[str, Any]]:
+    """The record most recently logged for each source id, from the fetch log."""
     if not log.exists():
         return {}
     records = (json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line.strip())
-    return {r["source_id"]: r["sha256"] for r in records}
+    return {r["source_id"]: r for r in records}
+
+
+def _last_logged(log: Path) -> dict[str, str]:
+    """The SHA-256 most recently logged for each source id, from the fetch log."""
+    return {sid: r["sha256"] for sid, r in _last_records(log).items()}
+
+
+def revisions(before: Path, log: Path = FETCH_LOG) -> list[str]:
+    """One Markdown line per source whose bytes changed between `before`, an earlier copy of the log, and `log`.
+
+    A source that `before` never logged is new, not revised, and is left out.
+    """
+    old, new = _last_records(before), _last_records(log)
+    return [
+        f"- `{sid}`: {old[sid]['sha256'][:12]} -> {r['sha256'][:12]}, {r['bytes']:,} bytes, "
+        f"fetched {r['retrieved_at']} from <{r['url']}>"
+        for sid, r in new.items()
+        if sid in old and old[sid]["sha256"] != r["sha256"]
+    ]
 
 
 def fetch(sources: list[Source], raw: Path = RAW, log: Path = FETCH_LOG) -> list[FetchRecord]:
@@ -385,14 +404,22 @@ def _message(error: Exception) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run one stage: fetch, build or validate."""
+    """Run one stage: fetch, build, validate, or revisions against an earlier copy of the fetch log."""
     parser = argparse.ArgumentParser(prog="{{ slug }}", description=__doc__.splitlines()[0])
-    parser.add_argument("stage", choices=["fetch", "build", "validate"])
-    stage = parser.parse_args(argv).stage
+    parser.add_argument("stage", choices=["fetch", "build", "validate", "revisions"])
+    parser.add_argument("before", nargs="?", type=Path, help="revisions only: an earlier copy of data/fetches.jsonl")
+    args = parser.parse_args(argv)
+    stage = args.stage
     problems: list[str] = []  # only validate reports any
     try:
         sources = load_manifest()
         match stage:
+            case "revisions":
+                if args.before is None:
+                    parser.error("revisions needs an earlier copy of the fetch log")
+                # Not a failure: a revised source is news, and the tripwire test decides whether it breaks anything.
+                for line in revisions(args.before):
+                    print(line)
             case "fetch":
                 for r in fetch(sources):
                     print(f"{r.source_id}  {r.bytes:>9,} B  {r.sha256[:12]}  {r.vintage}  {r.url}")

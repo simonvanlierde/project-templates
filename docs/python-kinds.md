@@ -50,6 +50,12 @@ Some tests compare published values with literal numbers. They run only in the w
 scheduled CI run (`TRIPWIRE=1`). A publisher that revises its data then fails that run,
 not your pull requests.
 
+The same weekly run compares what it fetched with the committed `data/fetches.jsonl`.
+When a source that the log already has comes back with different bytes, it comments on
+one open issue, "Source data revised upstream", with the old and new checksums. Run
+`just pipeline` and commit the log to record the new version. `uv run <slug> revisions
+<older copy of the log>` prints the same list locally.
+
 The example source in `sources.toml` is about 1 kB. Replace it with your own sources,
 and replace the tests that read its output.
 
