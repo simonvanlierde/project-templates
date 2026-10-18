@@ -114,7 +114,11 @@ refuses() {
     echo "rendered with $*: its validator is gone" >&2
     exit 1
   fi
-  grep -qF -- "$needle" <<<"$log" || { echo "refused $* for another reason:" >&2; echo "$log" >&2; exit 1; }
+  grep -qF -- "$needle" <<<"$log" || {
+    echo "refused $* for another reason:" >&2
+    echo "$log" >&2
+    exit 1
+  }
 }
 refuses 'An empty value' --data 'stacks=[python]' --data python_dir=
 refuses 'An empty value' --data 'stacks=[ts]' --data ts_dir=
