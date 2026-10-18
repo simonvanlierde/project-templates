@@ -50,8 +50,9 @@ image, so the hooks need a running Docker daemon.
 
 Tasks run through [just](https://just.systems). The root `justfile` imports a
 `just/<stack>.just` file for each stack. Those imports share one namespace, so recipes
-carry a stack prefix: `py-`, `ts-`, `rs-` or `go-`. `just check` runs the checks for
-every stack you picked.
+carry a stack prefix: `py-`, `ts-`, `rs-` or `go-`. The exceptions are a few recipes only
+one kind has: `fetch`, `build`, `validate` and `pipeline` (data-pipeline), `serve`
+(web-service) and `up` (docker). `just check` runs the checks for every stack you picked.
 
 Coverage is opt-in. `just py-cov` and `just ts-cov` print a summary. `just check`
 doesn't run them. They set no threshold and write no report files. With the `codecov`

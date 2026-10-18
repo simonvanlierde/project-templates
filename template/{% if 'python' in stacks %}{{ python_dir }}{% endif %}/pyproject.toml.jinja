@@ -24,9 +24,10 @@ dependencies = [
   "uvicorn>=0.54.0",
 ]
 {%- elif kind == 'data-pipeline' %}
-# fetch, build and validate. A git commit until sourceledger is on PyPI: bump it by hand.
+# fetch, build and validate. One commit's source archive until sourceledger is on PyPI:
+# bump the commit by hand. An archive, not git+, so the Docker build stage needs no git.
 dependencies = [
-  "sourceledger @ git+https://github.com/simonvanlierde/sourceledger@1bfe101645705e42f4936a284289c16f218ffcf5",
+  "sourceledger @ https://github.com/simonvanlierde/sourceledger/archive/1bfe101645705e42f4936a284289c16f218ffcf5.tar.gz",
 ]
 {%- else %}
 dependencies = []

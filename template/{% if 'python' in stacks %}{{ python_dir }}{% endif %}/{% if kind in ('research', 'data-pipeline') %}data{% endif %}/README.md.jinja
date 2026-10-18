@@ -11,6 +11,7 @@ no longer matches its fetch record.
 time it brings bytes that source has not had before, so the file is the history of
 every version the pipeline has seen. Commit it after a fetch that changes it.
 {%- else %}
+Put inputs in `raw/` and derived files in `processed/`; create them as you need them.
 `raw/` is read-only input: never edit it in place. The notebooks rebuild `processed/`
 from `raw/`, so you can delete it.
 

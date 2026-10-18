@@ -102,6 +102,13 @@
       matchManagers: ["github-actions"],
       groupName: "actions",
     },
+    // A Docker image update may carry no release date, and then minimumReleaseAge does not
+    // hold it back (timestamp-optional above). It reaches every new scaffold's Dockerfile,
+    // so merge those by hand.
+    {
+      matchDatasources: ["docker"],
+      automerge: false,
+    },
     // A new language release becomes every new scaffold's default, before its
     // ecosystem may have caught up: merge those by hand.
     {
