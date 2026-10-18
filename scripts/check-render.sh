@@ -375,3 +375,9 @@ grep -q SIGTERM a/src/render_me/__main__.py
 
 echo "all render checks passed"
 grep -q 'stub for a data pipeline' d/pipe/Dockerfile
+# rust-analyzer finds a crate two levels down only when told.
+grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/settings.json
+(! grep -q linkedProjects a/.vscode/settings.json)
+# Another stack's secrets stay out of an image's build context.
+grep -qx '\*\*/.env' c/apps/web/.dockerignore
+grep -qx '\*\*/.env' c/api/.dockerignore
