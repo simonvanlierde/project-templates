@@ -127,8 +127,9 @@ refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
 refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
   --data python_dir=api --data ts_dir=web --data app_port=65535
 # A binary never uses the Go package name, so a digit-leading project name is fine.
+# Its gitignored build output drops the module path's /v2.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
-  --data go_kind=binary . "$out/i"
+  --data go_kind=binary --data go_module=github.com/example-org/1tool/v2 . "$out/i"
 
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
 import ast, json, json5, os, pathlib, tomllib, yaml
@@ -297,6 +298,12 @@ grep -qF "cd services/tool && exec golangci-lint run" c/.pre-commit-config.yaml
 grep -q 'go-version-file: services/tool/go.mod' c/.github/workflows/go.yml
 grep -q 'directory: /services/tool' c/.github/dependabot.yml
 grep -qx '/services/tool/mono-me' c/.gitignore
+# rust-analyzer finds a crate two levels down only when told.
+grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/settings.json
+(! grep -q linkedProjects a/.vscode/settings.json)
+# Another stack's secrets stay out of an image's build context.
+grep -qx '\*\*/.env' c/apps/web/.dockerignore
+grep -qx '\*\*/.env' c/api/.dockerignore
 # Both release workflows exist.
 test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
@@ -337,6 +344,7 @@ test -f d/web/tests/e2e/csp.spec.ts
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json
 test ! -e d/web/Dockerfile
+grep -q 'stub for a data pipeline' d/pipe/Dockerfile
 test ! -e a/index.html
 grep -q '"react": \["./node_modules/preact/compat/"\]' d/web/tsconfig.json
 grep -q 'react: "preact/compat"' d/web/vite.config.ts
@@ -368,16 +376,10 @@ grep -q 'func TestAdd' h/add_test.go
 grep -q 'func ExampleAdd' h/example_test.go
 
 test -f i/main.go
+grep -qx '/1tool' i/.gitignore
 
 # PID 1 ignores SIGTERM without a handler, so both image stubs install one.
 grep -q SIGTERM b/src/main.ts
 grep -q SIGTERM a/src/render_me/__main__.py
 
 echo "all render checks passed"
-grep -q 'stub for a data pipeline' d/pipe/Dockerfile
-# rust-analyzer finds a crate two levels down only when told.
-grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/settings.json
-(! grep -q linkedProjects a/.vscode/settings.json)
-# Another stack's secrets stay out of an image's build context.
-grep -qx '\*\*/.env' c/apps/web/.dockerignore
-grep -qx '\*\*/.env' c/api/.dockerignore
