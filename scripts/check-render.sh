@@ -22,12 +22,13 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data kind=research --data ts_kind=app \
   --data 'docker_stacks=[python]' . "$out/a"
 
-# b: license=none, and a name and description with punctuation that `slug`
+# b: license=none, and a name, description and author name with punctuation that `slug`
 # strips and `to_json` escapes. A nested web-service beside the root ts package,
 # so the name also reaches the FastAPI title as a Python literal.
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'project_name=Odd "Name" & Co!' \
   --data 'project_description=A "quoted" one' \
+  --data 'author_name=Ada "X" Lovelace' \
   --data license=none --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
   --data 'docker_stacks=[python,ts]' . "$out/b"
