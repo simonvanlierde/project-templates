@@ -12,12 +12,20 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
+- In a `data-pipeline` project, `copier update` replaces `src/<module>/pipeline.py` with a
+  short file that imports sourceledger. If you added readers to `parse`, keep your
+  `parse` function and take the rest of the new file. Your old `tests/test_pipeline.py`
+  tested the copied stages: take the new one, and keep any tests of your own readers.
 - In a `data-pipeline` project, give each implemented source in `sources.toml` a
   `license` (an SPDX id, or `LicenseRef-<name>`) and `redistribute = true` or `false`.
   `just validate` fails until you do (see the Breaking change below).
 
 ### Added
 
+- A `data-pipeline` project's weekly CI run comments on an open "Source data revised
+  upstream" issue when a source the committed `data/fetches.jsonl` already has serves
+  new bytes, with the old and new checksums. Only that one job may write issues. A new
+  `revisions` stage prints the same list locally.
 - A `web-app` TypeScript kind: a Vite single-page app with React or Preact (the new
   `web_framework` question), deployed by Cloudflare Pages' Git integration. It ships
   Playwright specs that run against the production build: an axe check of every route
@@ -44,6 +52,12 @@ Upgrade steps:
 
 ### Changed
 
+- **Breaking:** a `data-pipeline` project gets its fetch, build, validate and revisions
+  stages from the [sourceledger](https://github.com/simonvanlierde/sourceledger)
+  package instead of about 400 copied lines in `pipeline.py`. A fix to them now reaches
+  a project as a dependency bump, not a `copier update` merge. `pipeline.py` keeps only
+  `parse`, and passes it to sourceledger with the project's name. Until sourceledger is
+  on PyPI, `pyproject.toml` pins it by git commit.
 - **Breaking:** `just validate` in a `data-pipeline` project needs each implemented
   source to state `license` (an SPDX id) and `redistribute` (whether the raw file may
   be republished), beside `terms`. The free-text terms stay for people; these two are
