@@ -8,7 +8,7 @@ version = "0.1.0"
 description = {{ project_description | to_json }}
 readme = "README.md"
 requires-python = ">={{ python_min if kind == 'library' else python_version }}"
-authors = [{ name = "{{ author_name }}", email = "{{ author_email }}" }]
+authors = [{ name = {{ author_name | to_json }}, email = {{ author_email | to_json }} }]
 {%- if license != 'none' %}
 license = "{{ license }}"
 {%- if python_dir == '.' %}

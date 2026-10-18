@@ -8,7 +8,8 @@
 .copier-answers.yml
 
 # Rebuilt inside the image
-node_modules
+**/node_modules
+**/.venv
 dist
 
 # Test, lint, and cache artifacts
@@ -24,9 +25,9 @@ src/**/*.test.ts
 .pre-commit-config.yaml
 
 # Secrets
-.env
-.env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
 # Docker meta files themselves
 Dockerfile

@@ -43,6 +43,9 @@ A `data-pipeline` project gets:
   tests the stages; these test the project's own parser and entry point.
 - A CI workflow that runs the pipeline for real on the manifest's URLs. It uploads only
   the fetch records and, from the weekly run, a revisions report of checksums.
+- With the `docker` stack, an image that is only a stub: it holds the installed package
+  but no `sources.toml` or `data/`, and it starts the `/health` placeholder, not the
+  pipeline. Copy the manifest in and change the `CMD` before you run the stages in it.
 
 Some tests compare published values with literal numbers. They run only in the weekly
 scheduled CI run (`TRIPWIRE=1`). A publisher that revises its data then fails that run,

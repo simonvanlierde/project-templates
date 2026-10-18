@@ -1,4 +1,4 @@
-{%- set name = author_name.split(' ', 1) -%}
+{%- set name = (author_name | trim).split(none, 1) -%}
 {
   "@context": "https://w3id.org/codemeta/4.0",
   "@type": "SoftwareSourceCode",

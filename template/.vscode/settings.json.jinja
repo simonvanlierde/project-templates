@@ -6,7 +6,8 @@
   "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" }{% endif %}{% if 'ts' in stacks %},
   "[javascript][javascriptreact][typescript][typescriptreact][json][jsonc][css]": { "editor.defaultFormatter": "biomejs.biome" }{% endif %}{% if 'rust' in stacks %},
   "[rust]": { "editor.defaultFormatter": "rust-lang.rust-analyzer" },
-  "rust-analyzer.check.command": "clippy"{% endif %}{% if 'go' in stacks %},
+  "rust-analyzer.check.command": "clippy"{% if rust_dir != '.' %},
+  "rust-analyzer.linkedProjects": ["{{ rust_dir }}/Cargo.toml"]{% endif %}{% endif %}{% if 'go' in stacks %},
   "[go]": { "editor.defaultFormatter": "golang.go" },
   "gopls": { "formatting.gofumpt": true },
   "go.lintTool": "golangci-lint-v2"{% endif %}

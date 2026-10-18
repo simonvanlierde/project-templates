@@ -6,7 +6,7 @@
 {%- if license != 'none' %}
   "license": "{{ license }}",
 {%- endif %}
-  "author": "{{ author_name }} <{{ author_email }}>",
+  "author": {{ (author_name ~ " <" ~ author_email ~ ">") | to_json }},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/{{ github_user }}/{{ slug }}.git"

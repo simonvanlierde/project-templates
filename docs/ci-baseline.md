@@ -31,7 +31,7 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
 The hooks job skips the hooks that need the project environment (`ruff`, `ty`,
-`biome`, `tsc`), because the stack workflows already run them. It also skips
+`biome`, `tsc`, `cargo fmt`, `cargo clippy` and `golangci-lint`), because the stack workflows already run them. It also skips
 betterleaks, which scans only staged changes, and CI stages nothing. GitHub secret
 scanning covers the server side.
 

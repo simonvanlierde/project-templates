@@ -47,8 +47,9 @@ target/
 # Go
 {{ d }}coverage.out
 {%- if go_kind == 'binary' %}
-# What `go build` writes: a binary named after the module path's last element.
-/{{ d }}{{ go_module.split('/')[-1] }}
+# What `go build` writes: a binary named after the module path's last element,
+# without a trailing major version such as /v2.
+/{{ d }}{{ (go_module|regex_replace('/v[0-9]+$', '')).split('/')[-1] }}
 {%- endif %}
 {%- endif %}
 {%- if 'python' in stacks and kind == 'data-pipeline' %}

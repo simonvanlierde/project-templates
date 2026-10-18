@@ -15,19 +15,22 @@ export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
 COPIER_VERSION=${COPIER_VERSION:-$(sed -n 's/^ *COPIER_VERSION: *//p' .github/workflows/ci.yml)}
 copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwrite)
 
-# a: every stack, other answers at their defaults. module_name is not set,
+# a: every stack, other answers at their defaults, but for an author name with a
+# leading space. module_name is not set,
 # so its slug-derived default renders.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=render-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data kind=research --data ts_kind=app \
+  --data 'author_name= Ada Lovelace' \
   --data 'docker_stacks=[python]' . "$out/a"
 
-# b: license=none, and a name and description with punctuation that `slug`
+# b: license=none, and a name, description and author name with punctuation that `slug`
 # strips and `to_json` escapes. A nested web-service beside the root ts package,
 # so the name also reaches the FastAPI title as a Python literal.
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'project_name=Odd "Name" & Co!' \
   --data 'project_description=A "quoted" one' \
+  --data 'author_name=Ada "X" Lovelace' \
   --data license=none --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
   --data 'docker_stacks=[python,ts]' . "$out/b"
@@ -70,6 +73,11 @@ grep -q 'project edit' "$out/d/web/src/App.tsx"
 grep -q 'project edit' "$out/d/web/index.html"
 (! grep -q 'project edit' "$out/d/web/vite.config.ts")
 
+# h: a go library named like the Example file. The unit test must not share its path
+# with example_test.go, which a project_name of `example` would otherwise claim.
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=example --data 'stacks=[go]' . "$out/h"
+
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
 # -f on `git tag` covers a killed run that left the tag behind.
@@ -97,6 +105,36 @@ if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
 fi
 grep -q 'Give the GitHub user or org' "$out/f.log"
 
+# Each answer below must be refused, with the validator's own message. A refusal for
+# another reason, or a render that goes through, fails the check.
+refuses() {
+  local needle=$1 log
+  shift
+  if log=$("${copier[@]}" --vcs-ref=HEAD --data project_name=refuse-me "$@" . "$out/refused" 2>&1); then
+    echo "rendered with $*: its validator is gone" >&2
+    exit 1
+  fi
+  grep -qF -- "$needle" <<<"$log" || {
+    echo "refused $* for another reason:" >&2
+    echo "$log" >&2
+    exit 1
+  }
+}
+refuses 'An empty value' --data 'stacks=[python]' --data python_dir=
+refuses 'An empty value' --data 'stacks=[ts]' --data ts_dir=
+refuses 'An empty value' --data 'stacks=[rust]' --data rust_dir=
+refuses 'An empty value' --data 'stacks=[go]' --data go_dir=
+refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
+refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
+refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
+refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
+refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
+  --data python_dir=api --data ts_dir=web --data app_port=65535
+# A binary never uses the Go package name, so a digit-leading project name is fine.
+# Its gitignored build output drops the module path's /v2.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
+  --data go_kind=binary --data go_module=github.com/example-org/1tool/v2 . "$out/i"
+
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
 import ast, json, json5, os, pathlib, tomllib, yaml
 
@@ -122,6 +160,9 @@ assert {"upload_type", "title", "description", "creators", "license"} <= zenodo.
 assert zenodo["creators"][0]["name"] == "Lovelace, Ada", zenodo
 codemeta = json.loads((out / "a/codemeta.json").read_text())
 assert codemeta["@context"] == "https://w3id.org/codemeta/4.0", codemeta
+# A leading space in the author name must not leave the given name empty.
+assert codemeta["author"][0]["givenName"] == "Ada", codemeta
+assert "given-names: \"Ada\"" in (out / "a/CITATION.cff").read_text()
 PY
 
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.
@@ -212,6 +253,8 @@ test -f a/renderme.go
 test ! -e a/main.go
 grep -qF 'renderme "github.com/example-org/render-me"' a/example_test.go
 grep -qx '    @just go-check' a/justfile
+# govulncheck fails until go-sync writes go.sum, so the README's setup runs it.
+grep -q '^just go-sync' a/README.md
 grep -q 'id: golangci-lint$' a/.pre-commit-config.yaml
 grep -q golang.go a/.vscode/extensions.json
 grep -q 'package-ecosystem: gomod' a/.github/dependabot.yml
@@ -259,6 +302,12 @@ grep -qF "cd services/tool && exec golangci-lint run" c/.pre-commit-config.yaml
 grep -q 'go-version-file: services/tool/go.mod' c/.github/workflows/go.yml
 grep -q 'directory: /services/tool' c/.github/dependabot.yml
 grep -qx '/services/tool/mono-me' c/.gitignore
+# rust-analyzer finds a crate two levels down only when told.
+grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/settings.json
+(! grep -q linkedProjects a/.vscode/settings.json)
+# Another stack's secrets stay out of an image's build context.
+grep -qx '\*\*/.env' c/apps/web/.dockerignore
+grep -qx '\*\*/.env' c/api/.dockerignore
 # Both release workflows exist.
 test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
@@ -301,6 +350,7 @@ test -f d/web/tests/e2e/csp.spec.ts
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json
 test ! -e d/web/Dockerfile
+grep -q 'stub for a data pipeline' d/pipe/Dockerfile
 test ! -e a/index.html
 grep -q '"react": \["./node_modules/preact/compat/"\]' d/web/tsconfig.json
 grep -q 'react: "preact/compat"' d/web/vite.config.ts
@@ -327,5 +377,15 @@ test ! -e a/ATTRIBUTION.md
 test ! -e a/src/render_me/app.py
 (! grep -q fastapi a/pyproject.toml)
 grep -q http.server a/src/render_me/__main__.py
+# h: the unit test and the Example are two files, not one overwriting the other.
+grep -q 'func TestAdd' h/add_test.go
+grep -q 'func ExampleAdd' h/example_test.go
+
+test -f i/main.go
+grep -qx '/1tool' i/.gitignore
+
+# PID 1 ignores SIGTERM without a handler, so both image stubs install one.
+grep -q SIGTERM b/src/main.ts
+grep -q SIGTERM a/src/render_me/__main__.py
 
 echo "all render checks passed"
