@@ -71,6 +71,11 @@ grep -q 'project edit' "$out/d/web/src/App.tsx"
 grep -q 'project edit' "$out/d/web/index.html"
 (! grep -q 'project edit' "$out/d/web/vite.config.ts")
 
+# h: a go library named like the Example file. The unit test must not share its path
+# with example_test.go, which a project_name of `example` would otherwise claim.
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=example --data 'stacks=[go]' . "$out/h"
+
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
 # -f on `git tag` covers a killed run that left the tag behind.
@@ -328,6 +333,10 @@ test ! -e a/ATTRIBUTION.md
 test ! -e a/src/render_me/app.py
 (! grep -q fastapi a/pyproject.toml)
 grep -q http.server a/src/render_me/__main__.py
+# h: the unit test and the Example are two files, not one overwriting the other.
+grep -q 'func TestAdd' h/add_test.go
+grep -q 'func ExampleAdd' h/example_test.go
+
 # PID 1 ignores SIGTERM without a handler, so both image stubs install one.
 grep -q SIGTERM b/src/main.ts
 grep -q SIGTERM a/src/render_me/__main__.py
