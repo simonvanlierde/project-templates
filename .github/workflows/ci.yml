@@ -141,8 +141,10 @@ jobs:
           - name: research
             project_name: ci-research
             kind: research
+          # With docker, so the image build covers the pipeline's dependencies.
           - name: data-pipeline
             project_name: ci-pipeline
+            stacks: "[python,docker]"
             kind: data-pipeline
           # Also starts the FastAPI container and probes /health.
           - name: web-service
@@ -335,6 +337,24 @@ jobs:
           test -z "$(find "$PROJ" -name '*.rej' -print -quit)"
           grep -q '"attrs>=25' "$PROJ/api/pyproject.toml"
           cd "$PROJ/api" && just py-sync py-check
+
+      # A data-pipeline project, updated the way the changelog's upgrade steps say: relock,
+      # then the locked sync its own CI runs, then its checks. py-sync would relock silently.
+      - name: data-pipeline at last tag, update to HEAD
+        run: |
+          set -euo pipefail
+          TAG=$(git describe --tags --abbrev=0)
+          PROJ="$RUNNER_TEMP/pipe"
+          git init -q "$PROJ"
+          uvx "copier@$COPIER_VERSION" copy --vcs-ref="$TAG" --defaults --overwrite \
+            --data project_name=pipe-me --data 'stacks=[python]' --data kind=data-pipeline . "$PROJ"
+          sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
+          (cd "$PROJ" && uv lock -q)
+          git -C "$PROJ" add -A
+          git -C "$PROJ" -c user.email=ci@invalid -c user.name=ci commit -qm scaffold
+          uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults --conflict rej "$PROJ"
+          test -z "$(find "$PROJ" -name '*.rej' -print -quit)"
+          cd "$PROJ" && uv lock -q && uv sync -q --locked && just check
 
   typescript:
     # TS stack, with docker. The image builds nested (monorepo). The root Dockerfile is

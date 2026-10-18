@@ -75,7 +75,9 @@ pnpm's `minimumReleaseAge` hold back the same releases, so `uv lock` or
 `pnpm install` can't pull in one that the bot is still waiting on. Go has no such setting.
 
 Nothing tracks the `FROM` base images in the Dockerfiles. Those tags are Copier
-answers, so update them by hand. This template repository uses Renovate instead,
+answers, so update them by hand. They are pinned by tag only, on purpose: each rebuild
+takes the tag's latest security fixes, at the cost of a build that isn't reproducible
+byte for byte. This template repository uses Renovate instead,
 because Dependabot can't parse `.jinja` files.
 
 `just check` and CI audit dependencies for known advisories:

@@ -15,8 +15,10 @@
 {%- endmacro %}
 {%- macro smoke_test() %}
       - name: smoke test
+        env:
+          TAG: {% raw %}${{ matrix.tag }}{% endraw %}
         run: |-
-          docker run -d --name ci -p {{ app_port }}:{{ app_port }} {% raw %}${{ matrix.tag }}{% endraw %}
+          docker run -d --name ci -p {{ app_port }}:{{ app_port }} "$TAG"
           ok=""
           for _ in $(seq 1 30); do
             if curl -fsS "http://127.0.0.1:{{ app_port }}/health"; then ok=1; break; fi
@@ -107,6 +109,9 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # In Settings > Environments, limit `ghcr` to main and tags matching `v*`, and add a
+    # required reviewer. Without that, anyone who can push a branch or a tag can publish.
+    environment: ghcr
     # Job-level permissions replace the workflow-level grant, so restate contents.
     permissions:
       contents: read
