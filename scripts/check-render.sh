@@ -103,6 +103,31 @@ if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
 fi
 grep -q 'Give the GitHub user or org' "$out/f.log"
 
+# Each answer below must be refused, with the validator's own message. A refusal for
+# another reason, or a render that goes through, fails the check.
+refuses() {
+  local needle=$1 log
+  shift
+  if log=$("${copier[@]}" --vcs-ref=HEAD --data project_name=refuse-me "$@" . "$out/refused" 2>&1); then
+    echo "rendered with $*: its validator is gone" >&2
+    exit 1
+  fi
+  grep -qF -- "$needle" <<<"$log" || { echo "refused $* for another reason:" >&2; echo "$log" >&2; exit 1; }
+}
+refuses 'An empty value' --data 'stacks=[python]' --data python_dir=
+refuses 'An empty value' --data 'stacks=[ts]' --data ts_dir=
+refuses 'An empty value' --data 'stacks=[rust]' --data rust_dir=
+refuses 'An empty value' --data 'stacks=[go]' --data go_dir=
+refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
+refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
+refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
+refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
+refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
+  --data python_dir=api --data ts_dir=web --data app_port=65535
+# A binary never uses the Go package name, so a digit-leading project name is fine.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
+  --data go_kind=binary . "$out/i"
+
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
 import ast, json, json5, os, pathlib, tomllib, yaml
 
@@ -336,6 +361,8 @@ grep -q http.server a/src/render_me/__main__.py
 # h: the unit test and the Example are two files, not one overwriting the other.
 grep -q 'func TestAdd' h/add_test.go
 grep -q 'func ExampleAdd' h/example_test.go
+
+test -f i/main.go
 
 # PID 1 ignores SIGTERM without a handler, so both image stubs install one.
 grep -q SIGTERM b/src/main.ts
