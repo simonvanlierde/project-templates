@@ -27,7 +27,7 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Accessibility check with axe | `tests/e2e/a11y.spec.ts`, `web-app` kind | Every route, in light and dark color schemes, against WCAG 2.0, 2.1 and 2.2 levels A and AA. Any violation fails, whatever its impact. |
 | Content-Security-Policy with no inline script | `public/_headers`, `tests/e2e/csp.spec.ts`, `web-app` kind | Cloudflare Pages serves the policy (`script-src 'self'`) with HSTS, frame and opener isolation. The spec runs the built app under that policy and fails on any violation, so a change that needs a looser policy fails in CI, not in production. |
 | Bundle budget | `scripts/checkBundleBudget.mjs`, `web-app` kind | Fails `just check` and CI when the largest JavaScript file, gzipped, passes the limit set in the script. A dependency that doubles the bundle shows up in its own pull request. |
-| Provenance on publish | release workflows | PyPI and npm trusted publishing attach attestations. Container images pushed to GHCR carry an SBOM and a provenance attestation. |
+| Provenance on publish | release workflows | PyPI and npm trusted publishing attach attestations. The Python release also signs a GitHub build-provenance attestation for each file, checkable with `gh attestation verify`. Container images pushed to GHCR carry an SBOM and a provenance attestation. |
 | Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
 The hooks job skips the hooks that need the project environment (`ruff`, `ty`,

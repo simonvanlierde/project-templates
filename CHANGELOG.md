@@ -99,6 +99,10 @@ Upgrade steps:
 
 ### Security
 
+- A library's PyPI release also signs a GitHub build-provenance attestation for each file
+  in `dist/`, so users can check where a wheel was built with `gh attestation verify`. It
+  is made in the publish job, which runs no project code.
+- The hooks job installs a set prek version, 0.5.5, instead of the newest one on each run.
 - The hooks job in `checks.yml` gives the read-only GitHub token to the zizmor hook only.
   Every other hook, third-party ones included, now runs without it.
 
