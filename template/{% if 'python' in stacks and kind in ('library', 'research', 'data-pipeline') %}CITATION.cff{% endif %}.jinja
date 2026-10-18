@@ -1,4 +1,4 @@
-{%- set name = author_name.split(' ', 1) -%}
+{%- set name = (author_name | trim).split(none, 1) -%}
 # GitHub reads this for its "Cite this repository" button. Zenodo reads
 # .zenodo.json instead when it archives a release, and software indexes read
 # codemeta.json: change authors in all three. Check the name split below: the

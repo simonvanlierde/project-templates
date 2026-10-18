@@ -15,11 +15,13 @@ export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
 COPIER_VERSION=${COPIER_VERSION:-$(sed -n 's/^ *COPIER_VERSION: *//p' .github/workflows/ci.yml)}
 copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwrite)
 
-# a: every stack, other answers at their defaults. module_name is not set,
+# a: every stack, other answers at their defaults, but for an author name with a
+# leading space. module_name is not set,
 # so its slug-derived default renders.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=render-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data kind=research --data ts_kind=app \
+  --data 'author_name= Ada Lovelace' \
   --data 'docker_stacks=[python]' . "$out/a"
 
 # b: license=none, and a name, description and author name with punctuation that `slug`
@@ -153,6 +155,9 @@ assert {"upload_type", "title", "description", "creators", "license"} <= zenodo.
 assert zenodo["creators"][0]["name"] == "Lovelace, Ada", zenodo
 codemeta = json.loads((out / "a/codemeta.json").read_text())
 assert codemeta["@context"] == "https://w3id.org/codemeta/4.0", codemeta
+# A leading space in the author name must not leave the given name empty.
+assert codemeta["author"][0]["givenName"] == "Ada", codemeta
+assert "given-names: \"Ada\"" in (out / "a/CITATION.cff").read_text()
 PY
 
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.
