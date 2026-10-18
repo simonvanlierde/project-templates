@@ -212,6 +212,8 @@ test -f a/renderme.go
 test ! -e a/main.go
 grep -qF 'renderme "github.com/example-org/render-me"' a/example_test.go
 grep -qx '    @just go-check' a/justfile
+# govulncheck fails until go-sync writes go.sum, so the README's setup runs it.
+grep -q '^just go-sync' a/README.md
 grep -q 'id: golangci-lint$' a/.pre-commit-config.yaml
 grep -q golang.go a/.vscode/extensions.json
 grep -q 'package-ecosystem: gomod' a/.github/dependabot.yml

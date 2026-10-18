@@ -13,8 +13,8 @@ The `stacks` question is a multi-select. Pick any combination:
 | `docker` | A `Dockerfile` for the Python or TypeScript package, and a root `compose.yaml` |
 
 Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
-`just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`,
-`SECURITY.md`, `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
+`just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`
+(unless `license=none`), `SECURITY.md`, `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
 recommendations. A Python project also picks a [kind](python-kinds.md).
 
 ## TypeScript kinds

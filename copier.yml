@@ -333,8 +333,8 @@ uv_version:
   when: false
   default: 0.12.23
 
-# Computed, never asked: the golangci-lint release that the README, `just go-check`
-# and go.yml pin, kept in one place. Renovate bumps it from its `# renovate:` line.
+# Computed, never asked: the golangci-lint release that the README and go.yml pin,
+# kept in one place. `just go-check` runs whichever golangci-lint is on PATH. Renovate bumps it from its `# renovate:` line.
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci_lint_version:
   type: str
