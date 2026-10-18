@@ -100,6 +100,8 @@ Upgrade steps:
   template release. Before, the one-week release age held those PRs back for good,
   because template tags carry no release date. The docs say how Dependabot users hear
   about releases instead.
+- The Docker image of a `data-pipeline` project is documented as a stub: it has no
+  `sources.toml` or `data/`, and it starts the `/health` placeholder.
 
 ### Fixed
 
@@ -111,6 +113,33 @@ Upgrade steps:
 - The `check-yaml` hook no longer fails on `pnpm-lock.yaml`. pnpm 12 writes its own
   version into the lockfile as a second YAML document, which the hook rejected, so
   every TS project failed its `checks` workflow once the lockfile was committed.
+- A name or email with a quote in it, such as `Ada "X" Lovelace`, no longer breaks the
+  generated `pyproject.toml`, `package.json` or `Cargo.toml`.
+- A `data-pipeline` fetch that gets 304 Not Modified now takes the vintage from the
+  current `release` in `sources.toml`, so bumping it reaches the fetch record and the
+  output rows. It also logs the source in `data/fetches.jsonl` when the log has no entry
+  for those bytes, as with a source fetched before the log existed.
+- A `data-pipeline` project with a log line missing `source_id` or `sha256` now fails with
+  a one-line message naming the line, not a traceback. `--help` no longer crashes
+  under `python -OO`.
+- The `ts` and stdlib Python starter servers in the Docker image now stop on SIGTERM.
+  As PID 1 they ignored it, so `docker stop` waited 10 seconds and then killed them.
+- A Go library named `example` no longer loses its `TestAdd`: the unit test is now
+  `add_test.go`, which cannot share a path with `example_test.go`.
+- Copier now refuses an empty `python_dir`, `ts_dir`, `rust_dir` or `go_dir`, a project
+  name that is a Go or Rust keyword (such as `type`), a `rust_version` below 1.85 (the
+  template uses edition 2024), and an `app_port` outside 1 to 65535, or 65535 when two
+  images publish ports. A Go binary no longer needs a project name that can be a Go
+  package name.
+- A leading space in the author name no longer leaves the given name empty in
+  `CITATION.cff`, `.zenodo.json` and `codemeta.json`.
+- The image `.dockerignore` files now match `.env`, `.venv` and `node_modules` in any
+  directory, so another stack's secrets stay out of the build context when a package sits
+  at the repo root.
+- `.gitignore` names a Go binary without a trailing major version, as `go build` does for
+  a module path ending in `/v2`.
+- With a Rust crate below the repo root, `.vscode/settings.json` sets
+  `rust-analyzer.linkedProjects`, so the editor finds a crate two levels deep.
 
 ### Security
 
