@@ -374,3 +374,4 @@ grep -q SIGTERM b/src/main.ts
 grep -q SIGTERM a/src/render_me/__main__.py
 
 echo "all render checks passed"
+grep -q 'stub for a data pipeline' d/pipe/Dockerfile

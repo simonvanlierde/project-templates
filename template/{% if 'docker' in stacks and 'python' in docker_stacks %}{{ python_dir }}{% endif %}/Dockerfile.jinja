@@ -73,4 +73,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 {% if kind != 'web-service' -%}
 # NOTE: needs src/{{ module_name }}/__main__.py. Replace with your real entrypoint.
 {% endif -%}
+{% if kind == 'data-pipeline' -%}
+# NOTE: a stub for a data pipeline. The image has no sources.toml or data/, so the
+# pipeline stages can't run in it. Copy the manifest in and change the CMD to use it.
+{% endif -%}
 CMD ["python", "-m", "{{ module_name }}"]
