@@ -97,9 +97,10 @@ python_dir:
   help: Directory holding the Python package (`.` for the repo root, `apps/api` for a monorepo)
   default: "."
   validator: >-
-    {% if not python_dir or (python_dir != '.' and (python_dir.startswith(('.', '/')) or python_dir.endswith('/') or '..' in python_dir)) %}
-    Give a plain relative path such as `apps/api`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% if not python_dir %}
     An empty value is not a path: use `.` for the repo root.
+    {% elif python_dir != '.' and (python_dir.startswith(('.', '/')) or python_dir.endswith('/') or '..' in python_dir) %}
+    Give a plain relative path such as `apps/api`: no leading `./` or `/`, no trailing `/`, no `..`.
     {% endif %}
 
 ts_dir:
@@ -108,9 +109,10 @@ ts_dir:
   help: Directory holding the TypeScript package (`.` for the repo root, `apps/web` for a monorepo)
   default: "."
   validator: >-
-    {% if not ts_dir or (ts_dir != '.' and (ts_dir.startswith(('.', '/')) or ts_dir.endswith('/') or '..' in ts_dir)) %}
-    Give a plain relative path such as `apps/web`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% if not ts_dir %}
     An empty value is not a path: use `.` for the repo root.
+    {% elif ts_dir != '.' and (ts_dir.startswith(('.', '/')) or ts_dir.endswith('/') or '..' in ts_dir) %}
+    Give a plain relative path such as `apps/web`: no leading `./` or `/`, no trailing `/`, no `..`.
     {% endif %}
 
 rust_dir:
@@ -119,9 +121,10 @@ rust_dir:
   help: Directory holding the Rust crate (`.` for the repo root, `crates/core` for a monorepo)
   default: "."
   validator: >-
-    {% if not rust_dir or (rust_dir != '.' and (rust_dir.startswith(('.', '/')) or rust_dir.endswith('/') or '..' in rust_dir)) %}
-    Give a plain relative path such as `crates/core`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% if not rust_dir %}
     An empty value is not a path: use `.` for the repo root.
+    {% elif rust_dir != '.' and (rust_dir.startswith(('.', '/')) or rust_dir.endswith('/') or '..' in rust_dir) %}
+    Give a plain relative path such as `crates/core`: no leading `./` or `/`, no trailing `/`, no `..`.
     {% endif %}
 
 go_dir:
@@ -130,9 +133,10 @@ go_dir:
   help: Directory holding the Go module (`.` for the repo root, `services/api` for a monorepo)
   default: "."
   validator: >-
-    {% if not go_dir or (go_dir != '.' and (go_dir.startswith(('.', '/')) or go_dir.endswith('/') or '..' in go_dir)) %}
-    Give a plain relative path such as `services/api`: no leading `./` or `/`, no trailing `/`, no `..`.
+    {% if not go_dir %}
     An empty value is not a path: use `.` for the repo root.
+    {% elif go_dir != '.' and (go_dir.startswith(('.', '/')) or go_dir.endswith('/') or '..' in go_dir) %}
+    Give a plain relative path such as `services/api`: no leading `./` or `/`, no trailing `/`, no `..`.
     {% endif %}
 
 codecov:
