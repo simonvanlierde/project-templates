@@ -58,6 +58,8 @@ Upgrade steps:
 
 ### Changed
 
+- A project with a publish option gets a Releasing section in its README: set up the
+  publishing environment before the first release.
 - A `data-pipeline` manifest names the edition `vintage`, as the fetch record and the
   output column already did. `release` is still read, with a warning.
 - The generated README lists the tools the project needs, and `just hooks` next to
@@ -112,6 +114,10 @@ Upgrade steps:
 
 ### Security
 
+- With `publish_to_ghcr`, the image push job runs in a `ghcr` environment, as PyPI and npm
+  releases already do. Limit it to `main` and `v*` tags with a required reviewer in the
+  repository's settings (see the README's Releasing section); until then GitHub creates
+  it unprotected and pushes as before.
 - A library's PyPI release also signs a GitHub build-provenance attestation for each file
   in `dist/`, so users can check where a wheel was built with `gh attestation verify`. It
   is made in the publish job, which runs no project code.

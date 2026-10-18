@@ -4,7 +4,7 @@
 #
 # Renders HEAD plus uncommitted edits (--vcs-ref=HEAD). COPIER_VERSION pins
 # copier; unset, it is the version ci.yml pins.
-set -Eeuo pipefail
+set -euo pipefail
 # A bare test or grep below fails silently under set -e; say which line tripped.
 trap 'echo "check-render: failed at line $LINENO" >&2' ERR
 
@@ -80,19 +80,22 @@ git tag -f check-render-tag >/dev/null
   --data project_name=tag-me --data 'stacks=[python]' . "$out/e"
 
 # A web app is static files, so the ts image (a Node service) is refused for it.
+# The grep checks the render failed for this reason, not for an unrelated break.
 if "${copier[@]}" --vcs-ref=HEAD --data project_name=web-docker \
   --data 'stacks=[ts,docker]' --data ts_kind=web-app \
-  --data 'docker_stacks=[ts]' . "$out/g" >/dev/null 2>&1; then
+  --data 'docker_stacks=[ts]' . "$out/g" >"$out/g.log" 2>&1; then
   echo "rendered a ts image for a web app: the docker_stacks validator lost its web-app check" >&2
   exit 1
 fi
+grep -q 'A web app is static files' "$out/g.log"
 
 # Without the settings file, --defaults must stop at the blank identity answers.
 if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=anon-me . "$out/f" >/dev/null 2>&1; then
+  --data project_name=anon-me . "$out/f" >"$out/f.log" 2>&1; then
   echo "rendered without an author: copier.yml has a personal default again" >&2
   exit 1
 fi
+grep -q 'Give the GitHub user or org' "$out/f.log"
 
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
 import ast, json, json5, os, pathlib, tomllib, yaml

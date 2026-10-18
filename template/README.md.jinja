@@ -32,7 +32,14 @@ just ts-e2e      # accessibility and CSP checks in Chromium, against the product
 just pipeline    # fetch, build and validate every source in sources.toml{% endif %}{% if 'docker' in stacks %}
 just up          # run each service in its container, rebuilt on source changes{% endif %}
 ```
-{% if 'python' in stacks and kind == 'data-pipeline' %}{% set d = '' if python_dir == '.' else python_dir ~ '/' %}
+{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}
+## Releasing
+
+Before the first release, set up the publishing environment
+({% for name, on in [('pypi', publish_to_pypi), ('npm', publish_to_npm), ('ghcr', publish_to_ghcr)] if on %}`{{ name }}`{% if not loop.last %}, {% endif %}{% endfor %})
+in Settings > Environments: limit it to tags matching `v*`, and add a required reviewer.
+The release workflows explain the rest in their header comments.
+{% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}{% set d = '' if python_dir == '.' else python_dir ~ '/' %}
 ## Pipeline
 
 [`{{ d }}sources.toml`]({{ d }}sources.toml) declares every input: its URL, its reuse

@@ -49,7 +49,6 @@ A data pipeline needs [Copier](https://copier.readthedocs.io/en/stable/#installa
 ```sh
 mkdir mydata && cd mydata && git init
 copier copy --data 'stacks=[python]' --data kind=data-pipeline gh:simonvanlierde/project-templates .
-just py-sync
 just pipeline  # fetch, build and validate the example source
 just check
 git add -A && git commit -m "chore: scaffold"
