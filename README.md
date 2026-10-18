@@ -9,12 +9,14 @@ Build a dataset from public sources where every row says which download it came 
 
 This is a [Copier](https://copier.readthedocs.io) template. Its `data-pipeline` kind
 writes a Python project around one manifest, `sources.toml`, which lists each input with
-its URL and the publisher's reuse terms. Three steps then run over it:
+its URL and the publisher's reuse terms. Three steps from the
+[sourceledger](https://github.com/simonvanlierde/sourceledger) library then run over it:
 
 - `just fetch` downloads each source and writes a record beside it: the URL, when it
-  was fetched, the SHA-256 and size of the bytes, the release you expect, and the
+  was fetched, the SHA-256 and size of the bytes, the vintage you expect, and the
   server's ETag. The next fetch asks the server whether the file changed and keeps the
-  record when it has not.
+  record when it has not. Each new version of a source is added to `data/fetches.jsonl`,
+  a log you commit.
 - `just build` re-hashes each download against its record before it parses it, and
   stamps every output row with that record.
 - `just validate` fails when an output came from an older download, a source has no
@@ -27,8 +29,9 @@ source_id,source_url,retrieved_at,vintage,raw_sha256,Year,Mean,Uncertainty
 example-co2,https://raw.githubusercontent.com/datasets/co2-ppm/main/data/co2-annmean-mlo.csv,2026-10-17T22:30:03Z,"unversioned, main branch",b1548ededea6f9b7eecac370753de8d8da6e0afafe1041f749a11db78c2e33c4,1959,315.98,0.12
 ```
 
-CI runs the whole pipeline against the live URLs, and a weekly run fails when a
-publisher revises a value the tests pinned. The raw and processed data stay out of
+CI runs the whole pipeline against the live URLs. A weekly run comments on an issue when
+a publisher serves new bytes for a source, and fails when a value the tests pinned
+changed. The raw and processed data stay out of
 git, so the repository never redistributes a source. `CITATION.cff`, `.zenodo.json` and
 `codemeta.json` come from the same answers, ready for a Zenodo DOI.
 
