@@ -328,5 +328,8 @@ test ! -e a/ATTRIBUTION.md
 test ! -e a/src/render_me/app.py
 (! grep -q fastapi a/pyproject.toml)
 grep -q http.server a/src/render_me/__main__.py
+# PID 1 ignores SIGTERM without a handler, so both image stubs install one.
+grep -q SIGTERM b/src/main.ts
+grep -q SIGTERM a/src/render_me/__main__.py
 
 echo "all render checks passed"

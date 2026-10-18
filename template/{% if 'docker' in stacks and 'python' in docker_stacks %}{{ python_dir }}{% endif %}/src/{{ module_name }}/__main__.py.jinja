@@ -47,6 +47,8 @@ probes, so `docker run` works before you write anything. Replace the
 handler with your real application.
 """
 
+import signal
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = {{ app_port }}
@@ -74,6 +76,9 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     """Serve until the container stops."""
+    # PID 1 ignores SIGTERM unless a handler is set, so without this `docker stop` waits
+    # 10 s and then kills the process.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     with ThreadingHTTPServer(("", PORT), Handler) as httpd:
         httpd.serve_forever()
 

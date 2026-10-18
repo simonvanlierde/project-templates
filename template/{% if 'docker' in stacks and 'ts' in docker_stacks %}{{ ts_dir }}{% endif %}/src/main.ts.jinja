@@ -9,7 +9,7 @@ import { createServer } from "node:http";
 
 const PORT = {{ app_port }};
 
-createServer((req, res) => {
+const server = createServer((req, res) => {
   if (req.url === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end('{"status":"ok"}');
@@ -18,3 +18,7 @@ createServer((req, res) => {
   res.writeHead(404);
   res.end("not found");
 }).listen(PORT);
+
+// PID 1 ignores SIGTERM unless a handler is set, so without this `docker stop` waits
+// 10 s and then kills the process.
+process.on("SIGTERM", () => server.close(() => process.exit(0)));
