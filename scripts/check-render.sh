@@ -264,6 +264,8 @@ test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
 grep -q 'packages: write' c/.github/workflows/docker.yml
+# The push job also runs on main, so the README must not limit `ghcr` to tags alone.
+grep -q 'ghcr. also to .main' c/README.md
 # The publish job has no checkout; the wheels land in the root dist/.
 grep -qx '          path: dist/' c/.github/workflows/python-release.yml
 # Up-paths at both depths.
