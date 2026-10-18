@@ -62,7 +62,8 @@ scanning covers the server side.
   the job skips private repos.
   The dependency audits in their stack workflows still run.
 - zizmor needs a token for its online audits: impostor commits and known-vulnerable
-  actions. The hooks job passes the read-only `github.token`. Locally, set `GH_TOKEN`
+  actions. The hooks job runs it in a step of its own, the only one given the read-only
+  `github.token`, so the other hooks never see it. Locally, set `GH_TOKEN`
   to get them. Without it, only the offline audits run.
 - A `data-pipeline` project fetches its sources from their live URLs in CI, and so
   does this template's own CI. `fetch` retries a server error, a rate limit or a

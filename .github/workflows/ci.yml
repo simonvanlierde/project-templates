@@ -57,9 +57,15 @@ jobs:
         env:
           # betterleaks scans staged changes only and CI stages nothing. GitHub secret
           # scanning covers the server side.
-          SKIP: betterleaks
-          # Enables zizmor's online audits (impostor commits, known-vulnerable actions).
-          # Read-only.
+          # zizmor runs in the next step, the only one given a token.
+          SKIP: betterleaks,zizmor
+
+      # zizmor's online audits (impostor commits, known-vulnerable actions) need a token.
+      # It is read-only, and only this hook sees it, not every third-party hook above.
+      - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        with:
+          extra-args: zizmor --all-files
+        env:
           GH_TOKEN: ${{ github.token }}
 
   renovate:
