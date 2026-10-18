@@ -97,6 +97,11 @@ Upgrade steps:
   version into the lockfile as a second YAML document, which the hook rejected, so
   every TS project failed its `checks` workflow once the lockfile was committed.
 
+### Security
+
+- The hooks job in `checks.yml` gives the read-only GitHub token to the zizmor hook only.
+  Every other hook, third-party ones included, now runs without it.
+
 ## [0.10.0] - 2026-10-16
 
 ### Added
