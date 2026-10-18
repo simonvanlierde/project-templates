@@ -508,6 +508,33 @@ def test_the_fetch_log_keeps_each_new_version_once(upstream: Path) -> None:
     assert lines[-1] == json.loads(Path("data/raw/example.csv.fetch.json").read_text(encoding="utf-8"))
 
 
+def test_revisions_names_a_source_whose_bytes_changed(
+    upstream: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The weekly report lists a revised source, and neither an unchanged one nor one new to the log."""
+    _run("fetch")
+    before = tmp_path / "before.jsonl"
+    before.write_text(LOG.read_text(encoding="utf-8"), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        pipeline.main(["revisions"])
+    capsys.readouterr()
+    assert pipeline.main(["revisions", str(before)]) == 0
+    assert capsys.readouterr().out == ""
+
+    upstream.write_text(FIXTURE + "2022,3.5\n", encoding="utf-8")
+    _run("fetch")
+    capsys.readouterr()
+    assert pipeline.main(["revisions", str(before)]) == 0
+    (line,) = capsys.readouterr().out.splitlines()
+    old, new = (hashlib.sha256(t.encode()).hexdigest()[:12] for t in (FIXTURE, FIXTURE + "2022,3.5\n"))
+    assert line.startswith(f"- `example`: {old} -> {new}, ")
+
+    before.write_text("", encoding="utf-8")
+    capsys.readouterr()
+    assert pipeline.main(["revisions", str(before)]) == 0
+    assert capsys.readouterr().out == ""
+
+
 @pytest.mark.usefixtures("upstream")
 def test_a_source_id_is_a_plain_file_name(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """An id names files under data/, so one that is a path is refused before anything is written."""

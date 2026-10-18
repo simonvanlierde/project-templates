@@ -18,6 +18,10 @@ Upgrade steps:
 
 ### Added
 
+- A `data-pipeline` project's weekly CI run comments on an open "Source data revised
+  upstream" issue when a source the committed `data/fetches.jsonl` already has serves
+  new bytes, with the old and new checksums. Only that one job may write issues. A new
+  `revisions` stage prints the same list locally.
 - A `web-app` TypeScript kind: a Vite single-page app with React or Preact (the new
   `web_framework` question), deployed by Cloudflare Pages' Git integration. It ships
   Playwright specs that run against the production build: an axe check of every route
