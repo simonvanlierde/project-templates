@@ -24,7 +24,9 @@ A `data-pipeline` project gets:
   `status = "unimplemented"` is one you know about but don't read yet.
 - `data/raw/` and `data/processed/`. Both are gitignored, so the repository never
   redistributes source data.
-- A small module, standard library only, with three stages:
+- A `pipeline.py` that holds only `parse`, the reader for each raw file. The stages
+  come from [sourceledger](https://github.com/simonvanlierde/sourceledger), a
+  dependency with no dependencies of its own, so fixes to them arrive as a version bump:
   - `fetch` retries server errors, rate limits (waiting for `Retry-After`, up to
     2 minutes), network errors and a body shorter than its `Content-Length`, with
     backoff. A fetch that still fails names its source and URL. It writes each
@@ -42,7 +44,8 @@ A `data-pipeline` project gets:
 - `just fetch`, `just build` and `just validate`, and `just pipeline` to run all three.
 - `ATTRIBUTION.md`, which states what the repository reuses and on what terms. The
   code license doesn't cover those.
-- Tests that run the whole pipeline against a local file, with no network.
+- Tests that run the whole pipeline against a local file, with no network. sourceledger
+  tests the stages; these test the project's own parser and entry point.
 - A CI workflow that runs the pipeline for real on the manifest's URLs. It uploads only
   the fetch records.
 
