@@ -27,6 +27,19 @@
           docker logs ci
           docker rm -f ci
           test -n "$ok" || { echo "::error::/health never answered"; exit 1; }
+{%- endmacro %}
+{%- macro scan() %}
+
+      # Lists HIGH and CRITICAL vulnerabilities that already have a fix. Only the weekly
+      # run fails on them: a fix often waits days on a rebuilt base image, and a gate
+      # that is red on every pull request in the meantime stops being read.
+      - name: scan image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: {% raw %}${{ matrix.tag }}{% endraw %}
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          exit-code: {% raw %}${{ github.event_name == 'schedule' && '1' || '0' }}{% endraw %}
 {%- endmacro -%}
 name: docker
 
@@ -38,6 +51,10 @@ on:
 {%- endif %}
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  # Weekly, so the image is rebuilt on the newest base image and scanned against new
+  # advisories even when the code has not changed. It builds and scans, never pushes.
+  schedule:
+    - cron: "0 5 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -55,8 +72,9 @@ jobs:
 {%- if publish_to_ghcr %}
     # Builds and runs the image with no write scopes. `permissions` takes no expression,
     # so only a separate push job keeps packages: write and id-token: write away from a
-    # pull request's Dockerfile steps and the dependencies they install.
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+    # pull request's Dockerfile steps and the dependencies they install. It is also the
+    # weekly rebuild, which has nothing to push.
+    if: (github.event_name == 'pull_request' && !github.event.pull_request.draft) || github.event_name == 'schedule'
 {%- else %}
     # Build-only. To push, set publish_to_ghcr and re-run copier update.
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
@@ -83,8 +101,9 @@ jobs:
           # other's layers.
           cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
 {%- if publish_to_ghcr %}
-          # No cache-to: this job runs on pull requests only, and a cache saved from a pull
-          # request is dropped on merge. The push job below fills the shared scope.
+          # No cache-to: this job runs on pull requests and the weekly rebuild, and a cache
+          # saved from a pull request is dropped on merge. The push job below fills the
+          # shared scope.
 {%- else %}
           # Export only on push. A cache saved from a pull request is readable by that PR
           # alone and dropped on merge. mode=max there would upload hundreds of MB that
@@ -100,13 +119,14 @@ jobs:
       # An image that cannot start is not a passing build. Matrix jobs get their
       # own runner, so both images can use {{ app_port }}.
 {{- smoke_test() }}
+{{- scan() }}
 {%- if publish_to_ghcr %}
 
   push:
     # The write half: builds and smoke-tests again, then pushes from the tested build's
     # cache, so only an image that answered /health reaches the registry.
     name: push
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # In Settings > Environments, limit `ghcr` to main and tags matching `v*`, and add a
@@ -143,6 +163,7 @@ jobs:
           load: true # so the smoke test below can run it
           tags: {% raw %}${{ matrix.tag }}{% endraw %}
 {{ smoke_test() }}
+{{- scan() }}
 
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:

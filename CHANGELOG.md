@@ -28,6 +28,10 @@ Upgrade steps:
 
 ### Added
 
+- With the `docker` stack, `docker.yml` scans each built image with Trivy for HIGH and
+  CRITICAL vulnerabilities that have a fix, and rebuilds and scans the image every
+  Monday without pushing it. Pull requests and pushes show the findings in the job log;
+  only the weekly run fails on them.
 - A `data-pipeline` project's weekly CI run comments on an open "Source data revised
   upstream" issue when a source the committed `data/fetches.jsonl` already has serves
   new bytes, with the old and new checksums. Only that one job may write issues. A new
