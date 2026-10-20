@@ -70,9 +70,36 @@ Generated projects use Dependabot by default, which needs no app and covers ever
 ecosystem here. The `dependency_bot` answer switches to Renovate, with the same rules in
 `renovate.json5`. Either way, version updates come weekly, grouped into one PR for actions,
 one for hooks and one for dev tooling, and wait a week, or a month for a major version of
-a package dependency. Security updates skip the wait. uv's `exclude-newer = "1 week"` and
-pnpm's `minimumReleaseAge` hold back the same releases, so `uv lock` or
-`pnpm install` can't pull in one that the bot is still waiting on. Go has no such setting.
+a package dependency. The bot's security PRs skip the wait. The one difference: Dependabot
+also groups npm security updates into a single PR, and the Renovate config has no such group.
+
+uv's `exclude-newer = "1 week"` and pnpm's `minimumReleaseAge` hold back the same
+releases, so `uv lock` or `pnpm install` can't pull in one that the bot is still waiting
+on. Go has no such setting. These two settings have no security exception. A fix released
+within the last week can't be locked, and `uv audit` keeps failing until the week passes.
+
+To lock one fixed package early, exempt it by name and delete the exemption after a week:
+
+- uv: add the package to `[tool.uv]` in `pyproject.toml`, with a timestamp after the
+  fix's release, then run `uv lock --upgrade-package <pkg>`:
+
+  ```toml
+  exclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }
+  ```
+
+  The flag `uv lock --exclude-newer-package <pkg>=<timestamp>` alone doesn't last:
+  the next `uv sync` relocks without it and moves the package back. uv has no
+  environment variable for this setting.
+- pnpm: list the package in `pnpm-workspace.yaml`, then run `pnpm install`. It matches
+  by name, or by `name@version` from pnpm 10.19.
+
+  ```yaml
+  minimumReleaseAgeExclude:
+    - is-odd@3.0.1
+  ```
+
+I couldn't find whether Dependabot's uv security PRs read `exclude-newer`. Its docs say
+nothing on it, so check the first PR you get.
 
 Nothing tracks the `FROM` base images in the Dockerfiles. Those tags are Copier
 answers, so update them by hand. They are pinned by tag only, on purpose: each rebuild

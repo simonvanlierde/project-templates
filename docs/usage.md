@@ -105,6 +105,14 @@ To move a package to another directory, run `copier update` with the new directo
 Then delete the old directory by hand. Copier removes files that left the template,
 but not files that moved because an answer changed.
 
+After any `copier update`, refresh the lockfiles for your stacks and commit them with
+the update: `uv lock`, `pnpm install`, `just go-sync`. A template change can add or bump a
+dependency, and CI installs with `--locked` and `--frozen-lockfile`, so a stale lockfile
+fails the build.
+
+Template releases are immutable, so a bad one is fixed by a new patch release. Until it
+arrives, close the update PR, or run `git revert` on the update commit.
+
 ### Hearing about new releases
 
 With `dependency_bot: renovate`, Renovate's
@@ -187,8 +195,8 @@ To turn it on:
 ## Dependency updates
 
 `dependency_bot` picks who opens dependency-update PRs: Dependabot (the default, built
-into GitHub) or Renovate. Both follow the same rules, described in
-[tooling](tooling.md#dependencies). Renovate needs its GitHub App on the repository:
+into GitHub) or Renovate. Both follow the rules in
+[tooling](tooling.md#dependencies), which also names the one difference. Renovate needs its GitHub App on the repository:
 install it from [github.com/apps/renovate](https://github.com/apps/renovate), choosing
 only this repository, then run `copier update` and answer `renovate`. That writes
 `renovate.json5` and removes `.github/dependabot.yml`, so Renovate skips its onboarding PR.
