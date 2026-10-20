@@ -193,6 +193,8 @@ author_orcid:
     Give the bare iD, as 0000-0000-0000-0000, without the https://orcid.org/ prefix.
     {% endif %}
 
+# The default trails a new Python release by 90 days (renovate.json5), so the
+# packages scaffolds install have wheels for it.
 # renovate: datasource=python-version depName=python
 python_version:
   type: str

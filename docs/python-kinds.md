@@ -27,14 +27,16 @@ A `data-pipeline` project gets:
   redistributes source data, and `data/fetches.jsonl`, committed: the history of every
   version of every source the pipeline has fetched.
 - A `pipeline.py` that holds `parse`, the reader for each raw file, and a two-line entry
-  point. The stages
+  point. `parse` hands each file to sourceledger, which reads CSV, JSON and Excel,
+  gzipped or not; branch on the source's id for any other format. The stages
   come from [sourceledger](https://github.com/simonvanlierde/sourceledger), a
   dependency with no dependencies of its own, so fixes to them arrive as a version bump.
   Its README says how each stage behaves:
   - `fetch` downloads each source with retries, writes a provenance record beside it,
     and next time asks the server whether it changed.
   - `build` re-hashes each download against its record, then writes the output with
-    five provenance columns in front.
+    five provenance columns in front, and a `datapackage.json` that lists each output
+    with its checksum, source and licence.
   - `validate` checks the output against the manifest, the records and the reuse terms.
 - `just fetch`, `just build` and `just validate`, and `just pipeline` to run all three.
 - `ATTRIBUTION.md`, which states what the repository reuses and on what terms. The

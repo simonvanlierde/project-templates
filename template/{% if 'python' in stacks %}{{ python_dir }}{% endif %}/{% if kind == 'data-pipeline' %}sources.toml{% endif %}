@@ -1,3 +1,5 @@
+#:schema https://raw.githubusercontent.com/simonvanlierde/sourceledger/main/src/sourceledger/sources.schema.json
+
 # Input manifest: every source this pipeline reads, declared before any code reads it.
 #
 # `just fetch` downloads each `implemented` source to data/raw/, `just build` turns
@@ -7,7 +9,7 @@
 # query). CI runs the whole pipeline against these URLs on every push.
 #
 # Per source:
-#   id         names the raw file (<id> plus the URL's extension) and the output
+#   id         ASCII letters, digits, `_` and `-`; names the raw file (<id> plus the URL's extension) and the output
 #   status     "implemented", or "unimplemented" plus a `reason`: a source you know
 #              about but do not read yet. It stays out of the output by design, and
 #              `just validate` fails if it ever produces any.
@@ -20,6 +22,13 @@
 #              URL that tracks a moving source.
 #   max_bytes  optional: the largest download `just fetch` accepts, 200 MiB unless set.
 #              Raise it for a source that is bigger than that on purpose.
+#   format     optional: "csv", "json" (an array of objects) or "xlsx" (needs the
+#              `sourceledger[xlsx]` extra). Otherwise from the URL's extension. A
+#              gzipped CSV or JSON file is decompressed.
+#   sheet      optional: the Excel sheet to read, the first unless set.
+#   headers    optional: request headers such as an API key, each value naming an
+#              environment variable: { Authorization = "env:API_TOKEN" }. A literal
+#              value is refused, so no secret lands in this file.
 #   terms      the publisher's reuse terms, in their words, plus `terms_url`. Required
 #              for every implemented source, and listed again in ATTRIBUTION.md.
 #   license    the same terms as an SPDX id (https://spdx.org/licenses/), such as
