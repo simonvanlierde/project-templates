@@ -1,4 +1,4 @@
-#:schema https://raw.githubusercontent.com/simonvanlierde/sourceledger/main/src/sourceledger/sources.schema.json
+#:schema https://raw.githubusercontent.com/simonvanlierde/sourceledger/v0.2.0/src/sourceledger/sources.schema.json
 
 # Input manifest: every source this pipeline reads, declared before any code reads it.
 #
@@ -10,6 +10,8 @@
 #
 # Per source:
 #   id         ASCII letters, digits, `_` and `-`; names the raw file (<id> plus the URL's extension) and the output
+#   name       optional: a title for people, shown by the data package and
+#              `just attribution` in place of the id
 #   status     "implemented", or "unimplemented" plus a `reason`: a source you know
 #              about but do not read yet. It stays out of the output by design, and
 #              `just validate` fails if it ever produces any.
@@ -20,6 +22,9 @@
 #   sha256     optional: the SHA-256 the download must have. Pin it for a fixed release
 #              and `just fetch` refuses bytes that changed upstream. Leave it out for a
 #              URL that tracks a moving source.
+#   archive    optional: true to ask the Internet Archive to snapshot the URL after each
+#              fetch that brings new bytes; the record keeps the snapshot's address.
+#              Not for a source that needs `headers`: the archive's request sends none.
 #   max_bytes  optional: the largest download `just fetch` accepts, 200 MiB unless set.
 #              Raise it for a source that is bigger than that on purpose.
 #   format     optional: "csv", "json" (an array of objects) or "xlsx" (needs the
@@ -42,8 +47,8 @@
 id = "example-co2"
 name = "Mauna Loa CO2 annual mean (EXAMPLE)"
 status = "implemented"
-url = "https://raw.githubusercontent.com/datasets/co2-ppm/main/data/co2-annmean-mlo.csv"
-vintage = "unversioned, main branch"
+url = "https://raw.githubusercontent.com/datasets/co2-ppm/8c4097238570147adf6fa97ad357315528dac4c5/data/co2-annmean-mlo.csv"
+vintage = "datasets/co2-ppm commit 8c40972"
 terms = "ODC-PDDL-1.0 (datasets/co2-ppm package; original data from NOAA GML)"
 terms_url = "https://opendatacommons.org/licenses/pddl/"
 license = "PDDL-1.0"

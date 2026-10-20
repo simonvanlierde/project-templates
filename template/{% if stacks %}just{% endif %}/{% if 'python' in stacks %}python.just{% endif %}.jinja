@@ -47,6 +47,14 @@ build:
 validate:
     {{ uv }} run {{ slug }} validate
 
+# Print the Markdown table of implemented sources and their terms, for ATTRIBUTION.md.
+attribution:
+    {{ uv }} run {{ slug }} attribution
+
+# One line per source: status, vintage, last fetch, checksum, licence. Reads no network.
+status:
+    {{ uv }} run {{ slug }} status
+
 # The whole chain, from the network to validated output.
 pipeline: fetch build validate
 {%- endif %}

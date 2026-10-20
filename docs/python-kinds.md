@@ -39,6 +39,8 @@ A `data-pipeline` project gets:
     with its checksum, source and licence.
   - `validate` checks the output against the manifest, the records and the reuse terms.
 - `just fetch`, `just build` and `just validate`, and `just pipeline` to run all three.
+  `just status` lists each source with its last fetch, and `just attribution` prints the
+  table of sources and terms for `ATTRIBUTION.md`.
 - `ATTRIBUTION.md`, which states what the repository reuses and on what terms. The
   code license doesn't cover those.
 - Tests that run the whole pipeline against a local file, with no network. sourceledger

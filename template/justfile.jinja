@@ -28,6 +28,21 @@ check:
     @just go-check
 {%- endif %}
 
+# Fix and format every stack here, as each stack's `fmt` recipe does.
+fmt:
+{%- if 'python' in stacks %}
+    @just py-fmt
+{%- endif %}
+{%- if 'ts' in stacks %}
+    @just ts-fmt
+{%- endif %}
+{%- if 'rust' in stacks %}
+    @just rs-fmt
+{%- endif %}
+{%- if 'go' in stacks %}
+    @just go-fmt
+{%- endif %}
+
 # Run every git hook over the whole repo, not just staged files.
 hooks:
     {% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run -a
