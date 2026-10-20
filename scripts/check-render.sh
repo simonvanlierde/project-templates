@@ -126,6 +126,9 @@ refuses 'An empty value' --data 'stacks=[rust]' --data rust_dir=
 refuses 'An empty value' --data 'stacks=[go]' --data go_dir=
 refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
+refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
+refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
+refuses 'at least one stack' --data 'stacks=[]'
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
 refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
