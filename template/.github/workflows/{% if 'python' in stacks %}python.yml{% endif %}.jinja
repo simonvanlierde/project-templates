@@ -22,7 +22,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  # The event is in the group because a queued run replaces a pending one in its group
+  # whatever cancel-in-progress says, so a push to main must not wait beside the weekly run.
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}{% endraw %}
   # Only a newer push to the same pull request cancels a run. A push to main must not cancel
   # the weekly scheduled run, or that week's revision report is lost.
   cancel-in-progress: {% raw %}${{ github.event_name == 'pull_request' }}{% endraw %}
@@ -70,8 +72,8 @@ jobs:
 
       - run: uv sync --locked
       # Checks every locked dependency, dev group included, against the OSV database
-      # for known vulnerabilities and deprecated or quarantined projects. Experimental
-      # in uv 0.12, hence the preview flag.
+      # for known vulnerabilities and deprecated or quarantined projects. Still
+      # experimental in uv, hence the preview flag.
       - run: uv audit --locked --preview-features audit-command
 
       - run: uv run ruff check --output-format=github
