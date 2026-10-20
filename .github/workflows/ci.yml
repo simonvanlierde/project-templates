@@ -115,8 +115,9 @@ jobs:
     # Python stack, with docker. The library row's module_name differs from project_name,
     # which exercises the uv_build module-name path. The data-pipeline row also runs its
     # pipeline, as its generated python.yml does. Images build nested (monorepo) and at
-    # the root (web-service). A row leaves out an answer that keeps its default: stacks
-    # [python], python_dir `.`, and the slug-derived module_name.
+    # the root (web-service). Each row's `answers` are every answer it renders with;
+    # the rest keep their defaults. publish_to_pypi (asked only of a library) renders
+    # the conditionally named python-release.yml.
     name: python (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -125,37 +126,54 @@ jobs:
       matrix:
         include:
           - name: library
-            project_name: ci-smoke
-            module_name: smokepkg
-            kind: library
+            answers:
+              project_name: ci-smoke
+              stacks: [python]
+              kind: library
+              module_name: smokepkg
+              publish_to_pypi: true
           # Property tests and the mutation recipe, run once to prove the recipe works.
           - name: library (test extras)
-            project_name: ci-extras
-            kind: library
-            test_extras: "[property,mutation]"
+            answers:
+              project_name: ci-extras
+              stacks: [python]
+              kind: library
+              publish_to_pypi: true
+              test_extras: [property, mutation]
           # Nested layout: the build context is a subdirectory.
           - name: monorepo
-            project_name: ci-mono-py
-            stacks: "[python,docker]"
-            python_dir: apps/api
-            kind: library
+            answers:
+              project_name: ci-mono-py
+              stacks: [python, docker]
+              python_dir: apps/api
+              kind: library
+              publish_to_pypi: true
+              docker_stacks: [python]
           - name: app
-            project_name: ci-app
-            kind: app
+            answers:
+              project_name: ci-app
+              stacks: [python]
+              kind: app
           # Adds JupyterLab to the dev group.
           - name: research
-            project_name: ci-research
-            kind: research
+            answers:
+              project_name: ci-research
+              stacks: [python]
+              kind: research
           # With docker, so the image build covers the pipeline's dependencies.
           - name: data-pipeline
-            project_name: ci-pipeline
-            stacks: "[python,docker]"
-            kind: data-pipeline
+            answers:
+              project_name: ci-pipeline
+              stacks: [python, docker]
+              kind: data-pipeline
+              docker_stacks: [python]
           # Also starts the FastAPI container and probes /health.
           - name: web-service
-            project_name: ci-web
-            stacks: "[python,docker]"
-            kind: web-service
+            answers:
+              project_name: ci-web
+              stacks: [python, docker]
+              kind: web-service
+              docker_stacks: [python]
     steps:
       - *checkout
 
@@ -166,37 +184,30 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: template/**/pyproject.toml.jinja
-          cache-suffix: ${{ github.job }}-${{ matrix.kind }}
+          cache-suffix: ${{ github.job }}-${{ matrix.answers.kind }}
           save-cache: ${{ github.event_name != 'pull_request' }}
 
-      # publish_to_pypi=true (asked only of a library) renders the conditionally named
-      # python-release.yml. Matrix values go through env: project_name is free text.
-      - name: scaffold
+      - &scaffold
+        # The typescript, rust and go jobs reuse this step. The answers go through env and
+        # a file (JSON is YAML): project_name is free text. --vcs-ref=HEAD tests the pushed
+        # commit, not the last tag.
+        name: scaffold
         env:
-          PROJECT_NAME: ${{ matrix.project_name }}
-          MODULE_NAME: ${{ matrix.module_name }}
-          STACKS: ${{ matrix.stacks || '[python]' }}
-          PYTHON_DIR: ${{ matrix.python_dir }}
-          KIND: ${{ matrix.kind }}
-          TEST_EXTRAS: ${{ matrix.test_extras }}
-          # Derived from stacks so a row can't add docker and skip its answers.
-          DOCKER: ${{ contains(matrix.stacks, 'docker') }}
+          ANSWERS: ${{ toJSON(matrix.answers) }}
         run: |
           set -euo pipefail
-          # --vcs-ref=HEAD tests the pushed commit, not the last tag.
-          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
-             --data "project_name=$PROJECT_NAME"
-             --data "stacks=$STACKS"
-             --data "kind=$KIND")
-          if [ -n "$MODULE_NAME" ]; then C+=(--data "module_name=$MODULE_NAME"); fi
-          if [ -n "$PYTHON_DIR" ]; then C+=(--data "python_dir=$PYTHON_DIR"); fi
-          if [ "$KIND" = library ]; then C+=(--data publish_to_pypi=true); fi
-          if [ -n "$TEST_EXTRAS" ]; then C+=(--data "test_extras=$TEST_EXTRAS"); fi
-          if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[python]'); fi
-          "${C[@]}" . "$RUNNER_TEMP/proj"
-          # TODO(2026-10-27): delete. certifi 2026.10.19 fixes GHSA-6q48-6c7w-9gw2, which
-          # uv audit fails on, but was uploaded 2026-10-20, inside the one-week
-          # exclude-newer. Only this CI's renders take it early; scaffolds are unchanged.
+          printf '%s\n' "$ANSWERS" >"$RUNNER_TEMP/answers.yml"
+          uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
+            --data-file "$RUNNER_TEMP/answers.yml" . "$RUNNER_TEMP/proj"
+
+      # TODO(2026-10-27): delete. certifi 2026.10.19 fixes GHSA-6q48-6c7w-9gw2, which
+      # uv audit fails on, but was uploaded 2026-10-20, inside the one-week
+      # exclude-newer. Only this CI's renders take it early; scaffolds are unchanged.
+      - name: certifi override
+        env:
+          PYTHON_DIR: ${{ matrix.answers.python_dir }}
+        run: |
+          set -euo pipefail
           sed -i 's/^exclude-newer = "1 week"$/&\nexclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }/' \
             "$RUNNER_TEMP/proj/${PYTHON_DIR:-.}/pyproject.toml"
           grep -q '^exclude-newer-package' "$RUNNER_TEMP/proj/${PYTHON_DIR:-.}/pyproject.toml"
@@ -231,18 +242,18 @@ jobs:
       # py-sync has no --locked: a fresh scaffold has no lockfile.
       # just finds the root justfile from a nested package dir.
       - name: inner loop
-        working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: just py-sync check
 
-      - if: matrix.test_extras
-        working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
+      - if: matrix.answers.test_extras
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: just py-mutation
 
       # The library's python.yml tests every version from python_min up. Run the
       # tests on each, so a floor the code can't meet fails here.
-      - if: matrix.kind == 'library'
+      - if: matrix.answers.kind == 'library'
         name: tests on every supported python
-        working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: |
           set -euo pipefail
           versions=$(yq -o=tsv '.jobs.check.strategy.matrix.python' "$RUNNER_TEMP/proj/.github/workflows/python.yml")
@@ -250,9 +261,9 @@ jobs:
 
       # Runs the pipeline against the example source's live URL, then the tests that
       # read its output.
-      - if: matrix.kind == 'data-pipeline'
+      - if: matrix.answers.kind == 'data-pipeline'
         name: pipeline
-        working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         env:
           PIPELINE_OUTPUT_REQUIRED: "1"
         run: |
@@ -261,18 +272,18 @@ jobs:
           ls data/raw/*.fetch.json
 
       # The runner's default builder loads the image so the web-service row can run it.
-      - if: contains(matrix.stacks, 'docker')
+      - if: contains(matrix.answers.stacks, 'docker')
         name: docker build
         env:
-          CONTEXT: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
-          IMAGE: ${{ matrix.project_name }}:ci
+          CONTEXT: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
+          IMAGE: ${{ matrix.answers.project_name }}:ci
         run: docker build -t "$IMAGE" "$CONTEXT"
 
       # The image serves, and the HEALTHCHECK it ships turns healthy.
-      - if: matrix.kind == 'web-service'
+      - if: matrix.answers.kind == 'web-service'
         name: container health
         env:
-          IMAGE: ${{ matrix.project_name }}:ci
+          IMAGE: ${{ matrix.answers.project_name }}:ci
         run: |
           set -euo pipefail
           docker run -d --name svc -p 127.0.0.1:8000:8000 "$IMAGE"
@@ -399,8 +410,8 @@ jobs:
 
   typescript:
     # TS stack, with docker. The image builds nested (monorepo). The root Dockerfile is
-    # the same template, and the render job renders it. A row leaves out an answer that
-    # keeps its default: stacks [ts] and ts_dir `.`.
+    # the same template, and the render job renders it. publish_to_npm (asked only of a
+    # library) renders the conditionally named ts-release.yml.
     name: typescript (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -410,66 +421,58 @@ jobs:
         include:
           # A project_name with punctuation that `slug` strips.
           - name: library
-            project_name: 'Ci "TS" Lib'
-            ts_kind: library
+            answers:
+              project_name: 'Ci "TS" Lib'
+              stacks: [ts]
+              ts_kind: library
+              publish_to_npm: true
           # Nested, so a report the mutation run writes beside the package must be
           # gitignored there too: ts-check runs again after it.
           - name: library (test extras)
-            project_name: ci-ts-extras
-            ts_dir: apps/lib
-            ts_kind: library
-            test_extras: "[property,mutation]"
+            answers:
+              project_name: ci-ts-extras
+              stacks: [ts]
+              ts_dir: apps/lib
+              ts_kind: library
+              publish_to_npm: true
+              test_extras: [property, mutation]
           - name: app
-            project_name: ci-ts-app
-            ts_kind: app
+            answers:
+              project_name: ci-ts-app
+              stacks: [ts]
+              ts_kind: app
           # Installs and builds the nested package, not only renders it.
           - name: monorepo
-            project_name: ci-mono-ts
-            stacks: "[ts,docker]"
-            ts_dir: apps/web
-            ts_kind: library
+            answers:
+              project_name: ci-mono-ts
+              stacks: [ts, docker]
+              ts_dir: apps/web
+              ts_kind: library
+              publish_to_npm: true
+              docker_stacks: [ts]
           # Both web frameworks, one at the root and one nested. Each also runs its
           # Playwright specs.
           - name: web-app (react)
-            project_name: ci-ts-web
-            ts_kind: web-app
-            web_framework: react
+            answers:
+              project_name: ci-ts-web
+              stacks: [ts]
+              ts_kind: web-app
+              web_framework: react
           - name: web-app (preact, nested)
-            project_name: ci-ts-web-preact
-            ts_dir: apps/web
-            ts_kind: web-app
-            web_framework: preact
+            answers:
+              project_name: ci-ts-web-preact
+              stacks: [ts]
+              ts_dir: apps/web
+              ts_kind: web-app
+              web_framework: preact
     env:
-      TS_DIR: ${{ matrix.ts_dir }}
+      TS_DIR: ${{ matrix.answers.ts_dir }}
     steps:
       - *checkout
 
       - *setup-uv-copier
 
-      # publish_to_npm=true (asked only of a library) renders the conditionally named
-      # ts-release.yml. project_name goes through env: one row's value contains quotes.
-      - name: scaffold
-        env:
-          PROJECT_NAME: ${{ matrix.project_name }}
-          STACKS: ${{ matrix.stacks || '[ts]' }}
-          TS_KIND: ${{ matrix.ts_kind }}
-          WEB_FRAMEWORK: ${{ matrix.web_framework }}
-          TEST_EXTRAS: ${{ matrix.test_extras }}
-          # Derived from stacks so a row can't add docker and skip its answers.
-          DOCKER: ${{ contains(matrix.stacks, 'docker') }}
-        run: |
-          set -euo pipefail
-          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
-             --data "project_name=$PROJECT_NAME"
-             --data "stacks=$STACKS"
-             --data "ts_kind=$TS_KIND")
-          if [ -n "$TS_DIR" ]; then C+=(--data "ts_dir=$TS_DIR"); fi
-          if [ -n "$WEB_FRAMEWORK" ]; then C+=(--data "web_framework=$WEB_FRAMEWORK"); fi
-          if [ "$TS_KIND" = library ]; then C+=(--data publish_to_npm=true); fi
-          if [ -n "$TEST_EXTRAS" ]; then C+=(--data "test_extras=$TEST_EXTRAS"); fi
-          if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[ts]'); fi
-          "${C[@]}" . "$RUNNER_TEMP/proj"
-
+      - *scaffold
       - &ts-versions
         # Read by hand: pnpm/setup resolves paths against GITHUB_WORKSPACE, and the scaffold
         # lives in RUNNER_TEMP. pnpm comes from the packageManager pin. Node comes from the
@@ -510,23 +513,23 @@ jobs:
         run: just ts-sync check
 
       # Then the checks again: biome reads .gitignore, so a report left unignored fails them.
-      - if: matrix.test_extras
+      - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj
         run: just ts-mutation ts-check
 
       # The accessibility and CSP specs. Chromium installs on the runner here; the
       # generated ts.yml runs the same specs in the Playwright container.
-      - if: matrix.ts_kind == 'web-app'
+      - if: matrix.answers.ts_kind == 'web-app'
         name: e2e
-        working-directory: ${{ runner.temp }}/proj/${{ matrix.ts_dir }}
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.ts_dir }}
         run: |
           pnpm exec playwright install --with-deps chromium
           just ts-e2e
 
-      - if: contains(matrix.stacks, 'docker')
+      - if: contains(matrix.answers.stacks, 'docker')
         name: docker build
         env:
-          CONTEXT: ${{ runner.temp }}/proj/${{ matrix.ts_dir }}
+          CONTEXT: ${{ runner.temp }}/proj/${{ matrix.answers.ts_dir }}
         run: docker build "$CONTEXT"
 
   fullstack:
@@ -586,35 +589,28 @@ jobs:
       matrix:
         include:
           - name: library
-            project_name: ci-rs-lib
-            rust_kind: library
+            answers:
+              project_name: ci-rs-lib
+              stacks: [rust]
+              rust_kind: library
           - name: library (test extras)
-            project_name: ci-rs-extras
-            rust_kind: library
-            test_extras: "[property,mutation]"
+            answers:
+              project_name: ci-rs-extras
+              stacks: [rust]
+              rust_kind: library
+              test_extras: [property, mutation]
           - name: binary
-            project_name: ci-rs-bin
-            rust_dir: crates/cli
-            rust_kind: binary
+            answers:
+              project_name: ci-rs-bin
+              stacks: [rust]
+              rust_dir: crates/cli
+              rust_kind: binary
     steps:
       - *checkout
 
       - *setup-uv-copier
 
-      - name: scaffold
-        env:
-          PROJECT_NAME: ${{ matrix.project_name }}
-          RUST_DIR: ${{ matrix.rust_dir }}
-          RUST_KIND: ${{ matrix.rust_kind }}
-          TEST_EXTRAS: ${{ matrix.test_extras }}
-        run: |
-          set -euo pipefail
-          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
-             --data "project_name=$PROJECT_NAME" --data 'stacks=[rust]'
-             --data "rust_kind=$RUST_KIND")
-          if [ -n "$RUST_DIR" ]; then C+=(--data "rust_dir=$RUST_DIR"); fi
-          if [ -n "$TEST_EXTRAS" ]; then C+=(--data "test_extras=$TEST_EXTRAS"); fi
-          "${C[@]}" . "$RUNNER_TEMP/proj"
+      - *scaffold
 
       # The toolchain the generated rust.yml installs, at the same pins.
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
@@ -624,7 +620,7 @@ jobs:
 
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
-          tool: cargo-nextest,cargo-deny${{ matrix.test_extras && ',cargo-mutants' || '' }}
+          tool: cargo-nextest,cargo-deny${{ matrix.answers.test_extras && ',cargo-mutants' || '' }}
 
       - *just
 
@@ -634,7 +630,7 @@ jobs:
         working-directory: ${{ runner.temp }}/proj
         run: just rs-sync rs-check
 
-      - if: matrix.test_extras
+      - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj
         run: just rs-mutation
 
@@ -651,35 +647,28 @@ jobs:
       matrix:
         include:
           - name: library
-            project_name: ci-go-lib
-            go_kind: library
+            answers:
+              project_name: ci-go-lib
+              stacks: [go]
+              go_kind: library
           - name: library (test extras)
-            project_name: ci-go-extras
-            go_kind: library
-            test_extras: "[property,mutation]"
+            answers:
+              project_name: ci-go-extras
+              stacks: [go]
+              go_kind: library
+              test_extras: [property, mutation]
           - name: binary
-            project_name: ci-go-bin
-            go_dir: services/cli
-            go_kind: binary
+            answers:
+              project_name: ci-go-bin
+              stacks: [go]
+              go_dir: services/cli
+              go_kind: binary
     steps:
       - *checkout
 
       - *setup-uv-copier
 
-      - name: scaffold
-        env:
-          PROJECT_NAME: ${{ matrix.project_name }}
-          GO_DIR: ${{ matrix.go_dir }}
-          GO_KIND: ${{ matrix.go_kind }}
-          TEST_EXTRAS: ${{ matrix.test_extras }}
-        run: |
-          set -euo pipefail
-          C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
-             --data "project_name=$PROJECT_NAME" --data 'stacks=[go]'
-             --data "go_kind=$GO_KIND")
-          if [ -n "$GO_DIR" ]; then C+=(--data "go_dir=$GO_DIR"); fi
-          if [ -n "$TEST_EXTRAS" ]; then C+=(--data "test_extras=$TEST_EXTRAS"); fi
-          "${C[@]}" . "$RUNNER_TEMP/proj"
+      - *scaffold
 
       # The golangci-lint the generated go.yml pins: a computed copier answer,
       # so read from copier.yml rather than the answers file.
@@ -696,7 +685,7 @@ jobs:
       # go-mutation fetches gremlins itself with `go run`.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: ${{ runner.temp }}/proj/${{ matrix.go_dir }}/go.mod
+          go-version-file: ${{ runner.temp }}/proj/${{ matrix.answers.go_dir }}/go.mod
           cache: false
 
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
@@ -713,7 +702,7 @@ jobs:
         working-directory: ${{ runner.temp }}/proj
         run: just go-sync go-check
 
-      - if: matrix.test_extras
+      - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj
         run: just go-mutation
 
