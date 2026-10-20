@@ -352,7 +352,7 @@ go_version:
 uv_version:
   type: str
   when: false
-  default: 0.12.23
+  default: 0.13.0
 
 # Computed, never asked: the golangci-lint release that the README and go.yml pin,
 # kept in one place. `just go-check` runs whichever golangci-lint is on PATH. Renovate bumps it from its `# renovate:` line.
@@ -368,7 +368,7 @@ golangci_lint_version:
 govulncheck_version:
   type: str
   when: false
-  default: v1.8.0
+  default: v1.9.0
 
 # --- test extras --------------------------------------------------------------
 
