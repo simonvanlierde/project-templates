@@ -68,6 +68,7 @@ target/
 .hypothesis/
 mutants/
 .stryker-tmp/
-reports/mutation/
+# Stryker writes it beside the package, which may be nested.
+**/reports/mutation/
 mutants.out*/
 {%- endif %}

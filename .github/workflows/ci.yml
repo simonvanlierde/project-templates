@@ -388,8 +388,11 @@ jobs:
           - name: library
             project_name: 'Ci "TS" Lib'
             ts_kind: library
+          # Nested, so a report the mutation run writes beside the package must be
+          # gitignored there too: ts-check runs again after it.
           - name: library (test extras)
             project_name: ci-ts-extras
+            ts_dir: apps/lib
             ts_kind: library
             test_extras: "[property,mutation]"
           - name: app
@@ -482,9 +485,10 @@ jobs:
         working-directory: ${{ runner.temp }}/proj
         run: just ts-sync check
 
+      # Then the checks again: biome reads .gitignore, so a report left unignored fails them.
       - if: matrix.test_extras
         working-directory: ${{ runner.temp }}/proj
-        run: just ts-mutation
+        run: just ts-mutation ts-check
 
       # The accessibility and CSP specs. Chromium installs on the runner here; the
       # generated ts.yml runs the same specs in the Playwright container.
