@@ -27,6 +27,10 @@ Upgrade steps:
   `just validate` fails until you do (see the Breaking change below).
 - In a `data-pipeline` project, rename any source id with a non-ASCII letter: sourceledger
   0.2.0 accepts only ASCII letters, digits, `_` and `-`. Fetch again afterwards.
+- In a Python or TypeScript library, `copier update` brings the new sample `add`
+  function as a conflict in `src/<module>/__init__.py` or `src/index.ts`: keep your own
+  side. Then delete `tests/test_add.py`, and the `add` import and test that the update
+  merged into `src/index.test.ts`, or those tests fail.
 
 ### Added
 
