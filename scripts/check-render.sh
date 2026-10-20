@@ -171,6 +171,11 @@ assert codemeta["@context"] == "https://w3id.org/codemeta/4.0", codemeta
 # A leading space in the author name must not leave the given name empty.
 assert codemeta["author"][0]["givenName"] == "Ada", codemeta
 assert "given-names: \"Ada\"" in (out / "a/CITATION.cff").read_text()
+# The push job holds the write scopes and reads no cache on a tag. trivy-action restores
+# its database from the Actions cache, so the scan stays in the build job.
+docker = yaml.safe_load((out / "c/.github/workflows/docker.yml").read_text())["jobs"]
+assert any("trivy-action" in s.get("uses", "") for s in docker["build"]["steps"]), docker["build"]
+assert not any("trivy-action" in s.get("uses", "") for s in docker["push"]["steps"]), docker["push"]
 PY
 
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.
@@ -326,6 +331,10 @@ test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
 grep -q 'packages: write' c/.github/workflows/docker.yml
+# docker.yml filters by path only when every build context is nested (c), not with a
+# root context (a, b).
+grep -qF 'paths: ["api/**", "apps/web/**", ".github/workflows/docker.yml"]' c/.github/workflows/docker.yml
+(! grep -q 'paths:' a/.github/workflows/docker.yml b/.github/workflows/docker.yml)
 # The push job also runs on main, so the README must not limit `ghcr` to tags alone.
 grep -q 'ghcr. also to .main' c/README.md
 # The publish job has no checkout; the wheels land in the root dist/.
