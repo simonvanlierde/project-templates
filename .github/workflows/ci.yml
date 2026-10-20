@@ -204,6 +204,28 @@ jobs:
       - &just
         run: uv tool install "rust-just==$JUST_VERSION"
 
+      - &soft-audit
+        # A new OSV advisory fails `uv audit` in every render at once, whatever a pull
+        # request changed. On pull requests, this wrapper ahead of uv on PATH turns an
+        # audit failure into a warning and passes every other uv call through, so the
+        # rendered recipes still run unchanged. The weekly run has no wrapper and fails.
+        # The update and fullstack jobs reuse this step.
+        if: github.event_name == 'pull_request'
+        name: uv audit warns on pull requests
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/soft-audit"
+          mkdir -p "$dir"
+          cat >"$dir/uv" <<EOF
+          #!/bin/sh
+          case " \$* " in
+            *" audit "*) "$(command -v uv)" "\$@" || echo "::warning::uv audit failed; the weekly run fails on this" ;;
+            *) exec "$(command -v uv)" "\$@" ;;
+          esac
+          EOF
+          chmod +x "$dir/uv"
+          echo "$dir" >>"$GITHUB_PATH"
+
       # The scaffold's own recipes, so the rendered justfile runs. `check` runs the same
       # commands as the generated python.yml.
       # py-sync has no --locked: a fresh scaffold has no lockfile.
@@ -332,6 +354,8 @@ jobs:
           save-cache: ${{ github.event_name != 'pull_request' }}
 
       - *just
+
+      - *soft-audit
 
       # A nested package with a local change, as a real project has one: the change must
       # survive the update, and the result must still pass its own checks.
@@ -535,6 +559,8 @@ jobs:
       - *pnpm-setup
 
       - *just
+
+      - *soft-audit
 
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
