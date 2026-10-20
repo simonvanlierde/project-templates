@@ -1,16 +1,8 @@
+{% from 'includes/triggers.jinja' import push_and_pr -%}
 name: python
 
 on:
-  push:
-    branches: [main]
-{%- if python_dir != '.' %}
-    paths: ["{{ python_dir }}/**", ".github/workflows/python.yml"]
-{%- endif %}
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-{%- if python_dir != '.' %}
-    paths: ["{{ python_dir }}/**", ".github/workflows/python.yml"]
-{%- endif %}
+{{- push_and_pr(python_dir, 'python') }}
 {%- if kind == 'data-pipeline' %}
   # Weekly, to catch a publisher revising its data. This is the only run that sets TRIPWIRE.
   schedule:

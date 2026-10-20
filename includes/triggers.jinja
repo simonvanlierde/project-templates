@@ -1,0 +1,14 @@
+{#- The push and pull_request triggers of the per-stack workflows. A nested package
+    runs its workflow only when its own files or the workflow change. -#}
+{% macro push_and_pr(dir, workflow) %}
+  push:
+    branches: [main]
+{%- if dir != '.' %}
+    paths: ["{{ dir }}/**", ".github/workflows/{{ workflow }}.yml"]
+{%- endif %}
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+{%- if dir != '.' %}
+    paths: ["{{ dir }}/**", ".github/workflows/{{ workflow }}.yml"]
+{%- endif %}
+{%- endmacro %}

@@ -1,17 +1,9 @@
+{% from 'includes/triggers.jinja' import push_and_pr -%}
 {%- set d = '' if go_dir == '.' else go_dir ~ '/' -%}
 name: go
 
 on:
-  push:
-    branches: [main]
-{%- if go_dir != '.' %}
-    paths: ["{{ go_dir }}/**", ".github/workflows/go.yml"]
-{%- endif %}
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-{%- if go_dir != '.' %}
-    paths: ["{{ go_dir }}/**", ".github/workflows/go.yml"]
-{%- endif %}
+{{- push_and_pr(go_dir, 'go') }}
   workflow_dispatch:
 
 permissions:

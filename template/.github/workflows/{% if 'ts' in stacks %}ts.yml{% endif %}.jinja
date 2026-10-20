@@ -1,16 +1,8 @@
+{% from 'includes/triggers.jinja' import push_and_pr -%}
 name: ts
 
 on:
-  push:
-    branches: [main]
-{%- if ts_dir != '.' %}
-    paths: ["{{ ts_dir }}/**", ".github/workflows/ts.yml"]
-{%- endif %}
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-{%- if ts_dir != '.' %}
-    paths: ["{{ ts_dir }}/**", ".github/workflows/ts.yml"]
-{%- endif %}
+{{- push_and_pr(ts_dir, 'ts') }}
   workflow_dispatch:
 
 permissions:
