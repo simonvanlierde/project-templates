@@ -24,3 +24,10 @@ rs-fmt:
 # Tests only; extra arguments reach nextest (`just rs-test name`).
 rs-test *args:
     cargo nextest run{{ mp }} {% raw %}{{ args }}{% endraw %}
+{%- if rust_kind == 'library' and 'mutation' in test_extras %}
+
+# Plant small bugs in src/ and report each one the tests miss. Slow: run it before a
+# release or after writing tests, not on every change. Results land in mutants.out/.
+rs-mutation:
+    cargo mutants{{ '' if rust_dir == '.' else ' --dir ' ~ rust_dir }}
+{%- endif %}

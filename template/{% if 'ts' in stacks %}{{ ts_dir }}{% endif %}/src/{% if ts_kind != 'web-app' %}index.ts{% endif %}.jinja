@@ -1,2 +1,9 @@
 /** {{ project_description or project_name }} */
 export const name = "{{ slug }}";
+{%- if ts_kind == 'library' %}
+
+/** Adds two numbers. */
+export function add(left: number, right: number): number {
+  return left + right;
+}
+{%- endif %}

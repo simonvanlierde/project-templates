@@ -219,6 +219,11 @@ grep -qx '          files: apps/web/coverage/lcov.info' c/.github/workflows/ts.y
 grep -qx '          flags: ts' c/.github/workflows/ts.yml
 (! grep -q codecov a/.github/workflows/python.yml a/.github/workflows/ts.yml)
 grep -qx '      - run: pnpm run test' a/.github/workflows/ts.yml
+# test_extras: asked only with a library kind (d has none), off by default (a's rust
+# and go libraries get no property-test or mutation dependency).
+(! grep -q '^test_extras' d/.copier-answers.yml)
+grep -qx 'test_extras: \[\]' a/.copier-answers.yml
+(! grep -q -e proptest -e gremlins a/Cargo.toml a/go.mod)
 # From a tag, the answers file names the canonical source. From any other
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
 # itself be a release tag, so render a is held to whichever its _commit is.

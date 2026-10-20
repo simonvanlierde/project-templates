@@ -62,3 +62,12 @@ target/
 {{ d }}data/processed/*
 !{{ d }}data/processed/.gitkeep
 {%- endif %}
+{%- if test_extras %}
+
+# Test extras: Hypothesis's example database and what the mutation tools write
+.hypothesis/
+mutants/
+.stryker-tmp/
+reports/mutation/
+mutants.out*/
+{%- endif %}

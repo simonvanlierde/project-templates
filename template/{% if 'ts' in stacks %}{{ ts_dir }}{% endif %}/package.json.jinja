@@ -1,4 +1,5 @@
 {%- set web = ts_kind == 'web-app' -%}
+{%- set mutation = ts_kind == 'library' and 'mutation' in test_extras -%}
 {
   "name": "{{ slug }}",
   "version": "0.1.0",
@@ -81,6 +82,10 @@
 {%- endif %}
     "@biomejs/biome": "^2.5.15",
     "@j178/prek": "^0.5.5",
+{%- if mutation %}
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
+{%- endif %}
 {%- if web %}
     "@playwright/test": "^1.64.0",
 {#- @testing-library/react takes the DOM library as a peer; the preact one bundles it. #}
@@ -98,6 +103,9 @@
     "@vitejs/plugin-react": "^6.1.2",
 {%- endif %}
     "@vitest/coverage-v8": "^5.0.3",
+{%- if ts_kind == 'library' and 'property' in test_extras %}
+    "fast-check": "^4.10.2",
+{%- endif %}
 {%- if web %}
     "jsdom": "^30.1.2",
 {%- endif %}

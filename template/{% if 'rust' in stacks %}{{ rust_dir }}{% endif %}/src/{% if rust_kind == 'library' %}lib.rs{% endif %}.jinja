@@ -12,9 +12,28 @@ pub fn add(left: u64, right: u64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::add;
+{%- if 'property' in test_extras %}
+    use proptest::prelude::*;
+{%- endif %}
 
     #[test]
     fn adds() {
         assert_eq!(add(2, 2), 4);
     }
+{%- if 'property' in test_extras %}
+
+    // proptest tries many pairs, and shrinks any that fails to the simplest one. Each
+    // input stays at or below half of u64::MAX, so no sum overflows.
+    proptest! {
+        #[test]
+        fn order_does_not_matter(left in 0..=u64::MAX / 2, right in 0..=u64::MAX / 2) {
+            prop_assert_eq!(add(left, right), add(right, left));
+        }
+
+        #[test]
+        fn zero_changes_nothing(value: u64) {
+            prop_assert_eq!(add(value, 0), value);
+        }
+    }
+{%- endif %}
 }

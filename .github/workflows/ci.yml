@@ -128,6 +128,11 @@ jobs:
             project_name: ci-smoke
             module_name: smokepkg
             kind: library
+          # Property tests and the mutation recipe, run once to prove the recipe works.
+          - name: library (test extras)
+            project_name: ci-extras
+            kind: library
+            test_extras: "[property,mutation]"
           # Nested layout: the build context is a subdirectory.
           - name: monorepo
             project_name: ci-mono-py
@@ -173,6 +178,7 @@ jobs:
           STACKS: ${{ matrix.stacks || '[python]' }}
           PYTHON_DIR: ${{ matrix.python_dir }}
           KIND: ${{ matrix.kind }}
+          TEST_EXTRAS: ${{ matrix.test_extras }}
           # Derived from stacks so a row can't add docker and skip its answers.
           DOCKER: ${{ contains(matrix.stacks, 'docker') }}
         run: |
@@ -185,6 +191,7 @@ jobs:
           if [ -n "$MODULE_NAME" ]; then C+=(--data "module_name=$MODULE_NAME"); fi
           if [ -n "$PYTHON_DIR" ]; then C+=(--data "python_dir=$PYTHON_DIR"); fi
           if [ "$KIND" = library ]; then C+=(--data publish_to_pypi=true); fi
+          if [ -n "$TEST_EXTRAS" ]; then C+=(--data "test_extras=$TEST_EXTRAS"); fi
           if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[python]'); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
@@ -198,6 +205,10 @@ jobs:
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
         run: just py-sync check
+
+      - if: matrix.test_extras
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.python_dir }}
+        run: just py-mutation
 
       # The library's python.yml tests every version from python_min up. Run the
       # tests on each, so a floor the code can't meet fails here.
@@ -371,6 +382,10 @@ jobs:
           - name: library
             project_name: 'Ci "TS" Lib'
             ts_kind: library
+          - name: library (test extras)
+            project_name: ci-ts-extras
+            ts_kind: library
+            test_extras: "[property,mutation]"
           - name: app
             project_name: ci-ts-app
             ts_kind: app
@@ -406,6 +421,7 @@ jobs:
           STACKS: ${{ matrix.stacks || '[ts]' }}
           TS_KIND: ${{ matrix.ts_kind }}
           WEB_FRAMEWORK: ${{ matrix.web_framework }}
+          TEST_EXTRAS: ${{ matrix.test_extras }}
           # Derived from stacks so a row can't add docker and skip its answers.
           DOCKER: ${{ contains(matrix.stacks, 'docker') }}
         run: |
@@ -417,6 +433,7 @@ jobs:
           if [ -n "$TS_DIR" ]; then C+=(--data "ts_dir=$TS_DIR"); fi
           if [ -n "$WEB_FRAMEWORK" ]; then C+=(--data "web_framework=$WEB_FRAMEWORK"); fi
           if [ "$TS_KIND" = library ]; then C+=(--data publish_to_npm=true); fi
+          if [ -n "$TEST_EXTRAS" ]; then C+=(--data "test_extras=$TEST_EXTRAS"); fi
           if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[ts]'); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
@@ -458,6 +475,10 @@ jobs:
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just ts-sync check
+
+      - if: matrix.test_extras
+        working-directory: ${{ runner.temp }}/proj
+        run: just ts-mutation
 
       # The accessibility and CSP specs. Chromium installs on the runner here; the
       # generated ts.yml runs the same specs in the Playwright container.
@@ -531,6 +552,10 @@ jobs:
           - name: library
             project_name: ci-rs-lib
             rust_kind: library
+          - name: library (test extras)
+            project_name: ci-rs-extras
+            rust_kind: library
+            test_extras: "[property,mutation]"
           - name: binary
             project_name: ci-rs-bin
             rust_dir: crates/cli
@@ -545,12 +570,14 @@ jobs:
           PROJECT_NAME: ${{ matrix.project_name }}
           RUST_DIR: ${{ matrix.rust_dir }}
           RUST_KIND: ${{ matrix.rust_kind }}
+          TEST_EXTRAS: ${{ matrix.test_extras }}
         run: |
           set -euo pipefail
           C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
              --data "project_name=$PROJECT_NAME" --data 'stacks=[rust]'
              --data "rust_kind=$RUST_KIND")
           if [ -n "$RUST_DIR" ]; then C+=(--data "rust_dir=$RUST_DIR"); fi
+          if [ -n "$TEST_EXTRAS" ]; then C+=(--data "test_extras=$TEST_EXTRAS"); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
       # The toolchain the generated rust.yml installs, at the same pins.
@@ -561,7 +588,7 @@ jobs:
 
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
-          tool: cargo-nextest,cargo-deny
+          tool: cargo-nextest,cargo-deny${{ matrix.test_extras && ',cargo-mutants' || '' }}
 
       - *just
 
@@ -570,6 +597,10 @@ jobs:
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just rs-sync rs-check
+
+      - if: matrix.test_extras
+        working-directory: ${{ runner.temp }}/proj
+        run: just rs-mutation
 
   go:
     # The go stack, one row per module kind: the library flat (go_dir left at its
@@ -586,6 +617,10 @@ jobs:
           - name: library
             project_name: ci-go-lib
             go_kind: library
+          - name: library (test extras)
+            project_name: ci-go-extras
+            go_kind: library
+            test_extras: "[property,mutation]"
           - name: binary
             project_name: ci-go-bin
             go_dir: services/cli
@@ -600,12 +635,14 @@ jobs:
           PROJECT_NAME: ${{ matrix.project_name }}
           GO_DIR: ${{ matrix.go_dir }}
           GO_KIND: ${{ matrix.go_kind }}
+          TEST_EXTRAS: ${{ matrix.test_extras }}
         run: |
           set -euo pipefail
           C=(uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite
              --data "project_name=$PROJECT_NAME" --data 'stacks=[go]'
              --data "go_kind=$GO_KIND")
           if [ -n "$GO_DIR" ]; then C+=(--data "go_dir=$GO_DIR"); fi
+          if [ -n "$TEST_EXTRAS" ]; then C+=(--data "test_extras=$TEST_EXTRAS"); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
 
       # The golangci-lint the generated go.yml pins: a computed copier answer,
@@ -619,7 +656,8 @@ jobs:
           echo "golangci-lint=$lint" >> "$GITHUB_OUTPUT"
 
       # Go from the scaffold's go.mod, as the generated go.yml does. No cache:
-      # a fresh scaffold's only dependency is govulncheck, which go-sync fetches.
+      # a fresh scaffold's only dependencies are its tools (govulncheck, and gremlins
+      # with test_extras), which go-sync fetches.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: ${{ runner.temp }}/proj/${{ matrix.go_dir }}/go.mod
@@ -638,6 +676,10 @@ jobs:
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just go-sync go-check
+
+      - if: matrix.test_extras
+        working-directory: ${{ runner.temp }}/proj
+        run: just go-mutation
 
   ok:
     # The one check the main ruleset requires, so jobs and matrix rows can change

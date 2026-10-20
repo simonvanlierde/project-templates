@@ -22,3 +22,10 @@
 # Tests only; extra arguments reach go test (`just go-test -run TestName`).
 {{ wd }}go-test *args:
     go test ./... {% raw %}{{ args }}{% endraw %}
+{%- if go_kind == 'library' and 'mutation' in test_extras %}
+
+# Plant small bugs in the package and report each one the tests miss. Slow: run it
+# before a release or after writing tests, not on every change.
+{{ wd }}go-mutation:
+    go tool gremlins unleash
+{%- endif %}

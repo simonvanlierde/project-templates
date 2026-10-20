@@ -1,1 +1,8 @@
 """{{ project_description or project_name }}."""
+{%- if kind == 'library' %}
+
+
+def add(left: int, right: int) -> int:
+    """Add two numbers."""
+    return left + right
+{%- endif %}

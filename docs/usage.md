@@ -123,6 +123,30 @@ tag that offers every answer in the file, such as the first tag with your `kind`
 commit that. Then run `copier update`. Expect conflicts where that tag differs from
 the commit you started from.
 
+## Test extras
+
+A library kind (Python, TypeScript, Rust or Go) also asks for `test_extras`, empty by
+default. Pick either or both:
+
+| Choice     | Python                  | TypeScript               | Rust                      | Go                          |
+| ---------- | ----------------------- | ------------------------ | ------------------------- | --------------------------- |
+| `property` | Hypothesis              | fast-check               | proptest                  | a native `FuzzAdd`          |
+| `mutation` | `just py-mutation` (mutmut) | `just ts-mutation` (Stryker) | `just rs-mutation` (cargo-mutants) | `just go-mutation` (gremlins) |
+
+A property test checks a rule, such as "order does not matter", against many generated
+inputs, and shrinks any input that fails to the simplest one. The examples test the
+sample `add` function and run with the other tests. Go's `FuzzAdd` runs on its seeds in
+`go test`; `go test -fuzz=FuzzAdd` keeps generating inputs until you stop it.
+
+Mutation testing plants small bugs in your code, such as `+` turned into `-`, and
+reports each one the tests don't catch. A run takes minutes to hours, and some
+surviving mutants change nothing a test could see, so it is a recipe to run before a
+release or after writing tests, never a CI step.
+
+OpenSSF Scorecard's Fuzzing check counts fast-check and Go's native fuzzing, not
+Hypothesis or proptest. To add the extras to an existing library, run
+`copier update --data 'test_extras=[property]'`.
+
 ## Publishing
 
 Publishing is off by default. While an option is off, a guard stops an accidental
