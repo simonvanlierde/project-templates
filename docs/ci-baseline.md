@@ -31,6 +31,11 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Image scan and weekly rebuild | `docker.yml`, with the `docker` stack | Trivy lists HIGH and CRITICAL vulnerabilities in the built image that already have a fix. A weekly run rebuilds the image on the newest base image and scans it without pushing. Only that run fails on a finding, because a fix often waits days on a rebuilt base image and a pull request can't change that. |
 | Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
+GitHub turns off scheduled workflows in a public repository with no activity for 60 days, such
+as the weekly Trivy rebuild, the data-pipeline tripwire and the revisions report. They
+stop without an error, so push a commit or re-enable them under the Actions tab. See
+[GitHub's docs](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow).
+
 The hooks job skips the hooks that need the project environment (`ruff`, `ty`,
 `biome`, `tsc`, `cargo fmt`, `cargo clippy` and `golangci-lint`), because the stack workflows already run them. It also skips
 betterleaks, which scans only staged changes, and CI stages nothing. GitHub secret
