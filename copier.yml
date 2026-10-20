@@ -4,7 +4,9 @@ _min_copier_version: "9.1.0"
 # Written once, then owned by the project: `copier update` leaves them alone. A
 # release adds its version, date and DOI to the citation files, and an update would
 # then conflict with that edit every time. The web-app entries are its starter files,
-# which the project rewrites from day one.
+# which the project rewrites from day one. go.mod is rewritten by the first
+# `go mod tidy`, and Dependabot bumps its requirements after that; its module path
+# and go version are answers fixed at copy time.
 _skip_if_exists:
   - CHANGELOG.md
   - CITATION.cff
@@ -16,6 +18,7 @@ _skip_if_exists:
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
+  - "{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
 
 project_name:
   type: str

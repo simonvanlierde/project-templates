@@ -77,6 +77,11 @@ grep -q 'project edit' "$out/d/web/index.html"
 # with example_test.go, which a project_name of `example` would otherwise claim.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=example --data 'stacks=[go]' . "$out/h"
+# go.mod belongs to the project once written: `go mod tidy` rewrites it.
+echo '// project edit' >>"$out/h/go.mod"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=example --data 'stacks=[go]' . "$out/h" >/dev/null 2>&1
+grep -q 'project edit' "$out/h/go.mod"
 
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
