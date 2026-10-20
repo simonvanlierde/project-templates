@@ -398,6 +398,9 @@ proptest_version:
   when: false
   default: 1.12.0
 
+# Computed, never asked: the gremlins that `just go-mutation` runs with `go run`.
+# Not a go.mod tool, which would pull its ~34 modules into the project's module
+# graph. `copier update` bumps it; Renovate bumps it here.
 # renovate: datasource=go depName=github.com/go-gremlins/gremlins
 gremlins_version:
   type: str
