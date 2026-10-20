@@ -2,15 +2,16 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { ROUTES } from "./routes";
 
-// WCAG 2.0, 2.1 and 2.2 at levels A and AA. Any violation fails, whatever its impact.
-const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+// WCAG 2.0, 2.1 and 2.2 at levels A and AA, plus axe's best-practice rules (landmarks,
+// one h1). Any violation fails, whatever its impact.
+const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
 
 for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`accessibility (${colorScheme})`, () => {
     test.use({ colorScheme });
 
     for (const path of ROUTES) {
-      test(`${path} has no WCAG A or AA violations`, async ({ page }) => {
+      test(`${path} has no WCAG A or AA or best-practice violations`, async ({ page }) => {
         await page.goto(path);
         await expect(page.getByRole("main")).toBeVisible();
 
