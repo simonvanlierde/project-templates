@@ -12,143 +12,156 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
-- In a `data-pipeline` project, `copier update` replaces `src/<module>/pipeline.py` with a
-  short file that imports sourceledger. If you added readers to `parse`, keep your
-  `parse` function and take the rest of the new file. Your old `tests/test_pipeline.py`
-  tested the copied stages: take the new one, and keep any tests of your own readers.
-- In a `data-pipeline` project, `pyproject.toml` gains the `sourceledger` dependency. If
-  you added dependencies of your own, keep them next to it where `copier update` can't
-  merge the two lists. Then run `uv lock` and commit `uv.lock`, or CI's
-  `uv sync --locked` fails.
-- In a `data-pipeline` project, rename `release` to `vintage` in `sources.toml`.
-  sourceledger still reads `release`, with a warning.
-- In a `data-pipeline` project, give each implemented source in `sources.toml` a
-  `license` (an SPDX id, or `LicenseRef-<name>`) and `redistribute = true` or `false`.
-  `just validate` fails until you do (see the Breaking change below).
-- In a `data-pipeline` project, rename any source id with a non-ASCII letter: sourceledger
-  0.2.0 accepts only ASCII letters, digits, `_` and `-`. Fetch again afterwards.
-- In a Python or TypeScript library, `copier update` brings the new sample `add`
-  function as a conflict in `src/<module>/__init__.py` or `src/index.ts`: keep your own
-  side. Then delete `tests/test_add.py`, and the `add` import and test that the update
-  merged into `src/index.test.ts`, or those tests fail.
+- After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
+  `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
+  installs with `--locked` and `--frozen-lockfile`.
+- **Breaking:** in a Go library made with v0.10.0 or earlier, `copier update` deletes
+  `<package>_test.go` without asking, your changes to it included, and adds
+  `add_test.go`. Before you commit the update, run `git checkout HEAD -- <package>_test.go`
+  (after committing it, `git checkout HEAD~1 -- <package>_test.go`). Then delete
+  `add_test.go`, or the two `TestAdd` functions stop the tests compiling. With
+  `test_extras=[property]`, first copy `FuzzAdd` from `add_test.go` into your test file.
+- In a Python or TypeScript library, the new sample `add` function arrives as a conflict
+  in `src/<module>/__init__.py` or `src/index.ts`: keep your own side. Then delete
+  `tests/test_add.py`, and the `add` import and test the update merged into
+  `src/index.test.ts`, or those tests fail.
+- In a `data-pipeline` project (see the two Breaking changes below):
+  - `src/<module>/pipeline.py` becomes a short file that imports sourceledger. If you
+    added readers to `parse`, keep only your own branches, end it with
+    `return sourceledger.parse_source(source, payload)`, and keep the imports your
+    branches need: the new file no longer imports `csv` or `io`.
+  - Take the new `tests/test_pipeline.py`, and keep any tests of your own readers.
+  - `pyproject.toml` gains the `sourceledger` dependency. Keep any dependencies of your
+    own next to it, where `copier update` can't merge the two lists.
+  - In `sources.toml`, rename `release` to `vintage` (the old key still works, with a
+    warning). Give each implemented source a `license` (an SPDX id, or
+    `LicenseRef-<name>`) and `redistribute = true` or `false`. Rename any source id with
+    a non-ASCII letter: only ASCII letters, digits, `_` and `-` are accepted.
+  - Run `just pipeline`. `just validate` reports a missing `datapackage.json` until
+    `just build` has written one.
 
 ### Added
 
+- A `web-app` TypeScript kind: a Vite single-page app with React or Preact (the new
+  `web_framework` question), deployed by Cloudflare Pages' Git integration. The docker
+  stack builds no image for it, since it is static files.
+  - Playwright specs run against the production build, in `ts.yml`'s `e2e` job and with
+    `just ts-e2e`. They check every route with axe in light and dark mode (WCAG 2.2 AA
+    and axe's best-practice rules) and at 320 px wide (reflow), and check that the app
+    runs under the Content-Security-Policy in `public/_headers`, which allows no inline
+    script. Removing any security header from that file fails the check.
+  - `just check` and CI enforce a bundle budget, set in `scripts/checkBundleBudget.mjs`,
+    and a pre-push hook runs the unit tests.
+  - The starter files (`src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`,
+    `index.html` and `tests/e2e/routes.ts`) belong to the project once written:
+    `copier update` never touches them again.
 - A `test_extras` question for the library kinds, empty by default. `property` adds a
   property test of the sample `add` function: Hypothesis, fast-check, proptest, or a
   native Go `FuzzAdd`. `mutation` adds a `just <stack>-mutation` recipe to run by hand:
   mutmut, Stryker, cargo-mutants or gremlins. See [Test extras](docs/usage.md#test-extras).
-- Python and TypeScript libraries ship a sample `add` function with a test, as the Rust
-  and Go libraries already did.
+  Python and TypeScript libraries now ship the sample `add`, as Rust and Go already did.
 - With the `docker` stack, `docker.yml` scans each built image with Trivy for HIGH and
-  CRITICAL vulnerabilities that have a fix, and rebuilds and scans the image every
-  Monday without pushing it. Pull requests and pushes show the findings in the job log;
-  only the weekly run fails on them.
-- A `data-pipeline` project's weekly CI run comments on an open "Source data revised
-  upstream" issue when a source the committed `data/fetches.jsonl` already has serves
-  new bytes, with the old and new checksums. Only that one job may write issues. A new
-  `revisions` stage prints the same list locally.
-- A `web-app` TypeScript kind: a Vite single-page app with React or Preact (the new
-  `web_framework` question), deployed by Cloudflare Pages' Git integration. It ships
-  Playwright specs that run against the production build: an axe check of every route
-  in light and dark mode against WCAG 2.2 AA, failing on any violation, and a check that
-  the app runs under the Content-Security-Policy in `public/_headers`, which allows no
-  inline script. `ts.yml` runs them in an `e2e` job in the Playwright container, and
-  `just ts-e2e` runs them locally. `just check` and CI also enforce a bundle budget,
-  set in `scripts/checkBundleBudget.mjs`, and a pre-push git hook runs the unit tests.
-  The docker stack builds no image for a web app, since it is static files.
-  Its starter files (`src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`,
-  `index.html` and `tests/e2e/routes.ts`) belong to the project once written:
-  `copier update` never touches them again.
-- Dependabot groups npm security updates into one pull request, instead of one per
+  CRITICAL vulnerabilities that have a fix, and rebuilds and scans the image every Monday
+  without pushing it. Pull requests and pushes show the findings in the job log; only the
+  weekly run fails on them. The job that pushes to GHCR runs no scan, so it reads no
+  cache on a tag.
+- In a `data-pipeline` project:
+  - `data/fetches.jsonl` is committed and gets a line each time a source serves bytes it
+    has not served before: the history of every version, as checksums, not values.
+  - The weekly CI run comments on an open "Source data revised upstream" issue when a
+    source in that file serves new bytes, with the old and new checksums. Only that job
+    may write issues. `uv run <slug> revisions <older log>` prints the same list locally.
+  - `just status` lists every source with its vintage, last fetch and licence, and
+    `just attribution` prints the sources and their reuse terms as a Markdown table for
+    `ATTRIBUTION.md`.
+- `just fmt` runs each stack's fix-and-format recipe, the counterpart of `just check`.
+- Dependabot groups npm security updates into one pull request instead of one per
   advisory.
 - VS Code formats `.tsx`, `.jsx` and `.css` files with Biome, and the Biome hook also
   checks HTML.
-- A `data-pipeline` fetch appends its record to `data/fetches.jsonl` whenever it brings
-  bytes a source has not had before. The file is committed, so it keeps every version
-  of every source the pipeline has seen. It holds checksums, not values.
-- A `data-pipeline` fetch sends the recorded `etag` and `last_modified` back as
-  `If-None-Match` and `If-Modified-Since`. When the server answers 304 Not Modified,
-  the raw file and its fetch record stay as they were. A raw file edited since its
-  fetch, or one that no longer matches the source's pinned `sha256`, is fetched in full.
 
 ### Changed
 
-- A project with a publish option gets a Releasing section in its README: set up the
-  publishing environment before the first release.
-- A `data-pipeline` manifest names the edition `vintage`, as the fetch record and the
-  output column already did. `release` is still read, with a warning.
-- The generated README lists the tools the project needs, and `just hooks` next to
-  `just check`, since a pull request also runs the git hooks.
-- A library's release workflow runs its wheel tests with the test tools from `uv.lock`,
-  hash-checked, instead of the newest pytest on PyPI, and turns on uv's malware check
-  as `python.yml` does.
 - **Breaking:** a `data-pipeline` project gets its fetch, build, validate and revisions
   stages from the [sourceledger](https://github.com/simonvanlierde/sourceledger)
-  package instead of about 400 copied lines in `pipeline.py`. A fix to them now reaches
-  a project as a dependency bump, not a `copier update` merge. `pipeline.py` keeps only
-  `parse`, and passes it to sourceledger with the project's name. Until sourceledger
-  0.2.0 is a week old on PyPI, `pyproject.toml` pins its tag's source archive.
-- A `data-pipeline` project's `parse` reads CSV, JSON and Excel sources, gzipped or not,
-  by each source's `format` or its URL's extension, through sourceledger's
-  `parse_source`. `sources.toml` gains a schema line for editors and documents the
-  `format`, `sheet` and `headers` keys. `just build` also writes a `datapackage.json`.
-- A new Python release becomes the default `python_version` 90 days after it is
-  published, once the packages scaffolds install have wheels for it.
-- **Breaking:** `just validate` in a `data-pipeline` project needs each implemented
-  source to state `license` (an SPDX id) and `redistribute` (whether the raw file may
-  be republished), beside `terms`. The free-text terms stay for people; these two are
-  for a release step to check.
-- The workflow linter hook runs jactionlint, a maintained fork of actionlint, in place of
-  actionlint. It adds checks for releases, caches and concurrency, so a workflow you
-  wrote or edited yourself may get new findings. The template's own workflows pass them.
-- The docker workflow cancels a superseded run only on a pull request, so a push to
-  `main` or a tag is never stopped halfway through pushing an image. A tag build no
-  longer restores the shared build cache, so a poisoned cache entry cannot reach a
-  release image. Release builds take longer as a result.
-- `python-release.yml` and `ts-release.yml` run one release per tag at a time, and a
-  second run for the same tag waits instead of starting alongside it.
-- A `data-pipeline` fetch waits at most 2 minutes for a 429's `Retry-After`, so a
-  server asking for hours cannot hold the run until CI's 10-minute job timeout kills it.
-- A fetch that still fails after its retries names the source and its URL, instead of
-  printing only the bare network error.
-- `copier update` no longer touches `CITATION.cff`, `.zenodo.json` or `codemeta.json`
-  once they exist, as with `CHANGELOG.md`. A release that adds its version, date or DOI
-  to them no longer conflicts with every update. Later template changes to these files
-  reach existing projects only by hand.
-- Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor
-  stays, so older uv versions still build them.
-- With `dependency_bot: renovate`, Renovate's copier manager opens a PR for each new
-  template release. Before, the one-week release age held those PRs back for good,
-  because template tags carry no release date. The docs say how Dependabot users hear
-  about releases instead.
+  package instead of about 400 copied lines in `pipeline.py`. Fixes now arrive as a
+  dependency bump, not a `copier update` merge. `pipeline.py` keeps only `parse`.
+  - `parse` reads CSV, JSON and Excel sources, gzipped or not, by each source's `format`
+    or its URL's extension. `just build` also writes a `datapackage.json`.
+  - A fetch asks the server whether the file changed (`If-None-Match`,
+    `If-Modified-Since`) and keeps the record on a 304, unless the raw file was edited or
+    no longer matches its pinned `sha256`. It waits at most 2 minutes for a
+    429's `Retry-After`, and a fetch that fails after its retries names the source and
+    its URL.
+  - The manifest names the edition `vintage`, as the fetch record and the output column
+    already did. `sources.toml` has a schema line for editors, pinned to sourceledger
+    v0.2.0, and its comments cover every key. The example source is pinned to a
+    datasets/co2-ppm commit, so CI and the tripwire tests no longer follow a moving
+    branch.
+  - Until sourceledger 0.2.0 is a week old on PyPI, `pyproject.toml` pins its tag's
+    source archive.
+- **Breaking:** `just validate` in a `data-pipeline` project needs each implemented source
+  to state `license` (an SPDX id) and `redistribute` (whether the raw file may be
+  republished), beside `terms`. The free-text terms stay for people; these two are for a
+  release step to check.
+- `go.mod` is written once and then belongs to the project, like `CHANGELOG.md`. Before,
+  every `copier update` conflicted with what `go mod tidy` had written there. To raise the
+  minimum Go version, run `go mod edit -go=<version>`.
+- `copier update` no longer touches `CITATION.cff`, `.zenodo.json` or `codemeta.json` once
+  they exist, so a release that adds its version, date or DOI to them no longer conflicts
+  with every update. Later template changes to these files reach existing projects only by
+  hand.
+- Web-service projects test with `httpx2`, which Starlette's test client now prefers,
+  instead of `httpx`, and require Starlette 1.2.0 or later. The pytest filter that hid
+  Starlette's deprecation warning is gone.
+- A new Python release becomes the default `python_version` 90 days after it comes out,
+  once the packages projects install have wheels for it.
+- The generated README lists the tools the project needs (uv only where it's used), puts
+  `just hooks` next to `just check`, says that `just check` doesn't build the Docker
+  image, and, with a publish option, has a Releasing section on setting up the publishing
+  environment first.
+- The workflow linter hook runs jactionlint, a maintained fork of actionlint. It adds
+  checks for releases, caches and concurrency, so a workflow you wrote yourself may get new
+  findings.
+- A library's release workflow runs its wheel tests with the test tools from `uv.lock`,
+  hash-checked, and turns on uv's malware check as `python.yml` does.
+- `python-release.yml` and `ts-release.yml` run one release per tag at a time.
+- The docker workflow cancels a superseded run only on a pull request, so a push to `main`
+  or a tag is never stopped halfway through pushing an image. A tag build doesn't restore
+  the shared build cache, so a poisoned cache entry can't reach a release image; release
+  builds take longer as a result. When every image builds from a subdirectory, the
+  workflow runs only when a build context or the workflow changes, so a required build
+  check stays pending on a pull request that touches neither.
 - The Docker image of a `data-pipeline` project is documented as a stub: it has no
   `sources.toml` or `data/`, and it starts the `/health` placeholder.
+- Python projects accept `uv_build` 0.13 as their build backend. The 0.12.19 floor stays,
+  so older uv versions still build them.
+- With `dependency_bot: renovate`, Renovate's copier manager opens a PR for each new
+  template release. Before, the one-week release age held those PRs back for good, because
+  template tags carry no release date. The docs say how Dependabot users hear about
+  releases.
 
 ### Fixed
 
-- A push to main no longer cancels the weekly scheduled run of a `data-pipeline`
-  project, which skipped that week's tripwire tests. `python.yml` now cancels only
-  superseded pull-request runs.
-- An empty `python_dir`, `ts_dir`, `rust_dir` or `go_dir` is refused. It used to render
-  a project with no package and workflows pointing at `/`.
+- The weekly scheduled run and a push to `main` no longer cancel each other in
+  `python.yml` and `docker.yml`. A cancelled weekly run used to skip that week's tripwire
+  tests in a `data-pipeline` project.
+- Copier refuses answers that rendered a broken project: a project name that is a Go,
+  Rust or Python keyword (such as `type`, `gen` or `lambda`), an empty `stacks` list, an
+  empty `*_dir`, a `rust_version` below 1.85 (the template uses edition 2024), and an
+  `app_port` outside 1 to 65535, or 65535 when two images publish ports. A Go binary no
+  longer needs a project name that can be a Go package name.
 - The `check-yaml` hook no longer fails on `pnpm-lock.yaml`. pnpm 12 writes its own
-  version into the lockfile as a second YAML document, which the hook rejected, so
-  every TS project failed its `checks` workflow once the lockfile was committed.
+  version into the lockfile as a second YAML document, so every TS project failed its
+  `checks` workflow once the lockfile was committed.
 - A name or email with a quote in it, such as `Ada "X" Lovelace`, no longer breaks the
-  generated `pyproject.toml`, `package.json` or `Cargo.toml`.
-- The `ts` and stdlib Python starter servers in the Docker image now stop on SIGTERM.
-  As PID 1 they ignored it, so `docker stop` waited 10 seconds and then killed them.
+  generated `pyproject.toml`, `package.json` or `Cargo.toml`. A leading space in the
+  author name no longer leaves the given name empty in the citation files.
+- The `ts` and stdlib Python starter servers in the Docker image stop on SIGTERM. As PID 1
+  they ignored it, so `docker stop` waited 10 seconds and then killed them.
 - A Go library named `example` no longer loses its `TestAdd`: the unit test is now
-  `add_test.go`, which cannot share a path with `example_test.go`.
-- Copier now refuses a project name that is a Go or Rust keyword (such as `type`), a
-  `rust_version` below 1.85 (the template uses edition 2024), and an `app_port` outside
-  1 to 65535, or 65535 when two images publish ports. An empty `*_dir` gets its own
-  message. A Go binary no longer needs a project name that can be a Go
-  package name.
-- A leading space in the author name no longer leaves the given name empty in
-  `CITATION.cff`, `.zenodo.json` and `codemeta.json`.
-- The image `.dockerignore` files now match `.env`, `.venv` and `node_modules` in any
+  `add_test.go`, which can't share a path with `example_test.go`.
+- The image `.dockerignore` files match `.env`, `.venv` and `node_modules` in any
   directory, so another stack's secrets stay out of the build context when a package sits
   at the repo root.
 - `.gitignore` names a Go binary without a trailing major version, as `go build` does for
@@ -160,14 +173,13 @@ Upgrade steps:
 
 - With `publish_to_ghcr`, the image push job runs in a `ghcr` environment, as PyPI and npm
   releases already do. Limit it to `main` and `v*` tags with a required reviewer in the
-  repository's settings (see the README's Releasing section); until then GitHub creates
-  it unprotected and pushes as before.
-- A library's PyPI release also signs a GitHub build-provenance attestation for each file
-  in `dist/`, so users can check where a wheel was built with `gh attestation verify`. It
-  is made in the publish job, which runs no project code.
-- The hooks job installs a set prek version, 0.5.5, instead of the newest one on each run.
-- The hooks job in `checks.yml` gives the read-only GitHub token to the zizmor hook only.
-  Every other hook, third-party ones included, now runs without it.
+  repository's settings (see the README's Releasing section); until then GitHub creates it
+  unprotected and pushes as before.
+- A library's PyPI release signs a GitHub build-provenance attestation for each file in
+  `dist/`, so users can check where a wheel was built with `gh attestation verify`. It is
+  made in the publish job, which runs no project code.
+- The hooks job installs a set prek version, 0.5.5, instead of the newest one on each run,
+  and gives the read-only GitHub token to the zizmor hook only.
 
 ## [0.10.0] - 2026-10-16
 
