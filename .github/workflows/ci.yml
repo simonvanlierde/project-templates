@@ -187,6 +187,12 @@ jobs:
           if [ "$KIND" = library ]; then C+=(--data publish_to_pypi=true); fi
           if [ "$DOCKER" = true ]; then C+=(--data 'docker_stacks=[python]'); fi
           "${C[@]}" . "$RUNNER_TEMP/proj"
+          # TODO(2026-10-27): delete. certifi 2026.10.19 fixes GHSA-6q48-6c7w-9gw2, which
+          # uv audit fails on, but was uploaded 2026-10-20, inside the one-week
+          # exclude-newer. Only this CI's renders take it early; scaffolds are unchanged.
+          sed -i 's/^exclude-newer = "1 week"$/&\nexclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }/' \
+            "$RUNNER_TEMP/proj/${PYTHON_DIR:-.}/pyproject.toml"
+          grep -q '^exclude-newer-package' "$RUNNER_TEMP/proj/${PYTHON_DIR:-.}/pyproject.toml"
 
       - &just
         run: uv tool install "rust-just==$JUST_VERSION"
