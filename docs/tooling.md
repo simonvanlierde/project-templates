@@ -98,8 +98,8 @@ To lock one fixed package early, exempt it by name and delete the exemption afte
     - is-odd@3.0.1
   ```
 
-I couldn't find whether Dependabot's uv security PRs read `exclude-newer`. Its docs say
-nothing on it, so check the first PR you get.
+Dependabot's docs don't say whether its uv security PRs read `exclude-newer`, so check
+the first one you get.
 
 Nothing tracks the `FROM` base images in the Dockerfiles. Those tags are Copier
 answers, so update them by hand. They are pinned by tag only, on purpose: each rebuild

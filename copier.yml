@@ -147,6 +147,7 @@ codecov:
 
 # Who opens dependency-update PRs. Both get the same rules: weekly, a one-week cooldown,
 # grouped actions, hooks and dev tooling, and no updates to the copier-owned FROM tags.
+# Only Dependabot also groups npm security updates (docs/tooling.md#dependencies).
 dependency_bot:
   type: str
   help: Which bot opens dependency updates
