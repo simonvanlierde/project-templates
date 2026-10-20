@@ -83,7 +83,7 @@ repos:
     hooks:
       - id: hadolint-docker
 {%- endif %}
-{%- if 'python' in stacks and kind in ('library', 'research', 'data-pipeline') %}
+{%- if citable %}
 
   # CITATION.cff against the official schema. GitHub's "Cite this repository"
   # silently drops a file that fails it.

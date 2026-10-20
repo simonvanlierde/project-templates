@@ -175,9 +175,16 @@ module_name:
     `{{ module_name }}` is a Python keyword, so the package could not be imported: pick another module name.
     {% endif %}
 
+# Computed, never asked: the kinds that get CITATION.cff, .zenodo.json, codemeta.json
+# and the hook that checks CITATION.cff.
+citable:
+  type: bool
+  when: false
+  default: "{{ 'python' in stacks and kind in ('library', 'research', 'data-pipeline') }}"
+
 author_orcid:
   type: str
-  when: "{{ 'python' in stacks and kind in ('library', 'research', 'data-pipeline') }}"
+  when: "{{ citable }}"
   help: ORCID iD for the citation files, as 0000-0000-0000-0000 (blank for none)
   default: ""
   validator: >-
