@@ -25,6 +25,8 @@ Upgrade steps:
 - In a `data-pipeline` project, give each implemented source in `sources.toml` a
   `license` (an SPDX id, or `LicenseRef-<name>`) and `redistribute = true` or `false`.
   `just validate` fails until you do (see the Breaking change below).
+- In a `data-pipeline` project, rename any source id with a non-ASCII letter: sourceledger
+  0.2.0 accepts only ASCII letters, digits, `_` and `-`. Fetch again afterwards.
 
 ### Added
 
@@ -75,8 +77,14 @@ Upgrade steps:
   stages from the [sourceledger](https://github.com/simonvanlierde/sourceledger)
   package instead of about 400 copied lines in `pipeline.py`. A fix to them now reaches
   a project as a dependency bump, not a `copier update` merge. `pipeline.py` keeps only
-  `parse`, and passes it to sourceledger with the project's name. Until sourceledger is
-  on PyPI, `pyproject.toml` pins it by git commit.
+  `parse`, and passes it to sourceledger with the project's name. Until sourceledger
+  0.2.0 is a week old on PyPI, `pyproject.toml` pins its tag's source archive.
+- A `data-pipeline` project's `parse` reads CSV, JSON and Excel sources, gzipped or not,
+  by each source's `format` or its URL's extension, through sourceledger's
+  `parse_source`. `sources.toml` gains a schema line for editors and documents the
+  `format`, `sheet` and `headers` keys. `just build` also writes a `datapackage.json`.
+- A new Python release becomes the default `python_version` 90 days after it is
+  published, once the packages scaffolds install have wheels for it.
 - **Breaking:** `just validate` in a `data-pipeline` project needs each implemented
   source to state `license` (an SPDX id) and `redistribute` (whether the raw file may
   be republished), beside `terms`. The free-text terms stay for people; these two are
