@@ -1,0 +1,25 @@
+"""Tests of the sample function: replace with tests of your own API."""
+{% if 'property' in test_extras %}
+from hypothesis import given
+from hypothesis import strategies as st
+{% endif %}
+from {{ module_name }} import add
+
+
+def test_adds() -> None:
+    """One known sum."""
+    assert add(2, 3) == 5
+{%- if 'property' in test_extras %}
+
+
+@given(st.integers(), st.integers())
+def test_order_does_not_matter(left: int, right: int) -> None:
+    """Hypothesis tries many pairs, and shrinks any that fails to the simplest one."""
+    assert add(left, right) == add(right, left)
+
+
+@given(st.integers())
+def test_zero_changes_nothing(value: int) -> None:
+    """Adding zero is the identity."""
+    assert add(value, 0) == value
+{%- endif %}

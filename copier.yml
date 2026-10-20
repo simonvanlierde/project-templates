@@ -370,6 +370,37 @@ govulncheck_version:
   when: false
   default: v1.9.0
 
+# --- test extras --------------------------------------------------------------
+
+# Library kinds only: their public API has to hold for any caller's input. Property
+# tests run with the rest of the tests. Mutation testing takes minutes to hours and
+# its score is noisy, so it is a recipe to run by hand, never a CI step.
+test_extras:
+  type: str
+  multiselect: true
+  when: >-
+    {{ ('python' in stacks and kind == 'library') or ('ts' in stacks and ts_kind == 'library')
+    or ('rust' in stacks and rust_kind == 'library') or ('go' in stacks and go_kind == 'library') }}
+  help: Extra tests for the library code (none, one or both)
+  choices:
+    Property tests (generated inputs checked against a rule, run with the tests): property
+    Mutation testing (a `just <stack>-mutation` recipe that checks the tests catch planted bugs): mutation
+  default: []
+
+# Computed, never asked: the versions a new project starts on. Dependabot bumps
+# them in the project after that.
+# renovate: datasource=crate depName=proptest
+proptest_version:
+  type: str
+  when: false
+  default: 1.12.0
+
+# renovate: datasource=go depName=github.com/go-gremlins/gremlins
+gremlins_version:
+  type: str
+  when: false
+  default: v0.6.0
+
 # --- docker -------------------------------------------------------------------
 
 docker_stacks:

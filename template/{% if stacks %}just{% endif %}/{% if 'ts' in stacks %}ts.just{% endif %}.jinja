@@ -28,6 +28,16 @@ ts-cov:
 # Tests only; extra arguments reach vitest (`just ts-test -t name`).
 ts-test *args:
     {{ pnpm }} exec vitest run {% raw %}{{ args }}{% endraw %}
+{%- if ts_kind == 'library' and 'mutation' in test_extras %}
+
+# Plant small bugs in src/ and report each one the tests miss. Slow: run it before a
+# release or after writing tests, not on every change. The HTML report lands in
+# reports/mutation/. stryker.config.json names the runner plugin, which Stryker can't
+# find in pnpm's node_modules on its own, and sets an empty tsconfigFile: Stryker's
+# tsconfig rewrite calls a TypeScript API that TypeScript 7 no longer has.
+ts-mutation:
+    {{ pnpm }} exec stryker run
+{%- endif %}
 {%- if ts_kind == 'web-app' %}
 
 # Playwright against the production build: the accessibility and CSP specs.

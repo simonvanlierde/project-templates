@@ -3,5 +3,13 @@ module {{ go_module }}
 go {{ go_version }}
 
 tool golang.org/x/vuln/cmd/govulncheck
+{%- if go_kind == 'library' and 'mutation' in test_extras %}
+
+tool github.com/go-gremlins/gremlins/cmd/gremlins
+{%- endif %}
 
 require golang.org/x/vuln {{ govulncheck_version }}
+{%- if go_kind == 'library' and 'mutation' in test_extras %}
+
+require github.com/go-gremlins/gremlins {{ gremlins_version }}
+{%- endif %}

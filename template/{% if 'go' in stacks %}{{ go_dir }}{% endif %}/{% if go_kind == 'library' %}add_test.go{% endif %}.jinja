@@ -20,3 +20,21 @@ func TestAdd(t *testing.T) {
 		})
 	}
 }
+{%- if 'property' in test_extras %}
+
+// go test runs FuzzAdd on its seeds alone. `go test -fuzz=FuzzAdd` generates new
+// inputs until stopped, and saves any that fails under testdata/fuzz/.
+func FuzzAdd(f *testing.F) {
+	f.Add(0, 0)
+	f.Add(2, 3)
+	f.Add(-2, 3)
+	f.Fuzz(func(t *testing.T, left, right int) {
+		if Add(left, right) != Add(right, left) {
+			t.Errorf("Add(%d, %d) != Add(%d, %d)", left, right, right, left)
+		}
+		if Add(left, 0) != left {
+			t.Errorf("Add(%d, 0) = %d, want %d", left, Add(left, 0), left)
+		}
+	})
+}
+{%- endif %}

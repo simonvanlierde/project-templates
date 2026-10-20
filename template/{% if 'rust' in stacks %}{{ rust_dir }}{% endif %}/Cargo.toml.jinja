@@ -13,6 +13,11 @@ license = "{{ license }}"
 publish = false
 
 [dependencies]
+{%- if rust_kind == 'library' and 'property' in test_extras %}
+
+[dev-dependencies]
+proptest = "{{ proptest_version }}"
+{%- endif %}
 
 # Clippy has no user-wide config: lint levels take effect only from this table.
 [lints.rust]

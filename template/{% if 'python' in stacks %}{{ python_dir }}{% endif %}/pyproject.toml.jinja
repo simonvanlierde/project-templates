@@ -63,6 +63,12 @@ dev = [
 {%- if kind == 'web-service' %}
   "httpx>=0.28.1", # fastapi.testclient (see filterwarnings below)
 {%- endif %}
+{%- if kind == 'library' and 'property' in test_extras %}
+  "hypothesis>=6.169.0",
+{%- endif %}
+{%- if kind == 'library' and 'mutation' in test_extras %}
+  "mutmut>=3.8.0",
+{%- endif %}
 ]
 
 {% if kind == 'data-pipeline' -%}

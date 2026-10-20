@@ -30,6 +30,12 @@ Upgrade steps:
 
 ### Added
 
+- A `test_extras` question for the library kinds, empty by default. `property` adds a
+  property test of the sample `add` function: Hypothesis, fast-check, proptest, or a
+  native Go `FuzzAdd`. `mutation` adds a `just <stack>-mutation` recipe to run by hand:
+  mutmut, Stryker, cargo-mutants or gremlins. See [Test extras](docs/usage.md#test-extras).
+- Python and TypeScript libraries ship a sample `add` function with a test, as the Rust
+  and Go libraries already did.
 - With the `docker` stack, `docker.yml` scans each built image with Trivy for HIGH and
   CRITICAL vulnerabilities that have a fix, and rebuilds and scans the image every
   Monday without pushing it. Pull requests and pushes show the findings in the job log;

@@ -14,7 +14,7 @@ You need [uv](https://docs.astral.sh/uv/) and [just](https://just.systems){% if 
 {% if 'python' in stacks %}uv sync{% if python_dir != '.' %} --directory {{ python_dir }}{% endif %}
 {% endif %}{% if 'ts' in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} install
 {% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec playwright install chromium   # once per machine, for the e2e tests
-{% endif %}{% if 'rust' in stacks %}cargo install --locked cargo-nextest cargo-deny   # once per machine
+{% endif %}{% if 'rust' in stacks %}cargo install --locked cargo-nextest cargo-deny{% if rust_kind == 'library' and 'mutation' in test_extras %} cargo-mutants{% endif %}   # once per machine
 {% endif %}{% if 'go' in stacks %}go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{ golangci_lint_version }}   # once per machine, checked against sum.golang.org
 just go-sync     # writes go.sum, which govulncheck needs: commit it
 {% endif %}{% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek install     # git hooks
@@ -28,7 +28,8 @@ The hadolint hook runs from its Docker image, so the git hooks need Docker runni
 
 ```sh
 just check       # lint, types and tests for every stack here
-just hooks       # the git hooks, as the checks workflow runs them{% if 'ts' in stacks and ts_kind == 'web-app' %}
+just hooks       # the git hooks, as the checks workflow runs them{% if 'mutation' in test_extras %}{% for prefix, on in [('py', 'python' in stacks and kind == 'library'), ('ts', 'ts' in stacks and ts_kind == 'library'), ('rs', 'rust' in stacks and rust_kind == 'library'), ('go', 'go' in stacks and go_kind == 'library')] if on %}
+just {{ prefix }}-mutation   # do the tests catch planted bugs? Slow: run before a release{% endfor %}{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}
 just ts-e2e      # accessibility and CSP checks in Chromium, against the production build{% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}
 just pipeline    # fetch, build and validate every source in sources.toml{% endif %}{% if 'docker' in stacks %}
 just up          # run each service in its container, rebuilt on source changes{% endif %}

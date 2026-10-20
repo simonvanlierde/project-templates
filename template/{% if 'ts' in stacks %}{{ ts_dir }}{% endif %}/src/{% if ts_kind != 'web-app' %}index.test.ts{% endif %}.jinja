@@ -1,6 +1,25 @@
-import { expect, test } from "vitest";
-import { name } from "./index.js";
+{%- set prop = ts_kind == 'library' and 'property' in test_extras -%}
+{% if prop %}import fc from "fast-check";
+{% endif %}import { expect, test } from "vitest";
+import { {% if ts_kind == 'library' %}add, {% endif %}name } from "./index.js";
 
 test("exports a name", () => {
   expect(name).toBe("{{ slug }}");
 });
+{%- if ts_kind == 'library' %}
+
+test("adds", () => {
+  expect(add(2, 3)).toBe(5);
+});
+{%- endif %}
+{%- if prop %}
+
+// fast-check tries many pairs, and shrinks any that fails to the simplest one.
+test("order does not matter", () => {
+  fc.assert(fc.property(fc.integer(), fc.integer(), (left, right) => add(left, right) === add(right, left)));
+});
+
+test("zero changes nothing", () => {
+  fc.assert(fc.property(fc.integer(), (value) => add(value, 0) === value));
+});
+{%- endif %}

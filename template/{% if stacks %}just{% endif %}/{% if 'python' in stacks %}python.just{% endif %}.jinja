@@ -26,6 +26,13 @@ py-cov:
 # Tests only; extra arguments reach pytest (`just py-test -k name`).
 py-test *args:
     {{ uv }} run pytest {% raw %}{{ args }}{% endraw %}
+{%- if kind == 'library' and 'mutation' in test_extras %}
+
+# Plant small bugs in src/ and report each one the tests miss. Slow: run it before a
+# release or after writing tests, not on every change. `mutmut browse` shows survivors.
+py-mutation:
+    {{ uv }} run mutmut run
+{%- endif %}
 {%- if kind == 'data-pipeline' %}
 
 # Download each implemented source in sources.toml to data/raw/, with a fetch record.
