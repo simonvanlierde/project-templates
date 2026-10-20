@@ -12,10 +12,22 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
+- After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
+  `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
+  installs with `--locked` and `--frozen-lockfile`.
+- **Breaking:** in a Go library made with v0.10.0 or earlier, `copier update` deletes
+  `<package>_test.go` without asking, your changes to it included, and adds
+  `add_test.go`. Before you commit the update, run `git checkout HEAD -- <package>_test.go`
+  (after committing it, `git checkout HEAD~1 -- <package>_test.go`). Then delete
+  `add_test.go`, or the two `TestAdd` functions stop the tests compiling. With
+  `test_extras=[property]`, first copy `FuzzAdd` from `add_test.go` into your test file.
 - In a `data-pipeline` project, `copier update` replaces `src/<module>/pipeline.py` with a
-  short file that imports sourceledger. If you added readers to `parse`, keep your
-  `parse` function and take the rest of the new file. Your old `tests/test_pipeline.py`
-  tested the copied stages: take the new one, and keep any tests of your own readers.
+  short file that imports sourceledger. If you added readers to `parse`, keep only your
+  own branches in `parse`, end it with `return sourceledger.parse_source(source, payload)`,
+  and keep the imports your branches need, since the new file no longer imports `csv` or
+  `io`. Your old `tests/test_pipeline.py` tested the copied stages: take the new one, and
+  keep any tests of your own readers. Then run `just pipeline`: `just validate` reports
+  the missing `datapackage.json` until `just build` has written it.
 - In a `data-pipeline` project, `pyproject.toml` gains the `sourceledger` dependency. If
   you added dependencies of your own, keep them next to it where `copier update` can't
   merge the two lists. Then run `uv lock` and commit `uv.lock`, or CI's
@@ -34,10 +46,19 @@ Upgrade steps:
 
 ### Added
 
+- `just fmt` runs each stack's fix-and-format recipe, the counterpart of `just check`.
+- A `data-pipeline` project gets `just status`, which lists every source with its
+  vintage, last fetch and licence, and `just attribution`, which prints the sources and
+  their reuse terms as a Markdown table for `ATTRIBUTION.md`. Its `sources.toml`
+  comments also describe the `name` and `archive` keys.
+- A `web-app` project checks every route at 320 px wide (WCAG 1.4.10 reflow), sends
+  `Cross-Origin-Resource-Policy: same-origin`, and wraps long words so one can't force
+  a sideways scroll.
 - A `test_extras` question for the library kinds, empty by default. `property` adds a
   property test of the sample `add` function: Hypothesis, fast-check, proptest, or a
   native Go `FuzzAdd`. `mutation` adds a `just <stack>-mutation` recipe to run by hand:
-  mutmut, Stryker, cargo-mutants or gremlins. See [Test extras](docs/usage.md#test-extras).
+  mutmut, Stryker, cargo-mutants or gremlins (run with `go run`, so it adds nothing to
+  `go.mod`). See [Test extras](docs/usage.md#test-extras).
 - Python and TypeScript libraries ship a sample `add` function with a test, as the Rust
   and Go libraries already did.
 - With the `docker` stack, `docker.yml` scans each built image with Trivy for HIGH and
@@ -74,6 +95,23 @@ Upgrade steps:
 
 ### Changed
 
+- Web-service projects test with `httpx2`, which Starlette's test client now prefers,
+  instead of `httpx`, and require Starlette 1.2.0 or later. The pytest filter that hid
+  Starlette's deprecation warning is gone.
+- `go.mod` is written once and then belongs to the project, like `CHANGELOG.md`. Before,
+  every `copier update` conflicted with what `go mod tidy` had written there. To raise the
+  minimum Go version, run `go mod edit -go=<version>`.
+- In a `data-pipeline` project, the `sources.toml` schema line points at sourceledger
+  v0.2.0 instead of `main`, and the example source is pinned to a datasets/co2-ppm
+  commit, so CI and the tripwire tests no longer follow a moving branch.
+- The generated README names uv only for projects that use it, and says that
+  `just check` does not build the Docker image.
+- When every image builds from a subdirectory, `docker.yml` runs only when a build
+  context or the workflow changes. If a build check is required in branch protection, a
+  pull request that touches neither leaves it pending.
+- A `web-app` project's accessibility check also runs axe's best-practice rules
+  (landmarks, one `h1`), and its CSP check fails when any security header goes missing
+  from `public/_headers`, not only the script policy.
 - A project with a publish option gets a Releasing section in its README: set up the
   publishing environment before the first release.
 - A `data-pipeline` manifest names the edition `vintage`, as the fetch record and the
@@ -127,6 +165,13 @@ Upgrade steps:
 
 ### Fixed
 
+- Copier refuses a project name that is a reserved Rust keyword, such as `gen` or `try`,
+  for the Rust stack, and a Python keyword, such as `lambda`, as a module name. Both used
+  to render a project that didn't compile or import.
+- An empty `stacks` answer is refused. It used to render a project whose `just check`
+  checked nothing and passed.
+- `docker.yml` and `python.yml` give scheduled runs their own concurrency group, so the
+  weekly run and a push to `main` no longer cancel each other while one waits.
 - A push to main no longer cancels the weekly scheduled run of a `data-pipeline`
   project, which skipped that week's tripwire tests. `python.yml` now cancels only
   superseded pull-request runs.
@@ -158,6 +203,10 @@ Upgrade steps:
 
 ### Security
 
+- `docker.yml` no longer scans the image in the job that pushes it to GHCR. That job
+  holds write permissions and reads no cache on a tag, and the scan restored its own
+  binary and database from the cache. The pull-request and weekly scans still cover the
+  image.
 - With `publish_to_ghcr`, the image push job runs in a `ghcr` environment, as PyPI and npm
   releases already do. Limit it to `main` and `v*` tags with a required reviewer in the
   repository's settings (see the README's Releasing section); until then GitHub creates
