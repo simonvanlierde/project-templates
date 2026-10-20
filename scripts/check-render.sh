@@ -38,25 +38,30 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # c: the only render with nested paths, at two depths to catch hardcoded
 # up-paths. The rust crate and go module are the binary kind. Render a has the
 # libraries. All publish flags on, so the release workflows could collide and
-# docker.yml renders its push job. The only render with Codecov.
+# docker.yml renders its push job. The only render with Codecov, and the only
+# one with the mutation extra, which the ts library (stryker) is the first to show.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mono-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data python_dir=api --data ts_dir=apps/web \
   --data rust_dir=crates/cli --data rust_kind=binary \
   --data go_dir=services/tool --data go_kind=binary \
   --data publish_to_pypi=true --data publish_to_npm=true --data codecov=true \
+  --data 'test_extras=[mutation]' \
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
 # workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, the
 # only one with Renovate, and the only web-app: Preact, nested, so the e2e job's
 # paths are audited with the rest.
+d_args=(
+  --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
+  --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
+  --data ts_dir=web --data ts_kind=web-app --data web_framework=preact
+  --data dependency_bot=renovate
+  --data 'docker_stacks=[python]'
+)
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=pipe-me --data 'stacks=[python,ts,docker]' \
-  --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0 \
-  --data ts_dir=web --data ts_kind=web-app --data web_framework=preact \
-  --data dependency_bot=renovate \
-  --data 'docker_stacks=[python]' . "$out/d"
+  "${d_args[@]}" . "$out/d"
 
 # The web-app starter files belong to the project: rendering d again over edited
 # copies keeps them (_skip_if_exists), while a template-owned file is rewritten.
@@ -64,11 +69,7 @@ echo '// project edit' >>"$out/d/web/src/App.tsx"
 echo '<!-- project edit -->' >>"$out/d/web/index.html"
 echo '// project edit' >>"$out/d/web/vite.config.ts"
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=pipe-me --data 'stacks=[python,ts,docker]' \
-  --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0 \
-  --data ts_dir=web --data ts_kind=web-app --data web_framework=preact \
-  --data dependency_bot=renovate \
-  --data 'docker_stacks=[python]' . "$out/d" >/dev/null 2>&1
+  "${d_args[@]}" . "$out/d" >/dev/null 2>&1
 grep -q 'project edit' "$out/d/web/src/App.tsx"
 grep -q 'project edit' "$out/d/web/index.html"
 (! grep -q 'project edit' "$out/d/web/vite.config.ts")
@@ -224,7 +225,7 @@ grep -q "python: \[\"$min\"" c/.github/workflows/python.yml
 # and the Python one from a single matrix job.
 test -f c/codecov.yml
 test ! -e a/codecov.yml
-grep -q -- 'uv run pytest --cov --cov-report=xml' c/.github/workflows/python.yml
+grep -qx '      - run: uv run pytest --cov --cov-report=xml' c/.github/workflows/python.yml
 grep -qx '          files: api/coverage.xml' c/.github/workflows/python.yml
 grep -qx "        if: matrix.python == '$(sed -n 's/^python_version: *//p' c/.copier-answers.yml | tr -d "\"'")'" c/.github/workflows/python.yml
 grep -qx '          flags: python' c/.github/workflows/python.yml
@@ -409,5 +410,73 @@ grep -qx '/1tool' i/.gitignore
 # PID 1 ignores SIGTERM without a handler, so both image stubs install one.
 grep -q SIGTERM b/src/main.ts
 grep -q SIGTERM a/src/render_me/__main__.py
+
+# Each kind gets its own tests and no other kind's. Dropping a filename condition
+# renders nothing, which no parse or CI row notices.
+test -f b/svc/tests/test_app.py
+test ! -e a/tests/test_app.py
+test -f c/api/tests/test_add.py
+test ! -e b/svc/tests/test_add.py
+test -f d/pipe/tests/test_pipeline.py
+test -f d/pipe/tests/test_published.py
+test ! -e a/tests/test_pipeline.py
+test ! -e a/tests/test_published.py
+test -f d/web/src/App.test.tsx
+test ! -e d/web/src/index.test.ts
+test -f a/src/index.test.ts
+test ! -e a/src/App.test.tsx
+test -f c/apps/web/src/index.test.ts
+test -f c/services/tool/main_test.go
+test ! -e c/services/tool/add_test.go
+test ! -e a/main_test.go
+test -f i/main_test.go
+# The mutation extra renders stryker for the ts library only (a is an app).
+test -f c/apps/web/stryker.config.json
+test ! -e a/stryker.config.json
+# The rust tests are inline.
+grep -qx '#\[cfg(test)\]' a/src/lib.rs
+grep -qx '#\[cfg(test)\]' c/crates/cli/src/main.rs
+
+# A stack's check recipe runs everything CI runs: dropping one command still exits 0.
+recipe_has() {
+  sed -n "/^$2:/,/^\$/p" "$1" | grep -qxF -- "$3" || {
+    echo "$1: recipe $2 lost: $3" >&2
+    exit 1
+  }
+}
+for cmd in 'uv run ruff check' 'uv run ruff format --check' 'uv run ty check' 'uv run pytest' \
+  'uv audit --locked --preview-features audit-command'; do
+  recipe_has a/just/python.just py-check "    $cmd"
+done
+for cmd in check typecheck test build; do recipe_has a/just/ts.just ts-check "    pnpm run $cmd"; done
+recipe_has a/just/ts.just ts-check '    pnpm audit --prod --audit-level=moderate'
+for cmd in 'cargo fmt --check' 'cargo clippy --all-targets --all-features -- -D warnings' \
+  'cargo nextest run --all-features' 'cargo deny check'; do
+  recipe_has a/just/rust.just rs-check "    $cmd"
+done
+for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' \
+  'go tool govulncheck ./...'; do
+  recipe_has a/just/go.just go-check "    $cmd"
+done
+# The root check calls every stack; rs and go are above.
+recipe_has a/justfile check '    @just py-check'
+recipe_has a/justfile check '    @just ts-check'
+
+# The generated workflows are linted, never run: a typo in a run line fails only
+# in the new project.
+grep -qx '      - run: uv run pytest' a/.github/workflows/python.yml
+grep -qx '      - run: uv run ty check' a/.github/workflows/python.yml
+grep -qx '      - run: uv audit --locked --preview-features audit-command' a/.github/workflows/python.yml
+grep -qx '      - run: cargo nextest run --all-features' a/.github/workflows/rust.yml
+grep -qx '      - run: cargo deny check' a/.github/workflows/rust.yml
+grep -qx '      - run: go test -race ./...' a/.github/workflows/go.yml
+grep -qx '      - run: go tool govulncheck ./...' a/.github/workflows/go.yml
+grep -qx '      - run: pnpm audit --prod --audit-level=moderate' a/.github/workflows/ts.yml
+# Trusted publishing and attestations need the job-level write scopes; the
+# workflow-level grant stays read-only.
+grep -q '^      id-token: write ' c/.github/workflows/python-release.yml
+grep -qx '      attestations: write' c/.github/workflows/python-release.yml
+grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
+(! grep -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 
 echo "all render checks passed"
