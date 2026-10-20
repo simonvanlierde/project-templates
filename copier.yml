@@ -88,6 +88,10 @@ stacks:
   help: Which stacks this repo uses
   choices: [python, ts, rust, go, docker]
   default: [python]
+  validator: >-
+    {% if not stacks %}
+    Pick at least one stack: with none, `just check` checks nothing.
+    {% endif %}
 
 # `.` is a single-package repo. Any other value nests only the package. Workflows,
 # hooks, justfile and answers file stay at the root.
@@ -179,8 +183,11 @@ module_name:
   help: Importable Python module name
   default: "{{ slug|replace('-', '_')|replace('.', '_') }}"
   validator: >-
+    {% set keywords = ['and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield'] %}
     {% if not module_name|regex_search('^[a-z_][a-z0-9_]*$') %}
     A module name is lower-case letters, digits and `_`, and cannot start with a digit.
+    {% elif module_name in keywords %}
+    `{{ module_name }}` is a Python keyword, so the package could not be imported: pick another module name.
     {% endif %}
 
 author_orcid:
@@ -274,9 +281,10 @@ rust_kind:
   default: library
   # crate_name is computed after this question, and copier skips validators on
   # computed questions. Its check lives here instead, derived from slug the same way.
+  # The keywords are the Rust reference's strict and reserved ones for edition 2024.
   validator: >-
     {% set ident = slug|replace('.', '-')|replace('-', '_') %}
-    {% set keywords = ['as', 'async', 'await', 'break', 'const', 'continue', 'crate', 'dyn', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'self', 'static', 'struct', 'super', 'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while'] %}
+    {% set keywords = ['abstract', 'as', 'async', 'await', 'become', 'box', 'break', 'const', 'continue', 'crate', 'do', 'dyn', 'else', 'enum', 'extern', 'false', 'final', 'fn', 'for', 'gen', 'if', 'impl', 'in', 'let', 'loop', 'macro', 'match', 'mod', 'move', 'mut', 'override', 'priv', 'pub', 'ref', 'return', 'self', 'static', 'struct', 'super', 'trait', 'true', 'try', 'type', 'typeof', 'unsafe', 'unsized', 'use', 'virtual', 'where', 'while', 'yield'] %}
     {% if ident|regex_search('^[0-9]') %}
     Cargo rejects a crate name that starts with a digit (`{{ ident }}`): start the project name with a letter.
     {% elif ident in keywords %}
