@@ -14,9 +14,10 @@ from sourceledger import Source
 def parse(source: Source, payload: bytes) -> tuple[list[str], list[dict[str, str]]]:
     """One raw file as its columns and rows.
 
-    Every source is read as CSV here. Branch on `source["id"]` for a source that is not.
+    sourceledger reads CSV, JSON and Excel, gzipped or not, by the source's `format` or
+    its URL's extension. Branch on `source["id"]` for a source in another format.
     """
-    return sourceledger.parse_csv(source, payload)
+    return sourceledger.parse_source(source, payload)
 
 
 def main(argv: list[str] | None = None) -> int:
