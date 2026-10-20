@@ -38,7 +38,7 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # c: the only render with nested paths, at two depths to catch hardcoded
 # up-paths. The rust crate and go module are the binary kind. Render a has the
 # libraries. All publish flags on, so the release workflows could collide and
-# docker.yml renders its push job. The only render with Codecov, and the only
+# docker.yml renders its push job. Codecov is on here and in d. The only
 # one with the mutation extra, which the ts library (stryker) is the first to show.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mono-me --data 'stacks=[python,ts,rust,go,docker]' \
@@ -57,7 +57,7 @@ d_args=(
   --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact
-  --data dependency_bot=renovate
+  --data dependency_bot=renovate --data codecov=true
   --data 'docker_stacks=[python]'
 )
 "${copier[@]}" --vcs-ref=HEAD \
@@ -231,6 +231,8 @@ grep -qx "        if: matrix.python == '$(sed -n 's/^python_version: *//p' c/.co
 grep -qx '          flags: python' c/.github/workflows/python.yml
 grep -qx '          files: apps/web/coverage/lcov.info' c/.github/workflows/ts.yml
 grep -qx '          flags: ts' c/.github/workflows/ts.yml
+# The data-pipeline workflow has its own pytest line, so d checks its coverage flags.
+grep -qx '      - run: uv run pytest --cov --cov-report=xml' d/.github/workflows/python.yml
 (! grep -q codecov a/.github/workflows/python.yml a/.github/workflows/ts.yml)
 grep -qx '      - run: pnpm run test' a/.github/workflows/ts.yml
 # test_extras: asked only with a library kind (d has none), off by default (a's rust
@@ -459,6 +461,17 @@ for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' 
   recipe_has a/just/go.just go-check "    $cmd"
 done
 # The root check calls every stack; rs and go are above.
+# Nested (c): every cargo and go command reaches the crate and module.
+for cmd in 'cargo fmt --manifest-path crates/cli/Cargo.toml --check' \
+  'cargo clippy --manifest-path crates/cli/Cargo.toml --all-targets --all-features -- -D warnings' \
+  'cargo nextest run --manifest-path crates/cli/Cargo.toml --all-features' \
+  'cargo deny --manifest-path crates/cli/Cargo.toml check'; do
+  recipe_has c/just/rust.just rs-check "    $cmd"
+done
+for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' \
+  'go tool govulncheck ./...'; do
+  recipe_has c/just/go.just go-check "    $cmd"
+done
 recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
 
@@ -477,6 +490,8 @@ grep -qx '      - run: pnpm audit --prod --audit-level=moderate' a/.github/workf
 grep -q '^      id-token: write ' c/.github/workflows/python-release.yml
 grep -qx '      attestations: write' c/.github/workflows/python-release.yml
 grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
+# The publish step: npm, from a tarball built earlier.
+grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
 (! grep -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 
 echo "all render checks passed"
