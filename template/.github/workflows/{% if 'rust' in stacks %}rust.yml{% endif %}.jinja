@@ -1,16 +1,8 @@
+{% from 'includes/triggers.jinja' import push_and_pr -%}
 name: rust
 
 on:
-  push:
-    branches: [main]
-{%- if rust_dir != '.' %}
-    paths: ["{{ rust_dir }}/**", ".github/workflows/rust.yml"]
-{%- endif %}
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-{%- if rust_dir != '.' %}
-    paths: ["{{ rust_dir }}/**", ".github/workflows/rust.yml"]
-{%- endif %}
+{{- push_and_pr(rust_dir, 'rust') }}
   workflow_dispatch:
 
 permissions:
