@@ -692,8 +692,8 @@ jobs:
           echo "golangci-lint=$lint" >> "$GITHUB_OUTPUT"
 
       # Go from the scaffold's go.mod, as the generated go.yml does. No cache:
-      # a fresh scaffold's only dependencies are its tools (govulncheck, and gremlins
-      # with test_extras), which go-sync fetches.
+      # a fresh scaffold's only dependency is govulncheck, which go-sync fetches.
+      # go-mutation fetches gremlins itself with `go run`.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: ${{ runner.temp }}/proj/${{ matrix.go_dir }}/go.mod

@@ -8,7 +8,8 @@
 {% endif %}
 ## Development
 
-You need [uv](https://docs.astral.sh/uv/) and [just](https://just.systems){% if 'ts' in stacks %}, [pnpm](https://pnpm.io){% endif %}{% if 'rust' in stacks %}, [cargo](https://rustup.rs){% endif %}{% if 'go' in stacks %}, [Go](https://go.dev/dl/){% endif %}{% if 'docker' in stacks %} and Docker{% endif %}.
+{% set needs_uv = 'python' in stacks or 'ts' not in stacks -%}
+You need {% if needs_uv %}[uv](https://docs.astral.sh/uv/) and {% endif %}[just](https://just.systems){% if 'ts' in stacks %}{{ ', ' if needs_uv else ' and ' }}[pnpm](https://pnpm.io){% endif %}{% if 'rust' in stacks %}, [cargo](https://rustup.rs){% endif %}{% if 'go' in stacks %}, [Go](https://go.dev/dl/){% endif %}{% if 'docker' in stacks %} and Docker{% endif %}.
 
 ```sh
 {% if 'python' in stacks %}uv sync{% if python_dir != '.' %} --directory {{ python_dir }}{% endif %}
@@ -27,7 +28,8 @@ The hadolint hook runs from its Docker image, so the git hooks need Docker runni
 `just` lists the tasks. They mirror what [.github/workflows/](.github/workflows/) runs.
 
 ```sh
-just check       # lint, types and tests for every stack here
+just check       # lint, types and tests for every stack here{% if 'docker' in stacks %} (it doesn't build the image: `just up` and the docker workflow do){% endif %}
+just fmt         # apply each stack's fixes and formatting
 just hooks       # the git hooks, as the checks workflow runs them{% if 'mutation' in test_extras %}{% for prefix, on in [('py', 'python' in stacks and kind == 'library'), ('ts', 'ts' in stacks and ts_kind == 'library'), ('rs', 'rust' in stacks and rust_kind == 'library'), ('go', 'go' in stacks and go_kind == 'library')] if on %}
 just {{ prefix }}-mutation   # do the tests catch planted bugs? Slow: run before a release{% endfor %}{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}
 just ts-e2e      # accessibility and CSP checks in Chromium, against the production build{% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}

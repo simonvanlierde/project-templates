@@ -96,14 +96,24 @@ need two packages in the same language, switch to that language's workspace tool
 this template. The same command lets you change your answers: add a stack or turn on a
 publish option, and Copier writes the new files.
 
-`CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`, `codemeta.json`)
-and a `web-app`'s starter files are written once and then belong to your project: an
+`CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`, `codemeta.json`),
+a `web-app`'s starter files and Go's `go.mod` are written once and then belong to your project: an
 update never touches them, so your release tool or your own edits own them. A template release that
-changes them says so in the template's changelog, for you to copy over by hand.
+changes them says so in the template's changelog, for you to copy over by hand. `go mod tidy`
+rewrites `go.mod` and Dependabot bumps its requirements, so a new `go_version` answer
+doesn't reach it: run `go mod edit -go=<version>` yourself.
 
 To move a package to another directory, run `copier update` with the new directory.
 Then delete the old directory by hand. Copier removes files that left the template,
 but not files that moved because an answer changed.
+
+After any `copier update`, refresh the lockfiles for your stacks and commit them with
+the update: `uv lock`, `pnpm install`, `just go-sync`. A template change can add or bump a
+dependency, and CI installs with `--locked` and `--frozen-lockfile`, so a stale lockfile
+fails the build.
+
+Template releases are immutable, so a bad one is fixed by a new patch release. Until it
+arrives, close the update PR, or run `git revert` on the update commit.
 
 ### Hearing about new releases
 
@@ -187,8 +197,8 @@ To turn it on:
 ## Dependency updates
 
 `dependency_bot` picks who opens dependency-update PRs: Dependabot (the default, built
-into GitHub) or Renovate. Both follow the same rules, described in
-[tooling](tooling.md#dependencies). Renovate needs its GitHub App on the repository:
+into GitHub) or Renovate. Both follow the rules in
+[tooling](tooling.md#dependencies), which also names the one difference. Renovate needs its GitHub App on the repository:
 install it from [github.com/apps/renovate](https://github.com/apps/renovate), choosing
 only this repository, then run `copier update` and answer `renovate`. That writes
 `renovate.json5` and removes `.github/dependabot.yml`, so Renovate skips its onboarding PR.

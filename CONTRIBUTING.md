@@ -6,11 +6,18 @@ git, and prek for the hooks (`uv tool install prek`, then `prek install`).
 ## Test an untagged change
 
 Copier renders the latest tag by default, so your edits never reach the output until
-you tag them. To render your working copy instead, pass `--vcs-ref=HEAD`:
+you tag them. To render your working copy instead, render this directory with
+`--vcs-ref=HEAD`. That includes uncommitted edits. Point `COPIER_SETTINGS_PATH` at the
+CI settings file, which fills the identity answers that have no default. Without it,
+`--defaults` stops at them. It replaces your own copier settings for the run.
 
 ```sh
-copier copy --vcs-ref=HEAD gh:simonvanlierde/project-templates .
+export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
+copier copy --defaults --vcs-ref=HEAD . "$(mktemp -d)"
 ```
+
+Drop `--defaults` to answer the questions yourself. Don't render into the repository
+root: the output would land among the template files.
 
 ## Run the checks before you push
 

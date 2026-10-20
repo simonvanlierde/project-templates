@@ -21,6 +21,8 @@ dependencies = [
   "opentelemetry-distro>=0.65b0",
   "opentelemetry-exporter-otlp-proto-http>=1.45.1",
   "opentelemetry-instrumentation-fastapi>=0.65b0",
+  # FastAPI allows older Starlette; 1.2.0 is the first whose TestClient takes httpx2.
+  "starlette>=1.2.0",
   "uvicorn>=0.54.0",
 ]
 {%- elif kind == 'data-pipeline' %}
@@ -61,7 +63,7 @@ dev = [
   "jupyterlab>=4.6.4",
 {%- endif %}
 {%- if kind == 'web-service' %}
-  "httpx>=0.28.1", # fastapi.testclient (see filterwarnings below)
+  "httpx2>=2.13.1", # fastapi.testclient
 {%- endif %}
 {%- if kind == 'library' and 'property' in test_extras %}
   "hypothesis>=6.169.0",
@@ -131,12 +133,6 @@ max-args = 10
 [tool.pytest.ini_options]
 addopts = ["-ra", "--strict-config", "--strict-markers", "--import-mode=importlib"]
 testpaths = ["tests"]
-{%- if kind == 'web-service' %}
-# NOTE: Starlette 1.x prefers httpx2 for its TestClient and warns on httpx. httpx is
-# kept because it works with every Starlette that FastAPI accepts; swap it for
-# httpx2 (and drop this filter) once the floor reaches a Starlette that has it.
-filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]
-{%- endif %}
 
 # Coverage is opt-in via `pytest --cov` (`just py-cov`), not addopts, because it
 # slows every plain test run. No fail_under until there is a suite worth setting

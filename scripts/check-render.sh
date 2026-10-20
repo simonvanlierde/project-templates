@@ -77,6 +77,11 @@ grep -q 'project edit' "$out/d/web/index.html"
 # with example_test.go, which a project_name of `example` would otherwise claim.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=example --data 'stacks=[go]' . "$out/h"
+# go.mod belongs to the project once written: `go mod tidy` rewrites it.
+echo '// project edit' >>"$out/h/go.mod"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=example --data 'stacks=[go]' . "$out/h" >/dev/null 2>&1
+grep -q 'project edit' "$out/h/go.mod"
 
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
@@ -126,6 +131,9 @@ refuses 'An empty value' --data 'stacks=[rust]' --data rust_dir=
 refuses 'An empty value' --data 'stacks=[go]' --data go_dir=
 refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
+refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
+refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
+refuses 'at least one stack' --data 'stacks=[]'
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
 refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \

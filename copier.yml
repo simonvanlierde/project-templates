@@ -4,7 +4,9 @@ _min_copier_version: "9.1.0"
 # Written once, then owned by the project: `copier update` leaves them alone. A
 # release adds its version, date and DOI to the citation files, and an update would
 # then conflict with that edit every time. The web-app entries are its starter files,
-# which the project rewrites from day one.
+# which the project rewrites from day one. go.mod is rewritten by the first
+# `go mod tidy`, and Dependabot bumps its requirements after that; its module path
+# and go version are answers fixed at copy time.
 _skip_if_exists:
   - CHANGELOG.md
   - CITATION.cff
@@ -16,6 +18,7 @@ _skip_if_exists:
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
+  - "{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
 
 project_name:
   type: str
@@ -88,6 +91,10 @@ stacks:
   help: Which stacks this repo uses
   choices: [python, ts, rust, go, docker]
   default: [python]
+  validator: >-
+    {% if not stacks %}
+    Pick at least one stack: with none, `just check` checks nothing.
+    {% endif %}
 
 # `.` is a single-package repo. Any other value nests only the package. Workflows,
 # hooks, justfile and answers file stay at the root.
@@ -147,6 +154,7 @@ codecov:
 
 # Who opens dependency-update PRs. Both get the same rules: weekly, a one-week cooldown,
 # grouped actions, hooks and dev tooling, and no updates to the copier-owned FROM tags.
+# Only Dependabot also groups npm security updates (docs/tooling.md#dependencies).
 dependency_bot:
   type: str
   help: Which bot opens dependency updates
@@ -179,8 +187,11 @@ module_name:
   help: Importable Python module name
   default: "{{ slug|replace('-', '_')|replace('.', '_') }}"
   validator: >-
+    {% set keywords = ['and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield'] %}
     {% if not module_name|regex_search('^[a-z_][a-z0-9_]*$') %}
     A module name is lower-case letters, digits and `_`, and cannot start with a digit.
+    {% elif module_name in keywords %}
+    `{{ module_name }}` is a Python keyword, so the package could not be imported: pick another module name.
     {% endif %}
 
 author_orcid:
@@ -274,9 +285,10 @@ rust_kind:
   default: library
   # crate_name is computed after this question, and copier skips validators on
   # computed questions. Its check lives here instead, derived from slug the same way.
+  # The keywords are the Rust reference's strict and reserved ones for edition 2024.
   validator: >-
     {% set ident = slug|replace('.', '-')|replace('-', '_') %}
-    {% set keywords = ['as', 'async', 'await', 'break', 'const', 'continue', 'crate', 'dyn', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'self', 'static', 'struct', 'super', 'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while'] %}
+    {% set keywords = ['abstract', 'as', 'async', 'await', 'become', 'box', 'break', 'const', 'continue', 'crate', 'do', 'dyn', 'else', 'enum', 'extern', 'false', 'final', 'fn', 'for', 'gen', 'if', 'impl', 'in', 'let', 'loop', 'macro', 'match', 'mod', 'move', 'mut', 'override', 'priv', 'pub', 'ref', 'return', 'self', 'static', 'struct', 'super', 'trait', 'true', 'try', 'type', 'typeof', 'unsafe', 'unsized', 'use', 'virtual', 'where', 'while', 'yield'] %}
     {% if ident|regex_search('^[0-9]') %}
     Cargo rejects a crate name that starts with a digit (`{{ ident }}`): start the project name with a letter.
     {% elif ident in keywords %}
@@ -395,6 +407,9 @@ proptest_version:
   when: false
   default: 1.12.0
 
+# Computed, never asked: the gremlins that `just go-mutation` runs with `go run`.
+# Not a go.mod tool, which would pull its ~34 modules into the project's module
+# graph. `copier update` bumps it; Renovate bumps it here.
 # renovate: datasource=go depName=github.com/go-gremlins/gremlins
 gremlins_version:
   type: str

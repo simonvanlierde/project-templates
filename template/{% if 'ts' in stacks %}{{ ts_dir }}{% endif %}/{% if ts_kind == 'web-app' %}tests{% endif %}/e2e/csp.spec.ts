@@ -7,6 +7,17 @@ test("the built app runs under its own Content-Security-Policy", async ({ page }
   const headersFile = await (await page.request.get("/_headers")).text();
   const policy = headersFile.match(/Content-Security-Policy:\s*(.+)/)?.[1];
   expect(policy).toContain("script-src 'self';");
+  for (const name of [
+    "X-Frame-Options",
+    "X-Content-Type-Options",
+    "Referrer-Policy",
+    "Cross-Origin-Opener-Policy",
+    "Cross-Origin-Resource-Policy",
+    "Permissions-Policy",
+    "Strict-Transport-Security",
+  ]) {
+    expect(headersFile, name).toMatch(new RegExp(`^\\s+${name}:`, "m"));
+  }
   await page.route("**/*", async (route) => {
     const response = await route.fetch();
     await route.fulfill({

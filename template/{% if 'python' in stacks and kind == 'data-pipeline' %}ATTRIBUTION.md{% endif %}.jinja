@@ -31,7 +31,7 @@ Each source's terms are in [`{{ d }}sources.toml`]({{ d }}sources.toml): `terms`
 `terms_url` in the publisher's words, `license` as an SPDX id, and `redistribute`,
 whether the raw file may be republished. `just validate` fails when an implemented
 source lacks any of them. `just build` copies each output's licence and source into
-`{{ d }}data/processed/datapackage.json`. Keep this table in step with that file.
+`{{ d }}data/processed/datapackage.json`. `just attribution` prints these facts as a table: paste it over the one below when you change a source.
 
 `{{ d }}data/fetches.jsonl` is committed. It lists each
 version of each source the pipeline has fetched, by checksum, and holds no values.
