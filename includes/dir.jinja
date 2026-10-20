@@ -1,0 +1,9 @@
+{#- Imported by copier.yml's *_dir validators. Outside template/ (the _subdirectory),
+    so it never renders into a project. Copier resolves imports from the repo root. -#}
+{% macro dir_error(value, example) -%}
+{% if not value %}
+An empty value is not a path: use `.` for the repo root.
+{% elif value != '.' and (value.startswith(('.', '/')) or value.endswith('/') or '..' in value) %}
+Give a plain relative path such as `{{ example }}`: no leading `./` or `/`, no trailing `/`, no `..`.
+{% endif %}
+{%- endmacro %}
