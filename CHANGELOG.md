@@ -82,6 +82,9 @@ Upgrade steps:
 
 ### Changed
 
+- With the `codecov` option, Codecov no longer comments on pull requests. Any line left
+  untested drew a comment. A drop of over 2 points still fails the `codecov/project`
+  check, which links to the report.
 - **Breaking:** a `data-pipeline` project gets its fetch, build, validate and revisions
   stages from the [sourceledger](https://github.com/simonvanlierde/sourceledger)
   package instead of about 400 copied lines in `pipeline.py`. Fixes now arrive as a

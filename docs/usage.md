@@ -186,8 +186,8 @@ registry needs to trust your repository first. To turn publishing on:
 
 `codecov` (off by default, Python and TS stacks) uploads each stack's test coverage to
 [Codecov](https://codecov.io) and adds a `codecov.yml`. A pull request fails only when
-total coverage drops by more than 2 points. Codecov comments only when a pull request adds
-lines no test runs. The share of new lines covered is shown but never fails a pull request.
+total coverage drops by more than 2 points, and that check links to the report: Codecov
+posts no comment. The share of new lines covered is shown but never fails a pull request.
 To turn it on:
 
 1. Add the repository on codecov.io and copy its upload token.

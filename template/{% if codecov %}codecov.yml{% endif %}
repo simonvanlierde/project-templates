@@ -11,11 +11,11 @@ coverage:
       default:
         informational: true
 
-# Comment only when a pull request adds lines no test runs. A total drop of over 2 points
-# shows as the failing project check instead. (coverage_drop would comment on any drop at
-# all, threshold or not.)
-comment:
-  require_changes: "uncovered_patch"
+# No pull request comment. A drop of over 2 points fails the project check, which links
+# to the report. require_changes cannot express that: its coverage_drop test reads the
+# threshold from coverage.status.project itself, where a valid config has none, so it
+# fires on any drop at all.
+comment: false
 
 # With both stacks, CI uploads one report per stack. Codecov compares as soon as the
 # first arrives, so the other stack's lines would count as a drop. Carryforward fills a
