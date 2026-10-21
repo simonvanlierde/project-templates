@@ -299,6 +299,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: uvx "zizmor@$ZIZMOR_VERSION" "$RUNNER_TEMP"/a "$RUNNER_TEMP"/b "$RUNNER_TEMP"/c "$RUNNER_TEMP"/d
 
+      # Render d answers dependency_bot=renovate. The renovate job above checks only this
+      # repo's own config.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: validate the rendered Renovate config
+        working-directory: ${{ runner.temp }}/d
+        run: npm_config_ignore_scripts=true npx -y --package "renovate@$RENOVATEBOT_VERSION" -- renovate-config-validator --strict
+
       # Checks what zizmor doesn't: unknown keys, bad `needs`, expression types, and
       # shellcheck over every `run:` (shellcheck ships on the runner).
       # Upstream's prebuilt binary. Its releases are mutable, so the checksums file only

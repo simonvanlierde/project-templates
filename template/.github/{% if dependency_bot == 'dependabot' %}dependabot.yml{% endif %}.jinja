@@ -32,8 +32,8 @@ updates:
       ('gomod', 'go', go_dir),
     ] if stack in stacks %}
 {% if loop.first and eco != 'gomod' %}
-  # Dev tooling lands as one PR. A runtime dependency gets its own, so a risky bump
-  # is not buried in lint-tool churn.
+  # Dev tooling lands as one PR and runtime minor and patch bumps as another, so a risky
+  # bump is not buried in lint-tool churn. A runtime major gets its own PR.
 {%- elif eco == 'gomod' %}
   # No dev-tooling group: go.mod has no development dependencies to split out.
 {%- endif %}
@@ -41,8 +41,12 @@ updates:
     directory: {{'/' if dir == '.' else '/' ~ dir}}
     schedule: {interval: weekly}
     cooldown: {default-days: 7, semver-major-days: 30}
-{%- if eco != 'gomod' %}
     groups:
+      runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+        patterns: ["*"]
+{%- if eco != 'gomod' %}
       dev-tooling:
         dependency-type: development
         update-types: [minor, patch]
