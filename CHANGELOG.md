@@ -147,10 +147,13 @@ Upgrade steps:
   `python.yml` and `docker.yml`. A cancelled weekly run used to skip that week's tripwire
   tests in a `data-pipeline` project.
 - Copier refuses answers that rendered a broken project: a project name that is a Go,
-  Rust or Python keyword (such as `type`, `gen` or `lambda`), an empty `stacks` list, an
-  empty `*_dir`, a `rust_version` below 1.85 (the template uses edition 2024), and an
-  `app_port` outside 1 to 65535, or 65535 when two images publish ports. A Go binary no
-  longer needs a project name that can be a Go package name.
+  Rust or Python keyword (such as `type`, `gen` or `lambda`), an empty `*_dir`, a
+  `rust_version` below 1.85 (the template uses edition 2024), and an `app_port` outside
+  1 to 65535, or 65535 when two images publish ports. An existing project with such an
+  answer stops at `copier update` with the same message until you change it. A Go binary
+  no longer needs a project name that can be a Go package name.
+- With no code stack, `just check` and `just fmt` say they have nothing to run, instead
+  of passing silently.
 - The `check-yaml` hook no longer fails on `pnpm-lock.yaml`. pnpm 12 writes its own
   version into the lockfile as a second YAML document, so every TS project failed its
   `checks` workflow once the lockfile was committed.

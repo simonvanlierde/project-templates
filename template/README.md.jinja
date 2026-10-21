@@ -8,8 +8,16 @@
 {% endif %}
 ## Development
 
-{% set needs_uv = 'python' in stacks or 'ts' not in stacks -%}
-You need {% if needs_uv %}[uv](https://docs.astral.sh/uv/) and {% endif %}[just](https://just.systems){% if 'ts' in stacks %}{{ ', ' if needs_uv else ' and ' }}[pnpm](https://pnpm.io){% endif %}{% if 'rust' in stacks %}, [cargo](https://rustup.rs){% endif %}{% if 'go' in stacks %}, [Go](https://go.dev/dl/){% endif %}{% if 'docker' in stacks %} and Docker{% endif %}.
+{# uv runs Python and installs prek; a TS-only project gets prek through pnpm. -#}
+{% set tools = [
+  ('[uv](https://docs.astral.sh/uv/)', 'python' in stacks or 'ts' not in stacks),
+  ('[just](https://just.systems)', true),
+  ('[pnpm](https://pnpm.io)', 'ts' in stacks),
+  ('[cargo](https://rustup.rs)', 'rust' in stacks),
+  ('[Go](https://go.dev/dl/)', 'go' in stacks),
+  ('Docker', 'docker' in stacks),
+] | selectattr('1') | map(attribute='0') | list -%}
+You need {{ tools[:-1] | join(', ') }} and {{ tools[-1] }}.
 
 ```sh
 {% if 'python' in stacks %}uv sync{% if python_dir != '.' %} --directory {{ python_dir }}{% endif %}
