@@ -21,8 +21,14 @@
   packageRules: [
     { matchManagers: ['github-actions'], groupName: 'actions' },
     { matchManagers: ['pre-commit'], groupName: 'hooks' },
-    // Dev tooling lands as one PR. A runtime dependency gets its own, so a risky bump
-    // is not buried in lint-tool churn.
+    // Dev tooling lands as one PR and runtime minor and patch bumps as another, so a
+    // risky bump is not buried in lint-tool churn. A runtime major gets its own PR. The
+    // dev-tooling rule comes second, so it wins for dev dependencies.
+    {
+      matchManagers: ['pep621', 'npm', 'cargo', 'gomod'],
+      matchUpdateTypes: ['minor', 'patch'],
+      groupName: 'runtime',
+    },
     {
       matchManagers: ['pep621', 'npm', 'cargo'],
       matchDepTypes: ['dependency-groups', 'devDependencies', 'dev-dependencies'],

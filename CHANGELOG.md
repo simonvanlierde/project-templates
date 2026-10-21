@@ -84,6 +84,8 @@ Upgrade steps:
 
 ### Changed
 
+- Dependabot and Renovate group minor and patch bumps of runtime dependencies into one
+  weekly PR, instead of one PR each. A major still gets its own PR.
 - With the `codecov` option, Codecov no longer comments on pull requests. Any line left
   untested drew a comment. A drop of over 2 points still fails the `codecov/project`
   check, which links to the report.
