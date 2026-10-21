@@ -68,8 +68,8 @@ BuildKit cache mounts, a non-root runtime user, and Open Container Initiative la
 
 Generated projects use Dependabot by default, which needs no app and covers every
 ecosystem here. The `dependency_bot` answer switches to Renovate, with the same rules in
-`renovate.json5`. Either way, version updates come weekly, grouped into one PR for actions,
-one for hooks, one for dev tooling and one for minor and patch bumps of runtime
+`renovate.json5`. Either way, version updates come weekly, grouped into one PR for actions and
+hooks together, one for dev tooling and one for minor and patch bumps of runtime
 dependencies, and wait a week, or a month for a major version of
 a package dependency. A runtime major gets a PR of its own. The bot's security PRs skip the wait. The one difference: Dependabot
 also groups npm security updates into a single PR, and the Renovate config has no such group.

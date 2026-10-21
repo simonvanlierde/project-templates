@@ -399,6 +399,10 @@ grep -qx 'playwright-report/' d/.gitignore
 (! grep -q 'playwright-report' a/.gitignore)
 (! grep -q 'e2e' a/.github/workflows/ts.yml)
 grep -q 'applies-to: security-updates' a/.github/dependabot.yml
+# Actions and hook revs share one multi-ecosystem PR, with the same group in Renovate.
+grep -qx '  actions-and-hooks:' a/.github/dependabot.yml
+test "$(grep -c 'multi-ecosystem-group: actions-and-hooks' a/.github/dependabot.yml)" = 2
+grep -q "groupName: 'actions and hooks'" d/renovate.json5
 # Only data-pipeline renders it.
 test ! -e a/sources.toml
 test ! -e a/ATTRIBUTION.md
