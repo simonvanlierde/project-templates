@@ -79,6 +79,8 @@ Upgrade steps:
   advisory.
 - VS Code formats `.tsx`, `.jsx` and `.css` files with Biome, and the Biome hook also
   checks HTML.
+- The README says how to lock a security fix that is less than a week old, which
+  `exclude-newer` and `minimumReleaseAge` otherwise hold back.
 
 ### Changed
 

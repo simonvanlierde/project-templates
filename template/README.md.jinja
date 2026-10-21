@@ -17,6 +17,10 @@
   ('[Go](https://go.dev/dl/)', 'go' in stacks),
   ('Docker', 'docker' in stacks),
 ] | selectattr('1') | map(attribute='0') | list -%}
+{% set hatches = [
+  ('`exclude-newer-package` under `[tool.uv]` in `' ~ ('' if python_dir == '.' else python_dir ~ '/') ~ 'pyproject.toml`', 'python' in stacks),
+  ('`minimumReleaseAgeExclude` in `' ~ ('' if ts_dir == '.' else ts_dir ~ '/') ~ 'pnpm-workspace.yaml`', 'ts' in stacks),
+] | selectattr('1') | map(attribute='0') | list -%}
 You need {{ tools[:-1] | join(', ') }} and {{ tools[-1] }}.
 
 ```sh
@@ -44,7 +48,11 @@ just ts-e2e      # accessibility and CSP checks in Chromium, against the product
 just pipeline    # fetch, build and validate every source in sources.toml{% endif %}{% if 'docker' in stacks %}
 just up          # run each service in its container, rebuilt on source changes{% endif %}
 ```
-{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}
+{% if hatches %}
+{{ 'uv and pnpm lock' if hatches | length == 2 else 'uv locks' if 'python' in stacks else 'pnpm locks' }} only releases at least a week old. If `just check` fails on
+a security fix newer than that, add the package to {{ hatches | join(' or ') }},
+and remove it a week later ([how](https://github.com/simonvanlierde/project-templates/blob/main/docs/tooling.md#dependencies)).
+{% endif %}{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}
 ## Releasing
 
 Before the first release, set up the publishing environment
