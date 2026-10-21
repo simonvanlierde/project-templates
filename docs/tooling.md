@@ -98,8 +98,10 @@ To lock one fixed package early, exempt it by name and delete the exemption afte
     - is-odd@3.0.1
   ```
 
-Dependabot's docs don't say whether its uv security PRs read `exclude-newer`, so check
-the first one you get.
+Dependabot doesn't read `exclude-newer`
+([dependabot-core#13816](https://github.com/dependabot/dependabot-core/issues/13816)), and
+uv applies it whenever it relocks, so a Dependabot security PR can't lock a fix that is
+less than a week old either. Use the exemption above.
 
 Nothing tracks the `FROM` base images in the Dockerfiles. Those tags are Copier
 answers, so update them by hand. They are pinned by tag only, on purpose: each rebuild
