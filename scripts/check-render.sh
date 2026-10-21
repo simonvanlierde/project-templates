@@ -352,6 +352,10 @@ test -f d/pipe/data/raw/.gitkeep
 test -f d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/README.md
+# The week-old-release escape hatch names each nested lockfile owner, and only those.
+grep -qF 'uv and pnpm lock only' d/README.md
+grep -q 'in .pipe/pyproject\.toml. or .minimumReleaseAgeExclude. in .web/pnpm-workspace\.yaml.' d/README.md
+(! grep -q 'exclude-newer' h/README.md)
 grep -q 'Apache License' d/LICENSE
 # Each license text ends in exactly one newline (MIT in a, Apache-2.0 in d), so the
 # end-of-file-fixer hook has nothing to rewrite in a new project.
