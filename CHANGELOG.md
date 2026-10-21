@@ -86,6 +86,9 @@ Upgrade steps:
 
 - Dependabot and Renovate group minor and patch bumps of runtime dependencies into one
   weekly PR, instead of one PR each. A major still gets its own PR.
+- GitHub Actions and pre-commit hook updates arrive as one weekly PR, instead of one
+  each: a Dependabot multi-ecosystem group, and one Renovate group. Fewer PRs means fewer
+  branches to bring up to date in turn where main requires it.
 - With the `codecov` option, Codecov no longer comments on pull requests. Any line left
   untested drew a comment. A drop of over 2 points still fails the `codecov/project`
   check, which links to the report.
