@@ -27,9 +27,6 @@ check:
 {%- if 'go' in stacks %}
     @just go-check
 {%- endif %}
-{%- if not stacks | select('in', ['python', 'ts', 'rust', 'go']) | list %}
-    @echo "No code stack here, so nothing to check. 'just hooks' runs the git hooks."
-{%- endif %}
 
 # Fix and format every stack here, as each stack's `fmt` recipe does.
 fmt:
@@ -44,9 +41,6 @@ fmt:
 {%- endif %}
 {%- if 'go' in stacks %}
     @just go-fmt
-{%- endif %}
-{%- if not stacks | select('in', ['python', 'ts', 'rust', 'go']) | list %}
-    @echo "No code stack here, so nothing to format."
 {%- endif %}
 
 # Run every git hook over the whole repo, not just staged files.

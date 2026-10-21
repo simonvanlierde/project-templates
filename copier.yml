@@ -90,11 +90,11 @@ stacks:
   multiselect: true
   help: Which stacks this repo uses
   choices: [python, ts, rust, go, docker]
-  # No validator for an empty list: on `copier update --defaults`, copier swaps an
-  # answer that fails its validator for the default without a word, which would turn
-  # an existing stack-less repo into a Python library. `just check` says it has
-  # nothing to check instead.
   default: [python]
+  validator: >-
+    {% if not stacks %}
+    Pick at least one stack: with none, `just check` checks nothing.
+    {% endif %}
 
 # `.` is a single-package repo. Any other value nests only the package. Workflows,
 # hooks, justfile and answers file stay at the root. includes/dir.jinja holds the

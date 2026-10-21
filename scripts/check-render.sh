@@ -134,10 +134,7 @@ refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
-# An empty stack list stays valid: a validator would let `copier update --defaults`
-# swap it for the default. `just check` says it has nothing to check instead.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=bare-me --data 'stacks=[]' . "$out/bare" >/dev/null 2>&1
-grep -q "No code stack here, so nothing to check" "$out/bare/justfile"
+refuses 'at least one stack' --data 'stacks=[]'
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
 refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
