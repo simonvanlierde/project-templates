@@ -123,12 +123,6 @@
       matchDepNames: ["python"],
       minimumReleaseAge: "90 days",
     },
-    // `widen` raises uv_build's cap and keeps the floor, so older installed uv
-    // versions keep working.
-    {
-      matchPackageNames: ["uv_build"],
-      rangeStrategy: "widen",
-    },
     // Maintained (commits in 2026-08) but tagged about once a year, which trips
     // the 1-year abandonment threshold.
     {
