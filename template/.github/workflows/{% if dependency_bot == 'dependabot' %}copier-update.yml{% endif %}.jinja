@@ -1,0 +1,90 @@
+name: copier update
+
+# Dependabot can't update a Copier template, so this opens the update PR. It runs
+# weekly, finds the newest template tag, and does nothing when `_commit` in
+# .copier-answers.yml already is that tag. The PR lives on one fixed branch.
+# Its CI does not start: see "Hearing about new releases" in the template's docs/usage.md.
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}{% endraw %}
+  cancel-in-progress: false
+
+env:
+  # Dependabot does not read this pin: raise it by hand. 9.19 is the template's floor.
+  COPIER_VERSION: 9.19.1
+
+jobs:
+  update:
+    name: copier update
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: false
+          version: "{{ uv_version }}"
+
+      # The template runs no Copier tasks, so there is no --trust.
+{%- raw %}
+      - name: Update from the newest template tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          branch=chore/copier-update
+          src=$(sed -n "s/^_src_path: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" .copier-answers.yml)
+          url=${src/#gh:/https://github.com/}
+          latest=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' | sed -n '1s|.*refs/tags/||p')
+          current=$(sed -n "s/^_commit: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" .copier-answers.yml)
+          if [ -z "$latest" ]; then
+            echo "::error::no v* tag found at $url (_src_path: $src)"
+            exit 1
+          fi
+          if [ "$current" = "$latest" ]; then
+            echo "Already on $latest."
+            exit 0
+          fi
+
+          git switch -C "$branch"
+          uvx "copier@$COPIER_VERSION" update --defaults --vcs-ref "$latest"
+          git add -A
+
+          # Copier exits 0 on conflicts: inline markers, or .rej files.
+          { git grep --cached -l -e '^<<<<<<< ' || true; git ls-files '*.rej'; } | sort -u >conflicts.txt
+          {
+            echo "Updates this project from the template: \`$current\` to \`$latest\`."
+            echo
+            echo "Read the diff before merging, then refresh the lockfiles for your stacks (\`uv lock\`, \`pnpm install\`, \`just go-sync\`)."
+            if [ -s conflicts.txt ]; then
+              echo
+              echo "These files have merge conflicts. Their markers are committed as they are:"
+              echo
+              sed "s/.*/- \`&\`/" conflicts.txt
+            fi
+          } >body.md
+          git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
+            commit -q -m "chore: update from template $latest"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"
+
+          if [ -n "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')" ]; then
+            gh pr edit "$branch" --title "chore: update from template $latest" --body-file body.md
+          else
+            gh pr create --head "$branch" --base "$BASE" --title "chore: update from template $latest" --body-file body.md
+          fi
+{%- endraw %}

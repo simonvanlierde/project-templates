@@ -189,6 +189,11 @@ Upgrade steps:
   template release. Before, the one-week release age held those PRs back for good, because
   template tags carry no release date. The docs say how Dependabot users hear about
   releases.
+- With `dependency_bot: dependabot`, a `copier-update` workflow opens a weekly PR that
+  runs `copier update` to the newest template tag, with conflicted files listed in the
+  PR body. Allow Actions to create pull requests in the repository settings first. The
+  docs have the command and the one catch: that PR's own CI does not start until you
+  close and reopen it.
 
 ### Fixed
 
