@@ -84,6 +84,11 @@ Upgrade steps:
 
 ### Changed
 
+- The TypeScript and Python check jobs are named `ts: lint, types, tests` and
+  `python: lint, types, tests` (`python: lint, types, pipeline, tests` in a
+  `data-pipeline` project). Both used to be `lint, types, tests`, so a ruleset could not
+  require one without the other. If a ruleset or branch protection requires the old name,
+  switch it to the new ones, or pull requests wait on a check that never reports.
 - Dependabot and Renovate group minor and patch bumps of runtime dependencies into one
   weekly PR, instead of one PR each. A major still gets its own PR.
 - GitHub Actions and pre-commit hook updates arrive as one weekly PR, instead of one
