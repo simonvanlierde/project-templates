@@ -2,7 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 const ci = Boolean(process.env.CI);
 // vite preview's default port. --strictPort fails the run if it is taken,
-// instead of serving on another port the tests never reach.
+// instead of serving on another port the tests never reach. The run never reuses
+// a server already there: on a dev machine that may be another app's preview.
 const url = "http://localhost:4173";
 
 export default defineConfig({
@@ -16,7 +17,6 @@ export default defineConfig({
   webServer: {
     command: "pnpm build && pnpm preview --strictPort",
     url,
-    reuseExistingServer: !ci,
     timeout: 120_000,
   },
 });

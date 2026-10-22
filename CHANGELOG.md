@@ -52,6 +52,11 @@ Upgrade steps:
     script. Removing any security header from that file fails the check.
   - `just check` and CI enforce a bundle budget, set in `scripts/checkBundleBudget.mjs`,
     and a pre-push hook runs the unit tests.
+  - The e2e run always starts its own preview server, on port 4173, and fails if the
+    port is taken, so it can't test another app's server instead.
+  - [Adopting the template in an existing web app](docs/usage.md#adopting-the-template-in-an-existing-web-app)
+    lists the files a first `copier copy --overwrite` adds or replaces, and how to
+    install a lockfile resolved before the one-week release wait.
   - The starter files (`src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`,
     `index.html` and `tests/e2e/routes.ts`) belong to the project once written:
     `copier update` never touches them again.
@@ -90,6 +95,8 @@ Upgrade steps:
   `python: lint, types, tests` (`python: lint, types, pipeline, tests` in a
   `data-pipeline` project). Both used to be `lint, types, tests`, so a ruleset could not
   require one without the other.
+- With the `codecov` option, `just check` runs the TypeScript tests with coverage, as CI
+  does, so a coverage threshold in the Vitest config fails locally as well as in CI.
 - Dependabot and Renovate group minor and patch bumps of runtime dependencies into one
   weekly PR, instead of one PR each. A major still gets its own PR.
 - GitHub Actions and pre-commit hook updates arrive as one weekly PR, instead of one

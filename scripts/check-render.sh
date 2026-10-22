@@ -409,6 +409,8 @@ grep -q 'stages: \[pre-push\]' d/.pre-commit-config.yaml
 grep -qx 'default_install_hook_types: \[pre-commit, pre-push\]' d/.pre-commit-config.yaml
 (! grep -q 'pre-push' a/.pre-commit-config.yaml)
 grep -qx 'playwright-report/' d/.gitignore
+# Outside CI, reusing a server on the preview port would test whichever app holds it.
+(! grep -q reuseExistingServer d/web/playwright.config.ts)
 (! grep -q 'playwright-report' a/.gitignore)
 (! grep -q 'e2e' a/.github/workflows/ts.yml)
 grep -q 'applies-to: security-updates' a/.github/dependabot.yml
@@ -473,6 +475,9 @@ for cmd in 'uv run ruff check' 'uv run ruff format --check' 'uv run ty check' 'u
 done
 for cmd in check typecheck test build; do recipe_has a/just/ts.just ts-check "    pnpm run $cmd"; done
 recipe_has a/just/ts.just ts-check '    pnpm audit --prod --audit-level=moderate'
+# With codecov, CI runs the tests with coverage, so check does too: thresholds set in
+# the vitest config then fail locally, not only in CI.
+recipe_has c/just/ts.just ts-check '    pnpm -C apps/web run coverage'
 for cmd in 'cargo fmt --check' 'cargo clippy --all-targets --all-features -- -D warnings' \
   'cargo nextest run --all-features' 'cargo deny check'; do
   recipe_has a/just/rust.just rs-check "    $cmd"
