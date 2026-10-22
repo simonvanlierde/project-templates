@@ -417,6 +417,8 @@ test "$(grep -c 'multi-ecosystem-group: actions-and-hooks' a/.github/dependabot.
 grep -q "groupName: 'actions and hooks'" d/renovate.json5
 # Lock refreshes carry transitive security fixes, and the week's wait would block them.
 grep -A3 'lockFileMaintenance: {' d/renovate.json5 | grep -q 'minimumReleaseAge: null'
+# Exemptions that `pnpm audit --fix` writes for fresh security fixes clean themselves up.
+grep -qx 'minimumReleaseAgeExcludePrune: true' d/web/pnpm-workspace.yaml
 # Only data-pipeline renders it.
 test ! -e a/sources.toml
 test ! -e a/ATTRIBUTION.md

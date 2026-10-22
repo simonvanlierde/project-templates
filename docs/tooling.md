@@ -96,8 +96,11 @@ To lock one fixed package early, exempt it by name and delete the exemption afte
   The flag `uv lock --exclude-newer-package <pkg>=<timestamp>` alone doesn't last:
   the next `uv sync` relocks without it and moves the package back. uv has no
   environment variable for this setting.
-- pnpm: list the package in `pnpm-workspace.yaml`, then run `pnpm install`. It matches
-  by name, or by `name@version` from pnpm 10.19.
+- pnpm: `pnpm audit --fix=update` does it for you. It adds each patched version to
+  `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` and locks it. By hand, list the
+  package there and run `pnpm install`. It matches by name, or by `name@version`.
+  `minimumReleaseAgeExcludePrune` drops an entry once the lockfile moves past that
+  version, so a `name@version` entry needs no clean-up.
 
   ```yaml
   minimumReleaseAgeExclude:

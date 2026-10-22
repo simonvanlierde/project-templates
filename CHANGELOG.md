@@ -92,6 +92,9 @@ Upgrade steps:
 
 ### Changed
 
+- `pnpm audit --fix=update` locks a security fix that is under a week old: it adds the
+  patched version to `minimumReleaseAgeExclude`, and the new
+  `minimumReleaseAgeExcludePrune` drops the entry once the lockfile moves past it.
 - With `dependency_bot=renovate`, Renovate refreshes the lockfiles every Monday. That is
   how a security fix in a dependency of a dependency arrives, once it is a week old.
 - **Breaking:** after updating, switch a ruleset or branch protection that requires the
