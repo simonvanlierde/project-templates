@@ -177,6 +177,16 @@ assert "given-names: \"Ada\"" in (out / "a/CITATION.cff").read_text()
 docker = yaml.safe_load((out / "c/.github/workflows/docker.yml").read_text())["jobs"]
 assert any("trivy-action" in s.get("uses", "") for s in docker["build"]["steps"]), docker["build"]
 assert not any("trivy-action" in s.get("uses", "") for s in docker["push"]["steps"]), docker["push"]
+# A ruleset requires a check by its job name, so two jobs with one name can't be told
+# apart. a, b, c and d each render more than one stack.
+for render in "abcd":
+    names = {}
+    for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
+        for job_id, job in yaml.safe_load(wf.read_text())["jobs"].items():
+            if "name" in job:
+                names.setdefault(job["name"], []).append(f"{wf.name}:{job_id}")
+    dupes = {n: where for n, where in names.items() if len(where) > 1}
+    assert not dupes, f"{render}: jobs share a name: {dupes}"
 PY
 
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.
