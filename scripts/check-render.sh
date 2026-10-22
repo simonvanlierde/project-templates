@@ -22,6 +22,7 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data project_name=render-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data kind=research --data ts_kind=app \
   --data 'author_name= Ada Lovelace' \
+  --data codspeed=true \
   --data 'docker_stacks=[python]' . "$out/a"
 
 # b: license=none, and a name, description and author name with punctuation that `slug`
@@ -46,6 +47,7 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data rust_dir=crates/cli --data rust_kind=binary \
   --data go_dir=services/tool --data go_kind=binary \
   --data publish_to_pypi=true --data publish_to_npm=true --data codecov=true \
+  --data codspeed=true \
   --data 'test_extras=[mutation]' \
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
@@ -241,6 +243,31 @@ grep -qx "        if: matrix.python == '$(sed -n 's/^python_version: *//p' c/.co
 grep -qx '          flags: python' c/.github/workflows/python.yml
 grep -qx '          files: apps/web/coverage/lcov.info' c/.github/workflows/ts.yml
 grep -qx '          flags: ts' c/.github/workflows/ts.yml
+# CodSpeed: a has the root python and rust library, c the nested python library and rust
+# binary. Each stack gets a job, a starter benchmark and its dependency; OIDC sign-in is
+# on the job, not the workflow. b and d, without the option, get none of it.
+for r in a c; do
+  test -f "$r/.github/workflows/benchmarks.yml"
+  grep -qx '      id-token: write # OpenID Connect sign-in to CodSpeed' "$r/.github/workflows/benchmarks.yml"
+  grep -q 'CodSpeedHQ/action@' "$r/.github/workflows/benchmarks.yml"
+done
+test -f a/tests/test_benchmarks.py
+test -f c/api/tests/test_benchmarks.py
+test -f a/benches/codspeed.rs
+test -f c/crates/cli/benches/codspeed.rs
+grep -q 'use render_me::add;' a/benches/codspeed.rs
+grep -q 'fn stand_in' c/crates/cli/benches/codspeed.rs
+grep -q 'pytest-codspeed' a/pyproject.toml
+grep -q 'pytest-codspeed' c/api/pyproject.toml
+grep -q 'package = "codspeed-divan-compat"' a/Cargo.toml
+grep -qx 'name = "codspeed"' c/crates/cli/Cargo.toml
+grep -q 'working-directory: crates/cli' c/.github/workflows/benchmarks.yml
+grep -q 'working-directory: api' c/.github/workflows/benchmarks.yml
+for r in b d; do
+  test ! -e "$r/.github/workflows/benchmarks.yml"
+  test ! -e "$r/tests/test_benchmarks.py"
+  (! grep -rq codspeed "$r" --include=pyproject.toml --include=Cargo.toml)
+done
 # The data-pipeline workflow has its own pytest line, so d checks its coverage flags.
 grep -qx '      - run: uv run pytest --cov --cov-report=xml' d/.github/workflows/python.yml
 (! grep -q codecov a/.github/workflows/python.yml a/.github/workflows/ts.yml)

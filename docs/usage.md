@@ -194,6 +194,22 @@ To turn it on:
 2. Save it as the `CODECOV_TOKEN` repository secret (`gh secret set CODECOV_TOKEN`).
 3. Run `copier update`, and answer yes to `codecov`.
 
+## Benchmarks on CodSpeed
+
+`codspeed` (off by default, Python and Rust stacks) adds `.github/workflows/benchmarks.yml`
+and a starter benchmark per stack: a `pytest-codspeed` test in `tests/test_benchmarks.py`,
+and a divan bench through `codspeed-divan-compat` in `benches/codspeed.rs`. CodSpeed
+measures them in simulation mode on every pull request and every push to main, so each
+pull request has a base to compare with. The workflow signs in with OpenID Connect, so
+there is no secret. Replace the starter benchmarks with calls into your own code. Two steps
+no file can do:
+
+1. Import the repository on [codspeed.io](https://codspeed.io). Until you do, uploads fail
+   with 401 "Repository not found".
+2. In the repository's settings on codspeed.io, set Pull Request comments to "On Change".
+   `codspeed.yml` has no option for it.
+3. Run `copier update`, and answer yes to `codspeed`.
+
 ## Dependency updates
 
 `dependency_bot` picks who opens dependency-update PRs: Dependabot (the default, built
