@@ -28,6 +28,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | `python_dir`, `ts_dir`, `rust_dir`, `go_dir`    | `.`: each package at the repo root               |
 | `dependency_bot`                                | Dependabot                                       |
 | `codecov`                                       | off                                              |
+| `codspeed`                                      | off ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
 | `module_name`, `go_module`                      | made from the project name and GitHub user       |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | the current releases; `python_min` two minors below `python_version` |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | off ([Publishing](#publishing))           |
@@ -271,6 +272,22 @@ To turn it on:
 1. Add the repository on codecov.io and copy its upload token.
 2. Save it as the `CODECOV_TOKEN` repository secret (`gh secret set CODECOV_TOKEN`).
 3. Run `copier update --data codecov=true`.
+
+## Benchmarks on CodSpeed
+
+`codspeed` (off by default, Python and Rust stacks) adds `.github/workflows/benchmarks.yml`
+and a starter benchmark per stack: a `pytest-codspeed` test in `tests/test_benchmarks.py`,
+and a divan bench through `codspeed-divan-compat` in `benches/codspeed.rs`. CodSpeed
+measures them in simulation mode on every pull request and every push to main, so each
+pull request has a base to compare with. The workflow signs in with OpenID Connect, so
+there is no secret. Replace the starter benchmarks with calls into your own code. Two steps
+no file can do:
+
+1. Import the repository on [codspeed.io](https://codspeed.io). Until you do, uploads fail
+   with 401 "Repository not found".
+2. In the repository's settings on codspeed.io, set Pull Request comments to "On Change".
+   `codspeed.yml` has no option for it.
+3. Run `copier update --data codspeed=true`.
 
 ## Dependency updates
 

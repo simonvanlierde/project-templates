@@ -1,0 +1,29 @@
+//! Benchmarks measured on every pull request. Run them locally with `cargo bench`.
+
+#![allow(missing_docs, reason = "divan's macros generate undocumented items")]
+
+use divan::black_box;
+{%- if rust_kind == 'library' %}
+use {{ crate_name | replace('-', '_') }}::add;
+{%- endif %}
+
+fn main() {
+    divan::main();
+}
+
+{%- if rust_kind == 'library' %}
+
+/// Replace with a call into your own code.
+#[divan::bench]
+fn adds() -> u64 {
+    add(black_box(2), black_box(3))
+}
+{%- else %}
+
+// NOTE: a binary crate has no library to import. Move the code you want measured into
+// `src/lib.rs`, call it here, and delete this stand-in.
+#[divan::bench]
+fn stand_in() -> u64 {
+    (0..black_box(1_000_u64)).sum()
+}
+{%- endif %}

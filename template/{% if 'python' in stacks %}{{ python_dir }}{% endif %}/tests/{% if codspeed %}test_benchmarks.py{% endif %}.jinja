@@ -1,0 +1,23 @@
+"""Benchmarks that CodSpeed measures on every pull request: `uv run pytest tests/test_benchmarks.py --codspeed`."""
+{%- if kind == 'library' %}
+
+import pytest
+
+from {{ module_name }} import add
+
+
+@pytest.mark.benchmark
+def test_add() -> None:
+    """Replace with a call into your own code."""
+    assert sum(add(i, 1) for i in range(10_000)) == 50_005_000
+{%- else %}
+
+import pytest
+
+
+# NOTE: stand-in. Call your own code here and delete it.
+@pytest.mark.benchmark
+def test_stand_in() -> None:
+    """Replace with a call into your own code."""
+    assert sum(range(10_000)) == 49_995_000
+{%- endif %}
