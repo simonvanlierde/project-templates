@@ -20,6 +20,19 @@ _skip_if_exists:
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
   - "{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
 
+# Shown on `copier copy` only; `--quiet` hides both.
+_message_before_copy: |
+  Each question says what it changes, and most have a default. Your GitHub user, name
+  and email can come from Copier's settings file instead: see "Your details" in
+  https://github.com/simonvanlierde/project-templates#your-details
+_message_after_copy: |
+  Next, in the new project:
+  {%- for stack in stacks if stack != 'docker' %}
+    just {{ {'python': 'py', 'ts': 'ts', 'rust': 'rs', 'go': 'go'}[stack] }}-sync
+  {%- endfor %}
+    just check
+  Then commit, lockfiles included: CI installs exactly what they list.
+
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
 # takes its default, or keeps its stored answer on `copier update`. Never hide an

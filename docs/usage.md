@@ -36,7 +36,12 @@ With `customise` left at no, the advanced questions take these defaults:
 
 On `copier update`, an advanced question you answered before keeps its answer even when
 `customise` is no. To change one answer without the others, pass it:
-`copier update --data codecov=true`. Copier 9.19 or later is needed for this switch.
+`copier update --data codecov=true`, or have Copier ask just that one question:
+`copier update --ask codecov`. Copier 9.19 or later is needed for this switch.
+
+To skip the questions, `--data-file answers.yml` reads answers from a file, and
+`--defaults` takes every default. Your details have no default, so give them with
+`--data`, the data file or the settings file.
 
 ## Public repos
 
