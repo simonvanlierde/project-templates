@@ -219,3 +219,6 @@ into GitHub) or Renovate. Both follow the rules in
 install it from [github.com/apps/renovate](https://github.com/apps/renovate), choosing
 only this repository, then run `copier update` and answer `renovate`. That writes
 `renovate.json5` and removes `.github/dependabot.yml`, so Renovate skips its onboarding PR.
+Then turn Dependabot security updates off, or each security fix arrives as two PRs:
+`gh api -X DELETE repos/OWNER/REPO/automated-security-fixes`. Leave Dependabot alerts on.
+Renovate reads them to open its own security PRs.
