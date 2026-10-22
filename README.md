@@ -44,7 +44,7 @@ tokens to store. When the template improves, `copier update` pulls the changes i
 ## Quick start
 
 A data pipeline needs [Copier](https://copier.readthedocs.io/en/stable/#installation)
-9.1 or later, [just](https://just.systems) and [uv](https://docs.astral.sh/uv/):
+9.19 or later, [just](https://just.systems) and [uv](https://docs.astral.sh/uv/):
 
 ```sh
 mkdir mydata && cd mydata && git init
@@ -78,7 +78,7 @@ lists what each release changes.
 
 Copier asks for your GitHub user, name and email, and for some Python kinds your ORCID
 iD. They have no defaults, so nobody publishes the template author's details by
-accident. To skip the questions, save your answers once in Copier's
+accident. To have them filled in for you, save your answers once in Copier's
 [settings file](https://copier.readthedocs.io/en/stable/settings/):
 `~/.config/copier/settings.yml` on Linux, `~/Library/Application Support/copier/settings.yml`
 on macOS, or wherever `COPIER_SETTINGS_PATH` points.

@@ -12,6 +12,10 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
+- **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
+  `copier update`. Renovate's copier manager installs the latest Copier.
+- A private repo: answer no to the new `public` question, and `.github/SECURITY.md`
+  goes. Your license answer stays as it is.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -45,6 +49,15 @@ Upgrade steps:
 
 ### Added
 
+- A `public` question, yes by default. No leaves out `.github/SECURITY.md` and makes
+  `none` the license default. See [Public repos](docs/usage.md#public-repos).
+- A `customise` question, no by default, ahead of the advanced questions: license,
+  directories, versions, module names, Codecov, the dependency bot, publishing, test
+  extras and the port. A new Python library, TypeScript web app or data pipeline now
+  asks 10 questions, down from 18, 14 and 15. Every question says what it changes.
+  [The questions](docs/usage.md#the-questions) lists them with their defaults.
+- `copier copy` says where your details can be saved before it asks, and lists the
+  `just` commands to run after it.
 - A `codspeed` option for the Python and Rust stacks: a `benchmarks.yml` workflow runs
   benchmarks on CodSpeed for every pull request and every push to main, with a starter
   benchmark per stack (`pytest-codspeed`, and divan through `codspeed-divan-compat`). Import
