@@ -10,7 +10,7 @@ ts-sync:
 ts-check:
     {{ pnpm }} run check
     {{ pnpm }} run typecheck
-    {{ pnpm }} run test
+    {{ pnpm }} run {{ 'coverage' if codecov else 'test' }}
     {{ pnpm }} run build
 {%- if ts_kind == 'web-app' %}
     {{ pnpm }} run budget
