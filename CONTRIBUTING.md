@@ -91,6 +91,12 @@ adds it. To add it to commits you already made, run `git rebase --signoff upstre
 request from a fork with a commit that lacks it. Pull requests from a branch in this
 repository skip it.
 
+## How pull requests merge
+
+A ruleset on `main` requires the `ci ok`, `git hooks`, `renovate extract` and `DCO sign-off`
+checks. GitHub's auto-merge lands a pull request once they pass, which is also how Renovate's
+non-major updates merge.
+
 ## Who maintains this
 
 Simon van Lierde ([@simonvanlierde](https://github.com/simonvanlierde)) maintains the
