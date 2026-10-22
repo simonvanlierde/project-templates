@@ -24,14 +24,14 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'author_name= Ada Lovelace' \
   --data 'docker_stacks=[python]' . "$out/a"
 
-# b: license=none, and a name, description and author name with punctuation that `slug`
+# b: public=false, so no SECURITY.md and a license that defaults to none, and a name, description and author name with punctuation that `slug`
 # strips and `to_json` escapes. A nested web-service beside the root ts package,
 # so the name also reaches the FastAPI title as a Python literal.
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'project_name=Odd "Name" & Co!' \
   --data 'project_description=A "quoted" one' \
   --data 'author_name=Ada "X" Lovelace' \
-  --data license=none --data 'stacks=[python,ts,docker]' \
+  --data public=false --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
   --data 'docker_stacks=[python,ts]' . "$out/b"
 
@@ -200,6 +200,7 @@ grep -q biomejs.biome a/.vscode/settings.json
 # TOML formats with tombi, which reads the shipped .tombi.toml; taplo would not.
 grep -q tombi-toml.tombi a/.vscode/settings.json
 test -f a/.github/SECURITY.md
+test ! -e b/.github/SECURITY.md
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
 (! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.
@@ -284,7 +285,7 @@ test ! -e a/renovate.json5
 test -f d/renovate.json5
 test ! -e d/.github/dependabot.yml
 (! grep -q working-directory a/just/go.just)
-# license=none: no file and no license key.
+# public=false defaults the license to none: no file and no license key.
 test ! -e b/LICENSE
 (! grep -q '"license"' b/package.json)
 (! grep -q 'image.licenses' b/Dockerfile)

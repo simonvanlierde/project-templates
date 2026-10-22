@@ -1,5 +1,51 @@
 # Using the template
 
+## The questions
+
+A new project asks at most ten questions for a single stack: the details only you know,
+then one switch for everything else. They come in this order:
+
+| Question              | Asked when                         | What it changes                                                    |
+| --------------------- | ---------------------------------- | ------------------------------------------------------------------ |
+| `project_name`        | always                             | Repo and directory name; package, crate and image names come from it |
+| `project_description` | always                             | One line for the README, package metadata and citation files       |
+| `stacks`              | always                             | Which packages, CI workflows and `just` recipes the repo gets      |
+| `kind`, `ts_kind`, `rust_kind`, `go_kind` | that stack is picked | What the package is: its layout, extra files and CI          |
+| `web_framework`       | `ts_kind=web-app`                  | React, or Preact for a smaller bundle                              |
+| `public`              | always                             | Yes adds `.github/SECURITY.md`, and sets the license default       |
+| `github_user`, `author_name`, `author_email` | always      | Repo URLs and badges, the license, package metadata                |
+| `author_orcid`        | a `library`, `research` or `data-pipeline` Python kind | The citation files                    |
+| `customise`           | always                             | Yes asks the advanced questions below; no takes their defaults     |
+| `docker_stacks`       | the `docker` stack                 | Which packages get a Dockerfile and a compose service              |
+
+The identity answers have no defaults. The README says how to save them once.
+
+With `customise` left at no, the advanced questions take these defaults:
+
+| Question                                        | Default                                          |
+| ----------------------------------------------- | ------------------------------------------------ |
+| `license`, `copyright_year`                     | MIT if `public`, otherwise none; this year       |
+| `python_dir`, `ts_dir`, `rust_dir`, `go_dir`    | `.`: each package at the repo root               |
+| `dependency_bot`                                | Dependabot                                       |
+| `codecov`                                       | off                                              |
+| `module_name`, `go_module`                      | made from the project name and GitHub user       |
+| `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | the current releases; `python_min` two minors below `python_version` |
+| `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | off ([Publishing](#publishing))           |
+| `test_extras`                                   | none ([Test extras](#test-extras))               |
+| `app_port`                                      | 8000                                             |
+
+On `copier update`, an advanced question you answered before keeps its answer even when
+`customise` is no. To change one answer without the others, pass it:
+`copier update --data codecov=true`. Copier 9.19 or later is needed for this switch.
+
+## Public repos
+
+`public` is yes by default. Answer no for a private repo, and the template leaves out
+`.github/SECURITY.md`, which only outsiders need, and licenses nothing unless you pick a
+license under `customise`. When the repo goes public, run
+`copier update --data public=true`: that adds the files back. It does not change a
+license you already answered.
+
 ## Choosing your stacks
 
 The `stacks` question is a multi-select. Pick any combination:
@@ -14,7 +60,7 @@ The `stacks` question is a multi-select. Pick any combination:
 
 Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
 `just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`
-(unless `license=none`), `SECURITY.md`, `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
+(unless `license=none`), `SECURITY.md` (unless `public=false`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
 recommendations. A Python project also picks a [kind](python-kinds.md).
 
 ## TypeScript kinds
@@ -71,7 +117,7 @@ so the edits from step 2 stay.
 ## One package or a monorepo
 
 By default, each package sits at the repository root. To put several packages in one
-repository, give each a directory when Copier asks, such as `python_dir: apps/api` and
+repository, answer yes to `customise` and give each a directory, such as `python_dir: apps/api` and
 `ts_dir: apps/web`:
 
 ```text
@@ -135,8 +181,8 @@ the commit you started from.
 
 ## Test extras
 
-A library kind (Python, TypeScript, Rust or Go) also asks for `test_extras`, empty by
-default. Pick either or both:
+A library kind (Python, TypeScript, Rust or Go) also asks for `test_extras` under
+`customise`, empty by default. Pick either or both:
 
 | Choice     | Python                  | TypeScript               | Rust                      | Go                          |
 | ---------- | ----------------------- | ------------------------ | ------------------------- | --------------------------- |
@@ -180,7 +226,7 @@ registry needs to trust your repository first. To turn publishing on:
    `main`), and add yourself as a required reviewer. Without this, GitHub creates the
    environment unprotected on the first run, and anyone who can push a branch can
    publish from it.
-4. Run `copier update`, and answer yes to the publish option.
+4. Run `copier update --data publish_to_pypi=true` (or the npm or ghcr option).
 
 ## Coverage on Codecov
 
@@ -192,7 +238,7 @@ To turn it on:
 
 1. Add the repository on codecov.io and copy its upload token.
 2. Save it as the `CODECOV_TOKEN` repository secret (`gh secret set CODECOV_TOKEN`).
-3. Run `copier update`, and answer yes to `codecov`.
+3. Run `copier update --data codecov=true`.
 
 ## Dependency updates
 
@@ -200,5 +246,5 @@ To turn it on:
 into GitHub) or Renovate. Both follow the rules in
 [tooling](tooling.md#dependencies), which also names the one difference. Renovate needs its GitHub App on the repository:
 install it from [github.com/apps/renovate](https://github.com/apps/renovate), choosing
-only this repository, then run `copier update` and answer `renovate`. That writes
+only this repository, then run `copier update --data dependency_bot=renovate`. That writes
 `renovate.json5` and removes `.github/dependabot.yml`, so Renovate skips its onboarding PR.
