@@ -1,6 +1,6 @@
 _subdirectory: template
-# `stacks` is a multiselect, which needs 9.1.0.
-_min_copier_version: "9.1.0"
+# `ask:` hides the advanced questions behind `customise`, which needs 9.19.0.
+_min_copier_version: "9.19.0"
 # Written once, then owned by the project: `copier update` leaves them alone. A
 # release adds its version, date and DOI to the citation files, and an update would
 # then conflict with that edit every time. The web-app entries are its starter files,
@@ -20,9 +20,28 @@ _skip_if_exists:
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
   - "{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
 
+# Shown on `copier copy` only; `--quiet` hides both.
+_message_before_copy: |
+  Each question says what it changes, and most have a default. Your GitHub user, name
+  and email can come from Copier's settings file instead: see "Your details" in
+  https://github.com/simonvanlierde/project-templates#your-details
+_message_after_copy: |
+  Next, in the new project:
+  {%- for stack in stacks if stack != 'docker' %}
+    just {{ {'python': 'py', 'ts': 'ts', 'rust': 'rs', 'go': 'go'}[stack] }}-sync
+  {%- endfor %}
+    just check
+  Then commit, lockfiles included: CI installs exactly what they list.
+
+# The questions run from what the user knows (name, kind, who owns it) to tooling
+# detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
+# takes its default, or keeps its stored answer on `copier update`. Never hide an
+# asked question with `when: false` instead: copier then drops its stored answer on
+# update and recomputes it. docs/usage.md lists the tree.
+
 project_name:
   type: str
-  help: Project name (directory / repo name)
+  help: Project name, used for the repo and directory; package, crate and image names are made from it
   default: "{{ _copier_conf.dst_path.name }}"
   validator: >-
     {% if not (project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '')|regex_search('^[a-z0-9]')) %}
@@ -37,58 +56,13 @@ slug:
 
 project_description:
   type: str
-  help: One-line description
+  help: One-line description, for the README, package metadata and citation files
   default: ""
-
-github_user:
-  type: str
-  help: GitHub user or org
-  # No personal defaults: `copier copy --defaults` would publish them. Set your own
-  # once under `defaults:` in copier's settings.yml (see README).
-  default: ""
-  validator: >-
-    {% if not github_user|regex_search('^[A-Za-z0-9][A-Za-z0-9-]*$') %}
-    Give the GitHub user or org that will own the repo.
-    {% endif %}
-
-author_name:
-  type: str
-  help: Author name, for package metadata and the license
-  default: ""
-  validator: >-
-    {% if not author_name|trim %}
-    Give an author name: the license and package metadata need one.
-    {% endif %}
-
-author_email:
-  type: str
-  help: Author email, for package metadata and SECURITY.md
-  default: ""
-  validator: >-
-    {% if not author_email|regex_search('^[^@\\s]+@[^@\\s]+$') %}
-    Give an email address: SECURITY.md sends vulnerability reports to it.
-    {% endif %}
-
-license:
-  type: str
-  help: License (texts are the canonical ones from the GitHub licenses API)
-  choices:
-    MIT (permissive, shortest): MIT
-    Apache-2.0 (permissive, explicit patent grant): Apache-2.0
-    BSD-3-Clause (permissive, no endorsement clause): BSD-3-Clause
-    None (not licensed for redistribution): none
-  default: MIT
-
-copyright_year:
-  type: str
-  when: "{{ license != 'none' }}"
-  help: Copyright year
-  default: "{{ '%Y' | strftime }}"
 
 stacks:
   type: str
   multiselect: true
-  help: Which stacks this repo uses
+  help: Languages and tools in this repo; each adds its package, CI workflow and `just` recipes
   choices: [python, ts, rust, go, docker]
   default: [python]
   validator: >-
@@ -96,60 +70,10 @@ stacks:
     Pick at least one stack: with none, `just check` checks nothing.
     {% endif %}
 
-# `.` is a single-package repo. Any other value nests only the package. Workflows,
-# hooks, justfile and answers file stay at the root. includes/dir.jinja holds the
-# path check all four *_dir questions share.
-python_dir:
-  type: str
-  when: "{{ 'python' in stacks }}"
-  help: Directory holding the Python package (`.` for the repo root, `apps/api` for a monorepo)
-  default: "."
-  validator: "{% from 'includes/dir.jinja' import dir_error %}{{ dir_error(python_dir, 'apps/api') }}"
-
-ts_dir:
-  type: str
-  when: "{{ 'ts' in stacks }}"
-  help: Directory holding the TypeScript package (`.` for the repo root, `apps/web` for a monorepo)
-  default: "."
-  validator: "{% from 'includes/dir.jinja' import dir_error %}{{ dir_error(ts_dir, 'apps/web') }}"
-
-rust_dir:
-  type: str
-  when: "{{ 'rust' in stacks }}"
-  help: Directory holding the Rust crate (`.` for the repo root, `crates/core` for a monorepo)
-  default: "."
-  validator: "{% from 'includes/dir.jinja' import dir_error %}{{ dir_error(rust_dir, 'crates/core') }}"
-
-go_dir:
-  type: str
-  when: "{{ 'go' in stacks }}"
-  help: Directory holding the Go module (`.` for the repo root, `services/api` for a monorepo)
-  default: "."
-  validator: "{% from 'includes/dir.jinja' import dir_error %}{{ dir_error(go_dir, 'services/api') }}"
-
-codecov:
-  type: bool
-  when: "{{ 'python' in stacks or 'ts' in stacks }}"
-  help: Upload test coverage to Codecov (needs a CODECOV_TOKEN repository secret)
-  default: false
-
-# Who opens dependency-update PRs. Both get the same rules: weekly, a one-week cooldown,
-# grouped actions, hooks and dev tooling, and no updates to the copier-owned FROM tags.
-# Only Dependabot also groups npm security updates (docs/tooling.md#dependencies).
-dependency_bot:
-  type: str
-  help: Which bot opens dependency updates
-  choices:
-    Dependabot (built into GitHub, nothing to install): dependabot
-    Renovate (needs the Renovate GitHub App on the repo): renovate
-  default: dependabot
-
-# --- python -------------------------------------------------------------------
-
 kind:
   type: str
   when: "{{ 'python' in stacks }}"
-  help: What kind of Python project
+  help: What the Python package is; sets its layout, extra files and CI
   choices:
     Library (packaged, publishable to PyPI): library
     Application (packaged, not published): app
@@ -162,76 +86,10 @@ kind:
     A web service ships as a container: add docker to `stacks` too.
     {% endif %}
 
-module_name:
-  type: str
-  when: "{{ 'python' in stacks }}"
-  help: Importable Python module name
-  default: "{{ slug|replace('-', '_')|replace('.', '_') }}"
-  validator: >-
-    {% set keywords = ['and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield'] %}
-    {% if not module_name|regex_search('^[a-z_][a-z0-9_]*$') %}
-    A module name is lower-case letters, digits and `_`, and cannot start with a digit.
-    {% elif module_name in keywords %}
-    `{{ module_name }}` is a Python keyword, so the package could not be imported: pick another module name.
-    {% endif %}
-
-# Computed, never asked: the kinds that get CITATION.cff, .zenodo.json, codemeta.json
-# and the hook that checks CITATION.cff.
-citable:
-  type: bool
-  when: false
-  default: "{{ 'python' in stacks and kind in ('library', 'research', 'data-pipeline') }}"
-
-author_orcid:
-  type: str
-  when: "{{ citable }}"
-  help: ORCID iD for the citation files, as 0000-0000-0000-0000 (blank for none)
-  default: ""
-  validator: >-
-    {% if author_orcid and not author_orcid|regex_search('^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$') %}
-    Give the bare iD, as 0000-0000-0000-0000, without the https://orcid.org/ prefix.
-    {% endif %}
-
-# The default trails a new Python release by 90 days (renovate.json5), so the
-# packages scaffolds install have wheels for it.
-# renovate: datasource=python-version depName=python
-python_version:
-  type: str
-  when: "{{ 'python' in stacks }}"
-  help: Python version (3.12 or later)
-  default: "3.14"
-  validator: >-
-    {% if not python_version|regex_search('^3\\.(1[2-9]|[2-9][0-9])$') %}
-    Give a version from 3.12 up, as `3.14`: the template uses `type` statements.
-    {% endif %}
-
-# A library's requires-python floor and the oldest version its CI tests. SPEC 0
-# supports a Python release for three years, about three minors, so the default is
-# two minors below python_version, and never below the template's own 3.12.
-python_min:
-  type: str
-  when: "{{ 'python' in stacks and kind == 'library' }}"
-  help: Oldest Python the library supports (requires-python, tested in CI)
-  default: "3.{{ [python_version.split('.')[1] | int - 2, 12] | max }}"
-  validator: >-
-    {% if not python_min|regex_search('^3\\.(1[2-9]|[2-9][0-9])$') %}
-    Give a version from 3.12 up, as `3.13`: the template uses `type` statements.
-    {% elif python_min.split('.')[1]|int > python_version.split('.')[1]|int %}
-    The oldest supported version can't be newer than python_version ({{ python_version }}).
-    {% endif %}
-
-publish_to_pypi:
-  type: bool
-  when: "{{ 'python' in stacks and kind == 'library' }}"
-  help: Add a release workflow publishing to PyPI via trusted publishing (needs setup on pypi.org first)
-  default: false
-
-# --- ts -----------------------------------------------------------------------
-
 ts_kind:
   type: str
   when: "{{ 'ts' in stacks }}"
-  help: What kind of TypeScript project
+  help: What the TypeScript package is; a Node package, or a browser app on Cloudflare Pages
   choices:
     Library (publishes dist/ and type declarations): library
     Application (builds to dist/, not published): app
@@ -243,30 +101,16 @@ ts_kind:
 web_framework:
   type: str
   when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
-  help: Which UI library the web app uses
+  help: UI library for the web app; Preact runs the same React code in a smaller bundle
   choices:
     React: react
     Preact (React API through preact/compat, a smaller bundle): preact
   default: react
 
-# renovate: datasource=node-version depName=node
-node_version:
-  type: str
-  when: "{{ 'ts' in stacks }}"
-  help: Node.js major version
-  default: "26"
-
-publish_to_npm:
-  type: bool
-  when: "{{ 'ts' in stacks and ts_kind == 'library' }}"
-  help: Add a release workflow publishing to npm via trusted publishing (needs setup on npmjs.com first)
-  default: false
-
-# --- rust ---------------------------------------------------------------------
-
 rust_kind:
   type: str
   when: "{{ 'rust' in stacks }}"
+  help: What the Rust crate is; a library gets the public-API lints and doctests
   choices:
     Library (src/lib.rs, documented public API): library
     Binary (src/main.rs, may print): binary
@@ -289,12 +133,234 @@ crate_name:
   when: false
   default: "{{ slug|replace('.', '-') }}"
 
+go_kind:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  help: What the Go module is; a library gets a package named after the project and an Example
+  choices:
+    Library (a package at the module root, with an Example): library
+    Binary (package main at the module root): binary
+  default: library
+
+# Computed, never asked. A package name is one lowercase identifier: no `-` or
+# `.`, which a slug may carry.
+go_package:
+  type: str
+  when: false
+  default: "{{ slug|regex_replace('[^a-z0-9]', '') }}"
+
+# Computed, never asked: the kinds that get CITATION.cff, .zenodo.json, codemeta.json
+# and the hook that checks CITATION.cff.
+citable:
+  type: bool
+  when: false
+  default: "{{ 'python' in stacks and kind in ('library', 'research', 'data-pipeline') }}"
+
+# What only outsiders need. True by default: answers files from before this
+# question had SECURITY.md, and an update with the default keeps it.
+public:
+  type: bool
+  help: Will the repo be public? Yes adds .github/SECURITY.md, which says where to report a vulnerability
+  default: true
+
+github_user:
+  type: str
+  help: GitHub user or org that will own the repo, for its URLs and badges
+  # No personal defaults: `copier copy --defaults` would publish them. Set your own
+  # once under `defaults:` in copier's settings.yml (see README).
+  default: ""
+  validator: >-
+    {% if not github_user|regex_search('^[A-Za-z0-9][A-Za-z0-9-]*$') %}
+    Give the GitHub user or org that will own the repo.
+    {% endif %}
+
+author_name:
+  type: str
+  help: Author name, for the license and package metadata
+  default: ""
+  validator: >-
+    {% if not author_name|trim %}
+    Give an author name: the license and package metadata need one.
+    {% endif %}
+
+author_email:
+  type: str
+  help: Author email, for package metadata and SECURITY.md
+  default: ""
+  validator: >-
+    {% if not author_email|regex_search('^[^@\\s]+@[^@\\s]+$') %}
+    Give an email address: package metadata and SECURITY.md use it.
+    {% endif %}
+
+author_orcid:
+  type: str
+  when: "{{ citable }}"
+  help: ORCID iD for the citation files, as 0000-0000-0000-0000 (blank for none)
+  default: ""
+  validator: >-
+    {% if author_orcid and not author_orcid|regex_search('^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$') %}
+    Give the bare iD, as 0000-0000-0000-0000, without the https://orcid.org/ prefix.
+    {% endif %}
+
+customise:
+  type: bool
+  help: Customise advanced settings (license, directories, versions, publishing, CI extras)? No keeps the defaults in docs/usage.md
+  default: false
+
+# --- advanced -----------------------------------------------------------------
+
+license:
+  type: str
+  ask: "{{ customise }}"
+  help: License (texts are the canonical ones from the GitHub licenses API)
+  choices:
+    MIT (permissive, shortest): MIT
+    Apache-2.0 (permissive, explicit patent grant): Apache-2.0
+    BSD-3-Clause (permissive, no endorsement clause): BSD-3-Clause
+    None (not licensed for redistribution): none
+  # A private repo is not licensed to anyone unless its owner says so.
+  default: "{{ 'MIT' if public else 'none' }}"
+
+copyright_year:
+  type: str
+  when: "{{ license != 'none' }}"
+  ask: "{{ customise }}"
+  help: Copyright year in the license
+  default: "{{ '%Y' | strftime }}"
+
+# `.` is a single-package repo. Any other value nests only the package. Workflows,
+# hooks, justfile and answers file stay at the root. includes/dir.jinja holds the
+# path check all four *_dir questions share.
+python_dir:
+  type: str
+  when: "{{ 'python' in stacks }}"
+  ask: "{{ customise }}"
+  help: Directory holding the Python package (`.` for the repo root, `apps/api` for a monorepo)
+  default: "."
+  validator: "{% from 'includes/dir.jinja' import dir_error %}{{ dir_error(python_dir, 'apps/api') }}"
+
+ts_dir:
+  type: str
+  when: "{{ 'ts' in stacks }}"
+  ask: "{{ customise }}"
+  help: Directory holding the TypeScript package (`.` for the repo root, `apps/web` for a monorepo)
+  default: "."
+  validator: "{% from 'includes/dir.jinja' import dir_error %}{{ dir_error(ts_dir, 'apps/web') }}"
+
+rust_dir:
+  type: str
+  when: "{{ 'rust' in stacks }}"
+  ask: "{{ customise }}"
+  help: Directory holding the Rust crate (`.` for the repo root, `crates/core` for a monorepo)
+  default: "."
+  validator: "{% from 'includes/dir.jinja' import dir_error %}{{ dir_error(rust_dir, 'crates/core') }}"
+
+go_dir:
+  type: str
+  when: "{{ 'go' in stacks }}"
+  ask: "{{ customise }}"
+  help: Directory holding the Go module (`.` for the repo root, `services/api` for a monorepo)
+  default: "."
+  validator: "{% from 'includes/dir.jinja' import dir_error %}{{ dir_error(go_dir, 'services/api') }}"
+
+# Who opens dependency-update PRs. Both get the same rules: weekly, a one-week cooldown,
+# grouped actions, hooks and dev tooling, and no updates to the copier-owned FROM tags.
+# Only Dependabot also groups npm security updates (docs/tooling.md#dependencies).
+dependency_bot:
+  type: str
+  ask: "{{ customise }}"
+  help: Which bot opens dependency updates
+  choices:
+    Dependabot (built into GitHub, nothing to install): dependabot
+    Renovate (needs the Renovate GitHub App on the repo): renovate
+  default: dependabot
+
+codecov:
+  type: bool
+  when: "{{ 'python' in stacks or 'ts' in stacks }}"
+  ask: "{{ customise }}"
+  help: Upload test coverage to Codecov (needs a CODECOV_TOKEN repository secret)
+  default: false
+
+# --- python -------------------------------------------------------------------
+
+module_name:
+  type: str
+  when: "{{ 'python' in stacks }}"
+  ask: "{{ customise }}"
+  help: Importable Python module name
+  default: "{{ slug|replace('-', '_')|replace('.', '_') }}"
+  validator: >-
+    {% set keywords = ['and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield'] %}
+    {% if not module_name|regex_search('^[a-z_][a-z0-9_]*$') %}
+    A module name is lower-case letters, digits and `_`, and cannot start with a digit.
+    {% elif module_name in keywords %}
+    `{{ module_name }}` is a Python keyword, so the package could not be imported: pick another module name.
+    {% endif %}
+
+# The default trails a new Python release by 90 days (renovate.json5), so the
+# packages scaffolds install have wheels for it.
+# renovate: datasource=python-version depName=python
+python_version:
+  type: str
+  when: "{{ 'python' in stacks }}"
+  ask: "{{ customise }}"
+  help: Python version (3.12 or later)
+  default: "3.14"
+  validator: >-
+    {% if not python_version|regex_search('^3\\.(1[2-9]|[2-9][0-9])$') %}
+    Give a version from 3.12 up, as `3.14`: the template uses `type` statements.
+    {% endif %}
+
+# A library's requires-python floor and the oldest version its CI tests. SPEC 0
+# supports a Python release for three years, about three minors, so the default is
+# two minors below python_version, and never below the template's own 3.12.
+python_min:
+  type: str
+  when: "{{ 'python' in stacks and kind == 'library' }}"
+  ask: "{{ customise }}"
+  help: Oldest Python the library supports (requires-python, tested in CI)
+  default: "3.{{ [python_version.split('.')[1] | int - 2, 12] | max }}"
+  validator: >-
+    {% if not python_min|regex_search('^3\\.(1[2-9]|[2-9][0-9])$') %}
+    Give a version from 3.12 up, as `3.13`: the template uses `type` statements.
+    {% elif python_min.split('.')[1]|int > python_version.split('.')[1]|int %}
+    The oldest supported version can't be newer than python_version ({{ python_version }}).
+    {% endif %}
+
+publish_to_pypi:
+  type: bool
+  when: "{{ 'python' in stacks and kind == 'library' }}"
+  ask: "{{ customise }}"
+  help: Add a release workflow publishing to PyPI via trusted publishing (needs setup on pypi.org first)
+  default: false
+
+# --- ts -----------------------------------------------------------------------
+
+# renovate: datasource=node-version depName=node
+node_version:
+  type: str
+  when: "{{ 'ts' in stacks }}"
+  ask: "{{ customise }}"
+  help: Node.js major version
+  default: "26"
+
+publish_to_npm:
+  type: bool
+  when: "{{ 'ts' in stacks and ts_kind == 'library' }}"
+  ask: "{{ customise }}"
+  help: Add a release workflow publishing to npm via trusted publishing (needs setup on npmjs.com first)
+  default: false
+
+# --- rust ---------------------------------------------------------------------
+
 # The crate's rust-version: its minimum supported Rust version (MSRV). Clippy
 # reads it too, and skips lints that suggest newer APIs. Defaults to the current stable minor.
 # renovate: datasource=github-releases depName=rust-lang/rust
 rust_version:
   type: str
   when: "{{ 'rust' in stacks }}"
+  ask: "{{ customise }}"
   help: Minimum supported Rust version (Cargo.toml rust-version)
   default: "1.99.0"
   validator: >-
@@ -304,17 +370,10 @@ rust_version:
 
 # --- go -----------------------------------------------------------------------
 
-go_kind:
-  type: str
-  when: "{{ 'go' in stacks }}"
-  choices:
-    Library (a package at the module root, with an Example): library
-    Binary (package main at the module root): binary
-  default: library
-
 go_module:
   type: str
   when: "{{ 'go' in stacks }}"
+  ask: "{{ customise }}"
   help: Go module path (go.mod `module`)
   default: "github.com/{{ github_user }}/{{ slug }}"
   # go_package is computed, and copier skips validators on computed questions,
@@ -329,13 +388,6 @@ go_module:
     A library named `{{ pkg }}` can't be a Go package: it is a Go keyword or `main`. Pick another project name.
     {% endif %}
 
-# Computed, never asked. A package name is one lowercase identifier: no `-` or
-# `.`, which a slug may carry.
-go_package:
-  type: str
-  when: false
-  default: "{{ slug|regex_replace('[^a-z0-9]', '') }}"
-
 # go.mod's `go` directive: the oldest Go the module builds with, and the
 # language version the linters check against. Defaults to the current stable
 # minor. golangci-lint must be built with at least this Go.
@@ -343,6 +395,7 @@ go_package:
 go_version:
   type: str
   when: "{{ 'go' in stacks }}"
+  ask: "{{ customise }}"
   help: Minimum Go version (go.mod `go` directive)
   default: "1.27"
 
@@ -381,6 +434,7 @@ test_extras:
   when: >-
     {{ ('python' in stacks and kind == 'library') or ('ts' in stacks and ts_kind == 'library')
     or ('rust' in stacks and rust_kind == 'library') or ('go' in stacks and go_kind == 'library') }}
+  ask: "{{ customise }}"
   help: Extra tests for the library code (none, one or both)
   choices:
     Property tests (generated inputs checked against a rule, run with the tests): property
@@ -406,6 +460,8 @@ gremlins_version:
 
 # --- docker -------------------------------------------------------------------
 
+# Asked even without `customise`: the right images depend on the stacks, and its
+# validator reads the *_dir answers, so it stays after them.
 docker_stacks:
   type: str
   multiselect: true
@@ -426,13 +482,15 @@ docker_stacks:
     {% elif kind == 'web-service' and 'python' not in docker_stacks %}
     The web-service kind is the python image: add python to `docker_stacks`.
     {% elif docker_stacks | length > 1 and python_dir == ts_dir %}
-    Both images would be written to {{ python_dir }}/Dockerfile. Give python_dir
+    Both images would be written to {{ python_dir }}/Dockerfile. Answer yes to
+    `customise` and give python_dir
     and ts_dir different values first.
     {% endif %}
 
 app_port:
   type: int
   when: "{{ 'docker' in stacks }}"
+  ask: "{{ customise }}"
   help: Port the service listens on
   default: 8000
   # A second image publishes on the next host port up (compose.yaml).
@@ -446,5 +504,6 @@ app_port:
 publish_to_ghcr:
   type: bool
   when: "{{ 'docker' in stacks }}"
+  ask: "{{ customise }}"
   help: Push the image to GitHub Container Registry (CI builds it either way)
   default: false
