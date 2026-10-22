@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   check:
-    name: lint, types, tests
+    name: "ts: lint, types, tests"
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 10
