@@ -19,6 +19,9 @@ Upgrade steps:
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
+- With `dependency_bot=renovate`: turn Dependabot security updates off
+  (`gh api -X DELETE repos/OWNER/REPO/automated-security-fixes`), or each security fix
+  arrives as two PRs. Keep Dependabot alerts on: Renovate's security PRs need them.
 - **Breaking:** in a Go library made with v0.10.0 or earlier, `copier update` deletes
   `<package>_test.go` without asking, your changes to it included, and adds
   `add_test.go`. Before you commit the update, run `git checkout HEAD -- <package>_test.go`
@@ -102,6 +105,11 @@ Upgrade steps:
 
 ### Changed
 
+- `pnpm audit --fix=update` locks a security fix that is under a week old: it adds the
+  patched version to `minimumReleaseAgeExclude`, and the new
+  `minimumReleaseAgeExcludePrune` drops the entry once the lockfile moves past it.
+- With `dependency_bot=renovate`, Renovate refreshes the lockfiles every Monday. That is
+  how a security fix in a dependency of a dependency arrives, once it is a week old.
 - **Breaking:** after updating, switch a ruleset or branch protection that requires the
   `lint, types, tests` check to the new names, or pull requests wait on a check that never
   reports. The TypeScript and Python check jobs are now `ts: lint, types, tests` and
