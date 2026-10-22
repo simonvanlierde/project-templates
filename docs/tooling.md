@@ -54,9 +54,10 @@ carry a stack prefix: `py-`, `ts-`, `rs-` or `go-`. The exceptions are a few rec
 one kind has: `fetch`, `build`, `validate` and `pipeline` (data-pipeline), `serve`
 (web-service) and `up` (docker). `just check` runs the checks for every stack you picked.
 
-Coverage is opt-in. `just py-cov` and `just ts-cov` print a summary. `just check`
-doesn't run them. They set no threshold and write no report files. With the `codecov`
-option, CI writes its own report and uploads it to Codecov.
+Coverage is opt-in. `just py-cov` and `just ts-cov` print a summary. They set no
+threshold and write no report files. With the `codecov` option, CI writes its own report
+and uploads it to Codecov. `just check` then runs the TypeScript tests with coverage too,
+as CI does, so a threshold you add to `vitest.config.ts` fails locally as well.
 
 ## Docker images
 

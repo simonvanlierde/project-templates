@@ -56,13 +56,30 @@ and `tests/e2e/routes.ts`. Every other file keeps receiving template changes.
    `copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .`,
    answering `ts_kind=web-app` and the framework the app uses.
 2. A first copy has nothing to merge with, so it overwrites every file it writes.
-   Review `git diff` and restore the app's own versions of the starter files above,
-   and of any config it has extended: `vite.config.ts` and `vitest.config.ts` for
-   extra plugins or test setup, `public/_headers` for a looser policy the app needs,
-   the `name` in `package.json` and `wrangler.jsonc`, and the README.
-3. Move any inline script in `index.html` to a file under `public/`, so the app runs
+   It also adds the starter files the app may not have: `src/App.tsx`,
+   `src/App.test.tsx` and `src/app.css` land next to the app's own components and
+   styles. Review `git diff`:
+   - Delete the starter files the app doesn't use, and restore its own versions of
+     the rest.
+   - Restore `vite.config.ts` and `vitest.config.ts` if the app added plugins, test
+     setup or coverage thresholds. Copier replaces both.
+   - Restore the `name` in `package.json` and `wrangler.jsonc`, which become the
+     project slug, and the README.
+   - Restore `public/_headers` if the app needs a looser policy.
+3. Run `pnpm install`. The template's `pnpm-workspace.yaml` only accepts releases at
+   least a week old, so it rejects a lockfile that holds a newer one. List each
+   package it names under `minimumReleaseAgeExclude` in that file, with a date a week
+   from now, and delete the list on that date (see [tooling](tooling.md#dependencies)):
+
+   ```yaml
+   # Delete after 2026-10-28: resolved before the one-week wait applied.
+   minimumReleaseAgeExclude:
+     - vite@8.3.5
+   ```
+
+4. Move any inline script in `index.html` to a file under `public/`, so the app runs
    under `script-src 'self'`. Then run `just check` and `just ts-e2e`.
-4. Delete the workflows the template replaces, and point branch protection at the
+5. Delete the workflows the template replaces, and point branch protection at the
    new job names. Commit, including `.copier-answers.yml`.
 
 Later `copier update` runs merge the template's changes since the recorded commit,
