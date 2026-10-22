@@ -58,6 +58,11 @@ Upgrade steps:
   [The questions](docs/usage.md#the-questions) lists them with their defaults.
 - `copier copy` says where your details can be saved before it asks, and lists the
   `just` commands to run after it.
+- A `codspeed` option for the Python and Rust stacks: a `benchmarks.yml` workflow runs
+  benchmarks on CodSpeed for every pull request and every push to main, with a starter
+  benchmark per stack (`pytest-codspeed`, and divan through `codspeed-divan-compat`). Import
+  the repository on codspeed.io and set Pull Request comments to "On Change" there; see
+  [usage](docs/usage.md#benchmarks-on-codspeed).
 - A `web-app` TypeScript kind: a Vite single-page app with React or Preact (the new
   `web_framework` question), deployed by Cloudflare Pages' Git integration. The docker
   stack builds no image for it, since it is static files.

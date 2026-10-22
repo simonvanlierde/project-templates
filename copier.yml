@@ -282,6 +282,13 @@ codecov:
   help: Upload test coverage to Codecov (needs a CODECOV_TOKEN repository secret)
   default: false
 
+codspeed:
+  type: bool
+  when: "{{ 'python' in stacks or 'rust' in stacks }}"
+  ask: "{{ customise }}"
+  help: Benchmark pull requests on CodSpeed (needs the repository imported on codspeed.io)
+  default: false
+
 # --- python -------------------------------------------------------------------
 
 module_name:
@@ -448,6 +455,12 @@ proptest_version:
   type: str
   when: false
   default: 1.12.0
+
+# renovate: datasource=crate depName=codspeed-divan-compat
+divan_version:
+  type: str
+  when: false
+  default: 6.0.0
 
 # Computed, never asked: the gremlins that `just go-mutation` runs with `go run`.
 # Not a go.mod tool, which would pull its ~34 modules into the project's module

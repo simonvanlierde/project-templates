@@ -13,10 +13,22 @@ license = "{{ license }}"
 publish = false
 
 [dependencies]
-{%- if rust_kind == 'library' and 'property' in test_extras %}
+{%- if codspeed or (rust_kind == 'library' and 'property' in test_extras) %}
 
 [dev-dependencies]
+{%- if codspeed %}
+divan = { version = "{{ divan_version }}", package = "codspeed-divan-compat" }
+{%- endif %}
+{%- if rust_kind == 'library' and 'property' in test_extras %}
 proptest = "{{ proptest_version }}"
+{%- endif %}
+{%- endif %}
+{%- if codspeed %}
+
+# harness = false: divan supplies main. CodSpeed measures it in .github/workflows/benchmarks.yml.
+[[bench]]
+name = "codspeed"
+harness = false
 {%- endif %}
 
 # Clippy has no user-wide config: lint levels take effect only from this table.

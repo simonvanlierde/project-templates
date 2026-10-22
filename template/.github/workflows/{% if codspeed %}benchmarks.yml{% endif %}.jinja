@@ -1,0 +1,104 @@
+name: benchmarks
+
+# CodSpeed measures the benchmarks on every pull request and compares them with main.
+# Simulation mode counts CPU instructions, so a noisy runner does not move the result.
+# Pushes to main run too, with no path filter: a pull request is compared with its base
+# commit, which needs a result of its own. The upload signs in with the job's OIDC token,
+# so there is no secret.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: {% raw %}${{ github.event_name == 'pull_request' }}{% endraw %}
+{%- if 'python' in stacks %}
+
+jobs:
+  python:
+    name: "codspeed: python"
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # OpenID Connect sign-in to CodSpeed
+{%- if python_dir != '.' %}
+    defaults:
+      run:
+        working-directory: {{ python_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: true
+          version: "{{ uv_version }}"
+
+      - run: uv sync --locked
+
+      - uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062 # v5.6.0
+        with:
+          mode: simulation
+{%- if python_dir != '.' %}
+          working-directory: {{ python_dir }}
+{%- endif %}
+          run: uv run pytest tests/test_benchmarks.py --codspeed
+{%- endif %}
+{%- if 'rust' in stacks %}
+{%- if 'python' not in stacks %}
+
+jobs:
+{%- endif %}
+  rust:
+    name: "codspeed: rust"
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # OpenID Connect sign-in to CodSpeed
+{%- if rust_dir != '.' %}
+    # Only `run:` steps take this, so rust-cache is pointed at the crate separately.
+    defaults:
+      run:
+        working-directory: {{ rust_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+{%- if rust_dir != '.' %}
+        with:
+          workspaces: {{ rust_dir }}
+{%- endif %}
+
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: cargo-codspeed@{{ divan_version }}
+
+      - run: cargo codspeed build -m simulation --locked
+
+      - uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062 # v5.6.0
+        with:
+          mode: simulation
+{%- if rust_dir != '.' %}
+          working-directory: {{ rust_dir }}
+{%- endif %}
+          run: cargo codspeed run
+{%- endif %}
