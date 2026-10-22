@@ -74,6 +74,10 @@ dependencies, and wait a week, or a month for a major version of
 a package dependency. A runtime major gets a PR of its own. The bot's security PRs skip the wait. The one difference: Dependabot
 also groups npm security updates into a single PR, and the Renovate config has no such group.
 
+Renovate also refreshes the uv, pnpm and Cargo lockfiles every Monday. Its security PRs
+cover only the dependencies a manifest names, so a fix in a dependency of a dependency
+arrives with that refresh, once the fix is a week old.
+
 uv's `exclude-newer = "1 week"` and pnpm's `minimumReleaseAge` hold back the same
 releases, so `uv lock` or `pnpm install` can't pull in one that the bot is still waiting
 on. Go has no such setting. These two settings have no security exception. A fix released
