@@ -298,8 +298,8 @@ grep -q charliermarsh.ruff a/.vscode/extensions.json
 grep -q biomejs.biome a/.vscode/settings.json
 # TOML formats with tombi, which reads the shipped .tombi.toml; taplo would not.
 grep -q tombi-toml.tombi a/.vscode/settings.json
-test -f a/.github/SECURITY.md
-test ! -e b/.github/SECURITY.md
+grep -q 'Contributor Covenant, version 3.0' a/.github/CODE_OF_CONDUCT.md
+grep -q 'send an email to <ada@example.com>' a/.github/CODE_OF_CONDUCT.md
 # Scorecard: its workflow and badge exist only with public (a), never without (b).
 test -f a/.github/workflows/scorecard.yml
 grep -qx '      id-token: write # to publish the results' a/.github/workflows/scorecard.yml
@@ -751,5 +751,29 @@ chmod +x "$fake/gh"
   grep -qF -- 'allow_merge_commit=false' "$FAKE_LOG"
   cmp "$FAKE_LOG.body" .github/rulesets/main.json
 )
+# The community files and the DCO check come with public and go with it, in every render.
+for answers in */.copier-answers.yml; do
+  r=${answers%%/*}
+  # e renders a tag on HEAD, so it lacks uncommitted edits.
+  [ "$r" = e ] && continue
+  for f in SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md pull_request_template.md workflows/dco.yml; do
+    if grep -qx 'public: false' "$answers"; then
+      test ! -e "$r/.github/$f"
+    else
+      test -f "$r/.github/$f"
+    fi
+  done
+done
+# What the OpenSSF badge criteria ask of them: a response time, a disclosure statement,
+# a sign-off rule and who maintains the project.
+grep -q 'within 14 days' a/.github/SECURITY.md
+grep -q 'publish the GitHub security advisory' a/.github/SECURITY.md
+grep -q '^## Scope' a/.github/SECURITY.md
+grep -q 'Signed-off-by:' a/.github/CONTRIBUTING.md
+grep -q '^## Who maintains this' a/.github/CONTRIBUTING.md
+grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
+(! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
+# This repo runs the same DCO check it renders.
+cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
 
 echo "all render checks passed"

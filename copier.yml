@@ -184,7 +184,7 @@ citable:
 # question had SECURITY.md, and an update with the default keeps it.
 public:
   type: bool
-  help: Will the repo be public? Yes adds .github/SECURITY.md, which says where to report a vulnerability
+  help: Will the repo be public? Yes adds the community files in .github/ (SECURITY.md says where to report a vulnerability), CONTRIBUTING.md, CODE_OF_CONDUCT.md and a pull request template
   default: true
 
 github_user:

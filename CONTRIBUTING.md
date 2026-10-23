@@ -1,5 +1,11 @@
 # Working on the template
 
+To report a bug or ask for a feature, open an
+[issue](https://github.com/simonvanlierde/project-templates/issues) with the copier
+answers you used and what the render did. Report a vulnerability as
+[SECURITY.md](SECURITY.md) says, not in an issue. [docs/design.md](docs/design.md)
+describes who acts on a generated project and what render and update do.
+
 You need [uv](https://docs.astral.sh/uv/) (it runs copier), [just](https://just.systems),
 git, and prek for the hooks (`uv tool install prek`, then `prek install`).
 
@@ -67,3 +73,21 @@ breaks `copier update` everywhere else. Render a real project from a pushed tag,
 
 To test an update against a local checkout, point `_src_path` at it for that run, as
 the CI `update` job does.
+
+## Sign off your commits
+
+Every commit in a pull request carries a `Signed-off-by:` line, which says you wrote the
+change or have the right to submit it under the MIT license: the
+[Developer Certificate of Origin 1.1](https://developercertificate.org/). `git commit -s`
+adds it; `git rebase --signoff upstream/main` (the branch you started from) adds it to commits you
+already made. The `dco`
+workflow fails a pull request from an outside contributor with a commit that lacks it. The
+maintainer's and the dependency bots' pull requests skip it.
+
+## Who maintains this
+
+Simon van Lierde ([@simonvanlierde](https://github.com/simonvanlierde)) maintains the
+template: reviews and merges pull requests, and tags releases. Only he can merge to `main`.
+A new maintainer would be named here
+first. If he stops maintaining it, the README says so and the repository is archived;
+anyone may fork it under the MIT license.
