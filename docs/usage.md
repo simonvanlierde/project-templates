@@ -86,8 +86,9 @@ The `stacks` question is a multi-select. Pick any combination:
 
 Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
 `just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`
-(unless `license=none`), `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and a pull request template (unless `public=false`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
-recommendations. A Python project also picks a [kind](python-kinds.md).
+(unless `license=none`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS
+Code recommendations. Unless `public=false`, it also gets the community files in `.github/`:
+`SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and a pull request template. A Python project also picks a [kind](python-kinds.md).
 
 ## TypeScript kinds
 
