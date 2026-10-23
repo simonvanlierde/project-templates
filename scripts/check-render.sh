@@ -221,6 +221,41 @@ grep -q biomejs.biome a/.vscode/settings.json
 grep -q tombi-toml.tombi a/.vscode/settings.json
 test -f a/.github/SECURITY.md
 test ! -e b/.github/SECURITY.md
+# Scorecard: its workflow and badge exist only with public (a), never without (b).
+test -f a/.github/workflows/scorecard.yml
+grep -qx '      id-token: write # to publish the results' a/.github/workflows/scorecard.yml
+grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md
+test ! -e b/.github/workflows/scorecard.yml
+(! grep -q -i scorecard b/README.md)
+# Badges follow their answers: a has codspeed only; c has codecov, codspeed, PyPI and npm;
+# d has codecov alone; b has none.
+grep -qF 'https://app.codspeed.io/' a/README.md
+(! grep -q -e codecov.io -e img.shields.io/pypi -e img.shields.io/npm a/README.md)
+grep -qF 'https://codecov.io/gh/' c/README.md
+grep -qF 'https://app.codspeed.io/' c/README.md
+grep -qF 'img.shields.io/pypi/v/mono-me' c/README.md
+grep -qF 'img.shields.io/pypi/pyversions/mono-me' c/README.md
+grep -qF 'img.shields.io/npm/v/mono-me' c/README.md
+grep -qF 'https://codecov.io/gh/' d/README.md
+(! grep -q -e codspeed -e img.shields.io/pypi -e img.shields.io/npm d/README.md)
+(! grep -q -e codecov -e codspeed -e img.shields.io/pypi -e img.shields.io/npm b/README.md)
+# The weekly audit: one job per stack, on a Monday schedule. python.yml keeps its own
+# schedule for the data pipeline (d) and has none elsewhere.
+for r in a b c d; do grep -q 'cron: "23 5 \* \* 1"' "$r/.github/workflows/advisories.yml"; done
+for j in python ts rust go; do grep -q "^  $j:" a/.github/workflows/advisories.yml; done
+grep -q 'cargo deny check advisories' a/.github/workflows/advisories.yml
+grep -q 'go tool govulncheck' a/.github/workflows/advisories.yml
+grep -q 'uv audit --locked' a/.github/workflows/advisories.yml
+grep -q 'pnpm audit --prod' a/.github/workflows/advisories.yml
+(! grep -q -e '^  rust:' -e '^  go:' b/.github/workflows/advisories.yml)
+grep -q 'working-directory: svc' b/.github/workflows/advisories.yml
+grep -q 'working-directory: crates/cli' c/.github/workflows/advisories.yml
+grep -q 'working-directory: services/tool' c/.github/workflows/advisories.yml
+grep -q 'working-directory: apps/web' c/.github/workflows/advisories.yml
+grep -q 'cron: "0 6 \* \* 1"' d/.github/workflows/python.yml
+(! grep -q 'cron:' a/.github/workflows/python.yml)
+test -f h/.github/workflows/advisories.yml
+(! grep -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
 (! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.

@@ -32,10 +32,12 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Bundle budget | `scripts/checkBundleBudget.mjs`, `web-app` kind | Fails `just check` and CI when the largest JavaScript file, gzipped, passes the limit set in the script. A dependency that doubles the bundle shows up in its own pull request. |
 | Provenance on publish | release workflows | PyPI and npm trusted publishing attach attestations. The Python release also signs a GitHub build-provenance attestation for each file, checkable with `gh attestation verify`. Container images pushed to GHCR carry an SBOM and a provenance attestation. |
 | Image scan and weekly rebuild | `docker.yml`, with the `docker` stack | Trivy lists HIGH and CRITICAL vulnerabilities in the built image that already have a fix. A weekly run rebuilds the image on the newest base image and scans it without pushing. Only that run fails on a finding, because a fix often waits days on a rebuilt base image and a pull request can't change that. |
+| Weekly dependency audit | `advisories.yml`, one job per stack | The stack workflows audit on push and pull request only. On Mondays this runs the same audit without a commit: `uv audit`, `pnpm audit --prod`, `cargo deny check advisories` and `govulncheck`. |
+| OpenSSF Scorecard | `scorecard.yml`, with `public` (the default) | Rates the repo's supply-chain practices, publishes the score for the README badge and uploads the findings to code scanning. It runs on pushes to main, weekly, and when branch protection changes. A private repo gets none: publishing the score needs a public repo. |
 | Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
 GitHub turns off scheduled workflows in a public repository with no activity for 60 days, such
-as the weekly Trivy rebuild, the data-pipeline tripwire and the revisions report. They
+as the weekly audit, the Scorecard run, the Trivy rebuild, the data-pipeline tripwire and the revisions report. They
 stop without an error, so push a commit or re-enable them under the Actions tab. See
 [GitHub's docs](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow).
 
@@ -49,11 +51,9 @@ scanning covers the server side.
 | Left out | Reason | Add it when |
 | --- | --- | --- |
 | CodeQL | Minutes per run and gigabytes of memory, for little signal on a small repo that already runs ruff and ty. | The repo grows a web surface or outside contributors. Default setup is a toggle in the repository settings; it needs no YAML. |
-| OpenSSF Scorecard | Needs a public repo to publish, and mostly scores the practices in the first table. | You want the badge. |
 | Renovate from Actions | Needs a GitHub App and two secrets. Dependabot needs neither and covers every ecosystem here, including hook revs. The hosted Renovate app is the `dependency_bot=renovate` answer. | You need automerge, or Renovate options the hosted app doesn't run. |
 | release-please | Research repos release rarely, and Zenodo archives a tagged release. A release PR on every push is noise. | Releases become frequent enough that writing the changelog by hand costs time. |
 | Secret scan over full history | GitHub secret scanning and push protection cover public repos at no cost. The hook covers local commits. | The repo is private without GitHub Advanced Security. |
-| Scheduled audit job | The stack workflows audit on every push and PR (`uv audit`, `pnpm audit --prod`, `cargo deny check`, `govulncheck`), and Dependabot security alerts cover the time between. | A dependency sits unchanged for months in a repo with few pushes. |
 | Base images pinned to a digest | The `FROM` tags are copier answers (`python_version`, `node_version`), so Dependabot's docker ecosystem would fight `copier update` over them. | The image runs in production: pin `FROM ...@sha256:` and add a docker entry to `dependabot.yml`. |
 | One required "CI result" job | A single workflow per stack is short enough to list its jobs in branch protection. | The job list grows past what you want to maintain by hand. |
 | CODEOWNERS, issue templates, CONTRIBUTING | Single-author repos. | Other people start contributing. |
