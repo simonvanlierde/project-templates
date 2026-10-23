@@ -185,6 +185,8 @@ refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'pro
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my<app>'
 refuses 'at least one stack' --data 'stacks=[]'
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
+refuses 'The flat layout' --data 'stacks=[python,docker]' --data 'docker_stacks=[python]' \
+  --data python_layout=flat
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
 # The legal pages are written from user_data, so it has no default to fall back on.
 refuses 'Question "user_data" is required' --data 'stacks=[ts]' --data ts_kind=web-app
@@ -198,6 +200,12 @@ refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=
 # Its gitignored build output drops the module path's /v2.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
   --data go_kind=binary --data go_module=github.com/example-org/1tool/v2 . "$out/i"
+# l: a flat Python package next to a ts image. Only the python image needs src/.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=flat-ts-image \
+  --data 'stacks=[python,ts,docker]' --data python_layout=flat --data ts_dir=web \
+  --data 'docker_stacks=[ts]' . "$out/l"
+test -f "$out/l/web/Dockerfile"
+test ! -e "$out/l/src"
 # j: a private web app, so its legal pages must not link a repo visitors can't open.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
