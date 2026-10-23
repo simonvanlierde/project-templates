@@ -5,11 +5,11 @@ git, and prek for the hooks (`uv tool install prek`, then `prek install`).
 
 ## Test an untagged change
 
-Copier renders the latest tag by default, so your edits never reach the output until
-you tag them. To render your working copy instead, render this directory with
-`--vcs-ref=HEAD`. That includes uncommitted edits. Point `COPIER_SETTINGS_PATH` at the
-CI settings file, which fills the identity answers that have no default. Without it,
-`--defaults` stops at them. It replaces your own copier settings for the run.
+Copier renders the latest tag by default, so your edits don't show up until you tag
+them. To render your working copy, including uncommitted edits, pass `--vcs-ref=HEAD`.
+Point `COPIER_SETTINGS_PATH` at the CI settings file. It fills the identity answers that
+have no default, and `--defaults` stops at them without it. For this run it replaces your
+own copier settings.
 
 ```sh
 export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
@@ -21,9 +21,9 @@ root: the output would land among the template files.
 
 ## Run the checks before you push
 
-Run the git hooks and the same render checks CI runs. The render script includes
-uncommitted edits. CI then runs zizmor, jactionlint and the CITATION.cff schema check over
-the rendered output, because `.jinja` files aren't YAML:
+Run the git hooks and the render checks CI runs. The render script includes uncommitted
+edits. CI also runs zizmor, jactionlint and the CITATION.cff schema check on the rendered
+output, because `.jinja` files aren't YAML:
 
 ```sh
 prek run -a
@@ -31,8 +31,8 @@ scripts/check-render.sh "$(mktemp -d)"
 ```
 
 The render script checks which files each answer set produces. It doesn't run the
-generated projects' own checks, which CI does for each stack and kind. To run one locally,
-render into a directory and check it there, for example:
+generated projects' own checks. CI does that for each stack and kind. To run one locally,
+render into a directory and check it there:
 
 ```sh
 out=$(mktemp -d) && scripts/check-render.sh "$out"
@@ -65,8 +65,8 @@ merge, and long check logs.
 
 Rendered from a tag, `.copier-answers.yml` records `_src_path` as
 `gh:simonvanlierde/project-templates`, so `copier update` works on any machine. Rendered
-from any other local commit, it keeps your local path, which leaks your home directory and
-breaks `copier update` everywhere else. So render a real project from a pushed tag, or fix
+from any other local commit, it keeps your local path. That leaks your home directory and
+breaks `copier update` everywhere else. Render a real project from a pushed tag, or fix
 `_src_path` and `_commit` by hand.
 
 To test an update against a local checkout, point `_src_path` at it for that run, as

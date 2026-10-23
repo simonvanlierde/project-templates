@@ -243,6 +243,9 @@ Hypothesis or proptest. To add the extras to an existing library, run
 
 ## Publishing
 
+To release, add a `## [X.Y.Z]` section to `CHANGELOG.md`, then push the tag `vX.Y.Z`.
+`release.yml` makes the GitHub release from that section.
+
 Publishing is off by default. While an option is off, a guard stops an accidental
 release:
 
@@ -251,6 +254,11 @@ release:
 | `publish_to_pypi` | PyPI rejects uploads (`Private :: Do Not Upload` classifier) | `python-release.yml` publishes to PyPI                   |
 | `publish_to_npm`  | pnpm refuses to publish (`"private": true`)                 | `ts-release.yml` publishes to npm                        |
 | `publish_to_ghcr` | CI builds the image and tests `/health`, but pushes nothing | CI also pushes the image to the GitHub Container Registry |
+
+Each of `publish_to_pypi` and `publish_to_npm` also adds an API-break check to CI and
+`just check` (see the [CI baseline](ci-baseline.md)). With `publish_to_npm`, run
+`just ts-api` once after the update and commit `<package>.api.md`: the template's copy
+describes the sample `add` function.
 
 PyPI and npm use trusted publishing (OpenID Connect), so you store no tokens. The
 registry needs to trust your repository first. To turn publishing on:
