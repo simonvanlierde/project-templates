@@ -62,7 +62,7 @@ repo-settings:
     }
     # Merge-method switches live on the repo itself; the ruleset also limits the PR button.
     gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false >/dev/null 2>"$err" || fail
-    id=$(gh api repos/{owner}/{repo}/rulesets --jq ".[] | select(.name == \"$name\") | .id" 2>"$err") || fail
+    id=$(gh api "repos/{owner}/{repo}/rulesets?includes_parents=false" --jq ".[] | select(.name == \"$name\") | .id" 2>"$err") || fail
     if [ -n "$id" ]; then
         gh api -X PUT "repos/{owner}/{repo}/rulesets/$id" --input "$file" >/dev/null 2>"$err" || fail
         echo "Updated ruleset '$name' ($id)."

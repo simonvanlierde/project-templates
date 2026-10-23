@@ -595,7 +595,7 @@ cat >"$fake/gh" <<'FAKE'
 echo "$*" >>"$FAKE_LOG"
 case "$*" in
   *"-X POST"*|*"-X PUT"*) while [ $# -gt 0 ]; do [ "$1" = --input ] && cp "$2" "$FAKE_LOG.body"; shift; done ;;
-  *"/rulesets --jq"*) [ -f "$FAKE_LOG.body" ] && echo 42 || true ;;
+  *"/rulesets?includes_parents=false --jq"*) [ -f "$FAKE_LOG.body" ] && echo 42 || true ;;
 esac
 FAKE
 chmod +x "$fake/gh"
