@@ -355,6 +355,9 @@ grep -q 'package-ecosystem: gomod' a/.github/dependabot.yml
 # dependency_bot: Dependabot by default, Renovate in d, never both.
 test ! -e a/renovate.json5
 test -f d/renovate.json5
+# Only Dependabot repos need the workflow that hears about template releases.
+test -f a/.github/workflows/copier-update.yml
+test ! -e d/.github/workflows/copier-update.yml
 test ! -e d/.github/dependabot.yml
 (! grep -q working-directory a/just/go.just)
 # public=false defaults the license to none: no file and no license key.
