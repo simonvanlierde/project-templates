@@ -94,6 +94,10 @@ Upgrade steps:
   `src/<module>` stub or `tests/test_add.py`, and sets `module-root = ""` for uv_build.
   [Adopting the template in an existing Python package](docs/usage.md#adopting-the-template-in-an-existing-python-package)
   covers the rest, including a ruff and ty baseline for code written without them.
+- A `docs/decisions/` folder in every project, for recording why you chose what you
+  did. It holds a short record template, `0000-template.md` (status, date, context,
+  decision, consequences), and an index, `README.md`. The index is yours once written,
+  so `copier update` leaves it alone.
 - README badges for the options you turn on: Codecov coverage (`codecov`), CodSpeed
   (`codspeed`), PyPI version and supported Python versions (`publish_to_pypi`), npm version
   (`publish_to_npm`) and OpenSSF Scorecard (`public`).

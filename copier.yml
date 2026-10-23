@@ -8,12 +8,14 @@ _min_copier_version: "9.19.0"
 # conflict with that edit every time. The web-app entries are its starter files and
 # legal pages, which the project rewrites from day one. go.mod is rewritten by the
 # first `go mod tidy`, and Dependabot bumps its requirements after that; its module
-# path and go version are answers fixed at copy time. Each entry starts with `/`:
+# path and go version are answers fixed at copy time. The decisions index gains a
+# line with each record the project writes. Each entry starts with `/`:
 # copier matches these like .gitignore lines, so a bare README.md would also skip
 # data/README.md.
 _skip_if_exists:
   - /README.md
   - /CHANGELOG.md
+  - /docs/decisions/README.md
   - /CITATION.cff
   - /.zenodo.json
   - /codemeta.json

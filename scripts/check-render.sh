@@ -348,6 +348,13 @@ grep -q 'cron: "0 6 \* \* 1"' d/.github/workflows/python.yml
 test -f h/.github/workflows/advisories.yml
 (! grep -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
+# Every render gets the decisions folder, and both files pass the rumdl the hook pins.
+for r in a b c d h i; do
+  test -f "$r/docs/decisions/README.md"
+  test -f "$r/docs/decisions/0000-template.md"
+done
+rumdl=$(grep -A1 'rvben/rumdl-pre-commit' a/.pre-commit-config.yaml | sed -n 's/.*# frozen: v//p')
+(cd a && uvx "rumdl@$rumdl" check --config .rumdl.toml docs/decisions)
 (! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.
 test -f a/.github/workflows/checks.yml
