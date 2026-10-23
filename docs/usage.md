@@ -26,6 +26,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | ----------------------------------------------- | ------------------------------------------------ |
 | `license`, `copyright_year`                     | MIT if `public`, otherwise none; this year       |
 | `python_dir`, `ts_dir`, `rust_dir`, `go_dir`    | `.`: each package at the repo root               |
+| `python_layout`                                 | `src`: the package in `src/<module>`, or `flat` ([adopting](#adopting-the-template-in-an-existing-python-package)) |
 | `dependency_bot`                                | Dependabot                                       |
 | `codecov`                                       | off                                              |
 | `codspeed`                                      | off ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
@@ -150,6 +151,31 @@ and `tests/e2e/routes.ts`. Every other file keeps receiving template changes.
 
 Later `copier update` runs merge the template's changes since the recorded commit,
 so the edits from step 2 stay.
+
+## Adopting the template in an existing Python package
+
+1. On a clean branch, render over the repo with
+   `copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .`.
+   Answer yes to `customise`, give the package's `module_name`, and pick
+   `python_layout=flat` if the package sits at the root rather than under `src/`. Flat
+   adds no `src/` stub and no `tests/test_add.py`. An existing `README.md`,
+   `CHANGELOG.md` and `CITATION.cff` stay as they are, and `copier update` never touches
+   them later either, so template changes to them reach you only by hand.
+2. Copier replaces `pyproject.toml`. Restore your dependencies, authors and version from
+   `git diff`, then run `just py-sync`.
+3. Run `uv run ruff format` and commit that on its own. `select = ["ALL"]` usually finds
+   hundreds of issues in code written without it. To start from a baseline, add the codes
+   `uv run ruff check --statistics --output-format json | jq -r '.[].code'` prints to
+   `ignore` under a `# NOTE: baseline at adoption` comment, and delete them as you fix
+   them. Do the same for ty: set each rule that
+   `uv run ty check --output-format concise` names to `"warn"` under `[tool.ty.rules]`.
+   Warnings are reported but don't fail `ty check`.
+4. If `just check` fails on `uv audit` because the fix is less than a week old, exempt
+   that package from `exclude-newer` (see [tooling](tooling.md#dependencies)).
+5. The hooks leave `data/` alone. Delete the workflows the template replaces, then run
+   `just check` and `just hooks`, and commit, `.copier-answers.yml` included.
+6. Before the first tag, give `CHANGELOG.md` Keep a Changelog `## [X.Y.Z]` headings.
+   `release.yml` and the publish workflows read the section for the tag and fail without it.
 
 ## One package or a monorepo
 

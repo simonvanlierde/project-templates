@@ -1,13 +1,16 @@
 _subdirectory: template
 # `ask:` hides the advanced questions behind `customise`, which needs 9.19.0.
 _min_copier_version: "9.19.0"
-# Written once, then owned by the project: `copier update` leaves them alone. A
-# release adds its version, date and DOI to the citation files, and an update would
-# then conflict with that edit every time. The web-app entries are its starter files,
+# Written once, then owned by the project: `copier update` leaves them alone, and
+# `copier copy` into an existing repo keeps its own. The README is the project's
+# from its first real paragraph, so template changes to it never arrive. A release
+# adds its version, date and DOI to the citation files, and an update would then
+# conflict with that edit every time. The web-app entries are its starter files,
 # which the project rewrites from day one. go.mod is rewritten by the first
 # `go mod tidy`, and Dependabot bumps its requirements after that; its module path
 # and go version are answers fixed at copy time.
 _skip_if_exists:
+  - README.md
   - CHANGELOG.md
   - CITATION.cff
   - .zenodo.json
@@ -219,13 +222,18 @@ license:
     MIT (permissive, shortest): MIT
     Apache-2.0 (permissive, explicit patent grant): Apache-2.0
     BSD-3-Clause (permissive, no endorsement clause): BSD-3-Clause
+    GPL-3.0-or-later (copyleft, changes and derived works stay GPL): GPL-3.0-or-later
+    LGPL-3.0-or-later (weak copyleft, may be linked from code under other licenses): LGPL-3.0-or-later
+    AGPL-3.0-or-later (copyleft that also covers use over a network): AGPL-3.0-or-later
     None (not licensed for redistribution): none
   # A private repo is not licensed to anyone unless its owner says so.
   default: "{{ 'MIT' if public else 'none' }}"
 
+# Only the permissive texts carry a copyright line. The GNU texts are fixed, and
+# their copyright notice goes in each source file instead.
 copyright_year:
   type: str
-  when: "{{ license != 'none' }}"
+  when: "{{ license in ('MIT', 'Apache-2.0', 'BSD-3-Clause') }}"
   ask: "{{ customise }}"
   help: Copyright year in the license
   default: "{{ '%Y' | strftime }}"
@@ -305,6 +313,24 @@ module_name:
     A module name is lower-case letters, digits and `_`, and cannot start with a digit.
     {% elif module_name in keywords %}
     `{{ module_name }}` is a Python keyword, so the package could not be imported: pick another module name.
+    {% endif %}
+
+# `flat` is for adopting the template in a repo whose package already sits at the
+# root: no src/ stub, and no starter tests that import it. web-service,
+# data-pipeline and the docker image need the starter modules, so they stay `src`.
+python_layout:
+  type: str
+  when: "{{ 'python' in stacks }}"
+  ask: "{{ customise }}"
+  help: Where the package lives; flat keeps an existing package at the root and adds no stub
+  choices:
+    src/<module> (a new package): src
+    <module>/ at the root (an existing package): flat
+  default: src
+  validator: >-
+    {% if python_layout == 'flat' and (kind in ('web-service', 'data-pipeline') or 'docker' in stacks) %}
+    The flat layout is for an existing library, app or research package without docker:
+    the web-service and data-pipeline kinds and the docker image need their starter modules in src/.
     {% endif %}
 
 # The default trails a new Python release by 90 days (renovate.json5), so the

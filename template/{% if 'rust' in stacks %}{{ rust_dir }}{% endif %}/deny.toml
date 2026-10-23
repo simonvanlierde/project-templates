@@ -4,8 +4,8 @@
 [advisories]
 
 [licenses]
-# Permissive licenses only. This crate's own is among them. Add an exception
-# per crate rather than widening the list.
+# Permissive licenses only, for dependencies. Add an exception per crate rather
+# than widening the list. Once this crate publishes, its own license must be here too.
 allow = [
   "Apache-2.0",
   "BSD-2-Clause",
