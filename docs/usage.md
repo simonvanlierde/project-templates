@@ -127,7 +127,7 @@ changes.
 
 Each page is one Markdown file in the app's `docs/` folder. GitHub shows the file as it
 is, and the build turns it into HTML (`marked`, in `vite.config.ts`), so the app ships no
-Markdown code. `src/App.tsx` serves them, and every page's footer links them:
+Markdown code. The build leaves out HTML comments: they are notes for you. `src/App.tsx` serves them, and every page's footer links them:
 
 | Page                     | Path             | Rendered when              |
 | ------------------------ | ---------------- | -------------------------- |

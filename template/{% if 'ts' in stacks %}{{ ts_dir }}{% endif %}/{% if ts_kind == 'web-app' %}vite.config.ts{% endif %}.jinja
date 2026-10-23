@@ -7,12 +7,14 @@ import { defineConfig, type Plugin } from "vite";
 /**
  * Turns an imported .md file into its HTML at build time, so the pages in docs/
  * ship as HTML and no Markdown code reaches the browser. GitHub shows the same files.
+ * HTML comments are notes for the author, so they are dropped before visitors see them.
  */
 const markdown = (): Plugin => ({
   name: "markdown-html",
   transform(code, id) {
     if (id.endsWith(".md")) {
-      return { code: `export default ${JSON.stringify(marked.parse(code, { async: false }))};`, map: null };
+      const html = marked.parse(code.replace(/<!--[\s\S]*?-->/g, ""), { async: false });
+      return { code: `export default ${JSON.stringify(html)};`, map: null };
     }
   },
 });
