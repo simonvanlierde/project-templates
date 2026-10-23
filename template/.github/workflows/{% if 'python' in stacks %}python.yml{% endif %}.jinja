@@ -190,5 +190,5 @@ jobs:
 
       # Reads the source without importing it, so the package needs no install. Runs
       # from the root: griffe resolves --search against the repository root at the tag.
-      - run: uvx griffe@{{ griffe_version }} check --search {{ '' if python_dir == '.' else python_dir ~ '/' }}src --format github {{ module_name }}
+      - run: uvx griffe@{{ griffe_version }} check --search {{ python_dir if python_layout == 'flat' else ('' if python_dir == '.' else python_dir ~ '/') ~ 'src' }} --format github {{ module_name }}
 {%- endif %}

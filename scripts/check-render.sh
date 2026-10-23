@@ -101,7 +101,8 @@ echo '# project citation' >"$out/k/CITATION.cff"
 echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=adopt-me --data customise=true --data python_layout=flat \
-  --data license=GPL-3.0-or-later --data codspeed=true --data 'test_extras=[mutation]' . "$out/k"
+  --data license=GPL-3.0-or-later --data codspeed=true --data 'test_extras=[mutation]' \
+  --data publish_to_pypi=true . "$out/k"
 grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
 grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
@@ -119,6 +120,7 @@ grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
 test "$(grep -cx ' *exclude: \^data/' "$out/k/.pre-commit-config.yaml")" = 4
 (! grep -qx 'exclude: \^data/' "$out/k/.pre-commit-config.yaml")
 grep -qx 'source_paths = \["adopt_me"\]' "$out/k/pyproject.toml"
+grep -q 'check --search \. --format github adopt_me' "$out/k/.github/workflows/python.yml"
 # yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
 grep -qx '        run: |-' "$out/k/.github/workflows/copier-update.yml"
 
