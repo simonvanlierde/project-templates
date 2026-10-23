@@ -3,10 +3,10 @@ _subdirectory: template
 _min_copier_version: "9.19.0"
 # Written once, then owned by the project: `copier update` leaves them alone. A
 # release adds its version, date and DOI to the citation files, and an update would
-# then conflict with that edit every time. The web-app entries are its starter files,
-# which the project rewrites from day one. go.mod is rewritten by the first
-# `go mod tidy`, and Dependabot bumps its requirements after that; its module path
-# and go version are answers fixed at copy time.
+# then conflict with that edit every time. The web-app entries are its starter files
+# and legal pages, which the project rewrites from day one. go.mod is rewritten by
+# the first `go mod tidy`, and Dependabot bumps its requirements after that; its
+# module path and go version are answers fixed at copy time.
 _skip_if_exists:
   - CHANGELOG.md
   - CITATION.cff
@@ -18,6 +18,9 @@ _skip_if_exists:
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility.md"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/privacy.md"
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/terms.md"
   - "{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
 
 # Shown on `copier copy` only; `--quiet` hides both.
@@ -106,6 +109,20 @@ web_framework:
     React: react
     Preact (React API through preact/compat, a smaller bundle): preact
   default: react
+
+# Decides the legal pages: every web app gets docs/privacy.md, and `accounts`
+# adds docs/terms.md. No default, on purpose: `--defaults` and an answers file
+# from before this question stop on it ("is required") instead of claiming the
+# app keeps nothing, and copier refuses any answer outside the choices. An empty
+# default would not do: copier checks it against the choices even when skipped.
+user_data:
+  type: str
+  when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+  help: What does the app keep about its users? Sets what the privacy page says, and whether there is a terms page
+  choices:
+    Nothing (no cookies, no storage, no accounts): nothing
+    Only in the browser (local storage the user can clear): browser
+    Accounts or uploads (kept on a server): accounts
 
 rust_kind:
   type: str
@@ -343,6 +360,26 @@ publish_to_pypi:
   default: false
 
 # --- ts -----------------------------------------------------------------------
+
+# The address the accessibility statement and privacy page name. The default is
+# the address Cloudflare Pages gives the project from wrangler.jsonc's name.
+site_url:
+  type: str
+  when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+  ask: "{{ customise }}"
+  help: The web app's public address, for its accessibility statement and privacy page
+  default: "https://{{ slug | replace('.', '-') | replace('_', '-') }}.pages.dev"
+  validator: >-
+    {% if not site_url|regex_search('^https://[^/\\s]+(/[^\\s]*)?$') %}
+    Give the full address, starting with https://.
+    {% endif %}
+
+# Computed, never asked: the date the legal pages start from. They are the
+# project's files from then on (_skip_if_exists), so an update never rewrites it.
+legal_date:
+  type: str
+  when: false
+  default: "{{ '%-d %B %Y' | strftime }}"
 
 # renovate: datasource=node-version depName=node
 node_version:

@@ -54,11 +54,11 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
 # workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, the
 # only one with Renovate, and the only web-app: Preact, nested, so the e2e job's
-# paths are audited with the rest.
+# paths are audited with the rest. Its user_data answer is the one that adds terms.md.
 d_args=(
   --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
-  --data ts_dir=web --data ts_kind=web-app --data web_framework=preact
+  --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
   --data dependency_bot=renovate --data codecov=true
   --data 'docker_stacks=[python]'
 )
@@ -70,10 +70,12 @@ d_args=(
 echo '// project edit' >>"$out/d/web/src/App.tsx"
 echo '<!-- project edit -->' >>"$out/d/web/index.html"
 echo '// project edit' >>"$out/d/web/vite.config.ts"
+echo '<!-- project edit -->' >>"$out/d/web/docs/privacy.md"
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d" >/dev/null 2>&1
 grep -q 'project edit' "$out/d/web/src/App.tsx"
 grep -q 'project edit' "$out/d/web/index.html"
+grep -q 'project edit' "$out/d/web/docs/privacy.md"
 (! grep -q 'project edit' "$out/d/web/vite.config.ts")
 
 # h: a go library named like the Example file. The unit test must not share its path
@@ -98,7 +100,7 @@ git tag -f check-render-tag >/dev/null
 # A web app is static files, so the ts image (a Node service) is refused for it.
 # The grep checks the render failed for this reason, not for an unrelated break.
 if "${copier[@]}" --vcs-ref=HEAD --data project_name=web-docker \
-  --data 'stacks=[ts,docker]' --data ts_kind=web-app \
+  --data 'stacks=[ts,docker]' --data ts_kind=web-app --data user_data=nothing \
   --data 'docker_stacks=[ts]' . "$out/g" >"$out/g.log" 2>&1; then
   echo "rendered a ts image for a web app: the docker_stacks validator lost its web-app check" >&2
   exit 1
@@ -138,6 +140,11 @@ refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
 refuses 'at least one stack' --data 'stacks=[]'
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
+# The legal pages are written from user_data, so it has no default to fall back on.
+refuses 'Question "user_data" is required' --data 'stacks=[ts]' --data ts_kind=web-app
+refuses "Invalid choice for 'user_data'" --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=some
+refuses 'starting with https://' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data site_url=http://example.org
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
 refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
   --data python_dir=api --data ts_dir=web --data app_port=65535
@@ -417,6 +424,17 @@ test -f d/web/public/_headers
 test -f d/web/wrangler.jsonc
 test -f d/web/tests/e2e/a11y.spec.ts
 test -f d/web/tests/e2e/csp.spec.ts
+# The legal pages: statement and privacy always, terms for accounts or uploads,
+# each a route the axe, CSP and privacy specs visit.
+for page in accessibility privacy terms; do
+  test -f "d/web/docs/$page.md"
+  grep -q "\"/$page\"" d/web/tests/e2e/routes.ts
+done
+test -f d/web/tests/e2e/privacy.spec.ts
+test -f d/web/tests/e2e/accessibility-statement.spec.ts
+grep -q 'Its conformance is \*\*not assessed\*\*' d/web/docs/accessibility.md
+grep -qx '    "marked": "[0-9.]*",' d/web/package.json
+test ! -e a/docs/privacy.md
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json
 test ! -e d/web/Dockerfile

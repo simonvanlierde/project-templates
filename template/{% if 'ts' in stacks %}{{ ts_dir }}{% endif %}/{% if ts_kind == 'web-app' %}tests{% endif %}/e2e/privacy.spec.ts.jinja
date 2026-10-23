@@ -1,0 +1,65 @@
+import { expect, test } from "@playwright/test";
+import { ROUTES } from "./routes";
+
+/**
+ * docs/privacy.md says the app sets no cookies, stores nothing before the user
+ * acts and loads nothing from other sites, so it needs no cookie banner. These
+ * prove it on a first visit to every route.
+ */
+
+// Origins a page may request besides its own. A self-hosted visitor counter goes
+// here by name, with a line in docs/privacy.md.
+const OTHER_ORIGINS: string[] = [];
+{%- if user_data == 'accounts' %}
+const LEGAL_PAGES = [
+  ["/privacy", "Privacy statement"],
+  ["/terms", "Terms of use"],
+] as const;
+{%- else %}
+const LEGAL_PAGES = [["/privacy", "Privacy statement"]] as const;
+{%- endif %}
+
+for (const path of ROUTES) {
+  test(`${path} sets no cookies, stores nothing and loads only its own files`, async ({ page, context }) => {
+    const origins = new Set<string>();
+    page.on("request", (request) => {
+      if (request.url().startsWith("http")) origins.add(new URL(request.url()).origin);
+    });
+    await page.goto(path, { waitUntil: "networkidle" });
+    await expect(page.getByRole("main")).toBeVisible();
+
+    expect(await context.cookies()).toEqual([]);
+    const stored = await page.evaluate(async () => ({
+      localStorage: localStorage.length,
+      sessionStorage: sessionStorage.length,
+      indexedDB: (await indexedDB.databases()).map((db) => db.name),
+      caches: await caches.keys(),
+    }));
+    expect(stored).toEqual({ localStorage: 0, sessionStorage: 0, indexedDB: [], caches: [] });
+    expect([...origins]).toEqual([new URL(page.url()).origin, ...OTHER_ORIGINS]);
+  });
+
+  test(`${path} links the legal pages from its footer`, async ({ page }) => {
+    await page.goto(path);
+    const footer = page.getByRole("contentinfo");
+    for (const [href, name] of LEGAL_PAGES) {
+      await expect(footer.getByRole("link", { name })).toHaveAttribute("href", href);
+    }
+  });
+}
+
+for (const [href, name] of LEGAL_PAGES) {
+  test(`${href} renders and gives an email contact`, async ({ page }) => {
+    await page.goto(href);
+    await expect(page).toHaveTitle(new RegExp(`^${name}`));
+    const article = page.locator("article");
+    await expect(article.getByRole("heading", { level: 1 })).toHaveText(name);
+    await expect(article.getByRole("link", { name: /@/ }).first()).toHaveAttribute("href", /^mailto:.+@.+/);
+  });
+
+  // The template leaves a TODO wherever only the project knows the answer.
+  test(`${href} has no TODO left`, async ({ page }) => {
+    await page.goto(href);
+    await expect(page.locator("article")).not.toContainText("TODO");
+  });
+}

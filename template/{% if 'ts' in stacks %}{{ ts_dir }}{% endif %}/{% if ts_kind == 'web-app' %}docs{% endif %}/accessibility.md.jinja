@@ -1,0 +1,94 @@
+{%- set blob = 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/blob/main/' ~ ('' if ts_dir == '.' else ts_dir ~ '/') -%}
+<!--
+Keep this statement true. Every claim must be checkable in this repository: the tests in
+tests/e2e/, the lint rules in biome.json, the styles in src/app.css. When a known problem is
+fixed, move its bullet from "Known problems" to "How we check" in the same pull request as the
+fix. The app renders this file at /accessibility, so write plain Markdown with absolute links.
+tests/e2e/accessibility-statement.spec.ts checks the headings, the status, the contact, the
+"Last reviewed" date, and that no TODO is left.
+-->
+
+# Accessibility statement
+
+This statement covers {{ project_name }} at [{{ site_url | regex_replace('^https://', '') }}]({{ site_url }}).
+{{ author_name }} builds and maintains it, and is responsible for this statement.
+
+## Using {{ project_name }}
+
+You should be able to:
+
+- use it on a screen 320 px wide, or zoomed in to 400%, without scrolling sideways;
+- use a dark theme, which follows your system setting.
+
+TODO: add what else you have checked, such as using every feature with the keyboard alone or
+with a screen reader. List only what a test or a recorded hand check backs.
+
+## How accessible {{ project_name }} is
+
+{{ project_name }} aims to meet [WCAG 2.2](https://www.w3.org/TR/WCAG22/) at level AA.
+
+Its conformance is **not assessed**. Nobody has checked it against every WCAG 2.2 criterion, and
+there has been no external audit. This is a self-assessment by the developer. What is checked,
+and how, is under [How we check](#how-we-check).
+
+## Known problems
+
+TODO: list each problem you know of, most harmful first. For each, say what the reader will
+notice, why (one clause), what to do instead, and a fix date or "No fix planned". Put the WCAG
+criterion in brackets at the end, such as [1.1.1 Non-text Content]. With none known, write
+"We don't know of any problems yet."
+
+## Tell us about a problem
+
+If something in {{ project_name }} is hard or impossible for you to use, email
+[{{ author_email }}](mailto:{{ author_email }}).
+{%- if public %} You can also
+[open an issue on GitHub](https://github.com/{{ github_user }}/{{ slug }}/issues/new), but you do not
+need a GitHub account to report a problem.
+{%- endif %}
+
+Say what you were trying to do, what happened, and which browser and assistive technology you use,
+if any. You will get a reply within 10 working days. If you need content from {{ project_name }} in
+another format, ask, and we will send it.
+
+## How we check
+
+- **Automated scan.** The end-to-end tests run [axe-core](https://github.com/dequelabs/axe-core)
+  with the WCAG 2.0, 2.1 and 2.2 level A and AA rules and axe's best practices, on every page,
+  in the light and the dark theme. See
+  [tests/e2e/a11y.spec.ts]({{ blob }}tests/e2e/a11y.spec.ts).
+- **Reflow.** Every page is loaded 320 px wide and fails if it scrolls sideways. See
+  [tests/e2e/reflow.spec.ts]({{ blob }}tests/e2e/reflow.spec.ts).
+- **Lint.** [Biome's accessibility rules](https://biomejs.dev/linter/javascript/rules/#a11y) check
+  every change for things like missing alt text, invalid ARIA and click handlers without a keyboard
+  equivalent.
+- **This statement.**
+  [tests/e2e/accessibility-statement.spec.ts]({{ blob }}tests/e2e/accessibility-statement.spec.ts)
+  fails when this page loses a section, claims a status it has not earned, loses its email contact,
+  or goes more than 400 days without a review.
+
+All of this runs on every pull request. Automated tools find only part of the problems a person
+can run into, so a passing run does not mean there are none.
+
+Not checked yet: nobody has used {{ project_name }} with the keyboard alone or with a screen reader
+to check it by hand.
+
+## Tested with
+
+- Chromium, in Playwright's desktop Chrome profile, with axe-core, on every pull request.
+
+TODO: add the browser and assistive-technology pairs you tried by hand, with the date, such as
+"Firefox with NVDA on 30 October 2026". {{ project_name }} relies on HTML, CSS and JavaScript.
+
+## About this statement
+
+Prepared: {{ legal_date }}
+
+Last reviewed: {{ legal_date }}
+
+Next review: within 12 months of the last review, or at the next major release if that comes first.
+
+Method: self-assessment by the developer, with the checks under [How we check](#how-we-check). No
+external audit.
+
+{{ project_name }} is not run by a public body, so no accessibility law requires this statement.

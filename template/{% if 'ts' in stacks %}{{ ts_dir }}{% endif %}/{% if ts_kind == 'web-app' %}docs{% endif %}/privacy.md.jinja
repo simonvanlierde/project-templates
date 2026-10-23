@@ -1,0 +1,77 @@
+{%- set host = site_url | regex_replace('^https://', '') | regex_replace('/.*$', '') -%}
+<!--
+Keep this page true: it says what the app keeps, and tests/e2e/privacy.spec.ts checks the part a
+test can see, that a first visit sets no cookies, stores nothing and loads only this site's own
+files. When the app starts to keep something new, say so here in the same pull request.
+The app renders this file at /privacy, so write plain Markdown with absolute links. web-legal.md
+says who is responsible for the text and what an organisation's privacy officer should check.
+-->
+
+# Privacy statement
+
+This statement covers {{ project_name }} at [{{ host }}]({{ site_url }}). {{ author_name }} runs it,
+and decides what happens to any data about you (the data controller).
+
+## What {{ project_name }} keeps
+{% if user_data == 'nothing' %}
+Nothing. {{ project_name }} has no accounts, sets no cookies and stores nothing on your device.
+{%- elif user_data == 'browser' %}
+{{ project_name }} keeps your work in your browser's local storage, on your device, so it is still
+there when you come back. It is never sent to us or anyone else, and nothing is stored until you
+start working. To remove it, clear this site's data in your browser's settings.
+
+TODO: list what the app stores in the browser, in plain words, such as "the list you are editing
+and your theme choice".
+{%- else %}
+TODO: list what an account holds (such as an email address, a display name and a hashed password),
+what users upload, who can see each, where it is stored (the provider and the country), and how
+long each is kept, including in backups. Say what happens to uploads when someone deletes their
+account.
+{%- endif %}
+
+## Server logs
+
+[Cloudflare Pages](https://www.cloudflare.com/privacypolicy/) hosts {{ project_name }}. To send you
+a page, the host sees your IP address and browser details, which count as personal data.
+
+TODO: say what the host logs, how long it keeps it, and whether you can see those logs.
+
+## Cookies and storage
+{% if user_data == 'nothing' %}
+{{ project_name }} sets no cookies and stores nothing on your device, so it has no cookie banner.
+{%- elif user_data == 'browser' %}
+{{ project_name }} sets no cookies, so it has no cookie banner. It uses your browser's local
+storage only for the work described above.
+{%- else %}
+TODO: list each cookie or storage item, what it is for and how long it lasts, such as a sign-in
+cookie. Cookies that only make the app work need no banner; anything else needs consent first.
+{%- endif %}
+
+## Other services
+{% if user_data == 'accounts' %}
+TODO: name every outside service the app sends data to (email delivery, file storage, sign-in
+with another site), what it sends and in which country it is processed. With none, write "None."
+{%- else %}
+None. {{ project_name }} loads every file from {{ host }}, and sends nothing to anyone else.
+{%- endif %}
+
+## Your rights
+
+You can ask to see, correct or delete the data about you, to limit how it is used, or to object to
+its use. To do so, or to ask anything about this statement, email
+[{{ author_email }}](mailto:{{ author_email }}). If you are not happy with the answer, you can
+complain to your data protection authority; in the Netherlands, that is the
+[Autoriteit Persoonsgegevens](https://www.autoriteitpersoonsgegevens.nl/).
+
+## About this statement
+
+Last updated: {{ legal_date }}
+{% if user_data == 'accounts' %}
+Using {{ project_name }} also means accepting its [terms of use]({{ site_url | regex_replace('/$', '') }}/terms).
+{%- elif license != 'none' %}
+{{ project_name }} is free software under the
+[{{ license }} licence](https://github.com/{{ github_user }}/{{ slug }}/blob/main/LICENSE), and
+comes with no warranty.
+{%- else %}
+{{ project_name }} comes with no warranty.
+{%- endif %}
