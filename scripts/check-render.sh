@@ -461,6 +461,9 @@ test ! -e a/renovate.json5
 test -f d/renovate.json5
 # Only Dependabot repos need the workflow that hears about template releases.
 test -f a/.github/workflows/copier-update.yml
+# GITHUB_TOKEN can't push a change to .github/workflows/, which most updates carry.
+# shellcheck disable=SC2016 # the literal workflow text, not a shell expansion
+grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' a/.github/workflows/copier-update.yml
 test ! -e d/.github/workflows/copier-update.yml
 test ! -e d/.github/dependabot.yml
 (! grep -q working-directory a/just/go.just)
