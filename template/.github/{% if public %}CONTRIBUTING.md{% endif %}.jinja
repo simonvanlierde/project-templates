@@ -4,27 +4,11 @@ Thank you for your interest in {{ project_name }}. Bug reports, feature requests
 requests are welcome. Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first, and
 report vulnerabilities as [SECURITY.md](SECURITY.md) describes, not in a public issue.
 
-## Set up
+## Set up and check
 
-You need [git](https://git-scm.com/), [prek](https://prek.j178.dev/) for the git hooks{% if stacks %} and
-[just](https://just.systems){% endif %}. Install the hooks once with `prek install`.
-{%- if stacks %}
-
-Run `just` to list the recipes. Install the dependencies with:
-
-{% if 'python' in stacks %}- `just py-sync`
-{% endif -%}
-{% if 'ts' in stacks %}- `just ts-sync`
-{% endif -%}
-{% if 'rust' in stacks %}- `just rs-sync`
-{% endif -%}
-{% if 'go' in stacks %}- `just go-sync`
-{% endif %}
-## Check your change
-
-`just check` runs the checks CI runs. `just fmt` fixes and formats. `just hooks` runs
-the git hooks over the whole repo.
-{%- endif %}
+[Development](../README.md#development) in the README installs the tools, the dependencies
+and the git hooks.{% if stacks %} `just check` runs the checks CI runs, and `just fmt` fixes and
+formats.{% endif %}
 
 ## Write commits and pull requests
 
