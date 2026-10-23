@@ -84,9 +84,14 @@ grep -q 'project edit' "$out/d/web/docs/privacy.md"
   --data project_name=example --data 'stacks=[go]' . "$out/h"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
+# The decisions index belongs to the project too; the record template does not.
+echo '- project record' >>"$out/h/docs/decisions/README.md"
+echo 'project edit' >>"$out/h/docs/decisions/0000-template.md"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=example --data 'stacks=[go]' . "$out/h" >/dev/null 2>&1
 grep -q 'project edit' "$out/h/go.mod"
+grep -q 'project record' "$out/h/docs/decisions/README.md"
+(! grep -q 'project edit' "$out/h/docs/decisions/0000-template.md")
 
 # m: every stack a library, nested, with the mutation extra: mutation.yml gets a job for
 # each. a has libraries too but no extras, so it must render no mutation.yml.
