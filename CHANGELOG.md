@@ -52,6 +52,17 @@ Upgrade steps:
 
 ### Added
 
+- README badges for the options you turn on: Codecov coverage (`codecov`), CodSpeed
+  (`codspeed`), PyPI version and supported Python versions (`publish_to_pypi`), npm version
+  (`publish_to_npm`) and OpenSSF Scorecard (`public`).
+- A weekly dependency audit, `advisories.yml`, on every Monday with a job per stack:
+  `uv audit`, `pnpm audit`, `cargo deny check advisories` and `govulncheck`. Before, a repo
+  with no new commits never heard of a new advisory. A failed run shows on the Actions page
+  and in the failed-run email.
+- With `public`, an OpenSSF Scorecard workflow (`scorecard.yml`): it runs on pushes to
+  main, weekly and when branch protection changes, publishes the score for the README
+  badge and uploads the findings to code scanning. A private repo gets none. After the
+  update, the first run on main publishes the score.
 - A `public` question, yes by default. No leaves out `.github/SECURITY.md` and makes
   `none` the license default. See [Public repos](docs/usage.md#public-repos).
 - A `customise` question, no by default, ahead of the advanced questions: license,
