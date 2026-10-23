@@ -153,18 +153,25 @@ Dutch and EU cookie rules say about local storage and analytics. It is not legal
 
 1. On a clean branch of the existing repository, render over it:
    `copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .`,
-   answering `ts_kind=web-app` and the framework the app uses.
-2. A first copy has nothing to merge with, so it overwrites every file it writes.
-   It also adds the starter files the app may not have: `src/App.tsx`,
-   `src/App.test.tsx` and `src/app.css` land next to the app's own components and
+   answering `ts_kind=web-app`, the framework the app uses, and `user_data` for its
+   [legal pages](#legal-pages).
+2. A first copy has nothing to merge with, so it overwrites the files it writes, except
+   the starter files and the README: an app's own `src/App.tsx`, `src/main.tsx`,
+   `src/app.css`, `index.html`, `tests/e2e/routes.ts` and `README.md` stay as they are.
+   The starter files the app doesn't have yet land next to its own components and
    styles. Review `git diff`:
-   - Delete the starter files the app doesn't use, and restore its own versions of
-     the rest.
+   - Delete the starter files the app doesn't use.
+   - Copy the footer and the routes for the legal pages from a fresh render's
+     `src/App.tsx` into the app's own, and add `/accessibility` and `/privacy` (and
+     `/terms`) to `tests/e2e/routes.ts`.
    - Restore `vite.config.ts` and `vitest.config.ts` if the app added plugins, test
-     setup or coverage thresholds. Copier replaces both.
+     setup or coverage thresholds. Copier replaces both. Keep the template's
+     `markdown()` plugin in `vite.config.ts`: the legal pages are `.md` imports, and
+     the build fails without it.
    - Restore the `name` in `package.json` and `wrangler.jsonc`, which become the
-     project slug, and the README.
+     project slug.
    - Restore `public/_headers` if the app needs a looser policy.
+   - Fill in the TODOs in the pages in `docs/`. The e2e tests fail until none is left.
 3. Run `pnpm install`. The template's `pnpm-workspace.yaml` only accepts releases at
    least a week old, so it rejects a lockfile that holds a newer one. List each
    package it names under `minimumReleaseAgeExclude` in that file, with a date a week
@@ -194,7 +201,10 @@ so the edits from step 2 stay.
    `CHANGELOG.md` and `CITATION.cff` stay as they are, and `copier update` never touches
    them later either, so template changes to them reach you only by hand.
 2. Copier replaces `pyproject.toml`. Restore your dependencies, authors and version from
-   `git diff`, then run `just py-sync`.
+   `git diff`, then run `just py-sync`. `--overwrite` also replaces `LICENSE`,
+   `.gitignore`, `.pre-commit-config.yaml`, the `justfile` and the community files in
+   `.github/`, so review `git diff` for those too. GitHub shows `.github/CONTRIBUTING.md`
+   before a root `CONTRIBUTING.md`: keep one of each such pair and delete the other.
 3. Run `uv run ruff format` and commit that on its own. `select = ["ALL"]` usually finds
    hundreds of issues in code written without it. To start from a baseline, add the codes
    `uv run ruff check --statistics --output-format json | jq -r '.[].code'` prints to
