@@ -94,7 +94,7 @@ echo '# project citation' >"$out/k/CITATION.cff"
 echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=adopt-me --data customise=true --data python_layout=flat \
-  --data license=GPL-3.0-or-later --data codspeed=true . "$out/k"
+  --data license=GPL-3.0-or-later --data codspeed=true --data 'test_extras=[mutation]' . "$out/k"
 grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
 grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
@@ -108,7 +108,10 @@ grep -qx 'license = "GPL-3.0-or-later"' "$out/k/pyproject.toml"
 grep -q '"license": "gpl-3.0-or-later"' "$out/k/.zenodo.json"
 # A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
 grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
-grep -qx 'exclude: \^data/' "$out/k/.pre-commit-config.yaml"
+# Per hook, never top-level: the secret scan and the large-file check still cover data/.
+test "$(grep -cx ' *exclude: \^data/' "$out/k/.pre-commit-config.yaml")" = 4
+(! grep -qx 'exclude: \^data/' "$out/k/.pre-commit-config.yaml")
+grep -qx 'source_paths = \["adopt_me"\]' "$out/k/pyproject.toml"
 # yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
 grep -qx '        run: |-' "$out/k/.github/workflows/copier-update.yml"
 

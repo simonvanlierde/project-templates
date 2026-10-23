@@ -165,6 +165,8 @@ so the edits from step 2 stay.
    that package from `exclude-newer` (see [tooling](tooling.md#dependencies)).
 5. The hooks leave `data/` alone. Delete the workflows the template replaces, then run
    `just check` and `just hooks`, and commit, `.copier-answers.yml` included.
+6. Before the first tag, give `CHANGELOG.md` Keep a Changelog `## [X.Y.Z]` headings.
+   `release.yml` and the publish workflows read the section for the tag and fail without it.
 
 ## One package or a monorepo
 

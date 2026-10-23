@@ -101,6 +101,12 @@ module-name = "{{ module_name }}"
 # The package sits at the root, not under src/.
 module-root = ""
 {%- endif %}
+{%- if python_layout == 'flat' and kind == 'library' and 'mutation' in test_extras %}
+
+# mutmut otherwise guesses lib/, src/ or the directory name, and fails on a flat package.
+[tool.mutmut]
+source_paths = ["{{ module_name }}"]
+{%- endif %}
 
 # NOTE: self-contained ruff config, deliberately not extended from any shared base.
 # No target-version: ruff derives it from requires-python above.
