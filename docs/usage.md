@@ -54,8 +54,17 @@ license you already answered.
 
 A public repo also gets `.github/workflows/scorecard.yml`, which publishes its
 [OpenSSF Scorecard](https://scorecard.dev) for the README badge. The workflow needs a public
-repo, so a private one gets neither. Scorecard rates branch protection too, so set that up
-for a higher score.
+repo, so a private one gets neither. Scorecard rates branch protection too: [Protecting main](#protecting-main)
+sets it up.
+
+## Protecting main
+
+`just repo-settings` applies `.github/rulesets/main.json` to the default branch with `gh api`:
+no deletion, no force-push, linear history, and PRs required, squash-merged only. It also
+turns off merge commits and rebase merges in the repo settings. Run it once per repo, and
+again after you edit the file: it updates the ruleset named `main` if there is one. Needs
+admin rights, and a paid GitHub plan on a private repo. No status checks are required, since
+the job names depend on your stacks.
 
 ## Choosing your stacks
 
