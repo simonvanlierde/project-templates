@@ -11,6 +11,9 @@
 {%- endif %}
     }
   ],
+{#- Zenodo gives an `open` record without a license CC-BY-4.0 by default, which would
+    license what the author never licensed. `closed` publishes the metadata and DOI
+    but not the files, whether or not the repository is public. #}
 {%- if license == 'none' %}
   "access_right": "closed"
 {%- else %}

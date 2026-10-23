@@ -49,6 +49,14 @@ Upgrade steps:
 
 ### Added
 
+- GPL-3.0-or-later, LGPL-3.0-or-later and AGPL-3.0-or-later as `license` answers, with
+  the GNU texts in `LICENSE`. These texts have no copyright line, so they don't ask
+  `copyright_year`.
+- A `python_layout` question under `customise`, `src` by default. `flat` is for adopting
+  the template in a repo whose package already sits at the root: it renders no
+  `src/<module>` stub or `tests/test_add.py`, and sets `module-root = ""` for uv_build.
+  [Adopting the template in an existing Python package](docs/usage.md#adopting-the-template-in-an-existing-python-package)
+  covers the rest, including a ruff and ty baseline for code written without them.
 - A `public` question, yes by default. No leaves out `.github/SECURITY.md` and makes
   `none` the license default. See [Public repos](docs/usage.md#public-repos).
 - A `customise` question, no by default, ahead of the advanced questions: license,
@@ -110,6 +118,14 @@ Upgrade steps:
 
 ### Changed
 
+- `copier copy` keeps an existing `README.md`, and `copier update` no longer touches it,
+  as it already did for `CITATION.cff`. Later template changes to the README reach
+  existing projects only by hand.
+- A ty rule set to `"warn"` reports without failing `ty check`, the hook and
+  `just py-check`. ty exits 1 on warnings by default; `pyproject.toml` now sets
+  `[tool.ty.terminal] error-on-warning = false`.
+- In a Python project, the git hooks skip `data/`, so the whitespace, end-of-file and
+  nbstripout hooks no longer rewrite input data and archived notebooks.
 - `pnpm audit --fix=update` locks a security fix that is under a week old: it adds the
   patched version to `minimumReleaseAgeExclude`, and the new
   `minimumReleaseAgeExcludePrune` drops the entry once the lockfile moves past it.
@@ -197,6 +213,8 @@ Upgrade steps:
 
 ### Fixed
 
+- `just hooks` no longer fails on a new project with Dependabot: yamlfmt rewrote the
+  `run:` block in `copier-update.yml`.
 - The weekly scheduled run and a push to `main` no longer cancel each other in
   `python.yml` and `docker.yml`. A cancelled weekly run used to skip that week's tripwire
   tests in a `data-pipeline` project.

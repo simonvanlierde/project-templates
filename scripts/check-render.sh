@@ -86,6 +86,32 @@ echo '// project edit' >>"$out/h/go.mod"
   --data project_name=example --data 'stacks=[go]' . "$out/h" >/dev/null 2>&1
 grep -q 'project edit' "$out/h/go.mod"
 
+# j: adopting the template in an existing flat Python package under the GPL. The repo's
+# own README, citation file and package stay; no src/ stub or sample test lands.
+mkdir -p "$out/j/adopt_me"
+echo '# project readme' >"$out/j/README.md"
+echo '# project citation' >"$out/j/CITATION.cff"
+echo 'VALUE = 1' >"$out/j/adopt_me/__init__.py"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=adopt-me --data customise=true --data python_layout=flat \
+  --data license=GPL-3.0-or-later --data codspeed=true . "$out/j"
+grep -qx '# project readme' "$out/j/README.md"
+grep -qx '# project citation' "$out/j/CITATION.cff"
+grep -qx 'VALUE = 1' "$out/j/adopt_me/__init__.py"
+test ! -e "$out/j/src"
+test ! -e "$out/j/tests/test_add.py"
+(! grep -q 'import add' "$out/j/tests/test_benchmarks.py")
+grep -qx 'module-root = ""' "$out/j/pyproject.toml"
+grep -qx 'source = \["adopt_me"\]' "$out/j/pyproject.toml"
+grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/j/LICENSE"
+grep -qx 'license = "GPL-3.0-or-later"' "$out/j/pyproject.toml"
+grep -q '"license": "gpl-3.0-or-later"' "$out/j/.zenodo.json"
+# A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
+grep -qx 'error-on-warning = false' "$out/j/pyproject.toml"
+grep -qx 'exclude: \^data/' "$out/j/.pre-commit-config.yaml"
+# yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
+grep -qx '        run: |-' "$out/j/.github/workflows/copier-update.yml"
+
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
 # -f on `git tag` covers a killed run that left the tag behind.
@@ -137,6 +163,7 @@ refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
 refuses 'at least one stack' --data 'stacks=[]'
+refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
 refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \

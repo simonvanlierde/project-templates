@@ -20,6 +20,11 @@
 # `prek install` sets up both: the unit tests run before each push.
 default_install_hook_types: [pre-commit, pre-push]
 {%- endif %}
+{%- if 'python' in stacks %}
+
+# data/ holds inputs: the whitespace, end-of-file and notebook hooks must not rewrite them.
+exclude: ^{{ '' if python_dir == '.' else python_dir ~ '/' }}data/
+{%- endif %}
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0

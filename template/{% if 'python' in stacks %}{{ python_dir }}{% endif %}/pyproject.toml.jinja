@@ -97,6 +97,10 @@ exclude-newer = "1 week"
 # for a module_name that differs.
 [tool.uv.build-backend]
 module-name = "{{ module_name }}"
+{%- if python_layout == 'flat' %}
+# The package sits at the root, not under src/.
+module-root = ""
+{%- endif %}
 
 # NOTE: self-contained ruff config, deliberately not extended from any shared base.
 # No target-version: ruff derives it from requires-python above.
@@ -133,6 +137,10 @@ convention = "google"
 allow-magic-value-types = ["int"]
 max-args = 10
 
+# A rule set to "warn" reports without failing: ty otherwise exits 1 on warnings too.
+[tool.ty.terminal]
+error-on-warning = false
+
 [tool.pytest.ini_options]
 addopts = ["-ra", "--strict-config", "--strict-markers", "--import-mode=importlib"]
 testpaths = ["tests"]
@@ -141,7 +149,7 @@ testpaths = ["tests"]
 # slows every plain test run. No fail_under until there is a suite worth setting
 # one against.
 [tool.coverage.run]
-source = ["src"]
+source = ["{{ 'src' if python_layout == 'src' else module_name }}"]
 branch = true
 
 [tool.coverage.report]
