@@ -444,7 +444,7 @@ govulncheck_version:
 
 # Library kinds only: their public API has to hold for any caller's input. Property
 # tests run with the rest of the tests. Mutation testing takes minutes to hours and
-# its score is noisy, so it is a recipe to run by hand, never a CI step.
+# its score is noisy, so it runs weekly in CI (never on a pull request) and as a recipe by hand.
 test_extras:
   type: str
   multiselect: true
@@ -455,7 +455,7 @@ test_extras:
   help: Extra tests for the library code (none, one or both)
   choices:
     Property tests (generated inputs checked against a rule, run with the tests): property
-    Mutation testing (a `just <stack>-mutation` recipe that checks the tests catch planted bugs): mutation
+    Mutation testing (a `just <stack>-mutation` recipe and a weekly CI run that check the tests catch planted bugs): mutation
   default: []
 
 # Computed, never asked: the versions a new project starts on. Dependabot bumps
@@ -480,6 +480,20 @@ gremlins_version:
   type: str
   when: false
   default: v0.6.0
+
+# Computed, never asked: the tools mutation.yml installs. `copier update` bumps them;
+# Renovate bumps them here.
+# renovate: datasource=github-releases depName=casey/just
+just_version:
+  type: str
+  when: false
+  default: 1.59.0
+
+# renovate: datasource=crate depName=cargo-mutants
+cargo_mutants_version:
+  type: str
+  when: false
+  default: 27.1.0
 
 # --- docker -------------------------------------------------------------------
 
