@@ -201,6 +201,10 @@ test ! -e a/.github/workflows/ts-release.yml
 # The release body is the CHANGELOG section of the tag. The last version before the
 # link references is the edge case: its section must not swallow them.
 test -f a/.github/workflows/release.yml
+# Every project's README says how to release; only publishing ones add the environment setup.
+grep -qx '## Releasing' a/README.md
+(! grep -q 'Before the first release' a/README.md)
+grep -q 'Before the first release' c/README.md
 test -x a/.github/scripts/release-notes.sh
 cat >"$out/sample-changelog.md" <<'MD'
 # Changelog

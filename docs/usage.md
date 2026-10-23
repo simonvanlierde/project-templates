@@ -243,6 +243,9 @@ Hypothesis or proptest. To add the extras to an existing library, run
 
 ## Publishing
 
+To release, add a `## [X.Y.Z]` section to `CHANGELOG.md`, then push the tag `vX.Y.Z`.
+`release.yml` makes the GitHub release from that section.
+
 Publishing is off by default. While an option is off, a guard stops an accidental
 release:
 
