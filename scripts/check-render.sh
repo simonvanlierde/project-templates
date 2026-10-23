@@ -86,31 +86,31 @@ echo '// project edit' >>"$out/h/go.mod"
   --data project_name=example --data 'stacks=[go]' . "$out/h" >/dev/null 2>&1
 grep -q 'project edit' "$out/h/go.mod"
 
-# j: adopting the template in an existing flat Python package under the GPL. The repo's
+# k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
-mkdir -p "$out/j/adopt_me"
-echo '# project readme' >"$out/j/README.md"
-echo '# project citation' >"$out/j/CITATION.cff"
-echo 'VALUE = 1' >"$out/j/adopt_me/__init__.py"
+mkdir -p "$out/k/adopt_me"
+echo '# project readme' >"$out/k/README.md"
+echo '# project citation' >"$out/k/CITATION.cff"
+echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=adopt-me --data customise=true --data python_layout=flat \
-  --data license=GPL-3.0-or-later --data codspeed=true . "$out/j"
-grep -qx '# project readme' "$out/j/README.md"
-grep -qx '# project citation' "$out/j/CITATION.cff"
-grep -qx 'VALUE = 1' "$out/j/adopt_me/__init__.py"
-test ! -e "$out/j/src"
-test ! -e "$out/j/tests/test_add.py"
-(! grep -q 'import add' "$out/j/tests/test_benchmarks.py")
-grep -qx 'module-root = ""' "$out/j/pyproject.toml"
-grep -qx 'source = \["adopt_me"\]' "$out/j/pyproject.toml"
-grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/j/LICENSE"
-grep -qx 'license = "GPL-3.0-or-later"' "$out/j/pyproject.toml"
-grep -q '"license": "gpl-3.0-or-later"' "$out/j/.zenodo.json"
+  --data license=GPL-3.0-or-later --data codspeed=true . "$out/k"
+grep -qx '# project readme' "$out/k/README.md"
+grep -qx '# project citation' "$out/k/CITATION.cff"
+grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
+test ! -e "$out/k/src"
+test ! -e "$out/k/tests/test_add.py"
+(! grep -q 'import add' "$out/k/tests/test_benchmarks.py")
+grep -qx 'module-root = ""' "$out/k/pyproject.toml"
+grep -qx 'source = \["adopt_me"\]' "$out/k/pyproject.toml"
+grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/k/LICENSE"
+grep -qx 'license = "GPL-3.0-or-later"' "$out/k/pyproject.toml"
+grep -q '"license": "gpl-3.0-or-later"' "$out/k/.zenodo.json"
 # A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
-grep -qx 'error-on-warning = false' "$out/j/pyproject.toml"
-grep -qx 'exclude: \^data/' "$out/j/.pre-commit-config.yaml"
+grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
+grep -qx 'exclude: \^data/' "$out/k/.pre-commit-config.yaml"
 # yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
-grep -qx '        run: |-' "$out/j/.github/workflows/copier-update.yml"
+grep -qx '        run: |-' "$out/k/.github/workflows/copier-update.yml"
 
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
