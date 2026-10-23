@@ -35,8 +35,8 @@ the `standard` linters plus `bodyclose`, `errorlint`, `gocritic`, `gosec`, `miss
 format the code.
 
 Install golangci-lint once per machine. The generated README has the install command.
-The template pins the golangci-lint version, so `copier update` bumps it. `govulncheck` is a `tool`
-in `go.mod`, so it needs no install, and Dependabot keeps it current.
+The template pins the golangci-lint version, so `copier update` bumps it. `govulncheck`
+is a `tool` in `go.mod`, so it needs no install, and Dependabot keeps it current.
 
 ## Git hooks
 
@@ -69,11 +69,16 @@ BuildKit cache mounts, a non-root runtime user, and Open Container Initiative la
 
 Generated projects use Dependabot by default, which needs no app and covers every
 ecosystem here. The `dependency_bot` answer switches to Renovate, with the same rules in
-`renovate.json5`. Either way, version updates come weekly, grouped into one PR for actions and
-hooks together, one for dev tooling and one for minor and patch bumps of runtime
-dependencies, and wait a week, or a month for a major version of
-a package dependency. A runtime major gets a PR of its own. The bot's security PRs skip the wait. The one difference: Dependabot
-also groups npm security updates into a single PR, and the Renovate config has no such group.
+`renovate.json5`. Either way:
+
+- Version updates come weekly, in three grouped PRs: actions and hooks together, dev
+  tooling, and minor and patch bumps of runtime dependencies.
+- A runtime major gets a PR of its own.
+- Updates wait a week, or a month for a major version of a package dependency.
+- The bot's security PRs skip the wait.
+
+The one difference: Dependabot also groups npm security updates into a single PR, and
+the Renovate config has no such group.
 
 Renovate also refreshes the uv, pnpm and Cargo lockfiles every Monday. Its security PRs
 cover only the dependencies a manifest names, so a fix in a dependency of a dependency
@@ -113,10 +118,9 @@ uv applies it whenever it relocks, so a Dependabot security PR can't lock a fix 
 less than a week old either. Use the exemption above.
 
 Nothing tracks the `FROM` base images in the Dockerfiles. Those tags are Copier
-answers, so update them by hand. They are pinned by tag only, on purpose: each rebuild
-takes the tag's latest security fixes, at the cost of a build that isn't reproducible
-byte for byte. This template repository uses Renovate instead,
-because Dependabot can't parse `.jinja` files.
+answers, so update them by hand. They are pinned by tag only. Each rebuild takes the
+tag's latest security fixes, so a build isn't reproducible byte for byte. This template
+repository uses Renovate, because Dependabot can't parse `.jinja` files.
 
 `just check` and CI audit dependencies for known advisories:
 
