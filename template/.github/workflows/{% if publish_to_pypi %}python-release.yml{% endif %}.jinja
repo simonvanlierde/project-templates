@@ -56,6 +56,9 @@ jobs:
           enable-cache: false
           version: "{{ uv_version }}"
 
+      # release.yml makes the release from this tag's CHANGELOG.md section: no section, no publish.
+      - run: '"$GITHUB_WORKSPACE/.github/scripts/release-notes.sh" "$GITHUB_REF_NAME" "$GITHUB_WORKSPACE/CHANGELOG.md" >/dev/null'
+
       # Publish only what passes, on the exact commit being released.
       - run: uv sync --locked
       - run: uv run ruff check
