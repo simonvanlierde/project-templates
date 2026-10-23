@@ -596,6 +596,9 @@ grep -qx '    "marked": "[0-9.]*",' d/web/package.json
 test -f j/docs/accessibility.md
 (! grep -rq 'github.com/example-org/private-web' j/docs)
 grep -q 'github.com/example-org/pipe-me/blob/main/web/tests/e2e/a11y.spec.ts' d/web/docs/accessibility.md
+# GitHub shows the pages as they are, so they pass the project's own Markdown lint.
+rumdl_version=$(sed -n '/rumdl-pre-commit/{n;s/.*frozen: v//p;}' "$repo/.pre-commit-config.yaml")
+uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs
 test ! -e a/docs/privacy.md
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json
