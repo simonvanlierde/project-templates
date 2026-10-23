@@ -47,8 +47,8 @@ To skip the questions, `--data-file answers.yml` reads answers from a file, and
 ## Public repos
 
 `public` is yes by default. Answer no for a private repo, and the template leaves out
-`.github/SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `pull_request_template.md`,
-which only outsiders need, and licenses nothing unless you pick a
+`.github/SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and the
+`dco.yml` sign-off check, which only outsiders need, and licenses nothing unless you pick a
 license under `customise`. When the repo goes public, run
 `copier update --data public=true`: that adds the files back. It does not change a
 license you already answered.

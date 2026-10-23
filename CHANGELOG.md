@@ -15,7 +15,7 @@ Upgrade steps:
 - **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
   `copier update`. Renovate's copier manager installs the latest Copier.
 - A private repo: answer no to the new `public` question, and `.github/SECURITY.md`,
-  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `pull_request_template.md` go. Your license answer stays as it is.
+  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml` go. Your license answer stays as it is.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -61,10 +61,15 @@ Upgrade steps:
   badge and uploads the findings to code scanning. A private repo gets none. After the
   update, the first run on main publishes the score.
 - A `public` question, yes by default. No leaves out `.github/SECURITY.md`,
-  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `pull_request_template.md`, and makes
+  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml`, and makes
   `none` the license default. See [Public repos](docs/usage.md#public-repos).
-- `CONTRIBUTING.md` states the commit, pull request and changelog conventions. `CODE_OF_CONDUCT.md`
-  is the Contributor Covenant 3.0, with the author email as the contact.
+- `CONTRIBUTING.md` says where to report a bug, states the commit, pull request and
+  changelog conventions, asks for a DCO sign-off on every commit and says who maintains the
+  project. `CODE_OF_CONDUCT.md` is the Contributor Covenant 3.0, with the author email as
+  the contact. A `dco.yml` workflow fails an outside contributor's pull request with a
+  commit that isn't signed off.
+- `SECURITY.md` says what to include in a report, promises an answer within 14 days, says
+  how a fix is disclosed, and has a scope section to fill in.
 - A `customise` question, no by default, ahead of the advanced questions: license,
   directories, versions, module names, Codecov, the dependency bot, publishing, test
   extras and the port. A new Python library, TypeScript web app or data pipeline now

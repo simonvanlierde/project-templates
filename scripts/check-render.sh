@@ -211,11 +211,6 @@ grep -q charliermarsh.ruff a/.vscode/extensions.json
 grep -q biomejs.biome a/.vscode/settings.json
 # TOML formats with tombi, which reads the shipped .tombi.toml; taplo would not.
 grep -q tombi-toml.tombi a/.vscode/settings.json
-# The community files come with SECURITY.md (public) and go with it.
-for f in SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md pull_request_template.md; do
-  for r in a c d; do test -f "$r/.github/$f"; done
-  test ! -e "b/.github/$f"
-done
 grep -q 'Contributor Covenant, version 3.0' a/.github/CODE_OF_CONDUCT.md
 grep -q 'send an email to <ada@example.com>' a/.github/CODE_OF_CONDUCT.md
 # Scorecard: its workflow and badge exist only with public (a), never without (b).
@@ -591,5 +586,27 @@ grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 # The publish step: npm, from a tarball built earlier.
 grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
 (! grep -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
+
+# The community files and the DCO check come with public and go with it, in every render.
+for answers in */.copier-answers.yml; do
+  r=${answers%%/*}
+  # e renders a tag on HEAD, so it lacks uncommitted edits.
+  [ "$r" = e ] && continue
+  for f in SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md pull_request_template.md workflows/dco.yml; do
+    if grep -qx 'public: false' "$answers"; then
+      test ! -e "$r/.github/$f"
+    else
+      test -f "$r/.github/$f"
+    fi
+  done
+done
+# What the OpenSSF badge criteria ask of them: a response time, a disclosure statement,
+# a sign-off rule and who maintains the project.
+grep -q 'within 14 days' a/.github/SECURITY.md
+grep -q 'publish the GitHub security advisory' a/.github/SECURITY.md
+grep -q '^## Scope' a/.github/SECURITY.md
+grep -q 'Signed-off-by:' a/.github/CONTRIBUTING.md
+grep -q '^## Who maintains this' a/.github/CONTRIBUTING.md
+grep -q '/issues)' a/.github/CONTRIBUTING.md
 
 echo "all render checks passed"
