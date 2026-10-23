@@ -3,9 +3,10 @@ name: copier update
 # Dependabot can't update a Copier template, so this opens the update PR. It runs
 # weekly, finds the newest template tag, and does nothing when `_commit` in
 # .copier-answers.yml already is that tag. The PR lives on one fixed branch.
-# It pushes with the COPIER_UPDATE_TOKEN secret when there is one: GITHUB_TOKEN can't
-# push a change to .github/workflows/, and its PR starts no CI. See "Hearing about new
-# releases" in the template's docs/usage.md.
+# GITHUB_TOKEN can't push a change to .github/workflows/, which most template releases
+# make, and its PR starts no CI. A COPIER_UPDATE_TOKEN secret fixes both; without it, an
+# update that touches a workflow opens an issue instead. See "Hearing about new releases"
+# in the template's docs/usage.md.
 
 on:
   schedule:
@@ -30,6 +31,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write # to ask for a local update when it can't push one
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,7 +46,9 @@ jobs:
 {%- raw %}
       - name: Update from the newest template tag
         env:
+          # A fine-grained token with contents, pull requests and workflows write on this repo.
           GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}
+          HAS_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN != '' }}
           REPO: ${{ github.repository }}
           BASE: ${{ github.event.repository.default_branch }}
         shell: bash
@@ -80,6 +84,20 @@ jobs:
               sed "s/.*/- \`&\`/" conflicts.txt
             fi
           } >body.md
+
+          if [ "$HAS_TOKEN" != true ] && git diff --cached --name-only | grep -q '^\.github/workflows/'; then
+            title="Update from template $latest by hand"
+            {
+              echo "Template \`$latest\` changes files in \`.github/workflows/\`, and \`GITHUB_TOKEN\` can't push those."
+              echo "Run \`copier update --vcs-ref $latest\` locally and open the PR yourself, or add a \`COPIER_UPDATE_TOKEN\` secret (see the template's docs/usage.md) so this workflow can."
+            } >issue.md
+            if [ -z "$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number')" ]; then
+              gh issue create --title "$title" --body-file issue.md
+            fi
+            echo "::warning::$title: GITHUB_TOKEN can't push workflow changes"
+            exit 0
+          fi
+
           git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
             commit -q -m "chore: update from template $latest"
           git push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"
