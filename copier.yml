@@ -22,6 +22,8 @@ _skip_if_exists:
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
   - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
   - "{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
+  # The committed API report: `just ts-api` rewrites it after a deliberate change.
+  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
 # Shown on `copier copy` only; `--quiet` hides both.
 _message_before_copy: |
@@ -439,6 +441,14 @@ uv_version:
   type: str
   when: false
   default: 0.13.0
+
+# Computed, never asked: the griffe that python.yml's api job and `just py-check` run
+# with uvx when publish_to_pypi is on. It compares the public API with the last git tag.
+# renovate: datasource=pypi depName=griffe
+griffe_version:
+  type: str
+  when: false
+  default: 2.3.2
 
 # Computed, never asked: the golangci-lint release that the README and go.yml pin,
 # kept in one place. `just go-check` runs whichever golangci-lint is on PATH. Renovate bumps it from its `# renovate:` line.

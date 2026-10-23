@@ -33,6 +33,9 @@
     "node": ">={{ node_version }}"
   },
   "scripts": {
+{%- if publish_to_npm %}
+    "api": "api-extractor run",
+{%- endif %}
 {%- if web %}
     "budget": "node scripts/checkBundleBudget.mjs",
     "build": "vite build",
@@ -82,6 +85,9 @@
 {%- endif %}
     "@biomejs/biome": "^2.5.15",
     "@j178/prek": "^0.5.5",
+{%- if publish_to_npm %}
+    "@microsoft/api-extractor": "^7.59.4",
+{%- endif %}
 {%- if mutation %}
     "@stryker-mutator/core": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",
