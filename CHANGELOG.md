@@ -19,6 +19,9 @@ Upgrade steps:
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
+- A TypeScript library with `publish_to_npm`: after the update, run `just ts-api` and
+  commit `<package>.api.md`. The template's copy describes the sample `add` function, not
+  your exports, so CI fails until you do.
 - With `dependency_bot=renovate`: turn Dependabot security updates off
   (`gh api -X DELETE repos/OWNER/REPO/automated-security-fixes`), or each security fix
   arrives as two PRs. Keep Dependabot alerts on: Renovate's security PRs need them.
@@ -126,6 +129,12 @@ Upgrade steps:
   checks HTML.
 - The README says how to lock a security fix that is less than a week old, which
   `exclude-newer` and `minimumReleaseAge` otherwise hold back.
+- API-break checks for libraries that publish. With `publish_to_pypi`, a new `api` job
+  in `python.yml` runs griffe, which fails when a public function, class or argument was
+  removed or changed since the last git tag, and passes while there is no tag. It stays
+  out of `just py-check`, so a deliberate break leaves local checks green. With `publish_to_npm`, `ts.yml` and `just ts-check` run API Extractor, which
+  fails when the built types differ from the committed `<package>.api.md`. `just ts-api`
+  rewrites that report after a deliberate change, so the change shows in review.
 
 ### Changed
 
