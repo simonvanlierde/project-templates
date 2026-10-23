@@ -31,7 +31,7 @@ jobs:
   python:
     name: "mutation: python"
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
 {%- if python_dir != '.' %}
     # Only `run:` steps take this. just finds the root justfile from here.
     defaults:
@@ -61,7 +61,7 @@ jobs:
   ts:
     name: "mutation: ts"
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
 {%- if ts_dir != '.' %}
     # Only `run:` steps take this. Point the setup actions at the package separately.
     defaults:
@@ -99,7 +99,7 @@ jobs:
   rust:
     name: "mutation: rust"
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -134,7 +134,7 @@ jobs:
   go:
     name: "mutation: go"
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
