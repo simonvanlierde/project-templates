@@ -211,8 +211,13 @@ grep -q charliermarsh.ruff a/.vscode/extensions.json
 grep -q biomejs.biome a/.vscode/settings.json
 # TOML formats with tombi, which reads the shipped .tombi.toml; taplo would not.
 grep -q tombi-toml.tombi a/.vscode/settings.json
-test -f a/.github/SECURITY.md
-test ! -e b/.github/SECURITY.md
+# The community files come with SECURITY.md (public) and go with it.
+for f in SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md pull_request_template.md; do
+  for r in a c d; do test -f "$r/.github/$f"; done
+  test ! -e "b/.github/$f"
+done
+grep -q 'Contributor Covenant, version 3.0' a/.github/CODE_OF_CONDUCT.md
+grep -q 'send an email to <ada@example.com>' a/.github/CODE_OF_CONDUCT.md
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
 (! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.

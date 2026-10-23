@@ -12,7 +12,7 @@ then one switch for everything else. They come in this order:
 | `stacks`              | always                             | Which packages, CI workflows and `just` recipes the repo gets      |
 | `kind`, `ts_kind`, `rust_kind`, `go_kind` | that stack is picked | What the package is: its layout, extra files and CI          |
 | `web_framework`       | `ts_kind=web-app`                  | React, or Preact for a smaller bundle                              |
-| `public`              | always                             | Yes adds `.github/SECURITY.md`, and sets the license default       |
+| `public`              | always                             | Yes adds the community files in `.github/`, and sets the license default |
 | `github_user`, `author_name`, `author_email` | always      | Repo URLs and badges, the license, package metadata                |
 | `author_orcid`        | a `library`, `research` or `data-pipeline` Python kind | The citation files                    |
 | `customise`           | always                             | Yes asks the advanced questions below; no takes their defaults     |
@@ -47,7 +47,8 @@ To skip the questions, `--data-file answers.yml` reads answers from a file, and
 ## Public repos
 
 `public` is yes by default. Answer no for a private repo, and the template leaves out
-`.github/SECURITY.md`, which only outsiders need, and licenses nothing unless you pick a
+`.github/SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `pull_request_template.md`,
+which only outsiders need, and licenses nothing unless you pick a
 license under `customise`. When the repo goes public, run
 `copier update --data public=true`: that adds the files back. It does not change a
 license you already answered.
@@ -66,7 +67,7 @@ The `stacks` question is a multi-select. Pick any combination:
 
 Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
 `just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`
-(unless `license=none`), `SECURITY.md` (unless `public=false`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
+(unless `license=none`), `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and a pull request template (unless `public=false`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
 recommendations. A Python project also picks a [kind](python-kinds.md).
 
 ## TypeScript kinds

@@ -1,0 +1,42 @@
+# Contributing
+
+Thank you for your interest in {{ project_name }}. Bug reports, feature requests and pull
+requests are welcome. Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first, and
+report vulnerabilities as [SECURITY.md](SECURITY.md) describes, not in a public issue.
+
+## Set up
+
+You need [git](https://git-scm.com/), [prek](https://prek.j178.dev/) for the git hooks{% if stacks %} and
+[just](https://just.systems){% endif %}. Install the hooks once with `prek install`.
+{%- if stacks %}
+
+Run `just` to list the recipes. Install the dependencies with:
+
+{% if 'python' in stacks %}- `just py-sync`
+{% endif -%}
+{% if 'ts' in stacks %}- `just ts-sync`
+{% endif -%}
+{% if 'rust' in stacks %}- `just rs-sync`
+{% endif -%}
+{% if 'go' in stacks %}- `just go-sync`
+{% endif %}
+## Check your change
+
+`just check` runs the checks CI runs. `just fmt` fixes and formats. `just hooks` runs
+the git hooks over the whole repo.
+{%- endif %}
+
+## Write commits and pull requests
+
+- **Commits** follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/):
+  `type(scope): summary`, in the imperative, lower case, with no period. Add a body only
+  when the change needs one, with a bullet per logical chunk.
+- **The pull request title** becomes the squash commit subject, so it follows the same rule.
+- **The pull request body** has the shape of
+  [the pull request template](pull_request_template.md): what it fixes and why, three or
+  four bullets, and a `Tests:` line.
+- **The changelog** ([CHANGELOG.md](../CHANGELOG.md)) follows
+  [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/). Write each entry for
+  the people who use the project, not as a commit subject. Mark breaking changes
+  **Breaking**, and put upgrade steps first under the version.
+- **The release notes** are that version's changelog section.

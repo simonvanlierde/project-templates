@@ -14,8 +14,8 @@ Upgrade steps:
 
 - **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
   `copier update`. Renovate's copier manager installs the latest Copier.
-- A private repo: answer no to the new `public` question, and `.github/SECURITY.md`
-  goes. Your license answer stays as it is.
+- A private repo: answer no to the new `public` question, and `.github/SECURITY.md`,
+  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `pull_request_template.md` go. Your license answer stays as it is.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -49,8 +49,11 @@ Upgrade steps:
 
 ### Added
 
-- A `public` question, yes by default. No leaves out `.github/SECURITY.md` and makes
+- A `public` question, yes by default. No leaves out `.github/SECURITY.md`,
+  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `pull_request_template.md`, and makes
   `none` the license default. See [Public repos](docs/usage.md#public-repos).
+- `CONTRIBUTING.md` states the commit, pull request and changelog conventions. `CODE_OF_CONDUCT.md`
+  is the Contributor Covenant 3.0, with the author email as the contact.
 - A `customise` question, no by default, ahead of the advanced questions: license,
   directories, versions, module names, Codecov, the dependency bot, publishing, test
   extras and the port. A new Python library, TypeScript web app or data pipeline now
