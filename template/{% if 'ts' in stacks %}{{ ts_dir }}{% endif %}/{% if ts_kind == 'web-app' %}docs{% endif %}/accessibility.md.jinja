@@ -1,11 +1,16 @@
+{#- A private repo's GitHub links would 404 for visitors, so they name the files instead. -#}
 {%- set blob = 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/blob/main/' ~ ('' if ts_dir == '.' else ts_dir ~ '/') -%}
+{%- macro file(path) -%}
+{%- if public %}[{{ path }}]({{ blob }}{{ path }}){% else %}`{{ path }}`{% endif -%}
+{%- endmacro -%}
 <!--
 Keep this statement true. Every claim must be checkable in this repository: the tests in
 tests/e2e/, the lint rules in biome.json, the styles in src/app.css. When a known problem is
 fixed, move its bullet from "Known problems" to "How we check" in the same pull request as the
 fix. The app renders this file at /accessibility, so write plain Markdown with absolute links.
 tests/e2e/accessibility-statement.spec.ts checks the headings, the status, the contact, the
-"Last reviewed" date, and that no TODO is left.
+"Last reviewed" date, and that no TODO is left. A public-sector site must also publish its
+country's model statement and link it from "About this statement" (see web-legal.md).
 -->
 
 # Accessibility statement
@@ -29,7 +34,7 @@ with a screen reader. List only what a test or a recorded hand check backs.
 
 Its conformance is **not assessed**. Nobody has checked it against every WCAG 2.2 criterion, and
 there has been no external audit. This is a self-assessment by the developer. What is checked,
-and how, is under [How we check](#how-we-check).
+and how, is under How we check.
 
 ## Known problems
 
@@ -56,14 +61,14 @@ another format, ask, and we will send it.
 - **Automated scan.** The end-to-end tests run [axe-core](https://github.com/dequelabs/axe-core)
   with the WCAG 2.0, 2.1 and 2.2 level A and AA rules and axe's best practices, on every page,
   in the light and the dark theme. See
-  [tests/e2e/a11y.spec.ts]({{ blob }}tests/e2e/a11y.spec.ts).
+  {{ file('tests/e2e/a11y.spec.ts') }}.
 - **Reflow.** Every page is loaded 320 px wide and fails if it scrolls sideways. See
-  [tests/e2e/reflow.spec.ts]({{ blob }}tests/e2e/reflow.spec.ts).
+  {{ file('tests/e2e/reflow.spec.ts') }}.
 - **Lint.** [Biome's accessibility rules](https://biomejs.dev/linter/javascript/rules/#a11y) check
   every change for things like missing alt text, invalid ARIA and click handlers without a keyboard
   equivalent.
 - **This statement.**
-  [tests/e2e/accessibility-statement.spec.ts]({{ blob }}tests/e2e/accessibility-statement.spec.ts)
+  {{ file('tests/e2e/accessibility-statement.spec.ts') }}
   fails when this page loses a section, claims a status it has not earned, loses its email contact,
   or goes more than 400 days without a review.
 
@@ -78,7 +83,9 @@ to check it by hand.
 - Chromium, in Playwright's desktop Chrome profile, with axe-core, on every pull request.
 
 TODO: add the browser and assistive-technology pairs you tried by hand, with the date, such as
-"Firefox with NVDA on 30 October 2026". {{ project_name }} relies on HTML, CSS and JavaScript.
+"Firefox with NVDA on 30 October 2026".
+
+{{ project_name }} relies on HTML, CSS and JavaScript.
 
 ## About this statement
 
@@ -88,7 +95,5 @@ Last reviewed: {{ legal_date }}
 
 Next review: within 12 months of the last review, or at the next major release if that comes first.
 
-Method: self-assessment by the developer, with the checks under [How we check](#how-we-check). No
-external audit.
-
-{{ project_name }} is not run by a public body, so no accessibility law requires this statement.
+Method: self-assessment by the developer, with the checks under How we check. No external
+audit.

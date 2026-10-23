@@ -8,9 +8,9 @@ import { ROUTES } from "./routes";
  * a11y.spec.ts runs axe over it with the other routes.
  */
 
-// The W3C conformance terms the statement may use. "Fully conformant" needs a
-// full external audit: allow it only once one is done.
-const ALLOWED_STATUS = /\b(not assessed|partially conformant|non-conformant)\b/i;
+// The status sentence, with the W3C conformance terms the statement may use.
+// "Fully conformant" needs a full external audit: allow it only once one is done.
+const STATUS = /^Its conformance is (not assessed|partially conformant|non-conformant)\b/i;
 const SECTIONS = [
   {{ ('Using ' ~ project_name) | to_json }},
   {{ ('How accessible ' ~ project_name ~ ' is') | to_json }},
@@ -31,12 +31,13 @@ test("the statement renders its sections and claims no more than was checked", a
   await expect(statement.getByRole("heading", { level: 1 })).toHaveText("Accessibility statement");
   await expect(statement.getByRole("heading", { level: 2 })).toHaveText(SECTIONS);
 
-  await expect(statement.getByText(ALLOWED_STATUS).first()).toBeVisible();
+  // The term must sit in the status sentence, not anywhere on the page.
+  await expect(statement.getByText(/^Its conformance is /)).toHaveText(STATUS);
   await expect(statement).not.toContainText(/fully conformant/i);
 
   // Email first: a GitHub account must never be the only way to report a barrier.
   await expect(statement.getByRole("link", { name: /@/ }).first()).toHaveAttribute("href", /^mailto:.+@.+/);
-  await expect(statement).toContainText("within 10 working days");
+  await expect(statement).toContainText(/within \d+ working days/);
 });
 
 test("the statement was reviewed in the last 400 days", async ({ page }) => {
@@ -47,7 +48,10 @@ test("the statement was reviewed in the last 400 days", async ({ page }) => {
     .textContent();
   const reviewed = new Date((line ?? "").replace(/^Last reviewed:\s*/, ""));
   expect(Number.isNaN(reviewed.getTime()), `unreadable date in "${line}"`).toBe(false);
-  expect((Date.now() - reviewed.getTime()) / DAY_MS).toBeLessThan(MAX_REVIEW_AGE_DAYS);
+  const ageDays = (Date.now() - reviewed.getTime()) / DAY_MS;
+  // A date in the future is a typo, and would hold the check off for years.
+  expect(ageDays).toBeGreaterThan(-1);
+  expect(ageDays).toBeLessThan(MAX_REVIEW_AGE_DAYS);
 });
 
 // The template leaves a TODO wherever only the project knows the answer.

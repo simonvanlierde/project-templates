@@ -17,7 +17,8 @@ Upgrade steps:
   `copier update --data user_data=nothing` (or `browser`, or `accounts`). Then add the
   footer and the page routing from a fresh render's `src/App.tsx` to yours, and
   `/accessibility` and `/privacy` (and `/terms`) to `tests/e2e/routes.ts`: an update
-  leaves both files alone. Fill in the TODOs in `docs/`.
+  leaves both files alone. Fill in the TODOs in `docs/`. An app on its own domain: pass
+  `--data site_url=https://<your domain>`, or the pages name the `pages.dev` address.
 - **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
   `copier update`. Renovate's copier manager installs the latest Copier.
 - A private repo: answer no to the new `public` question, and `.github/SECURITY.md`
@@ -128,7 +129,7 @@ Upgrade steps:
   statement at `/privacy`, and with `user_data=accounts` terms of use at `/terms`, each
   linked from every page's footer. Each is one Markdown file in `docs/` that GitHub shows
   and the build turns into HTML. New e2e tests fail while a page still holds a TODO, when
-  the statement claims more than "not assessed" or goes 400 days without a review, and
+  the statement claims to be "fully conformant" or goes 400 days without a review, and
   when a first visit sets a cookie, stores anything in the browser or loads a file from
   another site. `docs/web-legal.md` has tips for filling them in
   ([Legal pages](docs/usage.md#legal-pages)).

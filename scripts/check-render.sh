@@ -138,6 +138,9 @@ refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
+# The name goes into the README and the web app's Markdown pages unescaped.
+refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my*app'
+refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my<app>'
 refuses 'at least one stack' --data 'stacks=[]'
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
 # The legal pages are written from user_data, so it has no default to fall back on.
@@ -152,6 +155,9 @@ refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=
 # Its gitignored build output drops the module path's /v2.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
   --data go_kind=binary --data go_module=github.com/example-org/1tool/v2 . "$out/i"
+# j: a private web app, so its legal pages must not link a repo visitors can't open.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
 
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
 import ast, json, json5, os, pathlib, tomllib, yaml
@@ -469,6 +475,10 @@ test -f d/web/tests/e2e/privacy.spec.ts
 test -f d/web/tests/e2e/accessibility-statement.spec.ts
 grep -q 'Its conformance is \*\*not assessed\*\*' d/web/docs/accessibility.md
 grep -qx '    "marked": "[0-9.]*",' d/web/package.json
+# A private repo's GitHub links would 404 for visitors, so its legal pages have none.
+test -f j/docs/accessibility.md
+(! grep -rq 'github.com/example-org/private-web' j/docs)
+grep -q 'github.com/example-org/pipe-me/blob/main/web/tests/e2e/a11y.spec.ts' d/web/docs/accessibility.md
 test ! -e a/docs/privacy.md
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json

@@ -45,7 +45,7 @@ export function App() {
         <nav aria-label="About this site">
           {page && <a href="/">{title}</a>}
           {Object.entries(PAGES).map(([path, { title: name }]) => (
-            <a key={path} href={path}>
+            <a key={path} href={path} aria-current={PAGES[path] === page ? "page" : undefined}>
               {name}
             </a>
           ))}

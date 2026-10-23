@@ -128,15 +128,9 @@ The `user_data` answer, "What does the app keep about its users?", has no defaul
 `nothing`, `browser` (local storage only) or `accounts` (accounts or uploads on a
 server). It decides what the privacy statement says, and whether there are terms. The
 answers fill in the name, `site_url`, your email and today's date. The rest is marked
-TODO, and the e2e tests fail until no TODO is left:
-
-- `tests/e2e/accessibility-statement.spec.ts` checks the statement's sections, that its
-  status is "not assessed", "partially conformant" or "non-conformant" (never "fully
-  conformant"), its email contact, a "Last reviewed" date under 400 days old, and the
-  footer link from every route.
-- `tests/e2e/privacy.spec.ts` checks that a first visit to every route sets no cookies,
-  stores nothing in the browser and requests only the app's own origin, so the app needs
-  no cookie banner. It also checks the footer links and each page's email contact.
+TODO, and the e2e tests fail until no TODO is left. The
+[CI baseline](ci-baseline.md) says what `accessibility-statement.spec.ts` and
+`privacy.spec.ts` check.
 
 `docs/web-legal.md` in the rendered app has tips for filling the pages in: who is
 responsible for the data, what an organisation's privacy officer checks, and what the

@@ -21,11 +21,12 @@ request as the code that makes it untrue.
 - **An app run for an organisation** (a university, a company, a public body): the organisation is
   the controller, not you. Name it on the privacy statement, have its privacy officer review the
   text before launch, and link the organisation's own privacy statement from yours.
-- **A public-sector site in the EU** must also publish the national model accessibility statement.
-  In the Netherlands that is the statement the Bdto (Besluit digitale toegankelijkheid overheid)
-  requires, made with the wizard on
-  [toegankelijkheidsverklaring.nl](https://www.toegankelijkheidsverklaring.nl/) and listed in its
-  register. Link it from "About this statement" and keep this page as the readable version.
+- **A public-sector site in the EU** must publish its country's model accessibility statement,
+  which builds on the EU model in Implementing Decision (EU) 2018/1523. In the Netherlands that is
+  the statement the Bdto (Besluit digitale toegankelijkheid overheid) requires, made with the
+  wizard on [toegankelijkheidsverklaring.nl](https://www.toegankelijkheidsverklaring.nl/) and
+  listed in its register. Link it from "About this statement" and keep this page as the readable
+  version.
 
 ## Accessibility statement
 
@@ -38,8 +39,12 @@ request as the code that makes it untrue.
 
 ## Privacy statement
 
-- Say what is kept, where, for how long, and who else gets it. IP addresses in server logs count
-  as personal data, so the hosting section stays even for an app that keeps nothing.
+- Say what is kept, where, for how long, and who else gets it. IP addresses in server logs can
+  count as personal data, so the hosting section stays even for an app that keeps nothing.
+- Change "Last updated" with every edit to the page.
+- After the first deploy, check the host's dashboard for analytics or bot-protection features
+  that set cookies or add scripts, and check that `curl -sI <site_url> | grep -i set-cookie`
+  prints nothing.
 - Name every outside service the app calls. Loading a font, a script or an image from another site
   sends the visitor's IP address there; the template loads nothing from other sites, and
   `tests/e2e/privacy.spec.ts` fails if a page does.
@@ -48,7 +53,7 @@ request as the code that makes it untrue.
 
 - **The rule covers any storage, not only cookies.** Article 11.7a of the Dutch
   Telecommunicatiewet, the Dutch form of article 5(3) of the EU ePrivacy Directive, applies to
-  "het opslaan van of toegang verkrijgen tot informatie in de randapparatuur van een gebruiker":
+  "het … opslaan van of toegang verkrijgen tot informatie in de randapparatuur van een gebruiker":
   storing or reading any information on the user's device. The European Data Protection Board
   reads article 5(3) the same way: storage counts whatever the medium, the technique or how long
   it lasts ([Guidelines 2/2023](https://www.edpb.europa.eu/system/files/2024-10/edpb_guidelines_202302_technical_scope_art_53_eprivacydirective_v2_en_0.pdf),
@@ -56,15 +61,29 @@ request as the code that makes it untrue.
   as cookies. The Board adds (paragraph 44) that an app using information that stays on the device,
   such as local storage, is not "gaining access" to it, but article 5(3) applies once that
   information, or anything derived from it, leaves the device.
-- **Two exemptions need no consent**
-  ([article 11.7a, third paragraph](https://wetten.overheid.nl/jci1.3:c:BWBR0009950&hoofdstuk=11&artikel=11.7a)):
-  storage that is strictly necessary for the service the user asked for, and storage to measure the
-  quality or effectiveness of the service, provided it has no or only minor consequences for the
-  user's privacy. The text names no technique, so it reads as covering the same storage as the
-  rule. The Autoriteit Persoonsgegevens puts the second as "limited analytics cookies", such as
-  counting visitors and the most visited pages: they need no consent when their impact on privacy
-  is small, but still need a legal basis if they process personal data, and must be listed in the
-  privacy statement ([AP: Cookies](https://www.autoriteitpersoonsgegevens.nl/en/themes/internet-and-smart-devices/cookies),
+- **What needs no consent.** Article 5(3) of the ePrivacy Directive exempts two cases: storage or
+  access "for the sole purpose of carrying out the transmission of a communication…", and storage
+  or access "strictly necessary in order for the provider of an information society service
+  explicitly requested by the subscriber or user to provide the service" (the wording the
+  Article 29 Working Party quotes as its criteria A and B in
+  [Opinion 04/2012 on the cookie consent exemption](https://ec.europa.eu/justice/article-29/documentation/opinion-recommendation/files/2012/wp194_en.pdf)).
+  [Article 11.7a, third paragraph](https://wetten.overheid.nl/jci1.3:c:BWBR0009950&hoofdstuk=11&artikel=11.7a)
+  carries both over and adds a third, which is Dutch only: storage or access "om informatie te
+  verkrijgen over de kwaliteit of effectiviteit van een geleverde dienst…", to learn about the
+  quality or effectiveness of the service, provided it has "geen of geringe gevolgen" (no or
+  minor consequences) for the user's privacy. Outside the Netherlands, check your own country's
+  law before relying on that third case.
+- **Keeping the user's own work is strictly necessary.** The Working Party counts "user-input"
+  storage, such as a form filled in over several pages or a shopping cart, as needed for a
+  service the user explicitly asked for, and adds that "the user may explicitly ask the service
+  to remember some information from one session to another" (Opinion 04/2012, sections 2.3 and
+  3.1). So an app that saves the user's work in local storage because they asked it to, and for
+  nothing else, needs no banner. Say in the privacy statement what it keeps.
+- **Limited analytics, in Dutch practice.** The Autoriteit Persoonsgegevens calls the third case
+  "limited analytics cookies", such as counting visitors and the most visited pages: they need no
+  consent when their impact on privacy is small, but still need a legal basis if they process
+  personal data, and must be listed in the privacy statement
+  ([AP: Cookies](https://www.autoriteitpersoonsgegevens.nl/en/themes/internet-and-smart-devices/cookies),
   last edited 6 May 2025). Functional cookies need no consent either, but must be mentioned too.
   The AP pages talk about cookies only; they do not mention local storage.
 - **No banner by default.** The template sets no cookies and stores nothing before the user acts,
@@ -74,10 +93,11 @@ request as the code that makes it untrue.
   ([AP: Cookies and your organisation](https://www.autoriteitpersoonsgegevens.nl/en/themes/internet-and-smart-devices/cookies/cookies-and-your-organisation-make-sure-you-have-a-good-cookie-policy-in-place)).
 - **Analytics.** If you want visitor numbers, pick a counter that does not follow visitors across
   sites; the AP names Matomo, Plausible Analytics, Apache Superset and OpenPanel, "provided they are
-  configured correctly". Host it yourself on the app's own origin so the Content-Security-Policy
-  in `public/_headers` stays `'self'`, describe it in the privacy statement, and add it by name to
-  the allowed origins in `tests/e2e/privacy.spec.ts`. Anything that tracks people across sites,
-  such as advertising, needs consent first, and refusing must be as easy as accepting.
+  configured correctly". Describe it in the privacy statement. Served from the app's own origin, it
+  needs no change to the tests or the Content-Security-Policy. On another origin, add that origin to
+  `OTHER_ORIGINS` in `tests/e2e/privacy.spec.ts` and to `script-src` and `connect-src` in
+  `public/_headers`. Anything that tracks people across sites, such as advertising, needs consent
+  first, and refusing must be as easy as accepting.
 
 ## Terms of use
 
