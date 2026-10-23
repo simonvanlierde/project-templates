@@ -1,7 +1,25 @@
-{%- if web_framework == 'preact' -%}
-import { defineConfig } from "vite";
+{% if web_framework == 'react' -%}
+import react from "@vitejs/plugin-react";
+{% endif -%}
+import { marked } from "marked";
+import { defineConfig, type Plugin } from "vite";
+
+/**
+ * Turns an imported .md file into its HTML at build time, so the pages in docs/
+ * ship as HTML and no Markdown code reaches the browser. GitHub shows the same files.
+ */
+const markdown = (): Plugin => ({
+  name: "markdown-html",
+  transform(code, id) {
+    if (id.endsWith(".md")) {
+      return { code: `export default ${JSON.stringify(marked.parse(code, { async: false }))};`, map: null };
+    }
+  },
+});
 
 export default defineConfig({
+{%- if web_framework == 'preact' %}
+  plugins: [markdown()],
   resolve: {
     // Code written for React, including libraries, imports react and react-dom.
     // preact/compat answers those imports. The longer paths come first: each
@@ -15,12 +33,7 @@ export default defineConfig({
       react: "preact/compat",
     },
   },
-});
-{%- else -%}
-import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
-
-export default defineConfig({
-  plugins: [react()],
-});
+{%- else %}
+  plugins: [react(), markdown()],
 {%- endif %}
+});

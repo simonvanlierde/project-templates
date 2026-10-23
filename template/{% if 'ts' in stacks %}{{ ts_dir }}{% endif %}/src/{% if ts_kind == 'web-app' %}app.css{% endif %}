@@ -20,3 +20,16 @@ main {
 main {
   overflow-wrap: anywhere;
 }
+
+footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.5rem;
+  padding: 1rem;
+  font-size: 0.875rem;
+}
+
+a {
+  color: light-dark(#0b57d0, #a8c7fa);
+}
