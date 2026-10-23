@@ -4,6 +4,7 @@
 [![CI](https://github.com/simonvanlierde/project-templates/actions/workflows/ci.yml/badge.svg)](https://github.com/simonvanlierde/project-templates/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![release](https://img.shields.io/github/v/release/simonvanlierde/project-templates)](https://github.com/simonvanlierde/project-templates/releases/latest)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/simonvanlierde/project-templates/badge)](https://scorecard.dev/viewer/?uri=github.com/simonvanlierde/project-templates)
 
 Build a dataset from public sources where every row says which download it came from.
 
