@@ -33,6 +33,11 @@ Upgrade steps:
   `COPIER_UPDATE_TOKEN` secret. Without it, the new weekly `copier-update` workflow can't
   push an update that changes a workflow
   ([Hearing about new releases](docs/usage.md#hearing-about-new-releases)).
+- `README.md`, `CHANGELOG.md` and the citation files (`CITATION.cff`, `.zenodo.json`,
+  `codemeta.json`) are now your project's, and this update already leaves them alone. So
+  this release's README changes don't arrive: the badges for the options you turned on,
+  the Releasing section, and the `just fmt` and `just hooks` lines. Copy the ones you want
+  from a fresh render with your answers.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -186,9 +191,9 @@ Upgrade steps:
 
 ### Changed
 
-- `copier copy` keeps an existing `README.md`, and `copier update` no longer touches it,
-  as it already did for `CITATION.cff`. Later template changes to the README reach
-  existing projects only by hand.
+- `copier copy` keeps an existing `README.md`, and `copier update` no longer touches it.
+  Template changes to the README, this release's included, reach existing projects only
+  by hand.
 - A ty rule set to `"warn"` reports without failing `ty check`, the hook and
   `just py-check`. ty exits 1 on warnings by default; `pyproject.toml` now sets
   `[tool.ty.terminal] error-on-warning = false`.
@@ -242,8 +247,8 @@ Upgrade steps:
   minimum Go version, run `go mod edit -go=<version>`.
 - `copier update` no longer touches `CITATION.cff`, `.zenodo.json` or `codemeta.json` once
   they exist, so a release that adds its version, date or DOI to them no longer conflicts
-  with every update. Later template changes to these files reach existing projects only by
-  hand.
+  with every update. Template changes to these files, this release's included, reach
+  existing projects only by hand.
 - Web-service projects test with `httpx2`, which Starlette's test client now prefers,
   instead of `httpx`, and require Starlette 1.2.0 or later. The pytest filter that hid
   Starlette's deprecation warning is gone.
