@@ -269,12 +269,18 @@ differs from `_commit`, it runs `copier update --defaults` and opens one PR on t
 `chore/copier-update`, with conflicted files listed in the body. It does nothing when you
 are up to date. It pins Copier in its `COPIER_VERSION`, which Dependabot does not bump.
 
-The workflow needs the repository setting "Allow GitHub Actions to create and approve
-pull requests". Turn it on with
+Give the workflow a token of its own. GitHub refuses a push with `GITHUB_TOKEN` that
+changes a file in `.github/workflows/`, which most template releases do, so those updates
+fail. Create a fine-grained token for this repository with read and write access to
+Contents, Pull requests and Workflows, and store it as the `COPIER_UPDATE_TOKEN`
+repository secret (`gh secret set COPIER_UPDATE_TOKEN`). The workflow then pushes and
+opens the PR with it, and the PR's own CI starts.
+
+Without the secret, the workflow falls back to `GITHUB_TOKEN`. Updates that touch
+workflows fail, and the PR's CI does not start until you close and reopen it. It also
+needs the repository setting "Allow GitHub Actions to create and approve pull requests".
+Turn it on with
 `gh api -X PUT repos/OWNER/REPO/actions/permissions/workflow -F can_approve_pull_request_reviews=true -f default_workflow_permissions=read`.
-A PR pushed with `GITHUB_TOKEN` does not start other workflows, so its CI stays
-silent. Close and reopen the PR to start it, or change the workflow to push with a
-fine-grained token or GitHub App token.
 
 If `copier update` can't check out the `_commit` in `.copier-answers.yml`, the project
 was rendered from a commit that was never pushed or tagged. Set `_commit` to the oldest

@@ -28,6 +28,11 @@ Upgrade steps:
   `pull_request_template.md` and a `dco` check on pull requests from outside contributors,
   and `SECURITY.md` gains a Scope section to fill in. GitHub shows `.github/CONTRIBUTING.md`
   before a root `CONTRIBUTING.md`, so if you have your own, keep one and delete the other.
+- With `dependency_bot=dependabot`: create a fine-grained token with read and write access
+  to Contents, Pull requests and Workflows on the repo, and store it as the
+  `COPIER_UPDATE_TOKEN` secret. Without it, the new weekly `copier-update` workflow can't
+  push an update that changes a workflow
+  ([Hearing about new releases](docs/usage.md#hearing-about-new-releases)).
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -269,9 +274,10 @@ Upgrade steps:
   releases.
 - With `dependency_bot: dependabot`, a `copier-update` workflow opens a weekly PR that
   runs `copier update` to the newest template tag, with conflicted files listed in the
-  PR body. Allow Actions to create pull requests in the repository settings first. The
-  docs have the command and the one catch: that PR's own CI does not start until you
-  close and reopen it.
+  PR body. It pushes with a `COPIER_UPDATE_TOKEN` secret, a fine-grained token you create.
+  Without one it uses `GITHUB_TOKEN`, which GitHub stops from pushing workflow changes,
+  and the PR's own CI does not start. See
+  [Hearing about new releases](docs/usage.md#hearing-about-new-releases).
 
 ### Fixed
 
