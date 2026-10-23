@@ -27,9 +27,9 @@ the template.
 `copier update` renders the version in `.copier-answers.yml` and the newest release with
 the same answers, and applies the difference to the project as a three-way merge. Where the
 project changed the same lines, it leaves conflict markers to resolve by hand. Files listed
-in `_skip_if_exists` (the changelog, citation files and starter code) are never touched
-again. A new answer in the release takes its default unless the user passes `--data` or
-`--ask`.
+in `_skip_if_exists` (the changelog, README, citation files, legal pages, API report and starter code) are never touched
+again. A new answer in the release takes its default, or stops the update if it has none,
+unless the user passes `--data` or `--ask`.
 
 ## Workflows that can publish
 
@@ -39,8 +39,8 @@ takes the token.
 
 | Workflow | Renders with | Runs on | What the token can do | What limits it |
 | --- | --- | --- | --- | --- |
-| `python-release.yml` | `publish_to_pypi` | a release | Upload to PyPI (trusted publishing) and sign attestations | The token is only in the `publish` job, which runs no project code and installs nothing; the `pypi` environment should be limited to `v*` tags |
-| `ts-release.yml` | `publish_to_npm` | a release | Publish to npm | The same split: `publish` only uploads the tarball `build` made; the `npm` environment should be limited to `v*` tags |
+| `python-release.yml` | `publish_to_pypi` | a pushed `vX.Y.Z` tag | Upload to PyPI (trusted publishing) and sign attestations | The token is only in the `publish` job, which runs no project code and installs nothing; the `pypi` environment should be limited to `v*` tags |
+| `ts-release.yml` | `publish_to_npm` | a pushed `vX.Y.Z` tag | Publish to npm | The same split: `publish` only uploads the tarball `build` made; the `npm` environment should be limited to `v*` tags |
 | `docker.yml`, `push` job | `publish_to_ghcr` | pushes to main and tags, and manual runs | Sign the image's provenance, with `packages: write` to push to GHCR | Pull requests run only the `build` job, which has no write scope; the `ghcr` environment should be limited and need a reviewer |
 | `benchmarks.yml` | `codspeed` | pull requests and pushes to main | Upload benchmark results to CodSpeed | GitHub gives pull requests from forks no OIDC token. A branch in the repo itself can still upload false results, which affects the benchmark report only |
 | `scorecard.yml` | `public` | pushes to main and weekly | Publish the Scorecard result | Runs only approved actions on main; no pull request reaches it |
