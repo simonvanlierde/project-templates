@@ -11,16 +11,18 @@ and what an organisation's privacy officer should check.
 
 # Privacy statement
 
-This statement covers {{ project_name }} at [{{ host }}]({{ site_url }}). {{ author_name }} runs it,
-and decides what happens to any data about you (the data controller).
+This statement covers {{ project_name }} at [{{ host }}]({{ site_url }}). {{ author_name }} runs it
+and decides what happens to any data about you, which makes {{ author_name }} the data controller.
+"We" on this page means {{ author_name }}.
 
 ## What {{ project_name }} keeps
 {% if user_data == 'nothing' %}
 Nothing. {{ project_name }} has no accounts, sets no cookies and stores nothing on your device.
 {%- elif user_data == 'browser' %}
-{{ project_name }} keeps your work in your browser's local storage, on your device, so it is still
-there when you come back. It is never sent to us or anyone else, and nothing is stored until you
-start working. To remove it, clear this site's data in your browser's settings.
+{{ project_name }} keeps your work in your browser's local storage, on your device, so it's still
+there when you come back. It never leaves your device: we don't get it, and nor does anyone else.
+Nothing is stored until you start working. To remove it, clear this site's data in your browser's
+settings.
 
 TODO: list what the app stores in the browser, in plain words, such as "the list you are
 editing".
@@ -42,9 +44,9 @@ TODO: say what the host logs, how long it keeps it, and whether you can see thos
 {% if user_data == 'nothing' %}
 {{ project_name }} sets no cookies and stores nothing on your device, so it has no cookie banner.
 {%- elif user_data == 'browser' %}
-{{ project_name }} sets no cookies. It uses your browser's local storage only to keep the work
-described above, because you asked it to. That is strictly needed for what you asked, so it
-needs no consent and there is no cookie banner.
+{{ project_name }} sets no cookies. It uses local storage only to keep your work, which is what you
+asked it to do. Storage that only does what you asked for needs no consent, so there's no cookie
+banner.
 {%- else %}
 TODO: list each cookie or storage item, what it is for and how long it lasts, such as a sign-in
 cookie. Storage that only makes the app work needs no banner; web-legal.md lists the other
@@ -56,16 +58,16 @@ cases that need no consent. Anything else needs consent first.
 TODO: name every outside service the app sends data to (email delivery, file storage, sign-in
 with another site), what it sends and in which country it is processed. With none, write "None."
 {%- else %}
-None besides the host above. {{ project_name }} loads every file from {{ host }}, and sends
-nothing to anyone else.
+None besides the host above. {{ project_name }} loads every file from {{ host }} and sends nothing
+to anyone else.
 {%- endif %}
 
 ## Your rights
 
-You can ask to see, correct or delete the data about you, to limit how it is used, or to object to
-its use. To do so, or to ask anything about this statement, email
-[{{ author_email }}](mailto:{{ author_email }}). If you are not happy with the answer, you can
-complain to your data protection authority; in the Netherlands, that is the
+You can ask us to show you the data about you, to correct or delete it, to limit how we use it,
+or to object to how we use it. To ask, or to ask anything else about this statement, email
+[{{ author_email }}](mailto:{{ author_email }}). If you're not happy with our answer, you can
+complain to your data protection authority. In the Netherlands, that's the
 [Autoriteit Persoonsgegevens](https://www.autoriteitpersoonsgegevens.nl/).
 
 ## About this statement

@@ -10,9 +10,9 @@ lawyer or your organisation's privacy officer.
 ## Fill in every TODO
 
 Each page starts with what the template knows: the name, the address, your email and today's
-date. The rest is marked TODO, and `just ts-e2e` fails until no TODO is left, because a page that
-guesses is worse than none. Write only what you can check, and change the page in the same pull
-request as the code that makes it untrue.
+date. The rest is marked TODO, and `just ts-e2e` fails until none is left: a page that guesses is
+worse than no page. Write only what you can check. When code makes a page untrue, change the page
+in the same pull request.
 
 ## Who is responsible
 
@@ -42,8 +42,8 @@ request as the code that makes it untrue.
 - Say what is kept, where, for how long, and who else gets it. IP addresses in server logs can
   count as personal data, so the hosting section stays even for an app that keeps nothing.
 - Change "Last updated" with every edit to the page.
-- After the first deploy, check the host's dashboard for analytics or bot-protection features
-  that set cookies or add scripts, and check that `curl -sI <site_url> | grep -i set-cookie`
+- After the first deploy, look in the host's dashboard for analytics or bot-protection features
+  that set cookies or add scripts. Then check that `curl -sI <site_url> | grep -i set-cookie`
   prints nothing.
 - Name every outside service the app calls. Loading a font, a script or an image from another site
   sends the visitor's IP address there; the template loads nothing from other sites, and

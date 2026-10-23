@@ -125,13 +125,13 @@ Upgrade steps:
   checks HTML.
 - The README says how to lock a security fix that is less than a week old, which
   `exclude-newer` and `minimumReleaseAge` otherwise hold back.
-- A `web-app` serves an accessibility statement at `/accessibility` and a privacy
-  statement at `/privacy`, and with `user_data=accounts` terms of use at `/terms`, each
-  linked from every page's footer. Each is one Markdown file in `docs/` that GitHub shows
-  and the build turns into HTML. New e2e tests fail while a page still holds a TODO, when
-  the statement claims to be "fully conformant" or goes 400 days without a review, and
-  when a first visit sets a cookie, stores anything in the browser or loads a file from
-  another site. `docs/web-legal.md` has tips for filling them in
+- A `web-app` has legal pages, linked from every page's footer: an accessibility
+  statement at `/accessibility`, a privacy statement at `/privacy` and, with
+  `user_data=accounts`, terms of use at `/terms`. Each is one Markdown file in `docs/`:
+  GitHub shows it, and the build turns it into HTML. New e2e tests fail when a page still
+  holds a TODO, when the statement says "fully conformant" or goes 400 days without a
+  review, and when a first visit sets a cookie, stores anything in the browser or loads a
+  file from another site. `docs/web-legal.md` has tips for filling the pages in
   ([Legal pages](docs/usage.md#legal-pages)).
 
 ### Changed
