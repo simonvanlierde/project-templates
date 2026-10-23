@@ -65,7 +65,9 @@ sets it up.
 
 `just repo-settings` applies `.github/rulesets/main.json` to the default branch with `gh api`:
 no deletion, no force-push, linear history, and PRs required, squash-merged only. It also
-turns off merge commits and rebase merges in the repo settings. Run it once per repo, and
+turns off merge commits and rebase merges in the repo settings. In a public repo it turns
+on private vulnerability reporting, where `SECURITY.md` sends reports. Run it once per repo,
+after the first push, and
 again after you edit the file: it updates the ruleset named `main` if there is one. Needs
 admin rights, and a paid GitHub plan on a private repo. No status checks are required, since
 the job names depend on your stacks.

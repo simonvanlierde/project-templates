@@ -767,8 +767,11 @@ chmod +x "$fake/gh"
   grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG" | grep -qx 1
   grep -qF -- '-X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
   grep -qF -- 'allow_merge_commit=false' "$FAKE_LOG"
+  # SECURITY.md's advisory link needs private vulnerability reporting on.
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
   cmp "$FAKE_LOG.body" .github/rulesets/main.json
 )
+(! grep -q private-vulnerability-reporting b/justfile)
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
   r=${answers%%/*}
