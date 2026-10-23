@@ -12,16 +12,16 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
-- **Breaking:** a `web-app` asks the new `user_data` question, which has no default, so
-  `copier update --defaults` stops on it. Answer it, or pass it:
+- **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
+  `copier update`. Renovate's copier manager installs the latest Copier.
+- **Breaking:** a web app made from an untagged main asks the new `user_data` question,
+  which has no default, so `copier update --defaults` stops on it. Answer it, or pass it:
   `copier update --data user_data=nothing` (or `browser`, or `accounts`). Then add the
   footer and the page routing from a fresh render's `src/App.tsx` to yours, and
   `/accessibility` and `/privacy` (and `/terms`) to `tests/e2e/routes.ts`: an update
   leaves both files alone. Fill in the TODOs in `docs/`. An app on its own domain: pass
   `--data site_url=https://<your domain>`, or the pages name the `pages.dev` address.
   The weekly copier-update workflow fails until you have run this update by hand once.
-- **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
-  `copier update`. Renovate's copier manager installs the latest Copier.
 - A private repo: answer no to the new `public` question, and `.github/SECURITY.md`,
   `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml` go. Your license answer stays as it is.
 - A public repo: the update adds `.github/CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
@@ -38,6 +38,13 @@ Upgrade steps:
   this release's README changes don't arrive: the badges for the options you turned on,
   the Releasing section, and the `just fmt` and `just hooks` lines. Copy the ones you want
   from a fresh render with your answers.
+- **Breaking:** if a ruleset or branch protection requires the `lint, types, tests` check
+  (`lint, types, pipeline, tests` in a `data-pipeline` project), switch it to the new
+  name: `python: lint, types, tests` (`python: lint, types, pipeline, tests`) or
+  `ts: lint, types, tests`. Until then, pull requests wait on a check that never reports.
+- Run `just repo-settings` once after the update, and in a new project after the first
+  push. It protects `main` and, in a public repo, turns on private vulnerability
+  reporting, which `SECURITY.md` points to.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -101,12 +108,12 @@ Upgrade steps:
 - `release.yml` and `.github/scripts/release-notes.sh`: a pushed `vX.Y.Z` tag becomes a
   GitHub release whose notes are that version's `CHANGELOG.md` section, so the two never
   differ.
-- `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged) from `.github/rulesets/main.json`, and in a public repo turns on private vulnerability reporting, which `SECURITY.md` points to. Rerun it any time; it updates the ruleset instead of adding a second. Run it once on existing repos after `copier update`.
+- `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged) from `.github/rulesets/main.json`, and in a public repo turns on private vulnerability reporting, which `SECURITY.md` points to. Rerun it any time; it updates the ruleset instead of adding a second.
 - With `mutation` in `test_extras`, a weekly CI run of mutation testing:
   `.github/workflows/mutation.yml`, one job per library stack, also startable by hand
   and never run on a pull request. Each job runs the stack's `just <stack>-mutation`
   recipe. The Rust job fails when a mutant survives; the others print the survivors and
-  pass. A project that already has the extra gets the workflow with `copier update`.
+  pass.
 - A `public` question, yes by default. No leaves out `.github/SECURITY.md`,
   `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml`, and makes
   `none` the license default. See [Public repos](docs/usage.md#public-repos).
@@ -120,7 +127,7 @@ Upgrade steps:
 - A `customise` question, no by default, ahead of the advanced questions: license,
   directories, versions, module names, Codecov, the dependency bot, publishing, test
   extras and the port. A new Python library, TypeScript web app or data pipeline now
-  asks 10 questions, down from 18, 14 and 15. Every question says what it changes.
+  asks 10 questions, or 11 for a web app, down from 18, 14 and 15. Every question says what it changes.
   [The questions](docs/usage.md#the-questions) lists them with their defaults.
 - `copier copy` says where your details can be saved before it asks, and lists the
   `just` commands to run after it.
@@ -204,12 +211,11 @@ Upgrade steps:
   `minimumReleaseAgeExcludePrune` drops the entry once the lockfile moves past it.
 - With `dependency_bot=renovate`, Renovate refreshes the lockfiles every Monday. That is
   how a security fix in a dependency of a dependency arrives, once it is a week old.
-- **Breaking:** after updating, switch a ruleset or branch protection that requires the
-  `lint, types, tests` check to the new names, or pull requests wait on a check that never
-  reports. The TypeScript and Python check jobs are now `ts: lint, types, tests` and
+- **Breaking:** the TypeScript and Python check jobs are now `ts: lint, types, tests` and
   `python: lint, types, tests` (`python: lint, types, pipeline, tests` in a
   `data-pipeline` project). Both used to be `lint, types, tests`, so a ruleset could not
-  require one without the other.
+  require one without the other. A ruleset that requires the old name needs the new one
+  (see the upgrade steps).
 - With the `codecov` option, `just check` runs the TypeScript tests with coverage, as CI
   does, so a coverage threshold in the Vitest config fails locally as well as in CI.
 - Dependabot and Renovate group minor and patch bumps of runtime dependencies into one
@@ -287,8 +293,6 @@ Upgrade steps:
 
 ### Fixed
 
-- `just hooks` no longer fails on a new project with Dependabot: yamlfmt rewrote the
-  `run:` block in `copier-update.yml`.
 - The weekly scheduled run and a push to `main` no longer cancel each other in
   `python.yml` and `docker.yml`. A cancelled weekly run used to skip that week's tripwire
   tests in a `data-pipeline` project.
