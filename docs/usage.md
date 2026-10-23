@@ -52,6 +52,15 @@ license under `customise`. When the repo goes public, run
 `copier update --data public=true`: that adds the files back. It does not change a
 license you already answered.
 
+## Protecting main
+
+`just repo-settings` applies `.github/rulesets/main.json` to the default branch with `gh api`:
+no deletion, no force-push, linear history, and PRs required, squash-merged only. It also
+turns off merge commits and rebase merges in the repo settings. Run it once per repo, and
+again after you edit the file: it updates the ruleset named `main` if there is one. Needs
+admin rights, and a paid GitHub plan on a private repo. No status checks are required, since
+the job names depend on your stacks.
+
 ## Choosing your stacks
 
 The `stacks` question is a multi-select. Pick any combination:

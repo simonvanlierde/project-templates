@@ -552,4 +552,27 @@ grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
 (! grep -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 
+# repo-settings: a fake gh proves the first run POSTs the ruleset file, the second PUTs the same id.
+test -f a/.github/rulesets/main.json
+fake=$(mktemp -d)
+cat >"$fake/gh" <<'FAKE'
+#!/usr/bin/env bash
+echo "$*" >>"$FAKE_LOG"
+case "$*" in
+  *"-X POST"*|*"-X PUT"*) while [ $# -gt 0 ]; do [ "$1" = --input ] && cp "$2" "$FAKE_LOG.body"; shift; done ;;
+  *"/rulesets --jq"*) [ -f "$FAKE_LOG.body" ] && echo 42 || true ;;
+esac
+FAKE
+chmod +x "$fake/gh"
+(
+  cd a
+  export FAKE_LOG="$fake/log" PATH="$fake:$PATH"
+  just repo-settings >/dev/null
+  just repo-settings >/dev/null
+  grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG" | grep -qx 1
+  grep -qF -- '-X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
+  grep -qF -- 'allow_merge_commit=false' "$FAKE_LOG"
+  cmp "$FAKE_LOG.body" .github/rulesets/main.json
+)
+
 echo "all render checks passed"

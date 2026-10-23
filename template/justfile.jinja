@@ -46,3 +46,27 @@ fmt:
 # Run every git hook over the whole repo, not just staged files.
 hooks:
     {% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run -a
+
+# Protect the default branch: no deletion, no force-push, linear history, PRs squash-merged. Safe to rerun.
+repo-settings:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    file=.github/rulesets/main.json
+    name=$(jq -r .name "$file")
+    err=$(mktemp)
+    trap 'rm -f "$err"' EXIT
+    fail() {
+        cat "$err" >&2
+        grep -qE 'HTTP (403|404)' "$err" && echo "Rulesets on a private repo need a paid GitHub plan (or the repo does not exist, or you lack admin rights)." >&2
+        exit 1
+    }
+    # Merge-method switches live on the repo itself; the ruleset also limits the PR button.
+    gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false >/dev/null 2>"$err" || fail
+    id=$(gh api repos/{owner}/{repo}/rulesets --jq ".[] | select(.name == \"$name\") | .id" 2>"$err") || fail
+    if [ -n "$id" ]; then
+        gh api -X PUT "repos/{owner}/{repo}/rulesets/$id" --input "$file" >/dev/null 2>"$err" || fail
+        echo "Updated ruleset '$name' ($id)."
+    else
+        gh api -X POST repos/{owner}/{repo}/rulesets --input "$file" >/dev/null 2>"$err" || fail
+        echo "Created ruleset '$name'."
+    fi

@@ -49,6 +49,7 @@ Upgrade steps:
 
 ### Added
 
+- `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged) from `.github/rulesets/main.json`. Rerun it any time; it updates the ruleset instead of adding a second. Run it once on existing repos after `copier update`.
 - A `public` question, yes by default. No leaves out `.github/SECURITY.md` and makes
   `none` the license default. See [Public repos](docs/usage.md#public-repos).
 - A `customise` question, no by default, ahead of the advanced questions: license,
