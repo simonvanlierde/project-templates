@@ -126,6 +126,10 @@ grep -q 'check --search \. --format github adopt_me' "$out/k/.github/workflows/p
 # yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
 grep -qx '        run: |-' "$out/k/.github/workflows/copier-update.yml"
 
+# copier matches _skip_if_exists like .gitignore lines, so an entry without a leading /
+# also skips the same name in any directory, such as data/README.md.
+(! sed -n '/^_skip_if_exists:/,/^$/p' copier.yml | grep '^  - ' | grep -v '^  - "\{0,1\}/')
+
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
 # -f on `git tag` covers a killed run that left the tag behind.
