@@ -1,0 +1,96 @@
+name: advisories
+
+# The stack workflows audit dependencies on push and pull request. A new advisory can land
+# against a lockfile with no commit here, so this audits again every Monday. A failure shows
+# on the Actions page and in the failed-run email.
+on:
+  schedule:
+    - cron: "23 5 * * 1" # Mondays, 05:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+{%- if 'python' in stacks %}
+  python:
+    name: "python: uv audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+{%- if python_dir != '.' %}
+    defaults:
+      run:
+        working-directory: {{ python_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "{{ uv_version }}"
+      - run: uv audit --locked --preview-features audit-command
+{%- endif %}
+{%- if 'ts' in stacks %}
+  ts:
+    name: "ts: pnpm audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+{%- if ts_dir != '.' %}
+    defaults:
+      run:
+        working-directory: {{ ts_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+{%- if ts_dir != '.' %}
+        with:
+          package_json_file: {{ ts_dir }}/package.json
+{%- endif %}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "{{ node_version }}"
+      - run: pnpm audit --prod --audit-level=moderate
+{%- endif %}
+{%- if 'rust' in stacks %}
+  rust:
+    name: "rust: cargo deny advisories"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+{%- if rust_dir != '.' %}
+    defaults:
+      run:
+        working-directory: {{ rust_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: cargo-deny
+      - run: cargo deny check advisories
+{%- endif %}
+{%- if 'go' in stacks %}
+  go:
+    name: "go: govulncheck"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+{%- if go_dir != '.' %}
+    defaults:
+      run:
+        working-directory: {{ go_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: {{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod
+          cache-dependency-path: {{ '' if go_dir == '.' else go_dir ~ '/' }}go.sum
+      - run: go tool govulncheck ./...
+{%- endif %}

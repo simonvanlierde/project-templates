@@ -2,7 +2,13 @@
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
 {% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}[![{{ s }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml)
-{% endfor %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license | replace('-', '--') }}-blue.svg)](LICENSE)
+{% endfor %}{% if codecov %}[![codecov](https://codecov.io/gh/{{ github_user }}/{{ slug }}/graph/badge.svg)](https://codecov.io/gh/{{ github_user }}/{{ slug }})
+{% endif %}{% if codspeed %}[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/{{ github_user }}/{{ slug }}?utm_source=badge)
+{% endif %}{% if publish_to_pypi %}[![PyPI](https://img.shields.io/pypi/v/{{ slug }})](https://pypi.org/project/{{ slug }}/)
+[![Python versions](https://img.shields.io/pypi/pyversions/{{ slug }})](https://pypi.org/project/{{ slug }}/)
+{% endif %}{% if publish_to_npm %}[![npm](https://img.shields.io/npm/v/{{ slug }})](https://www.npmjs.com/package/{{ slug }})
+{% endif %}{% if public %}[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/{{ github_user }}/{{ slug }}/badge)](https://scorecard.dev/viewer/?uri=github.com/{{ github_user }}/{{ slug }})
+{% endif %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license | replace('-', '--') }}-blue.svg)](LICENSE)
 {% endif %}{% if project_description %}
 {{ project_description }}
 {% endif %}
