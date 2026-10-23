@@ -373,11 +373,12 @@ grep -qx '\*\*/.env' c/api/.dockerignore
 # Both release workflows exist.
 test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
-# The API-break checks render with the publish answers, and only with them: griffe from
+# The API-break checks render with the publish answers, and only with them: griffe in CI from
 # the repository root, so its search path carries the nested dir; the npm report beside
 # the nested package.
 grep -qx '      - run: uvx griffe@[0-9.]* check --search api/src --format github mono_me' c/.github/workflows/python.yml
-grep -qx '    uv tool run griffe@[0-9.]* check --search api/src mono_me' c/just/python.just
+# Not in py-check: a deliberate break would keep local checks red until the next tag.
+(! grep -q griffe c/just/python.just)
 grep -qx '      - run: pnpm run api' c/.github/workflows/ts.yml
 grep -qx '    pnpm -C apps/web run api' c/just/ts.just
 test -f c/apps/web/api-extractor.json

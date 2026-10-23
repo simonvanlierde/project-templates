@@ -111,9 +111,9 @@ Upgrade steps:
 - The README says how to lock a security fix that is less than a week old, which
   `exclude-newer` and `minimumReleaseAge` otherwise hold back.
 - API-break checks for libraries that publish. With `publish_to_pypi`, a new `api` job
-  in `python.yml` and `just py-check` run griffe, which fails when a public function,
-  class or argument was removed or changed since the last git tag, and passes while there
-  is no tag. With `publish_to_npm`, `ts.yml` and `just ts-check` run API Extractor, which
+  in `python.yml` runs griffe, which fails when a public function, class or argument was
+  removed or changed since the last git tag, and passes while there is no tag. It stays
+  out of `just py-check`, so a deliberate break leaves local checks green. With `publish_to_npm`, `ts.yml` and `just ts-check` run API Extractor, which
   fails when the built types differ from the committed `<package>.api.md`. `just ts-api`
   rewrites that report after a deliberate change, so the change shows in review.
 

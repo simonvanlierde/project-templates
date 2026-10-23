@@ -218,13 +218,10 @@ jobs:
       # The scaffold's own recipes, so the rendered justfile runs. `check` runs the same
       # commands as the generated python.yml.
       # py-sync has no --locked: a fresh scaffold has no lockfile.
-      # just finds the root justfile from a nested package dir. The git repo is the one
-      # the README's quick start makes: a library's API check reads its tags.
+      # just finds the root justfile from a nested package dir.
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
-        run: |
-          git init -q "$RUNNER_TEMP/proj"
-          just py-sync check
+        run: just py-sync check
 
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
