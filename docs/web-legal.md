@@ -1,8 +1,9 @@
 # Legal pages: tips
 
-The app serves three pages from this folder: `accessibility.md` at
+A rendered web app serves three pages from its `docs/` folder: `accessibility.md` at
 `/accessibility`, `privacy.md` at `/privacy`, and, for an app with accounts or uploads,
-`terms.md` at `/terms`. Every page links them from its footer.
+`terms.md` at `/terms`. Every page links them from its footer. This page lives in the
+[project-templates](https://github.com/simonvanlierde/project-templates) repository, not in your project.
 
 These are tips for keeping the pages true, not legal advice. When the stakes are real, ask a
 lawyer or your organisation's privacy officer.
@@ -46,7 +47,7 @@ in the same pull request.
   that set cookies or add scripts. Then check that `curl -sI <site_url> | grep -i set-cookie`
   prints nothing.
 - Name every outside service the app calls. Loading a font, a script or an image from another site
-  sends the visitor's IP address there; the template loads nothing from other sites, and
+  sends the visitor's IP address there; a rendered app loads nothing from other sites, and
   `tests/e2e/privacy.spec.ts` fails if a page does.
 
 ## Cookies and other storage
@@ -86,7 +87,7 @@ in the same pull request.
   ([AP: Cookies](https://www.autoriteitpersoonsgegevens.nl/en/themes/internet-and-smart-devices/cookies),
   last edited 6 May 2025). Functional cookies need no consent either, but must be mentioned too.
   The AP pages talk about cookies only; they do not mention local storage.
-- **No banner by default.** The template sets no cookies and stores nothing before the user acts,
+- **No banner by default.** A rendered app sets no cookies and stores nothing before the user acts,
   and the privacy test proves it on first load. With nothing to consent to, a banner only adds
   noise. The AP notes the same: an organisation that stops collecting personal data no longer needs
   consent and can remove its banner

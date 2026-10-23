@@ -132,8 +132,8 @@ Upgrade steps:
   GitHub shows it, and the build turns it into HTML. New e2e tests fail when a page still
   holds a TODO, when the statement says "fully conformant" or goes 400 days without a
   review, and when a first visit sets a cookie, stores anything in the browser or loads a
-  file from another site. `docs/web-legal.md` has tips for filling the pages in
-  ([Legal pages](docs/usage.md#legal-pages)).
+  file from another site. [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for
+  filling the pages in, linked from each page ([Legal pages](docs/usage.md#legal-pages)).
 
 ### Changed
 

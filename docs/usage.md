@@ -132,7 +132,7 @@ TODO, and the e2e tests fail until no TODO is left. The
 [CI baseline](ci-baseline.md) says what `accessibility-statement.spec.ts` and
 `privacy.spec.ts` check.
 
-`docs/web-legal.md` in the rendered app has tips for filling the pages in: who is
+[`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for filling the pages in: who is
 responsible for the data, what an organisation's privacy officer checks, and what the
 Dutch and EU cookie rules say about local storage and analytics. It is not legal advice.
 
