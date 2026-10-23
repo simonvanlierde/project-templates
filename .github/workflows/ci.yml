@@ -288,6 +288,9 @@ jobs:
           cache-suffix: ${{ github.job }}
           save-cache: ${{ github.event_name != 'pull_request' }}
 
+      # check-render runs `just repo-settings` against a fake gh.
+      - *just
+
       - name: render and check
         run: scripts/check-render.sh "$RUNNER_TEMP"
 
