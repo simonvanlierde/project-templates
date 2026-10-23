@@ -198,6 +198,37 @@ test -f a/data/README.md
 test -f a/notebooks/.gitkeep
 test ! -e a/.github/workflows/python-release.yml
 test ! -e a/.github/workflows/ts-release.yml
+# The release body is the CHANGELOG section of the tag. The last version before the
+# link references is the edge case: its section must not swallow them.
+test -f a/.github/workflows/release.yml
+test -x a/.github/scripts/release-notes.sh
+cat >"$out/sample-changelog.md" <<'MD'
+# Changelog
+
+## [Unreleased]
+
+- not shipped
+
+## [1.1.0] - 2026-02-01
+
+### Added
+
+- new thing
+
+## [1.0.0] - 2026-01-01
+
+- first release
+
+[Unreleased]: https://example.com/compare/v1.1.0...HEAD
+[1.1.0]: https://example.com/compare/v1.0.0...v1.1.0
+[1.0.0]: https://example.com/releases/tag/v1.0.0
+MD
+notes=a/.github/scripts/release-notes.sh
+test "$("$notes" v1.1.0 "$out/sample-changelog.md" | grep -c .)" = 2
+"$notes" 1.1.0 "$out/sample-changelog.md" | grep -qx -- '- new thing'
+test "$("$notes" 1.0.0 "$out/sample-changelog.md")" = $'\n- first release'
+(! "$notes" 2.0.0 "$out/sample-changelog.md" 2>/dev/null)
+(! "$notes" 1.0 "$out/sample-changelog.md" 2>/dev/null)
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 grep -q '"private": true' a/package.json
 # The one-week release age, in both resolvers.

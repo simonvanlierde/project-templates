@@ -31,7 +31,7 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Bundle budget | `scripts/checkBundleBudget.mjs`, `web-app` kind | Fails `just check` and CI when the largest JavaScript file, gzipped, passes the limit set in the script. A dependency that doubles the bundle shows up in its own pull request. |
 | Provenance on publish | release workflows | PyPI and npm trusted publishing attach attestations. The Python release also signs a GitHub build-provenance attestation for each file, checkable with `gh attestation verify`. Container images pushed to GHCR carry an SBOM and a provenance attestation. |
 | Image scan and weekly rebuild | `docker.yml`, with the `docker` stack | Trivy lists HIGH and CRITICAL vulnerabilities in the built image that already have a fix. A weekly run rebuilds the image on the newest base image and scans it without pushing. Only that run fails on a finding, because a fix often waits days on a rebuilt base image and a pull request can't change that. |
-| Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
+| Publishing from a version tag only | release workflows | `release.yml` makes the GitHub release from the tag's `CHANGELOG.md` section. No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
 GitHub turns off scheduled workflows in a public repository with no activity for 60 days, such
 as the weekly Trivy rebuild, the data-pipeline tripwire and the revisions report. They

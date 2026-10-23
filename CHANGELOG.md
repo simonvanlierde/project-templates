@@ -46,8 +46,17 @@ Upgrade steps:
     a non-ASCII letter: only ASCII letters, digits, `_` and `-` are accepted.
   - Run `just pipeline`. `just validate` reports a missing `datapackage.json` until
     `just build` has written one.
+- **Breaking:** `python-release.yml` and `ts-release.yml` now run when a `vX.Y.Z` tag is
+  pushed, not when a GitHub release is published. Add the `## [X.Y.Z]` section to
+  `CHANGELOG.md` before you tag. The new `release.yml` creates the release from it, and
+  fails when the section is missing. Releases created by `GITHUB_TOKEN` don't start other
+  workflows, so the publish workflows could not follow the release.
 
 ### Added
+
+- `release.yml` and `.github/scripts/release-notes.sh`: a pushed `vX.Y.Z` tag becomes a
+  GitHub release whose notes are that version's `CHANGELOG.md` section, so the two never
+  differ.
 
 - A `public` question, yes by default. No leaves out `.github/SECURITY.md` and makes
   `none` the license default. See [Public repos](docs/usage.md#public-repos).
