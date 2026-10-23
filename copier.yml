@@ -187,7 +187,7 @@ citable:
 # question had SECURITY.md, and an update with the default keeps it.
 public:
   type: bool
-  help: Will the repo be public? Yes adds the community files in .github/ (SECURITY.md says where to report a vulnerability), CONTRIBUTING.md, CODE_OF_CONDUCT.md and a pull request template
+  help: Will the repo be public? Yes adds the community files in .github/ (SECURITY.md says where to report a vulnerability), CONTRIBUTING.md, CODE_OF_CONDUCT.md, a pull request template and the dco.yml sign-off check
   default: true
 
 github_user:
@@ -212,11 +212,11 @@ author_name:
 
 author_email:
   type: str
-  help: Author email, for package metadata and SECURITY.md
+  help: Author email, for package metadata, SECURITY.md and the code of conduct
   default: ""
   validator: >-
     {% if not author_email|regex_search('^[^@\\s]+@[^@\\s]+$') %}
-    Give an email address: package metadata and SECURITY.md use it.
+    Give an email address: package metadata, SECURITY.md and the code of conduct use it.
     {% endif %}
 
 author_orcid:
@@ -413,7 +413,8 @@ site_url:
 legal_date:
   type: str
   when: false
-  default: "{{ '%-d %B %Y' | strftime }}"
+  # Not %-d, which strftime on Windows rejects.
+  default: "{{ '%d %B %Y' | strftime | regex_replace('^0', '') }}"
 
 # renovate: datasource=node-version depName=node
 node_version:
