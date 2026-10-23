@@ -198,6 +198,41 @@ test -f a/data/README.md
 test -f a/notebooks/.gitkeep
 test ! -e a/.github/workflows/python-release.yml
 test ! -e a/.github/workflows/ts-release.yml
+# The release body is the CHANGELOG section of the tag. The last version before the
+# link references is the edge case: its section must not swallow them.
+test -f a/.github/workflows/release.yml
+# Every project's README says how to release; only publishing ones add the environment setup.
+grep -qx '## Releasing' a/README.md
+(! grep -q 'Before the first release' a/README.md)
+grep -q 'Before the first release' c/README.md
+test -x a/.github/scripts/release-notes.sh
+cat >"$out/sample-changelog.md" <<'MD'
+# Changelog
+
+## [Unreleased]
+
+- not shipped
+
+## [1.1.0] - 2026-02-01
+
+### Added
+
+- new thing
+
+## [1.0.0] - 2026-01-01
+
+- first release
+
+[Unreleased]: https://example.com/compare/v1.1.0...HEAD
+[1.1.0]: https://example.com/compare/v1.0.0...v1.1.0
+[1.0.0]: https://example.com/releases/tag/v1.0.0
+MD
+notes=a/.github/scripts/release-notes.sh
+test "$("$notes" v1.1.0 "$out/sample-changelog.md" | grep -c .)" = 2
+"$notes" 1.1.0 "$out/sample-changelog.md" | grep -qx -- '- new thing'
+test "$("$notes" 1.0.0 "$out/sample-changelog.md")" = $'\n- first release'
+(! "$notes" 2.0.0 "$out/sample-changelog.md" 2>/dev/null)
+(! "$notes" 1.0 "$out/sample-changelog.md" 2>/dev/null)
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 grep -q '"private": true' a/package.json
 # The one-week release age, in both resolvers.
@@ -432,6 +467,15 @@ grep -qF 'paths: ["api/**", "apps/web/**", ".github/workflows/docker.yml"]' c/.g
 grep -q 'ghcr. also to .main' c/README.md
 # The publish job has no checkout; the wheels land in the root dist/.
 grep -qx '          path: dist/' c/.github/workflows/python-release.yml
+# A release made by release.yml's GITHUB_TOKEN starts no workflow, so publishing
+# must follow the tag push, not the release.
+grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/python-release.yml
+grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/ts-release.yml
+(! grep -q 'types: \[published\]' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
+for w in python ts; do
+  # shellcheck disable=SC2016 # the literal workflow text, not a shell expansion
+  grep -q 'release-notes.sh" "$GITHUB_REF_NAME' "c/.github/workflows/$w-release.yml"
+done
 # Up-paths at both depths.
 grep -qF '](../README.md)' c/api/README.md
 grep -qF '"root": "../.."' c/apps/web/biome.json
