@@ -52,6 +52,11 @@ license under `customise`. When the repo goes public, run
 `copier update --data public=true`: that adds the files back. It does not change a
 license you already answered.
 
+A public repo also gets `.github/workflows/scorecard.yml`, which publishes its
+[OpenSSF Scorecard](https://scorecard.dev) for the README badge. The workflow needs a public
+repo, so a private one gets neither. Scorecard rates branch protection too: [Protecting main](#protecting-main)
+sets it up.
+
 ## Protecting main
 
 `just repo-settings` applies `.github/rulesets/main.json` to the default branch with `gh api`:
