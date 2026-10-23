@@ -58,9 +58,11 @@ just up          # run each service in its container, rebuilt on source changes{
 {{ 'uv and pnpm lock' if hatches | length == 2 else 'uv locks' if 'python' in stacks else 'pnpm locks' }} only releases at least a week old. If `just check` fails on
 a security fix newer than that, add the package to {{ hatches | join(' or ') }},
 and remove it a week later ([how](https://github.com/simonvanlierde/project-templates/blob/main/docs/tooling.md#dependencies)).
-{% endif %}{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}
+{% endif %}
 ## Releasing
 
+To release, add a `## [X.Y.Z]` section to `CHANGELOG.md`, then push the tag `vX.Y.Z`. `release.yml` makes the GitHub release from that section.
+{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}
 Before the first release, set up the publishing environment
 ({% for name, on in [('pypi', publish_to_pypi), ('npm', publish_to_npm), ('ghcr', publish_to_ghcr)] if on %}`{{ name }}`{% if not loop.last %}, {% endif %}{% endfor %})
 in Settings > Environments: limit it to tags matching `v*`{% if publish_to_ghcr %} (`ghcr` also to `main`,

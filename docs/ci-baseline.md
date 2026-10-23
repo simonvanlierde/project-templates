@@ -33,7 +33,7 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Image scan and weekly rebuild | `docker.yml`, with the `docker` stack | Trivy lists HIGH and CRITICAL vulnerabilities in the built image that already have a fix. A weekly run rebuilds the image on the newest base image and scans it without pushing. Only that run fails on a finding, because a fix often waits days on a rebuilt base image and a pull request can't change that. |
 | Weekly dependency audit | `advisories.yml`, one job per stack | The stack workflows audit on push and pull request only. On Mondays this runs the same audit without a commit: `uv audit`, `pnpm audit --prod`, `cargo deny check advisories` and `govulncheck`. |
 | OpenSSF Scorecard | `scorecard.yml`, with `public` (the default) | Rates the repo's supply-chain practices, publishes the score for the README badge and uploads the findings to code scanning. It runs on pushes to main, weekly, and when branch protection changes. A private repo gets none: publishing the score needs a public repo. |
-| Publishing from a published release only | release workflows | No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
+| Publishing from a version tag only | release workflows | `release.yml` makes the GitHub release from the tag's `CHANGELOG.md` section. No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
 GitHub turns off scheduled workflows in a public repository with no activity for 60 days, such
 as the weekly audit, the Scorecard run, the Trivy rebuild, the data-pipeline tripwire and the revisions report. They
