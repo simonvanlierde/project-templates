@@ -11,7 +11,8 @@
 // would fight the next `copier update`.
 {
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
-  extends: ['config:recommended'],
+  // Conventional Commits titles, `chore(deps): update ...`, which the pr-title workflow checks.
+  extends: ['config:recommended', ':semanticCommits'],
   schedule: ['before 9am on monday'],
   minimumReleaseAge: '7 days',
   // A weekly relock is the only way a fix reaches a dependency that only the lockfile

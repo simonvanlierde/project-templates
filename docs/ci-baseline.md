@@ -15,6 +15,7 @@ say what each piece is, why it's there, and what I left out on purpose.
 | `persist-credentials: false` on checkout | every workflow | Later steps can't reuse the checkout token. |
 | Stack checks: lint, format, types, tests, dependency audit | `python.yml`, `ts.yml`, `rust.yml`, `go.yml` | The same commands as `just check`. |
 | Git hooks run in CI | `checks.yml` | `prek install` is opt-in per clone. Without this job, a commit made without hooks reaches `main` unchecked. |
+| Commit message and PR title rules | `committed.toml`, the `committed` commit-msg hook and `pr-title.yml` | A squash merge makes the PR title the commit subject on `main`, so the title follows the same rules as a commit: Conventional Commits, an imperative lower-case summary, no period. The hook skips merge commits, whose message git writes. Dependabot and Renovate are set to write titles that pass. |
 | zizmor | hook, so also CI | Audits workflows for template injection, credential leaks, cache poisoning, and impostor commits. |
 | jactionlint | hook, so also CI | Catches what zizmor doesn't: unknown keys, bad `needs`, expression type errors, and shellcheck findings in `run:` blocks. |
 | Dependency review | `checks.yml`, PRs only | Fails a PR that adds a dependency with a known advisory. |

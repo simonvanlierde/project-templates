@@ -469,8 +469,18 @@ grep -qF 'needs.check.outputs.playwright }}-noble' d/.github/workflows/ts.yml
 grep -q 'fonts-dejavu-core' d/.github/workflows/ts.yml
 grep -qx '          path: web/playwright-report/' d/.github/workflows/ts.yml
 grep -q 'stages: \[pre-push\]' d/.pre-commit-config.yaml
-grep -qx 'default_install_hook_types: \[pre-commit, pre-push\]' d/.pre-commit-config.yaml
+grep -qx 'default_install_hook_types: \[pre-commit, commit-msg, pre-push\]' d/.pre-commit-config.yaml
 (! grep -q 'pre-push' a/.pre-commit-config.yaml)
+# Commit messages and PR titles: one committed.toml, read by the commit-msg hook and
+# the pr-title workflow, in every render. The bots write titles that pass it.
+grep -qx 'default_install_hook_types: \[pre-commit, commit-msg\]' a/.pre-commit-config.yaml
+for r in a b c d; do
+  grep -qx 'style = "conventional"' "$r/committed.toml"
+  grep -qx '      - id: committed' "$r/.pre-commit-config.yaml"
+  grep -q 'uvx committed@[0-9.]* --config committed.toml --commit-file -' "$r/.github/workflows/pr-title.yml"
+done
+test "$(grep -c 'commit-message: {prefix: chore, include: scope}' a/.github/dependabot.yml)" -eq 6
+grep -q "extends: \['config:recommended', ':semanticCommits'\]" d/renovate.json5
 grep -qx 'playwright-report/' d/.gitignore
 # Outside CI, reusing a server on the preview port would test whichever app holds it.
 (! grep -q reuseExistingServer d/web/playwright.config.ts)

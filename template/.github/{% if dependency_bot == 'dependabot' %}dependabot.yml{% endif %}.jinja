@@ -8,6 +8,8 @@
 #
 # No docker ecosystem: it reads FROM lines only, and those tags are copier answers,
 # so its PRs would fight the next `copier update`.
+# `commit-message` gives each PR a Conventional Commits title, `chore(deps): bump ...`, which
+# the pr-title workflow checks.
 version: 2
 
 # Actions and hook revs are all CI and dev tooling, so they share one weekly PR. Fewer
@@ -22,6 +24,7 @@ updates:
     multi-ecosystem-group: actions-and-hooks
     patterns: ["*"]
     cooldown: {default-days: 7}
+    commit-message: {prefix: chore, include: scope}
 
   # Version updates only. Dependabot has no security updates for this ecosystem.
   - package-ecosystem: pre-commit
@@ -29,6 +32,7 @@ updates:
     multi-ecosystem-group: actions-and-hooks
     patterns: ["*"]
     cooldown: {default-days: 7}
+    commit-message: {prefix: chore, include: scope}
 {%- for eco, stack, dir in [
       ('uv', 'python', python_dir),
       ('npm', 'ts', ts_dir),
@@ -45,6 +49,7 @@ updates:
     directory: {{'/' if dir == '.' else '/' ~ dir}}
     schedule: {interval: weekly}
     cooldown: {default-days: 7, semver-major-days: 30}
+    commit-message: {prefix: chore, include: scope}
     groups:
       runtime:
         dependency-type: production

@@ -16,6 +16,7 @@ Upgrade steps:
   `copier update`. Renovate's copier manager installs the latest Copier.
 - A private repo: answer no to the new `public` question, and `.github/SECURITY.md`
   goes. Your license answer stays as it is.
+- Run `prek install` again in each clone, so the new commit-msg hook is installed.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -49,6 +50,11 @@ Upgrade steps:
 
 ### Added
 
+- Commit message rules in `committed.toml`: Conventional Commits, an imperative lower-case
+  summary, no period. A `committed` commit-msg hook checks each commit, skipping merge
+  commits, and a new `pr-title.yml` workflow checks the pull request title, which a squash
+  merge turns into the commit subject. Dependabot and Renovate now write PR titles in the
+  same form, `chore(deps): ...`.
 - README badges for the options you turn on: Codecov coverage (`codecov`), CodSpeed
   (`codspeed`), PyPI version and supported Python versions (`publish_to_pypi`), npm version
   (`publish_to_npm`) and OpenSSF Scorecard (`public`).
