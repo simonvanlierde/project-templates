@@ -46,7 +46,7 @@ jobs:
           REPO: ${{ github.repository }}
           BASE: ${{ github.event.repository.default_branch }}
         shell: bash
-        run: |
+        run: |-
           branch=chore/copier-update
           src=$(sed -n "s/^_src_path: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" .copier-answers.yml)
           url=${src/#gh:/https://github.com/}

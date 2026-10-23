@@ -1,5 +1,5 @@
 """Benchmarks that CodSpeed measures on every pull request: `uv run pytest tests/test_benchmarks.py --codspeed`."""
-{%- if kind == 'library' %}
+{%- if kind == 'library' and python_layout == 'src' %}
 
 import pytest
 
