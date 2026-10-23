@@ -19,6 +19,7 @@ Upgrade steps:
   `/accessibility` and `/privacy` (and `/terms`) to `tests/e2e/routes.ts`: an update
   leaves both files alone. Fill in the TODOs in `docs/`. An app on its own domain: pass
   `--data site_url=https://<your domain>`, or the pages name the `pages.dev` address.
+  The weekly copier-update workflow fails until you have run this update by hand once.
 - **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
   `copier update`. Renovate's copier manager installs the latest Copier.
 - A private repo: answer no to the new `public` question, and `.github/SECURITY.md`
