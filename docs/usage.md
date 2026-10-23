@@ -2,8 +2,8 @@
 
 ## The questions
 
-A new project asks at most ten questions for a single stack: the details only you know,
-then one switch for everything else. They come in this order:
+A new project asks at most ten questions for a single stack, eleven for a web app: the
+details only you know, then one switch for everything else. They come in this order:
 
 | Question              | Asked when                         | What it changes                                                    |
 | --------------------- | ---------------------------------- | ------------------------------------------------------------------ |
@@ -12,6 +12,7 @@ then one switch for everything else. They come in this order:
 | `stacks`              | always                             | Which packages, CI workflows and `just` recipes the repo gets      |
 | `kind`, `ts_kind`, `rust_kind`, `go_kind` | that stack is picked | What the package is: its layout, extra files and CI          |
 | `web_framework`       | `ts_kind=web-app`                  | React, or Preact for a smaller bundle                              |
+| `user_data`           | `ts_kind=web-app`                  | What the privacy page says, and whether there is a terms page ([legal pages](#legal-pages)) |
 | `public`              | always                             | Yes adds `.github/SECURITY.md`, and sets the license default       |
 | `github_user`, `author_name`, `author_email` | always      | Repo URLs and badges, the license, package metadata                |
 | `author_orcid`        | a `library`, `research` or `data-pipeline` Python kind | The citation files                    |
@@ -35,6 +36,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | off ([Publishing](#publishing))           |
 | `test_extras`                                   | none ([Test extras](#test-extras))               |
 | `app_port`                                      | 8000                                             |
+| `site_url`                                      | `https://<project>.pages.dev`, the Cloudflare Pages address |
 
 On `copier update`, an advanced question you answered before keeps its answer even when
 `customise` is no. To change one answer without the others, pass it:
@@ -94,8 +96,8 @@ recommendations. A Python project also picks a [kind](python-kinds.md).
 | `app`     | The same Node package, built to `dist/` and never published                                   |
 | `web-app` | A Vite single-page app for the browser, deployed to Cloudflare Pages                           |
 
-A `web-app` asks one more question, `web_framework`: React, or Preact for a smaller
-bundle. Preact runs React code through `preact/compat`, set up as aliases in
+A `web-app` asks two more questions: `web_framework`, React or Preact for a smaller
+bundle, and `user_data` for its [legal pages](#legal-pages). Preact runs React code through `preact/compat`, set up as aliases in
 `vite.config.ts` and `tsconfig.json`. On top of the TS stack's checks, a web app gets:
 
 - `index.html`, `src/main.tsx` and an `App` component with a unit test (Vitest with jsdom).
@@ -103,6 +105,8 @@ bundle. Preact runs React code through `preact/compat`, set up as aliases in
   accessibility check of every route in light and dark mode, and a check that the app
   runs under its own Content-Security-Policy. `just ts-e2e` runs them, and so does an
   `e2e` job in `ts.yml`.
+- An accessibility statement, a privacy statement and, for accounts or uploads, terms of
+  use, linked from every page's footer ([legal pages](#legal-pages)).
 - `public/_headers` with the response headers, and `wrangler.jsonc` with the build
   output directory, for Cloudflare Pages.
 - A bundle budget in `scripts/checkBundleBudget.mjs`, which `just check` runs after the build.
@@ -114,8 +118,33 @@ directory to `ts_dir` if the app is nested. No workflow deploys it, and no token
 stored in GitHub. A web app is static files, so the docker stack can't build it an image.
 
 The starter files are the project's once written, and `copier update` leaves them
-alone: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`
-and `tests/e2e/routes.ts`. Every other file keeps receiving template changes.
+alone: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`,
+`tests/e2e/routes.ts` and the pages in `docs/`. Every other file keeps receiving template
+changes.
+
+### Legal pages
+
+Each page is one Markdown file in the app's `docs/` folder. GitHub shows the file as it
+is, and the build turns it into HTML (`marked`, in `vite.config.ts`), so the app ships no
+Markdown code. `src/App.tsx` serves them, and every page's footer links them:
+
+| Page                     | Path             | Rendered when              |
+| ------------------------ | ---------------- | -------------------------- |
+| `docs/accessibility.md`  | `/accessibility` | always                     |
+| `docs/privacy.md`        | `/privacy`       | always; its cookies section is part of it |
+| `docs/terms.md`          | `/terms`         | `user_data=accounts`       |
+
+The `user_data` answer, "What does the app keep about its users?", has no default:
+`nothing`, `browser` (local storage only) or `accounts` (accounts or uploads on a
+server). It decides what the privacy statement says, and whether there are terms. The
+answers fill in the name, `site_url`, your email and today's date. The rest is marked
+TODO, and the e2e tests fail until no TODO is left. The
+[CI baseline](ci-baseline.md) says what `accessibility-statement.spec.ts` and
+`privacy.spec.ts` check.
+
+[`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for filling the pages in: who is
+responsible for the data, what an organisation's privacy officer checks, and what the
+Dutch and EU cookie rules say about local storage and analytics. It is not legal advice.
 
 ### Adopting the template in an existing web app
 

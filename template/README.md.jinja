@@ -50,7 +50,7 @@ just check       # lint, types and tests for every stack here{% if 'docker' in s
 just fmt         # apply each stack's fixes and formatting
 just hooks       # the git hooks, as the checks workflow runs them{% if 'mutation' in test_extras %}{% for prefix, on in [('py', 'python' in stacks and kind == 'library'), ('ts', 'ts' in stacks and ts_kind == 'library'), ('rs', 'rust' in stacks and rust_kind == 'library'), ('go', 'go' in stacks and go_kind == 'library')] if on %}
 just {{ prefix }}-mutation   # do the tests catch planted bugs? Slow: CI runs it weekly (mutation.yml){% endfor %}{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}
-just ts-e2e      # accessibility and CSP checks in Chromium, against the production build{% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}
+just ts-e2e      # accessibility, CSP and privacy checks in Chromium, against the production build{% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}
 just pipeline    # fetch, build and validate every source in sources.toml{% endif %}{% if 'docker' in stacks %}
 just up          # run each service in its container, rebuilt on source changes{% endif %}
 ```
@@ -90,6 +90,17 @@ integration: create a Pages project from this repository, with build command
 `pnpm build`{% if ts_dir != '.' %}, root directory `{{ ts_dir }}`{% endif %} and output directory `dist`. Every push to `main` deploys, and
 every pull request gets a preview URL. [`{{ d }}public/_headers`]({{ d }}public/_headers) sets the
 response headers, including the Content-Security-Policy that the e2e tests run under.
+
+{% if user_data == 'accounts' -%}
+The footer links the [accessibility statement]({{ d }}docs/accessibility.md), the
+[privacy statement]({{ d }}docs/privacy.md) and the [terms of use]({{ d }}docs/terms.md), which the
+build serves at `/accessibility`, `/privacy` and `/terms`.
+{%- else -%}
+The footer links the [accessibility statement]({{ d }}docs/accessibility.md) and the
+[privacy statement]({{ d }}docs/privacy.md), which the build serves at `/accessibility` and `/privacy`.
+{%- endif %}
+Fill in their TODOs before the first deploy: `just ts-e2e` and CI's e2e job stay red until none is left.
+[Tips for filling them in](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md).
 {% endif %}
 ## License
 

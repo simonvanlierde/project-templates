@@ -1,0 +1,47 @@
+<!--
+The terms people accept by making an account or uploading. Keep them short and true, and match
+them to docs/privacy.md. The app renders this file at /terms, so write plain Markdown with absolute
+links. https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md says who should review them.
+-->
+
+# Terms of use
+
+These terms cover {{ project_name }} at [{{ site_url | regex_replace('^https://', '') }}]({{ site_url }}).
+By making an account or uploading anything, you agree to them.
+
+## Who you are agreeing with
+
+{{ author_name }}, who runs {{ project_name }}.
+
+## What you upload stays yours
+
+You keep the copyright in what you upload. You give {{ author_name }} a worldwide, royalty-free,
+non-exclusive licence to store, show and copy it, as far as running {{ project_name }} needs.
+
+TODO: if uploads are shared further, such as in an open dataset, name the licence (such as
+CC BY 4.0) and say whether a release can be taken back once published.
+
+## What you promise
+
+Only upload what you made yourself or have the right to share. Don't upload anything illegal,
+anything that breaks someone else's rights, or personal data about other people without their
+consent.
+
+## Removing content
+
+You can delete your account. TODO: say what that removes, what stays (such as uploads without your
+name), and how to ask for the rest to be removed.
+
+{{ author_name }} may remove content or close an account that breaks these terms.
+
+## No warranty
+
+{{ project_name }} comes as it is, with no warranty. As far as the law allows, {{ author_name }}
+isn't liable for lost data or for how others use what you share.
+
+## Changes and contact
+
+When these terms change, the date below changes too, and {{ author_name }} tells account holders
+before the new terms apply. Questions: [{{ author_email }}](mailto:{{ author_email }}).
+
+Last updated: {{ legal_date }}

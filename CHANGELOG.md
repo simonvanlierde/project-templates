@@ -12,6 +12,14 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
+- **Breaking:** a `web-app` asks the new `user_data` question, which has no default, so
+  `copier update --defaults` stops on it. Answer it, or pass it:
+  `copier update --data user_data=nothing` (or `browser`, or `accounts`). Then add the
+  footer and the page routing from a fresh render's `src/App.tsx` to yours, and
+  `/accessibility` and `/privacy` (and `/terms`) to `tests/e2e/routes.ts`: an update
+  leaves both files alone. Fill in the TODOs in `docs/`. An app on its own domain: pass
+  `--data site_url=https://<your domain>`, or the pages name the `pages.dev` address.
+  The weekly copier-update workflow fails until you have run this update by hand once.
 - **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
   `copier update`. Renovate's copier manager installs the latest Copier.
 - A private repo: answer no to the new `public` question, and `.github/SECURITY.md`
@@ -149,6 +157,14 @@ Upgrade steps:
   out of `just py-check`, so a deliberate break leaves local checks green. With `publish_to_npm`, `ts.yml` and `just ts-check` run API Extractor, which
   fails when the built types differ from the committed `<package>.api.md`. `just ts-api`
   rewrites that report after a deliberate change, so the change shows in review.
+- A `web-app` has legal pages, linked from every page's footer: an accessibility
+  statement at `/accessibility`, a privacy statement at `/privacy` and, with
+  `user_data=accounts`, terms of use at `/terms`. Each is one Markdown file in `docs/`:
+  GitHub shows it, and the build turns it into HTML. New e2e tests fail when a page still
+  holds a TODO, when the statement says "fully conformant" or goes 400 days without a
+  review, and when a first visit sets a cookie, stores anything in the browser or loads a
+  file from another site. [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for
+  filling the pages in, linked from each page ([Legal pages](docs/usage.md#legal-pages)).
 
 ### Changed
 

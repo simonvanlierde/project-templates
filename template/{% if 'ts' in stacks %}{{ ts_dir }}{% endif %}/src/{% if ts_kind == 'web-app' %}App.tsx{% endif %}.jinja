@@ -1,12 +1,56 @@
+import { useEffect } from "react";
+import accessibility from "../docs/accessibility.md";
+import privacy from "../docs/privacy.md";
+{%- if user_data == 'accounts' %}
+import terms from "../docs/terms.md";
+{%- endif %}
+
 export const title = {{ project_name | to_json }};
 
-export function App() {
-  return (
-    <main>
-      <h1>{title}</h1>
-{%- if project_description %}
-      <p>{{ "{" }}{{ project_description | to_json }}{{ "}" }}</p>
+// The pages rendered from docs/, by path. Cloudflare Pages and vite preview
+// answer an unknown path with index.html, so each loads the app.
+const PAGES: Record<string, { title: string; html: string }> = {
+  "/accessibility": { title: "Accessibility statement", html: accessibility },
+  "/privacy": { title: "Privacy statement", html: privacy },
+{%- if user_data == 'accounts' %}
+  "/terms": { title: "Terms of use", html: terms },
 {%- endif %}
-    </main>
+};
+
+export function App() {
+  const page = PAGES[location.pathname.replace(/\/$/, "")];
+
+  useEffect(() => {
+    document.title = page ? `${page.title} · ${title}` : title;
+  }, [page]);
+
+  return (
+    <>
+      <main>
+        {page ? (
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: our own Markdown, rendered at build time
+          <article dangerouslySetInnerHTML={% raw %}{{ __html: page.html }}{% endraw %} />
+        ) : (
+{%- if project_description %}
+          <>
+            <h1>{title}</h1>
+            <p>{{ "{" }}{{ project_description | to_json }}{{ "}" }}</p>
+          </>
+{%- else %}
+          <h1>{title}</h1>
+{%- endif %}
+        )}
+      </main>
+      <footer>
+        <nav aria-label="About this site">
+          {page && <a href="/">{title}</a>}
+          {Object.entries(PAGES).map(([path, { title: name }]) => (
+            <a key={path} href={path} aria-current={PAGES[path] === page ? "page" : undefined}>
+              {name}
+            </a>
+          ))}
+        </nav>
+      </footer>
+    </>
   );
 }
