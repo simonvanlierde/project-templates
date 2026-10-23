@@ -414,6 +414,11 @@ grep -qF 'paths: ["api/**", "apps/web/**", ".github/workflows/docker.yml"]' c/.g
 grep -q 'ghcr. also to .main' c/README.md
 # The publish job has no checkout; the wheels land in the root dist/.
 grep -qx '          path: dist/' c/.github/workflows/python-release.yml
+# A release made by release.yml's GITHUB_TOKEN starts no workflow, so publishing
+# must follow the tag push, not the release.
+grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/python-release.yml
+grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/ts-release.yml
+(! grep -q 'types: \[published\]' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 # Up-paths at both depths.
 grep -qF '](../README.md)' c/api/README.md
 grep -qF '"root": "../.."' c/apps/web/biome.json
