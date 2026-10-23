@@ -529,6 +529,12 @@ jobs:
             echo "::error::the legal pages render no TODO, so the TODO tests check nothing" >&2
             exit 1
           fi
+          # The pages' authoring notes are HTML comments, which the build drops. This
+          # phrase opens the note at the top of docs/privacy.md.
+          if grep -rq 'Keep this page true' dist/; then
+            echo "::error::an authoring note from docs/ reached the build" >&2
+            exit 1
+          fi
 
       - if: contains(matrix.answers.stacks, 'docker')
         name: docker build

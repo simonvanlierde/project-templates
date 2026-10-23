@@ -177,11 +177,12 @@ Upgrade steps:
 - A `web-app` has legal pages, linked from every page's footer: an accessibility
   statement at `/accessibility`, a privacy statement at `/privacy` and, with
   `user_data=accounts`, terms of use at `/terms`. Each is one Markdown file in `docs/`:
-  GitHub shows it, and the build turns it into HTML. New e2e tests fail when a page still
+  GitHub shows it, and the build turns it into HTML. Its HTML comments are notes for you,
+  and the build leaves them out. New e2e tests fail when a page still
   holds a TODO, when the statement says "fully conformant" or goes 400 days without a
   review, and when a first visit sets a cookie, stores anything in the browser or loads a
   file from another site. [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for
-  filling the pages in, linked from each page ([Legal pages](docs/usage.md#legal-pages)).
+  filling the pages in, linked from each page's notes ([Legal pages](docs/usage.md#legal-pages)).
 
 ### Changed
 
