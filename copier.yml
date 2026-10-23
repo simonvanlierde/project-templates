@@ -338,7 +338,8 @@ module_name:
 
 # `flat` is for adopting the template in a repo whose package already sits at the
 # root: no src/ stub, and no starter tests that import it. web-service,
-# data-pipeline and the docker image need the starter modules, so they stay `src`.
+# data-pipeline and the python image need the starter modules, so they stay `src`.
+# docker_stacks is asked later, so its validator refuses flat with the python image.
 python_layout:
   type: str
   when: "{{ 'python' in stacks }}"
@@ -349,9 +350,9 @@ python_layout:
     <module>/ at the root (an existing package): flat
   default: src
   validator: >-
-    {% if python_layout == 'flat' and (kind in ('web-service', 'data-pipeline') or 'docker' in stacks) %}
-    The flat layout is for an existing library, app or research package without docker:
-    the web-service and data-pipeline kinds and the docker image need their starter modules in src/.
+    {% if python_layout == 'flat' and kind in ('web-service', 'data-pipeline') %}
+    The flat layout is for an existing library, app or research package: the web-service
+    and data-pipeline kinds and the python image need their starter modules in src/.
     {% endif %}
 
 # The default trails a new Python release by 90 days (renovate.json5), so the
@@ -580,6 +581,9 @@ docker_stacks:
     Pick at least one stack to build an image from.
     {% elif docker_stacks | reject('in', stacks) | list %}
     An image needs its stack: add {{ docker_stacks | reject('in', stacks) | join(' and ') }} to `stacks` too.
+    {% elif 'python' in docker_stacks and python_layout == 'flat' %}
+    The flat layout is for an existing library, app or research package: the web-service
+    and data-pipeline kinds and the python image need their starter modules in src/.
     {% elif 'ts' in docker_stacks and ts_kind == 'web-app' %}
     The ts image is a Node service with /health. A web app is static files that
     Cloudflare Pages serves: drop ts from `docker_stacks`.
