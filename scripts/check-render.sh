@@ -373,6 +373,19 @@ grep -qx '\*\*/.env' c/api/.dockerignore
 # Both release workflows exist.
 test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
+# The API-break checks render with the publish answers, and only with them: griffe from
+# the repository root, so its search path carries the nested dir; the npm report beside
+# the nested package.
+grep -qx '      - run: uvx griffe@[0-9.]* check --search api/src --format github mono_me' c/.github/workflows/python.yml
+grep -qx '    uv tool run griffe@[0-9.]* check --search api/src mono_me' c/just/python.just
+grep -qx '      - run: pnpm run api' c/.github/workflows/ts.yml
+grep -qx '    pnpm -C apps/web run api' c/just/ts.just
+test -f c/apps/web/api-extractor.json
+test -f c/apps/web/mono-me.api.md
+(! grep -q griffe a/.github/workflows/python.yml a/just/python.just)
+(! grep -q 'run api' a/.github/workflows/ts.yml a/just/ts.just)
+test ! -e a/api-extractor.json
+test ! -e a/render-me.api.md
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
 grep -q 'packages: write' c/.github/workflows/docker.yml
 # docker.yml filters by path only when every build context is nested (c), not with a

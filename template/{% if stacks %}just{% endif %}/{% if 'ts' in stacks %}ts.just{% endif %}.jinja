@@ -6,12 +6,15 @@
 ts-sync:
     {{ pnpm }} install
 
-# What CI runs: lint and unused code, types, tests, build{% if ts_kind == 'web-app' %}, bundle budget{% endif %}, dependency audit.
+# What CI runs: lint and unused code, types, tests, build{% if publish_to_npm %}, API report{% endif %}{% if ts_kind == 'web-app' %}, bundle budget{% endif %}, dependency audit.
 ts-check:
     {{ pnpm }} run check
     {{ pnpm }} run typecheck
     {{ pnpm }} run {{ 'coverage' if codecov else 'test' }}
     {{ pnpm }} run build
+{%- if publish_to_npm %}
+    {{ pnpm }} run api
+{%- endif %}
 {%- if ts_kind == 'web-app' %}
     {{ pnpm }} run budget
 {%- endif %}
@@ -28,6 +31,16 @@ ts-cov:
 # Tests only; extra arguments reach vitest (`just ts-test -t name`).
 ts-test *args:
     {{ pnpm }} exec vitest run {% raw %}{{ args }}{% endraw %}
+{%- if publish_to_npm %}
+
+# Rewrite {{ slug }}.api.md from the built types after a deliberate API change, and
+# commit it: its diff is the API change reviewers see. api-extractor.json gives
+# the compiler its own options because api-extractor's bundled TypeScript 5 can't
+# read this tsconfig.json.
+ts-api:
+    {{ pnpm }} run build
+    {{ pnpm }} exec api-extractor run --local
+{%- endif %}
 {%- if ts_kind == 'library' and 'mutation' in test_extras %}
 
 # Plant small bugs in src/ and report each one the tests miss. Slow: run it before a

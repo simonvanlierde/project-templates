@@ -75,6 +75,11 @@ jobs:
       - run: pnpm run test
 {%- endif %}
       - run: pnpm run build
+{%- if publish_to_npm %}
+      # Fails when the built types differ from the committed {{ slug }}.api.md, so a
+      # removed or changed export shows in review. `just ts-api` updates the report.
+      - run: pnpm run api
+{%- endif %}
 {%- if ts_kind == 'web-app' %}
       - run: pnpm run budget
 {%- endif %}
