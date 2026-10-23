@@ -28,8 +28,8 @@ A `data-pipeline` project gets:
   version of every source the pipeline has fetched.
 - A `pipeline.py` that holds `parse`, the reader for each raw file, and a two-line entry
   point. `parse` hands each file to sourceledger, which reads CSV, JSON and Excel,
-  gzipped or not; branch on the source's id for any other format. The stages
-  come from [sourceledger](https://github.com/simonvanlierde/sourceledger), a
+  gzipped or not. For any other format, branch on the source's id. The stages come from
+  [sourceledger](https://github.com/simonvanlierde/sourceledger), a
   dependency with no dependencies of its own, so fixes to them arrive as a version bump.
   Its README says how each stage behaves:
   - `fetch` downloads each source with retries, writes a provenance record beside it,
@@ -47,9 +47,9 @@ A `data-pipeline` project gets:
   tests the stages; these test the project's own parser and entry point.
 - A CI workflow that runs the pipeline for real on the manifest's URLs. It uploads only
   the fetch records and, from the weekly run, a revisions report of checksums.
-- With the `docker` stack, an image that is only a stub: it holds the installed package
-  but no `sources.toml` or `data/`, and it starts the `/health` placeholder, not the
-  pipeline. Copy the manifest in and change the `CMD` before you run the stages in it.
+- With the `docker` stack, an image that is a stub. It holds the installed package but
+  no `sources.toml` or `data/`, and it starts the `/health` placeholder, not the
+  pipeline. To run the stages in it, copy the manifest in and change the `CMD`.
 
 Some tests compare published values with literal numbers. They run only in the weekly
 scheduled CI run (`TRIPWIRE=1`). A publisher that revises its data then fails that run,
