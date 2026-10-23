@@ -52,7 +52,7 @@ repo-settings:
     #!/usr/bin/env bash
     set -euo pipefail
     file=.github/rulesets/main.json
-    name=$(jq -r .name "$file")
+    name=main # the "name" in $file; read by hand so the recipe needs no jq
     err=$(mktemp)
     trap 'rm -f "$err"' EXIT
     fail() {
