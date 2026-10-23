@@ -30,8 +30,8 @@ ts-test *args:
     {{ pnpm }} exec vitest run {% raw %}{{ args }}{% endraw %}
 {%- if ts_kind == 'library' and 'mutation' in test_extras %}
 
-# Plant small bugs in src/ and report each one the tests miss. Slow: run it before a
-# release or after writing tests, not on every change. The HTML report lands in
+# Plant small bugs in src/ and report each one the tests miss. Slow: CI runs it
+# weekly (mutation.yml); run it by hand after writing tests. The HTML report lands in
 # reports/mutation/. stryker.config.json names the runner plugin, which Stryker can't
 # find in pnpm's node_modules on its own, and sets an empty tsconfigFile: Stryker's
 # tsconfig rewrite calls a TypeScript API that TypeScript 7 no longer has.

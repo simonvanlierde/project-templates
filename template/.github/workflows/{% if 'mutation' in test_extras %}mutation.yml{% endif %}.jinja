@@ -123,12 +123,12 @@ jobs:
       # one gives 2, unless a timeout came too, so check the list as well.
       - run: |
           just rs-mutation || [ $? -eq 3 ]
-          test ! -s mutants.out/missed.txt
+          test ! -s {{ '' if rust_dir == '.' else rust_dir ~ '/' }}mutants.out/missed.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: {% raw %}${{ !cancelled() }}{% endraw %}
         with:
           name: mutants.out
-          path: mutants.out/
+          path: {{ '' if rust_dir == '.' else rust_dir ~ '/' }}mutants.out/
 {%- endif %}
 {%- if go %}
   go:

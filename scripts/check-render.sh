@@ -333,6 +333,10 @@ assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
 assert all("timeout-minutes" in j for j in wf["jobs"].values())
 for stack in ("py", "ts", "rs", "go"):
     assert any(f"just {stack}-mutation" in s.get("run", "") for j in wf["jobs"].values() for s in j["steps"]), stack
+# cargo mutants --dir writes mutants.out inside rust_dir: the check and the upload follow it.
+steps = wf["jobs"]["rust"]["steps"]
+assert any("test ! -s crates/lib/mutants.out/missed.txt" in s.get("run", "") for s in steps), steps
+assert any(s.get("with", {}).get("path") == "crates/lib/mutants.out/" for s in steps), steps
 PY
 # From a tag, the answers file names the canonical source. From any other
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
