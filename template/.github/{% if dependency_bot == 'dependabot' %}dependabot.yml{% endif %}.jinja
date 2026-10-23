@@ -17,6 +17,8 @@ version: 2
 multi-ecosystem-groups:
   actions-and-hooks:
     schedule: {interval: weekly}
+    # Members of a group can't set commit-message; the group sets it for them.
+    commit-message: {prefix: chore, include: scope}
 
 updates:
   - package-ecosystem: github-actions
@@ -24,7 +26,6 @@ updates:
     multi-ecosystem-group: actions-and-hooks
     patterns: ["*"]
     cooldown: {default-days: 7}
-    commit-message: {prefix: chore, include: scope}
 
   # Version updates only. Dependabot has no security updates for this ecosystem.
   - package-ecosystem: pre-commit
@@ -32,7 +33,6 @@ updates:
     multi-ecosystem-group: actions-and-hooks
     patterns: ["*"]
     cooldown: {default-days: 7}
-    commit-message: {prefix: chore, include: scope}
 {%- for eco, stack, dir in [
       ('uv', 'python', python_dir),
       ('npm', 'ts', ts_dir),

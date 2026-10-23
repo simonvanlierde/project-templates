@@ -479,7 +479,7 @@ for r in a b c d; do
   grep -qx '      - id: committed' "$r/.pre-commit-config.yaml"
   grep -q 'uvx committed@[0-9.]* --config committed.toml --commit-file -' "$r/.github/workflows/pr-title.yml"
 done
-test "$(grep -c 'commit-message: {prefix: chore, include: scope}' a/.github/dependabot.yml)" -eq 6
+test "$(grep -c 'commit-message: {prefix: chore, include: scope}' a/.github/dependabot.yml)" -eq 5
 grep -q "extends: \['config:recommended', ':semanticCommits'\]" d/renovate.json5
 grep -qx 'playwright-report/' d/.gitignore
 # Outside CI, reusing a server on the preview port would test whichever app holds it.
