@@ -86,6 +86,14 @@ echo '// project edit' >>"$out/h/go.mod"
   --data project_name=example --data 'stacks=[go]' . "$out/h" >/dev/null 2>&1
 grep -q 'project edit' "$out/h/go.mod"
 
+# m: every stack a library, nested, with the mutation extra: mutation.yml gets a job for
+# each. a has libraries too but no extras, so it must render no mutation.yml.
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
+  --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
+  --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
+  --data 'test_extras=[mutation]' . "$out/m"
+
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
 # -f on `git tag` covers a killed run that left the tag behind.
@@ -153,7 +161,7 @@ load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
 seen = 0
 out = pathlib.Path(os.environ["OUT"])
-for path in sorted(out.glob("[abcd]/**/*")):
+for path in sorted(out.glob("[abcdm]/**/*")):
     parse = load.get(path.suffix)
     if parse and path.is_file():
         parse(path.read_text())
@@ -181,7 +189,7 @@ assert any("trivy-action" in s.get("uses", "") for s in docker["build"]["steps"]
 assert not any("trivy-action" in s.get("uses", "") for s in docker["push"]["steps"]), docker["push"]
 # A ruleset requires a check by its job name, so two jobs with one name can't be told
 # apart. a, b, c and d each render more than one stack.
-for render in "abcd":
+for render in "abcdm":
     names = {}
     for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
         for job_id, job in yaml.safe_load(wf.read_text())["jobs"].items():
@@ -348,6 +356,23 @@ grep -qx '      - run: pnpm run test' a/.github/workflows/ts.yml
 (! grep -q '^test_extras' d/.copier-answers.yml)
 grep -qx 'test_extras: \[\]' a/.copier-answers.yml
 (! grep -q -e proptest -e gremlins a/Cargo.toml a/go.mod)
+# mutation.yml: only with the extra, one job per library stack, weekly and by hand only.
+test -f m/.github/workflows/mutation.yml
+test ! -e a/.github/workflows/mutation.yml
+python3 - <<'PY'
+import yaml
+wf = yaml.safe_load(open("m/.github/workflows/mutation.yml"))
+assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
+assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
+assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
+assert all("timeout-minutes" in j for j in wf["jobs"].values())
+for stack in ("py", "ts", "rs", "go"):
+    assert any(f"just {stack}-mutation" in s.get("run", "") for j in wf["jobs"].values() for s in j["steps"]), stack
+# cargo mutants --dir writes mutants.out inside rust_dir: the check and the upload follow it.
+steps = wf["jobs"]["rust"]["steps"]
+assert any("test ! -s crates/lib/mutants.out/missed.txt" in s.get("run", "") for s in steps), steps
+assert any(s.get("with", {}).get("path") == "crates/lib/mutants.out/" for s in steps), steps
+PY
 # From a tag, the answers file names the canonical source. From any other
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
 # itself be a release tag, so render a is held to whichever its _commit is.

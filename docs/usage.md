@@ -243,8 +243,12 @@ sample `add` function and run with the other tests. Go's `FuzzAdd` runs on its s
 
 Mutation testing plants small bugs in your code, such as `+` turned into `-`, and
 reports each one the tests don't catch. A run takes minutes to hours, and some
-surviving mutants change nothing a test could see, so it is a recipe to run before a
-release or after writing tests, never a CI step.
+surviving mutants change nothing a test could see. So CI runs it once a week, from
+`.github/workflows/mutation.yml`, never on a pull request. It has one job per library
+stack and runs the same `just <stack>-mutation` recipe you run by hand. Start it from
+the Actions tab with "Run workflow" after you change the tests. The Rust job fails when
+a mutant survives; list a harmless one in `.cargo/mutants.toml` (`exclude_re`). The other
+jobs print the survivors and pass.
 
 OpenSSF Scorecard's Fuzzing check counts fast-check and Go's native fuzzing, not
 Hypothesis or proptest. To add the extras to an existing library, run
