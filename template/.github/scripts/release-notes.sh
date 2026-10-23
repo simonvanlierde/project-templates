@@ -16,7 +16,7 @@ notes="$(awk -v head="## [${version#v}]" '
 ' "$changelog")"
 
 if ! grep -q '[^[:space:]]' <<<"$notes"; then
-    echo "no '## [${version#v}]' section in $changelog" >&2
-    exit 1
+  echo "no '## [${version#v}]' section in $changelog" >&2
+  exit 1
 fi
 printf '%s\n' "$notes"

@@ -454,8 +454,10 @@ grep -qx '          path: dist/' c/.github/workflows/python-release.yml
 grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/python-release.yml
 grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/ts-release.yml
 (! grep -q 'types: \[published\]' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
-grep -q 'release-notes.sh" "$GITHUB_REF_NAME' c/.github/workflows/python-release.yml
-grep -q 'release-notes.sh" "$GITHUB_REF_NAME' c/.github/workflows/ts-release.yml
+for w in python ts; do
+  # shellcheck disable=SC2016 # the literal workflow text, not a shell expansion
+  grep -q 'release-notes.sh" "$GITHUB_REF_NAME' "c/.github/workflows/$w-release.yml"
+done
 # Up-paths at both depths.
 grep -qF '](../README.md)' c/api/README.md
 grep -qF '"root": "../.."' c/apps/web/biome.json
