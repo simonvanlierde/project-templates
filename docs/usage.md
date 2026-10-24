@@ -253,11 +253,12 @@ this template. The same command lets you change your answers: add a stack or tur
 publish option, and Copier writes the new files.
 
 `CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`, `codemeta.json`),
-`docs/decisions/README.md`, a `web-app`'s starter files and Go's `go.mod` are written once and then belong to your project: an
-update never touches them, so your release tool or your own edits own them. A template release that
-changes them says so in the template's changelog, for you to copy over by hand. `go mod tidy`
-rewrites `go.mod` and Dependabot bumps its requirements, so a new `go_version` answer
-doesn't reach it: run `go mod edit -go=<version>` yourself.
+`docs/decisions/README.md`, a `web-app`'s starter files and Go's `go.mod` are written once
+and then belong to your project: an update never touches them, so your release tool or
+your own edits own them. A template release that changes them says so in the template's
+changelog, for you to copy over by hand. `go mod tidy` rewrites `go.mod` and Dependabot
+bumps its requirements, so a new `go_version` answer doesn't reach it: run `go mod edit
+-go=<version>` yourself.
 
 To move a package to another directory, run `copier update` with the new directory.
 Then delete the old directory by hand. Copier removes files that left the template,

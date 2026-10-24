@@ -1,6 +1,6 @@
 # 0000. Title of the decision
 
-- Status: proposed
+- Status: proposed (later accepted, rejected or superseded by NNNN)
 - Date: YYYY-MM-DD
 
 ## Context
