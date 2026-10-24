@@ -801,5 +801,8 @@ grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' "$cu"
 grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
 # shellcheck disable=SC2016
 grep -q 'gh issue create --title "$title"' "$cu"
+# shellcheck disable=SC2016
+grep -q 'gh pr close "$stale"' "$cu"
+grep -qF 'gh issue list --state all' "$cu"
 
 echo "all render checks passed"
