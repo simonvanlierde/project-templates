@@ -43,9 +43,7 @@ change or have the right to submit it under this project's license: the
 adds the line. To add it to commits you already made, run
 `git rebase --signoff upstream/main` (the branch you started from) and force-push the branch.
 
-The `dco` workflow checks every pull request from outside contributors and fails on a
-commit without the line. The maintainers' commits and the dependency bots' are covered by
-their role, so their pull requests skip it.
+The `dco` workflow checks every pull request from a fork and fails on a commit without the line. Pull requests from a branch in this repository skip it: pushing that branch already needed write access.
 
 ## Who maintains this
 
