@@ -90,6 +90,10 @@ Each stack also gets its own CI workflow in `.github/workflows/` and its own rec
 Code recommendations. Unless `public=false`, it also gets the community files in `.github/`:
 `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and a pull request template. A Python project also picks a [kind](python-kinds.md).
 
+Every project also gets `docs/decisions/`, for decision records: one numbered file per
+decision, such as `0001-one-parser.md`, saying what was chosen, why, and what it costs.
+Copy `0000-template.md` for a new record and list it in the folder's `README.md`.
+
 ## TypeScript kinds
 
 `ts_kind` picks what the TypeScript package is:
@@ -249,11 +253,12 @@ this template. The same command lets you change your answers: add a stack or tur
 publish option, and Copier writes the new files.
 
 `CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`, `codemeta.json`),
-a `web-app`'s starter files and Go's `go.mod` are written once and then belong to your project: an
-update never touches them, so your release tool or your own edits own them. A template release that
-changes them says so in the template's changelog, for you to copy over by hand. `go mod tidy`
-rewrites `go.mod` and Dependabot bumps its requirements, so a new `go_version` answer
-doesn't reach it: run `go mod edit -go=<version>` yourself.
+`docs/decisions/README.md`, a `web-app`'s starter files and Go's `go.mod` are written once
+and then belong to your project: an update never touches them, so your release tool or
+your own edits own them. A template release that changes them says so in the template's
+changelog, for you to copy over by hand. `go mod tidy` rewrites `go.mod` and Dependabot
+bumps its requirements, so a new `go_version` answer doesn't reach it: run `go mod edit
+-go=<version>` yourself.
 
 To move a package to another directory, run `copier update` with the new directory.
 Then delete the old directory by hand. Copier removes files that left the template,
