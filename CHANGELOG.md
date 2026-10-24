@@ -87,8 +87,8 @@ Upgrade steps:
 
 ### Added
 
-- Commit message rules in `committed.toml`: Conventional Commits, an imperative lower-case
-  summary, no period. A `committed` commit-msg hook checks each commit, skipping merge
+- Commit message rules in `committed.toml`: Conventional Commits, an imperative summary,
+  no period. A `committed` commit-msg hook checks each commit, skipping merge
   commits, and a new `pr-title.yml` workflow checks the pull request title, which a squash
   merge turns into the commit subject. Dependabot and Renovate now write PR titles in the
   same form, `chore(deps): ...`.
