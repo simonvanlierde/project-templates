@@ -50,8 +50,11 @@ test("the statement was reviewed in the last 400 days", async ({ page }) => {
   expect(Number.isNaN(reviewed.getTime()), `unreadable date in "${line}"`).toBe(false);
   const ageDays = (Date.now() - reviewed.getTime()) / DAY_MS;
   // A date in the future is a typo, and would hold the check off for years.
-  expect(ageDays).toBeGreaterThan(-1);
-  expect(ageDays).toBeLessThan(MAX_REVIEW_AGE_DAYS);
+  expect(ageDays, `"${line}" is in the future`).toBeGreaterThan(-1);
+  expect(
+    ageDays,
+    `"${line}" is over ${MAX_REVIEW_AGE_DAYS} days old. Check docs/accessibility.md against the app as it is now, fix what changed, and set "Last reviewed" to today.`,
+  ).toBeLessThan(MAX_REVIEW_AGE_DAYS);
 });
 
 // The template leaves a TODO wherever only the project knows the answer.

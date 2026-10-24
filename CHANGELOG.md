@@ -86,7 +86,7 @@ Upgrade steps:
 
 ### Added
 
-- GPL-3.0-or-later, LGPL-3.0-or-later and AGPL-3.0-or-later as `license` answers, with
+- GPL-3.0-or-later and AGPL-3.0-or-later as `license` answers, with
   the GNU texts in `LICENSE`. These texts have no copyright line, so they don't ask
   `copyright_year`.
 - A `python_layout` question under `customise`, `src` by default. `flat` is for adopting
