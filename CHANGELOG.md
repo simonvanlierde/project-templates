@@ -92,7 +92,7 @@ Upgrade steps:
   commits, and a new `pr-title.yml` workflow checks the pull request title, which a squash
   merge turns into the commit subject. Dependabot and Renovate now write PR titles in the
   same form, `chore(deps): ...`.
-- GPL-3.0-or-later, LGPL-3.0-or-later and AGPL-3.0-or-later as `license` answers, with
+- GPL-3.0-or-later and AGPL-3.0-or-later as `license` answers, with
   the GNU texts in `LICENSE`. These texts have no copyright line, so they don't ask
   `copyright_year`.
 - A `python_layout` question under `customise`, `src` by default. `flat` is for adopting
