@@ -59,6 +59,13 @@ one by hand first: the workflow leaves an existing release as it is.
 
 ## Write pull requests for any reader
 
+Commit messages and the pull request title, which becomes the squash commit subject, follow
+[committed.toml](committed.toml): Conventional Commits, an imperative summary, no period.
+The commit-msg hook checks each commit and the `pull request title` check checks the title.
+Write the summary in lower case too; nothing checks that. A revert is titled
+`revert: <original subject>`: rename the `Revert "..."` title that GitHub's Revert button
+writes, or the check fails.
+
 This repository is public. A pull request body is one line on its purpose and a few
 bullets on what changed. Leave out steps for the maintainer, such as tagging after the
 merge, and long check logs.

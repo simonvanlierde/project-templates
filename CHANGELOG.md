@@ -45,6 +45,7 @@ Upgrade steps:
 - Run `just repo-settings` once after the update, and in a new project after the first
   push. It protects `main` and, in a public repo, turns on private vulnerability
   reporting, which `SECURITY.md` points to.
+- Run `prek install` again in each clone, so the new commit-msg hook is installed.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -86,6 +87,11 @@ Upgrade steps:
 
 ### Added
 
+- Commit message rules in `committed.toml`: Conventional Commits, an imperative summary,
+  no period. A `committed` commit-msg hook checks each commit, skipping merge
+  commits, and a new `pr-title.yml` workflow checks the pull request title, which a squash
+  merge turns into the commit subject. Dependabot and Renovate now write PR titles in the
+  same form, `chore(deps): ...`.
 - GPL-3.0-or-later, LGPL-3.0-or-later and AGPL-3.0-or-later as `license` answers, with
   the GNU texts in `LICENSE`. These texts have no copyright line, so they don't ask
   `copyright_year`.
