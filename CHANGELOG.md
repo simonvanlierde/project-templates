@@ -126,8 +126,7 @@ Upgrade steps:
 - `CONTRIBUTING.md` says where to report a bug, states the commit, pull request and
   changelog conventions, asks for a DCO sign-off on every commit and says who maintains the
   project. `CODE_OF_CONDUCT.md` is the Contributor Covenant 3.0, with the author email as
-  the contact. A `dco.yml` workflow fails an outside contributor's pull request with a
-  commit that isn't signed off.
+  the contact. A `dco.yml` workflow fails a pull request from a fork with a commit that isn't signed off.
 - `SECURITY.md` says what to include in a report, promises an answer within 14 days, says
   how a fix is disclosed, and has a scope section to fill in.
 - A `customise` question, no by default, ahead of the advanced questions: license,
