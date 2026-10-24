@@ -2,8 +2,8 @@
 
 ## The questions
 
-A new project asks at most ten questions for a single stack: the details only you know,
-then one switch for everything else. They come in this order:
+A new project asks at most ten questions for a single stack, eleven for a web app: the
+details only you know, then one switch for everything else. They come in this order:
 
 | Question              | Asked when                         | What it changes                                                    |
 | --------------------- | ---------------------------------- | ------------------------------------------------------------------ |
@@ -12,7 +12,8 @@ then one switch for everything else. They come in this order:
 | `stacks`              | always                             | Which packages, CI workflows and `just` recipes the repo gets      |
 | `kind`, `ts_kind`, `rust_kind`, `go_kind` | that stack is picked | What the package is: its layout, extra files and CI          |
 | `web_framework`       | `ts_kind=web-app`                  | React, or Preact for a smaller bundle                              |
-| `public`              | always                             | Yes adds `.github/SECURITY.md`, and sets the license default       |
+| `user_data`           | `ts_kind=web-app`                  | What the privacy page says, and whether there is a terms page ([legal pages](#legal-pages)) |
+| `public`              | always                             | Yes adds the community files in `.github/`, and sets the license default |
 | `github_user`, `author_name`, `author_email` | always      | Repo URLs and badges, the license, package metadata                |
 | `author_orcid`        | a `library`, `research` or `data-pipeline` Python kind | The citation files                    |
 | `customise`           | always                             | Yes asks the advanced questions below; no takes their defaults     |
@@ -26,6 +27,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | ----------------------------------------------- | ------------------------------------------------ |
 | `license`, `copyright_year`                     | MIT if `public`, otherwise none; this year       |
 | `python_dir`, `ts_dir`, `rust_dir`, `go_dir`    | `.`: each package at the repo root               |
+| `python_layout`                                 | `src`: the package in `src/<module>`, or `flat` ([adopting](#adopting-the-template-in-an-existing-python-package)) |
 | `dependency_bot`                                | Dependabot                                       |
 | `codecov`                                       | off                                              |
 | `codspeed`                                      | off ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
@@ -34,6 +36,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | off ([Publishing](#publishing))           |
 | `test_extras`                                   | none ([Test extras](#test-extras))               |
 | `app_port`                                      | 8000                                             |
+| `site_url`                                      | `https://<project>.pages.dev`, the Cloudflare Pages address |
 
 On `copier update`, an advanced question you answered before keeps its answer even when
 `customise` is no. To change one answer without the others, pass it:
@@ -47,15 +50,27 @@ To skip the questions, `--data-file answers.yml` reads answers from a file, and
 ## Public repos
 
 `public` is yes by default. Answer no for a private repo, and the template leaves out
-`.github/SECURITY.md`, which only outsiders need, and licenses nothing unless you pick a
+`.github/SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and the
+`dco.yml` sign-off check, which only outsiders need, and licenses nothing unless you pick a
 license under `customise`. When the repo goes public, run
 `copier update --data public=true`: that adds the files back. It does not change a
 license you already answered.
 
 A public repo also gets `.github/workflows/scorecard.yml`, which publishes its
 [OpenSSF Scorecard](https://scorecard.dev) for the README badge. The workflow needs a public
-repo, so a private one gets neither. Scorecard rates branch protection too, so set that up
-for a higher score.
+repo, so a private one gets neither. Scorecard rates branch protection too: [Protecting main](#protecting-main)
+sets it up.
+
+## Protecting main
+
+`just repo-settings` applies `.github/rulesets/main.json` to the default branch with `gh api`:
+no deletion, no force-push, linear history, and PRs required, squash-merged only. It also
+turns off merge commits and rebase merges in the repo settings. In a public repo it turns
+on private vulnerability reporting, where `SECURITY.md` sends reports. Run it once per repo,
+after the first push, and
+again after you edit the file: it updates the ruleset named `main` if there is one. Needs
+admin rights, and a paid GitHub plan on a private repo. No status checks are required, since
+the job names depend on your stacks.
 
 ## Choosing your stacks
 
@@ -71,8 +86,9 @@ The `stacks` question is a multi-select. Pick any combination:
 
 Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
 `just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`
-(unless `license=none`), `SECURITY.md` (unless `public=false`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS Code
-recommendations. A Python project also picks a [kind](python-kinds.md).
+(unless `license=none`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS
+Code recommendations. Unless `public=false`, it also gets the community files in `.github/`:
+`SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and a pull request template. A Python project also picks a [kind](python-kinds.md).
 
 ## TypeScript kinds
 
@@ -84,8 +100,8 @@ recommendations. A Python project also picks a [kind](python-kinds.md).
 | `app`     | The same Node package, built to `dist/` and never published                                   |
 | `web-app` | A Vite single-page app for the browser, deployed to Cloudflare Pages                           |
 
-A `web-app` asks one more question, `web_framework`: React, or Preact for a smaller
-bundle. Preact runs React code through `preact/compat`, set up as aliases in
+A `web-app` asks two more questions: `web_framework`, React or Preact for a smaller
+bundle, and `user_data` for its [legal pages](#legal-pages). Preact runs React code through `preact/compat`, set up as aliases in
 `vite.config.ts` and `tsconfig.json`. On top of the TS stack's checks, a web app gets:
 
 - `index.html`, `src/main.tsx` and an `App` component with a unit test (Vitest with jsdom).
@@ -93,6 +109,8 @@ bundle. Preact runs React code through `preact/compat`, set up as aliases in
   accessibility check of every route in light and dark mode, and a check that the app
   runs under its own Content-Security-Policy. `just ts-e2e` runs them, and so does an
   `e2e` job in `ts.yml`.
+- An accessibility statement, a privacy statement and, for accounts or uploads, terms of
+  use, linked from every page's footer ([legal pages](#legal-pages)).
 - `public/_headers` with the response headers, and `wrangler.jsonc` with the build
   output directory, for Cloudflare Pages.
 - A bundle budget in `scripts/checkBundleBudget.mjs`, which `just check` runs after the build.
@@ -104,25 +122,57 @@ directory to `ts_dir` if the app is nested. No workflow deploys it, and no token
 stored in GitHub. A web app is static files, so the docker stack can't build it an image.
 
 The starter files are the project's once written, and `copier update` leaves them
-alone: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`
-and `tests/e2e/routes.ts`. Every other file keeps receiving template changes.
+alone: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`,
+`tests/e2e/routes.ts` and the pages in `docs/`. Every other file keeps receiving template
+changes.
+
+### Legal pages
+
+Each page is one Markdown file in the app's `docs/` folder. GitHub shows the file as it
+is, and the build turns it into HTML (`marked`, in `vite.config.ts`), so the app ships no
+Markdown code. The build leaves out HTML comments: they are notes for you. `src/App.tsx` serves them, and every page's footer links them:
+
+| Page                     | Path             | Rendered when              |
+| ------------------------ | ---------------- | -------------------------- |
+| `docs/accessibility.md`  | `/accessibility` | always                     |
+| `docs/privacy.md`        | `/privacy`       | always; its cookies section is part of it |
+| `docs/terms.md`          | `/terms`         | `user_data=accounts`       |
+
+The `user_data` answer, "What does the app keep about its users?", has no default:
+`nothing`, `browser` (local storage only) or `accounts` (accounts or uploads on a
+server). It decides what the privacy statement says, and whether there are terms. The
+answers fill in the name, `site_url`, your email and today's date. The rest is marked
+TODO, and the e2e tests fail until no TODO is left. The
+[CI baseline](ci-baseline.md) says what `accessibility-statement.spec.ts` and
+`privacy.spec.ts` check.
+
+[`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for filling the pages in: who is
+responsible for the data, what an organisation's privacy officer checks, and what the
+Dutch and EU cookie rules say about local storage and analytics. It is not legal advice.
 
 ### Adopting the template in an existing web app
 
 1. On a clean branch of the existing repository, render over it:
    `copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .`,
-   answering `ts_kind=web-app` and the framework the app uses.
-2. A first copy has nothing to merge with, so it overwrites every file it writes.
-   It also adds the starter files the app may not have: `src/App.tsx`,
-   `src/App.test.tsx` and `src/app.css` land next to the app's own components and
+   answering `ts_kind=web-app`, the framework the app uses, and `user_data` for its
+   [legal pages](#legal-pages).
+2. A first copy has nothing to merge with, so it overwrites the files it writes, except
+   the starter files and the README: an app's own `src/App.tsx`, `src/main.tsx`,
+   `src/app.css`, `index.html`, `tests/e2e/routes.ts` and `README.md` stay as they are.
+   The starter files the app doesn't have yet land next to its own components and
    styles. Review `git diff`:
-   - Delete the starter files the app doesn't use, and restore its own versions of
-     the rest.
+   - Delete the starter files the app doesn't use.
+   - Copy the footer and the routes for the legal pages from a fresh render's
+     `src/App.tsx` into the app's own, and add `/accessibility` and `/privacy` (and
+     `/terms`) to `tests/e2e/routes.ts`.
    - Restore `vite.config.ts` and `vitest.config.ts` if the app added plugins, test
-     setup or coverage thresholds. Copier replaces both.
+     setup or coverage thresholds. Copier replaces both. Keep the template's
+     `markdown()` plugin in `vite.config.ts`: the legal pages are `.md` imports, and
+     the build fails without it.
    - Restore the `name` in `package.json` and `wrangler.jsonc`, which become the
-     project slug, and the README.
+     project slug.
    - Restore `public/_headers` if the app needs a looser policy.
+   - Fill in the TODOs in the pages in `docs/`. The e2e tests fail until none is left.
 3. Run `pnpm install`. The template's `pnpm-workspace.yaml` only accepts releases at
    least a week old, so it rejects a lockfile that holds a newer one. List each
    package it names under `minimumReleaseAgeExclude` in that file, with a date a week
@@ -141,6 +191,34 @@ and `tests/e2e/routes.ts`. Every other file keeps receiving template changes.
 
 Later `copier update` runs merge the template's changes since the recorded commit,
 so the edits from step 2 stay.
+
+## Adopting the template in an existing Python package
+
+1. On a clean branch, render over the repo with
+   `copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .`.
+   Answer yes to `customise`, give the package's `module_name`, and pick
+   `python_layout=flat` if the package sits at the root rather than under `src/`. Flat
+   adds no `src/` stub and no `tests/test_add.py`. An existing `README.md`,
+   `CHANGELOG.md` and `CITATION.cff` stay as they are, and `copier update` never touches
+   them later either, so template changes to them reach you only by hand.
+2. Copier replaces `pyproject.toml`. Restore your dependencies, authors and version from
+   `git diff`, then run `just py-sync`. `--overwrite` also replaces `LICENSE`,
+   `.gitignore`, `.pre-commit-config.yaml`, the `justfile` and the community files in
+   `.github/`, so review `git diff` for those too. GitHub shows `.github/CONTRIBUTING.md`
+   before a root `CONTRIBUTING.md`: keep one of each such pair and delete the other.
+3. Run `uv run ruff format` and commit that on its own. `select = ["ALL"]` usually finds
+   hundreds of issues in code written without it. To start from a baseline, add the codes
+   `uv run ruff check --statistics --output-format json | jq -r '.[].code'` prints to
+   `ignore` under a `# NOTE: baseline at adoption` comment, and delete them as you fix
+   them. Do the same for ty: set each rule that
+   `uv run ty check --output-format concise` names to `"warn"` under `[tool.ty.rules]`.
+   Warnings are reported but don't fail `ty check`.
+4. If `just check` fails on `uv audit` because the fix is less than a week old, exempt
+   that package from `exclude-newer` (see [tooling](tooling.md#dependencies)).
+5. The hooks leave `data/` alone. Delete the workflows the template replaces, then run
+   `just check` and `just hooks`, and commit, `.copier-answers.yml` included.
+6. Before the first tag, give `CHANGELOG.md` Keep a Changelog `## [X.Y.Z]` headings.
+   `release.yml` and the publish workflows read the section for the tag and fail without it.
 
 ## One package or a monorepo
 
@@ -204,12 +282,18 @@ differs from `_commit`, it runs `copier update --defaults` and opens one PR on t
 `chore/copier-update`, with conflicted files listed in the body. It does nothing when you
 are up to date. It pins Copier in its `COPIER_VERSION`, which Dependabot does not bump.
 
-The workflow needs the repository setting "Allow GitHub Actions to create and approve
-pull requests". Turn it on with
+Give the workflow a token of its own. GitHub refuses a push with `GITHUB_TOKEN` that
+changes a file in `.github/workflows/`, which most template releases do, so those updates
+fail. Create a fine-grained token for this repository with read and write access to
+Contents, Pull requests and Workflows, and store it as the `COPIER_UPDATE_TOKEN`
+repository secret (`gh secret set COPIER_UPDATE_TOKEN`). The workflow then pushes and
+opens the PR with it, and the PR's own CI starts.
+
+Without the secret, the workflow falls back to `GITHUB_TOKEN`. Updates that touch
+workflows fail, and the PR's CI does not start until you close and reopen it. It also
+needs the repository setting "Allow GitHub Actions to create and approve pull requests".
+Turn it on with
 `gh api -X PUT repos/OWNER/REPO/actions/permissions/workflow -F can_approve_pull_request_reviews=true -f default_workflow_permissions=read`.
-A PR pushed with `GITHUB_TOKEN` does not start other workflows, so its CI stays
-silent. Close and reopen the PR to start it, or change the workflow to push with a
-fine-grained token or GitHub App token.
 
 If `copier update` can't check out the `_commit` in `.copier-answers.yml`, the project
 was rendered from a commit that was never pushed or tagged. Set `_commit` to the oldest
@@ -234,8 +318,12 @@ sample `add` function and run with the other tests. Go's `FuzzAdd` runs on its s
 
 Mutation testing plants small bugs in your code, such as `+` turned into `-`, and
 reports each one the tests don't catch. A run takes minutes to hours, and some
-surviving mutants change nothing a test could see, so it is a recipe to run before a
-release or after writing tests, never a CI step.
+surviving mutants change nothing a test could see. So CI runs it once a week, from
+`.github/workflows/mutation.yml`, never on a pull request. It has one job per library
+stack and runs the same `just <stack>-mutation` recipe you run by hand. Start it from
+the Actions tab with "Run workflow" after you change the tests. The Rust job fails when
+a mutant survives; list a harmless one in `.cargo/mutants.toml` (`exclude_re`). The other
+jobs print the survivors and pass.
 
 OpenSSF Scorecard's Fuzzing check counts fast-check and Go's native fuzzing, not
 Hypothesis or proptest. To add the extras to an existing library, run

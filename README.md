@@ -99,5 +99,7 @@ defaults:
 - [docs/tooling.md](docs/tooling.md): the tools, lint policies, Docker images,
   dependency updates and release workflows.
 - [docs/ci-baseline.md](docs/ci-baseline.md): every CI check, and what was left out.
+- [docs/design.md](docs/design.md): who can change what, and the workflows that can publish.
+- [docs/web-legal.md](docs/web-legal.md): tips for filling in a web app's legal pages.
 - [CONTRIBUTING.md](CONTRIBUTING.md): how to test a template change before you tag it.
 - [SECURITY.md](SECURITY.md): how to report a vulnerability.

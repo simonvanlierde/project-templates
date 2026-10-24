@@ -14,8 +14,37 @@ Upgrade steps:
 
 - **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
   `copier update`. Renovate's copier manager installs the latest Copier.
-- A private repo: answer no to the new `public` question, and `.github/SECURITY.md`
-  goes. Your license answer stays as it is.
+- **Breaking:** a web app made from an untagged main asks the new `user_data` question,
+  which has no default, so `copier update --defaults` stops on it. Answer it, or pass it:
+  `copier update --data user_data=nothing` (or `browser`, or `accounts`). Then add the
+  footer and the page routing from a fresh render's `src/App.tsx` to yours, and
+  `/accessibility` and `/privacy` (and `/terms`) to `tests/e2e/routes.ts`: an update
+  leaves both files alone. Fill in the TODOs in `docs/`. An app on its own domain: pass
+  `--data site_url=https://<your domain>`, or the pages name the `pages.dev` address.
+  The weekly copier-update workflow fails until you have run this update by hand once.
+- A private repo: answer no to the new `public` question, and `.github/SECURITY.md`,
+  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml` go. Your license answer stays as it is.
+- A public repo: the update adds `.github/CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
+  `pull_request_template.md` and a `dco` check on pull requests from outside contributors,
+  and `SECURITY.md` gains a Scope section to fill in. GitHub shows `.github/CONTRIBUTING.md`
+  before a root `CONTRIBUTING.md`, so if you have your own, keep one and delete the other.
+- With `dependency_bot=dependabot`: create a fine-grained token with read and write access
+  to Contents, Pull requests and Workflows on the repo, and store it as the
+  `COPIER_UPDATE_TOKEN` secret. Without it, the new weekly `copier-update` workflow can't
+  push an update that changes a workflow
+  ([Hearing about new releases](docs/usage.md#hearing-about-new-releases)).
+- `README.md`, `CHANGELOG.md` and the citation files (`CITATION.cff`, `.zenodo.json`,
+  `codemeta.json`) are now your project's, and this update already leaves them alone. So
+  this release's README changes don't arrive: the badges for the options you turned on,
+  the Releasing section, and the `just fmt` and `just hooks` lines. Copy the ones you want
+  from a fresh render with your answers.
+- **Breaking:** if a ruleset or branch protection requires the `lint, types, tests` check
+  (`lint, types, pipeline, tests` in a `data-pipeline` project), switch it to the new
+  name: `python: lint, types, tests` (`python: lint, types, pipeline, tests`) or
+  `ts: lint, types, tests`. Until then, pull requests wait on a check that never reports.
+- Run `just repo-settings` once after the update, and in a new project after the first
+  push. It protects `main` and, in a public repo, turns on private vulnerability
+  reporting, which `SECURITY.md` points to.
 - Run `prek install` again in each clone, so the new commit-msg hook is installed.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
@@ -63,6 +92,14 @@ Upgrade steps:
   commits, and a new `pr-title.yml` workflow checks the pull request title, which a squash
   merge turns into the commit subject. Dependabot and Renovate now write PR titles in the
   same form, `chore(deps): ...`.
+- GPL-3.0-or-later, LGPL-3.0-or-later and AGPL-3.0-or-later as `license` answers, with
+  the GNU texts in `LICENSE`. These texts have no copyright line, so they don't ask
+  `copyright_year`.
+- A `python_layout` question under `customise`, `src` by default. `flat` is for adopting
+  the template in a repo whose package already sits at the root: it renders no
+  `src/<module>` stub or `tests/test_add.py`, and sets `module-root = ""` for uv_build.
+  [Adopting the template in an existing Python package](docs/usage.md#adopting-the-template-in-an-existing-python-package)
+  covers the rest, including a ruff and ty baseline for code written without them.
 - README badges for the options you turn on: Codecov coverage (`codecov`), CodSpeed
   (`codspeed`), PyPI version and supported Python versions (`publish_to_pypi`), npm version
   (`publish_to_npm`) and OpenSSF Scorecard (`public`).
@@ -77,12 +114,26 @@ Upgrade steps:
 - `release.yml` and `.github/scripts/release-notes.sh`: a pushed `vX.Y.Z` tag becomes a
   GitHub release whose notes are that version's `CHANGELOG.md` section, so the two never
   differ.
-- A `public` question, yes by default. No leaves out `.github/SECURITY.md` and makes
+- `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged) from `.github/rulesets/main.json`, and in a public repo turns on private vulnerability reporting, which `SECURITY.md` points to. Rerun it any time; it updates the ruleset instead of adding a second.
+- With `mutation` in `test_extras`, a weekly CI run of mutation testing:
+  `.github/workflows/mutation.yml`, one job per library stack, also startable by hand
+  and never run on a pull request. Each job runs the stack's `just <stack>-mutation`
+  recipe. The Rust job fails when a mutant survives; the others print the survivors and
+  pass.
+- A `public` question, yes by default. No leaves out `.github/SECURITY.md`,
+  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml`, and makes
   `none` the license default. See [Public repos](docs/usage.md#public-repos).
+- `CONTRIBUTING.md` says where to report a bug, states the commit, pull request and
+  changelog conventions, asks for a DCO sign-off on every commit and says who maintains the
+  project. `CODE_OF_CONDUCT.md` is the Contributor Covenant 3.0, with the author email as
+  the contact. A `dco.yml` workflow fails an outside contributor's pull request with a
+  commit that isn't signed off.
+- `SECURITY.md` says what to include in a report, promises an answer within 14 days, says
+  how a fix is disclosed, and has a scope section to fill in.
 - A `customise` question, no by default, ahead of the advanced questions: license,
   directories, versions, module names, Codecov, the dependency bot, publishing, test
   extras and the port. A new Python library, TypeScript web app or data pipeline now
-  asks 10 questions, down from 18, 14 and 15. Every question says what it changes.
+  asks 10 questions, or 11 for a web app, down from 18, 14 and 15. Every question says what it changes.
   [The questions](docs/usage.md#the-questions) lists them with their defaults.
 - `copier copy` says where your details can be saved before it asks, and lists the
   `just` commands to run after it.
@@ -141,20 +192,36 @@ Upgrade steps:
   out of `just py-check`, so a deliberate break leaves local checks green. With `publish_to_npm`, `ts.yml` and `just ts-check` run API Extractor, which
   fails when the built types differ from the committed `<package>.api.md`. `just ts-api`
   rewrites that report after a deliberate change, so the change shows in review.
+- A `web-app` has legal pages, linked from every page's footer: an accessibility
+  statement at `/accessibility`, a privacy statement at `/privacy` and, with
+  `user_data=accounts`, terms of use at `/terms`. Each is one Markdown file in `docs/`:
+  GitHub shows it, and the build turns it into HTML. Its HTML comments are notes for you,
+  and the build leaves them out. New e2e tests fail when a page still
+  holds a TODO, when the statement says "fully conformant" or goes 400 days without a
+  review, and when a first visit sets a cookie, stores anything in the browser or loads a
+  file from another site. [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for
+  filling the pages in, linked from each page's notes ([Legal pages](docs/usage.md#legal-pages)).
 
 ### Changed
 
+- `copier copy` keeps an existing `README.md`, and `copier update` no longer touches it.
+  Template changes to the README, this release's included, reach existing projects only
+  by hand.
+- A ty rule set to `"warn"` reports without failing `ty check`, the hook and
+  `just py-check`. ty exits 1 on warnings by default; `pyproject.toml` now sets
+  `[tool.ty.terminal] error-on-warning = false`.
+- In a Python project, the git hooks skip `data/`, so the whitespace, end-of-file and
+  nbstripout hooks no longer rewrite input data and archived notebooks.
 - `pnpm audit --fix=update` locks a security fix that is under a week old: it adds the
   patched version to `minimumReleaseAgeExclude`, and the new
   `minimumReleaseAgeExcludePrune` drops the entry once the lockfile moves past it.
 - With `dependency_bot=renovate`, Renovate refreshes the lockfiles every Monday. That is
   how a security fix in a dependency of a dependency arrives, once it is a week old.
-- **Breaking:** after updating, switch a ruleset or branch protection that requires the
-  `lint, types, tests` check to the new names, or pull requests wait on a check that never
-  reports. The TypeScript and Python check jobs are now `ts: lint, types, tests` and
+- **Breaking:** the TypeScript and Python check jobs are now `ts: lint, types, tests` and
   `python: lint, types, tests` (`python: lint, types, pipeline, tests` in a
   `data-pipeline` project). Both used to be `lint, types, tests`, so a ruleset could not
-  require one without the other.
+  require one without the other. A ruleset that requires the old name needs the new one
+  (see the upgrade steps).
 - With the `codecov` option, `just check` runs the TypeScript tests with coverage, as CI
   does, so a coverage threshold in the Vitest config fails locally as well as in CI.
 - Dependabot and Renovate group minor and patch bumps of runtime dependencies into one
@@ -192,8 +259,8 @@ Upgrade steps:
   minimum Go version, run `go mod edit -go=<version>`.
 - `copier update` no longer touches `CITATION.cff`, `.zenodo.json` or `codemeta.json` once
   they exist, so a release that adds its version, date or DOI to them no longer conflicts
-  with every update. Later template changes to these files reach existing projects only by
-  hand.
+  with every update. Template changes to these files, this release's included, reach
+  existing projects only by hand.
 - Web-service projects test with `httpx2`, which Starlette's test client now prefers,
   instead of `httpx`, and require Starlette 1.2.0 or later. The pytest filter that hid
   Starlette's deprecation warning is gone.
@@ -225,9 +292,10 @@ Upgrade steps:
   releases.
 - With `dependency_bot: dependabot`, a `copier-update` workflow opens a weekly PR that
   runs `copier update` to the newest template tag, with conflicted files listed in the
-  PR body. Allow Actions to create pull requests in the repository settings first. The
-  docs have the command and the one catch: that PR's own CI does not start until you
-  close and reopen it.
+  PR body. It pushes with a `COPIER_UPDATE_TOKEN` secret, a fine-grained token you create.
+  Without one it uses `GITHUB_TOKEN`, which GitHub stops from pushing workflow changes,
+  and the PR's own CI does not start. See
+  [Hearing about new releases](docs/usage.md#hearing-about-new-releases).
 
 ### Fixed
 

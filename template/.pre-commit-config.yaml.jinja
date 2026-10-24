@@ -19,6 +19,12 @@
 # `prek install` sets up each of these: the commit message is checked as you commit{% if 'ts' in stacks and ts_kind == 'web-app' %},
 # and the unit tests run before each push{% endif %}.
 default_install_hook_types: [pre-commit, commit-msg{% if 'ts' in stacks and ts_kind == 'web-app' %}, pre-push{% endif %}]
+{%- if 'python' in stacks %}
+
+# data/ holds inputs: the whitespace, end-of-file and notebook hooks must not rewrite them.
+# Excluded per hook, so the secret scan and the large-file check still cover data/.
+{%- set data_exclude = '^' ~ ('' if python_dir == '.' else python_dir ~ '/') ~ 'data/' %}
+{%- endif %}
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
@@ -29,8 +35,17 @@ repos:
         # pnpm writes its own version into the lockfile as a second YAML document.
         exclude: (^|/)pnpm-lock\.yaml$
       - id: end-of-file-fixer
+{%- if 'python' in stacks %}
+        exclude: {{ data_exclude }}
+{%- endif %}
       - id: mixed-line-ending
+{%- if 'python' in stacks %}
+        exclude: {{ data_exclude }}
+{%- endif %}
       - id: trailing-whitespace
+{%- if 'python' in stacks %}
+        exclude: {{ data_exclude }}
+{%- endif %}
       # Not gated to python: .rumdl.toml ships to every stack.
       - id: check-toml
 
@@ -105,6 +120,7 @@ repos:
     rev: 34071b78c181af3bf5af955c1426466e096fc3db # frozen: 0.9.1
     hooks:
       - id: nbstripout
+        exclude: {{ data_exclude }}
 {%- endif %}
   - repo: https://github.com/rvben/rumdl-pre-commit
     rev: 3429bee0c8870bff7874f898c6e8659d1ffe9645 # frozen: v0.2.79

@@ -5,7 +5,8 @@ type: software
 title: "project-templates"
 abstract: >-
   A Copier template for Python, TypeScript, Rust, Go and Docker projects, with
-  supply-chain-hardened CI and a provenance-first data-pipeline kind.
+  supply-chain-hardened CI, a provenance-first data-pipeline kind, a web-app kind with
+  legal pages, and community files for public repos.
 authors:
   - given-names: "Simon"
     family-names: "van Lierde"
@@ -17,3 +18,4 @@ keywords:
   - project template
   - research software
   - provenance
+  - web app

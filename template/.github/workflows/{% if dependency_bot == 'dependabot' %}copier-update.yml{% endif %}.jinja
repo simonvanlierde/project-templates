@@ -3,7 +3,9 @@ name: copier update
 # Dependabot can't update a Copier template, so this opens the update PR. It runs
 # weekly, finds the newest template tag, and does nothing when `_commit` in
 # .copier-answers.yml already is that tag. The PR lives on one fixed branch.
-# Its CI does not start: see "Hearing about new releases" in the template's docs/usage.md.
+# It pushes with the COPIER_UPDATE_TOKEN secret when there is one: GITHUB_TOKEN can't
+# push a change to .github/workflows/, and its PR starts no CI. See "Hearing about new
+# releases" in the template's docs/usage.md.
 
 on:
   schedule:
@@ -42,11 +44,11 @@ jobs:
 {%- raw %}
       - name: Update from the newest template tag
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}
           REPO: ${{ github.repository }}
           BASE: ${{ github.event.repository.default_branch }}
         shell: bash
-        run: |
+        run: |-
           branch=chore/copier-update
           src=$(sed -n "s/^_src_path: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" .copier-answers.yml)
           url=${src/#gh:/https://github.com/}

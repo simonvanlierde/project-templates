@@ -54,11 +54,11 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
 # workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, the
 # only one with Renovate, and the only web-app: Preact, nested, so the e2e job's
-# paths are audited with the rest.
+# paths are audited with the rest. Its user_data answer is the one that adds terms.md.
 d_args=(
   --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
-  --data ts_dir=web --data ts_kind=web-app --data web_framework=preact
+  --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
   --data dependency_bot=renovate --data codecov=true
   --data 'docker_stacks=[python]'
 )
@@ -70,10 +70,12 @@ d_args=(
 echo '// project edit' >>"$out/d/web/src/App.tsx"
 echo '<!-- project edit -->' >>"$out/d/web/index.html"
 echo '// project edit' >>"$out/d/web/vite.config.ts"
+echo '<!-- project edit -->' >>"$out/d/web/docs/privacy.md"
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d" >/dev/null 2>&1
 grep -q 'project edit' "$out/d/web/src/App.tsx"
 grep -q 'project edit' "$out/d/web/index.html"
+grep -q 'project edit' "$out/d/web/docs/privacy.md"
 (! grep -q 'project edit' "$out/d/web/vite.config.ts")
 
 # h: a go library named like the Example file. The unit test must not share its path
@@ -85,6 +87,48 @@ echo '// project edit' >>"$out/h/go.mod"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=example --data 'stacks=[go]' . "$out/h" >/dev/null 2>&1
 grep -q 'project edit' "$out/h/go.mod"
+
+# m: every stack a library, nested, with the mutation extra: mutation.yml gets a job for
+# each. a has libraries too but no extras, so it must render no mutation.yml.
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
+  --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
+  --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
+  --data 'test_extras=[mutation]' . "$out/m"
+# k: adopting the template in an existing flat Python package under the GPL. The repo's
+# own README, citation file and package stay; no src/ stub or sample test lands.
+mkdir -p "$out/k/adopt_me"
+echo '# project readme' >"$out/k/README.md"
+echo '# project citation' >"$out/k/CITATION.cff"
+echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=adopt-me --data customise=true --data python_layout=flat \
+  --data license=GPL-3.0-or-later --data codspeed=true --data 'test_extras=[mutation]' \
+  --data publish_to_pypi=true . "$out/k"
+grep -qx '# project readme' "$out/k/README.md"
+grep -qx '# project citation' "$out/k/CITATION.cff"
+grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
+test ! -e "$out/k/src"
+test ! -e "$out/k/tests/test_add.py"
+(! grep -q 'import add' "$out/k/tests/test_benchmarks.py")
+grep -qx 'module-root = ""' "$out/k/pyproject.toml"
+grep -qx 'source = \["adopt_me"\]' "$out/k/pyproject.toml"
+grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/k/LICENSE"
+grep -qx 'license = "GPL-3.0-or-later"' "$out/k/pyproject.toml"
+grep -q '"license": "gpl-3.0-or-later"' "$out/k/.zenodo.json"
+# A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
+grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
+# Per hook, never top-level: the secret scan and the large-file check still cover data/.
+test "$(grep -cx ' *exclude: \^data/' "$out/k/.pre-commit-config.yaml")" = 4
+(! grep -qx 'exclude: \^data/' "$out/k/.pre-commit-config.yaml")
+grep -qx 'source_paths = \["adopt_me"\]' "$out/k/pyproject.toml"
+grep -q 'check --search \. --format github adopt_me' "$out/k/.github/workflows/python.yml"
+# yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
+grep -qx '        run: |-' "$out/k/.github/workflows/copier-update.yml"
+
+# copier matches _skip_if_exists like .gitignore lines, so an entry without a leading /
+# also skips the same name in any directory, such as data/README.md.
+(! sed -n '/^_skip_if_exists:/,/^$/p' copier.yml | grep '^  - ' | grep -v '^  - "\{0,1\}/')
 
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
@@ -98,7 +142,7 @@ git tag -f check-render-tag >/dev/null
 # A web app is static files, so the ts image (a Node service) is refused for it.
 # The grep checks the render failed for this reason, not for an unrelated break.
 if "${copier[@]}" --vcs-ref=HEAD --data project_name=web-docker \
-  --data 'stacks=[ts,docker]' --data ts_kind=web-app \
+  --data 'stacks=[ts,docker]' --data ts_kind=web-app --data user_data=nothing \
   --data 'docker_stacks=[ts]' . "$out/g" >"$out/g.log" 2>&1; then
   echo "rendered a ts image for a web app: the docker_stacks validator lost its web-app check" >&2
   exit 1
@@ -136,8 +180,19 @@ refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
+# The name goes into the README and the web app's Markdown pages unescaped.
+refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my*app'
+refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my<app>'
 refuses 'at least one stack' --data 'stacks=[]'
+refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
+refuses 'The flat layout' --data 'stacks=[python,docker]' --data 'docker_stacks=[python]' \
+  --data python_layout=flat
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
+# The legal pages are written from user_data, so it has no default to fall back on.
+refuses 'Question "user_data" is required' --data 'stacks=[ts]' --data ts_kind=web-app
+refuses "Invalid choice for 'user_data'" --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=some
+refuses 'starting with https://' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data site_url=http://example.org
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
 refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
   --data python_dir=api --data ts_dir=web --data app_port=65535
@@ -145,6 +200,15 @@ refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=
 # Its gitignored build output drops the module path's /v2.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
   --data go_kind=binary --data go_module=github.com/example-org/1tool/v2 . "$out/i"
+# l: a flat Python package next to a ts image. Only the python image needs src/.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=flat-ts-image \
+  --data 'stacks=[python,ts,docker]' --data python_layout=flat --data ts_dir=web \
+  --data 'docker_stacks=[ts]' . "$out/l"
+test -f "$out/l/web/Dockerfile"
+test ! -e "$out/l/src"
+# j: a private web app, so its legal pages must not link a repo visitors can't open.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
 
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
 import ast, json, json5, os, pathlib, tomllib, yaml
@@ -153,7 +217,7 @@ load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
 seen = 0
 out = pathlib.Path(os.environ["OUT"])
-for path in sorted(out.glob("[abcd]/**/*")):
+for path in sorted(out.glob("[abcdm]/**/*")):
     parse = load.get(path.suffix)
     if parse and path.is_file():
         parse(path.read_text())
@@ -181,7 +245,7 @@ assert any("trivy-action" in s.get("uses", "") for s in docker["build"]["steps"]
 assert not any("trivy-action" in s.get("uses", "") for s in docker["push"]["steps"]), docker["push"]
 # A ruleset requires a check by its job name, so two jobs with one name can't be told
 # apart. a, b, c and d each render more than one stack.
-for render in "abcd":
+for render in "abcdm":
     names = {}
     for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
         for job_id, job in yaml.safe_load(wf.read_text())["jobs"].items():
@@ -246,8 +310,8 @@ grep -q charliermarsh.ruff a/.vscode/extensions.json
 grep -q biomejs.biome a/.vscode/settings.json
 # TOML formats with tombi, which reads the shipped .tombi.toml; taplo would not.
 grep -q tombi-toml.tombi a/.vscode/settings.json
-test -f a/.github/SECURITY.md
-test ! -e b/.github/SECURITY.md
+grep -q 'Contributor Covenant, version 3.0' a/.github/CODE_OF_CONDUCT.md
+grep -q 'send an email to <ada@example.com>' a/.github/CODE_OF_CONDUCT.md
 # Scorecard: its workflow and badge exist only with public (a), never without (b).
 test -f a/.github/workflows/scorecard.yml
 grep -qx '      id-token: write # to publish the results' a/.github/workflows/scorecard.yml
@@ -348,6 +412,23 @@ grep -qx '      - run: pnpm run test' a/.github/workflows/ts.yml
 (! grep -q '^test_extras' d/.copier-answers.yml)
 grep -qx 'test_extras: \[\]' a/.copier-answers.yml
 (! grep -q -e proptest -e gremlins a/Cargo.toml a/go.mod)
+# mutation.yml: only with the extra, one job per library stack, weekly and by hand only.
+test -f m/.github/workflows/mutation.yml
+test ! -e a/.github/workflows/mutation.yml
+python3 - <<'PY'
+import yaml
+wf = yaml.safe_load(open("m/.github/workflows/mutation.yml"))
+assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
+assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
+assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
+assert all("timeout-minutes" in j for j in wf["jobs"].values())
+for stack in ("py", "ts", "rs", "go"):
+    assert any(f"just {stack}-mutation" in s.get("run", "") for j in wf["jobs"].values() for s in j["steps"]), stack
+# cargo mutants --dir writes mutants.out inside rust_dir: the check and the upload follow it.
+steps = wf["jobs"]["rust"]["steps"]
+assert any("test ! -s crates/lib/mutants.out/missed.txt" in s.get("run", "") for s in steps), steps
+assert any(s.get("with", {}).get("path") == "crates/lib/mutants.out/" for s in steps), steps
+PY
 # From a tag, the answers file names the canonical source. From any other
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
 # itself be a release tag, so render a is held to whichever its _commit is.
@@ -392,6 +473,9 @@ test ! -e a/renovate.json5
 test -f d/renovate.json5
 # Only Dependabot repos need the workflow that hears about template releases.
 test -f a/.github/workflows/copier-update.yml
+# GITHUB_TOKEN can't push a change to .github/workflows/, which most updates carry.
+# shellcheck disable=SC2016 # the literal workflow text, not a shell expansion
+grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' a/.github/workflows/copier-update.yml
 test ! -e d/.github/workflows/copier-update.yml
 test ! -e d/.github/dependabot.yml
 (! grep -q working-directory a/just/go.just)
@@ -510,6 +594,24 @@ test -f d/web/public/_headers
 test -f d/web/wrangler.jsonc
 test -f d/web/tests/e2e/a11y.spec.ts
 test -f d/web/tests/e2e/csp.spec.ts
+# The legal pages: statement and privacy always, terms for accounts or uploads,
+# each a route the axe, CSP and privacy specs visit.
+for page in accessibility privacy terms; do
+  test -f "d/web/docs/$page.md"
+  grep -q "\"/$page\"" d/web/tests/e2e/routes.ts
+done
+test -f d/web/tests/e2e/privacy.spec.ts
+test -f d/web/tests/e2e/accessibility-statement.spec.ts
+grep -q 'Its conformance is \*\*not assessed\*\*' d/web/docs/accessibility.md
+grep -qx '    "marked": "[0-9.]*",' d/web/package.json
+# A private repo's GitHub links would 404 for visitors, so its legal pages have none.
+test -f j/docs/accessibility.md
+(! grep -rq 'github.com/example-org/private-web' j/docs)
+grep -q 'github.com/example-org/pipe-me/blob/main/web/tests/e2e/a11y.spec.ts' d/web/docs/accessibility.md
+# GitHub shows the pages as they are, so they pass the project's own Markdown lint.
+rumdl_version=$(sed -n '/rumdl-pre-commit/{n;s/.*frozen: v//p;}' "$repo/.pre-commit-config.yaml")
+uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs
+test ! -e a/docs/privacy.md
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json
 test ! -e d/web/Dockerfile
@@ -654,5 +756,56 @@ grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 # The publish step: npm, from a tarball built earlier.
 grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
 (! grep -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
+
+# repo-settings: a fake gh proves the first run POSTs the ruleset file, the second PUTs the same id.
+test -f a/.github/rulesets/main.json
+fake=$(mktemp -d)
+cat >"$fake/gh" <<'FAKE'
+#!/usr/bin/env bash
+echo "$*" >>"$FAKE_LOG"
+case "$*" in
+  *"-X POST"*|*"-X PUT"*) while [ $# -gt 0 ]; do [ "$1" = --input ] && cp "$2" "$FAKE_LOG.body"; shift; done ;;
+  *"/rulesets?includes_parents=false --jq"*) [ -f "$FAKE_LOG.body" ] && echo 42 || true ;;
+esac
+FAKE
+chmod +x "$fake/gh"
+(
+  cd a
+  export FAKE_LOG="$fake/log" PATH="$fake:$PATH"
+  just repo-settings >/dev/null
+  just repo-settings >/dev/null
+  grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG" | grep -qx 1
+  grep -qF -- '-X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
+  grep -qF -- 'allow_merge_commit=false' "$FAKE_LOG"
+  # SECURITY.md's advisory link needs private vulnerability reporting on.
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
+  cmp "$FAKE_LOG.body" .github/rulesets/main.json
+)
+(! grep -q private-vulnerability-reporting b/justfile)
+# The community files and the DCO check come with public and go with it, in every render.
+for answers in */.copier-answers.yml; do
+  r=${answers%%/*}
+  # e renders a tag on HEAD, so it lacks uncommitted edits.
+  [ "$r" = e ] && continue
+  for f in SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md pull_request_template.md workflows/dco.yml; do
+    if grep -qx 'public: false' "$answers"; then
+      test ! -e "$r/.github/$f"
+    else
+      test -f "$r/.github/$f"
+    fi
+  done
+done
+# What the OpenSSF badge criteria ask of them: a response time, a disclosure statement,
+# a sign-off rule and who maintains the project.
+grep -q 'within 14 days' a/.github/SECURITY.md
+grep -q 'publish the GitHub security advisory' a/.github/SECURITY.md
+grep -q '^## Scope' a/.github/SECURITY.md
+grep -q 'Signed-off-by:' a/.github/CONTRIBUTING.md
+grep -q '^## Who maintains this' a/.github/CONTRIBUTING.md
+grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
+grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
+(! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
+# This repo runs the same DCO check it renders.
+cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
 
 echo "all render checks passed"

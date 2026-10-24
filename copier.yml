@@ -1,26 +1,34 @@
 _subdirectory: template
 # `ask:` hides the advanced questions behind `customise`, which needs 9.19.0.
 _min_copier_version: "9.19.0"
-# Written once, then owned by the project: `copier update` leaves them alone. A
-# release adds its version, date and DOI to the citation files, and an update would
-# then conflict with that edit every time. The web-app entries are its starter files,
-# which the project rewrites from day one. go.mod is rewritten by the first
-# `go mod tidy`, and Dependabot bumps its requirements after that; its module path
-# and go version are answers fixed at copy time.
+# Written once, then owned by the project: `copier update` leaves them alone, and
+# `copier copy` into an existing repo keeps its own. The README is the project's
+# from its first real paragraph, so template changes to it never arrive. A release
+# adds its version, date and DOI to the citation files, and an update would then
+# conflict with that edit every time. The web-app entries are its starter files and
+# legal pages, which the project rewrites from day one. go.mod is rewritten by the
+# first `go mod tidy`, and Dependabot bumps its requirements after that; its module
+# path and go version are answers fixed at copy time. Each entry starts with `/`:
+# copier matches these like .gitignore lines, so a bare README.md would also skip
+# data/README.md.
 _skip_if_exists:
-  - CHANGELOG.md
-  - CITATION.cff
-  - .zenodo.json
-  - codemeta.json
-  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.tsx"
-  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.test.tsx"
-  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/main.tsx"
-  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
-  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
-  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
-  - "{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
+  - /README.md
+  - /CHANGELOG.md
+  - /CITATION.cff
+  - /.zenodo.json
+  - /codemeta.json
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.tsx"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.test.tsx"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/main.tsx"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility.md"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/privacy.md"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/terms.md"
+  - "/{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
-  - "{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
 # Shown on `copier copy` only; `--quiet` hides both.
 _message_before_copy: |
@@ -34,6 +42,7 @@ _message_after_copy: |
   {%- endfor %}
     just check
   Then commit, lockfiles included: CI installs exactly what they list.
+  After the first push, run `just repo-settings` to protect main.
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
@@ -48,6 +57,8 @@ project_name:
   validator: >-
     {% if not (project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '')|regex_search('^[a-z0-9]')) %}
     The name needs a leading ASCII letter or digit: npm, PyPI and image tags are built from it.
+    {% elif project_name|regex_search('[*`\\[\\]<>\\\\]') %}
+    Leave out * ` [ ] < > and \: the name is written into Markdown and HTML pages.
     {% endif %}
 
 # Computed, not asked. npm, PyPI, compose and image tags need this normalized form.
@@ -109,6 +120,20 @@ web_framework:
     Preact (React API through preact/compat, a smaller bundle): preact
   default: react
 
+# Decides the legal pages: every web app gets docs/privacy.md, and `accounts`
+# adds docs/terms.md. No default, on purpose: `--defaults` and an answers file
+# from before this question stop on it ("is required") instead of claiming the
+# app keeps nothing, and copier refuses any answer outside the choices. An empty
+# default would not do: copier checks it against the choices even when skipped.
+user_data:
+  type: str
+  when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+  help: What does the app keep about its users? Sets what the privacy page says, and whether there is a terms page
+  choices:
+    Nothing (no cookies, no storage, no accounts): nothing
+    Only in the browser (local storage the user can clear): browser
+    Accounts or uploads (kept on a server): accounts
+
 rust_kind:
   type: str
   when: "{{ 'rust' in stacks }}"
@@ -162,7 +187,7 @@ citable:
 # question had SECURITY.md, and an update with the default keeps it.
 public:
   type: bool
-  help: Will the repo be public? Yes adds .github/SECURITY.md, which says where to report a vulnerability
+  help: Will the repo be public? Yes adds the community files in .github/ (SECURITY.md says where to report a vulnerability), CONTRIBUTING.md, CODE_OF_CONDUCT.md, a pull request template and the dco.yml sign-off check
   default: true
 
 github_user:
@@ -187,11 +212,11 @@ author_name:
 
 author_email:
   type: str
-  help: Author email, for package metadata and SECURITY.md
+  help: Author email, for package metadata, SECURITY.md and the code of conduct
   default: ""
   validator: >-
     {% if not author_email|regex_search('^[^@\\s]+@[^@\\s]+$') %}
-    Give an email address: package metadata and SECURITY.md use it.
+    Give an email address: package metadata, SECURITY.md and the code of conduct use it.
     {% endif %}
 
 author_orcid:
@@ -219,13 +244,18 @@ license:
     MIT (permissive, shortest): MIT
     Apache-2.0 (permissive, explicit patent grant): Apache-2.0
     BSD-3-Clause (permissive, no endorsement clause): BSD-3-Clause
+    GPL-3.0-or-later (copyleft, changes and derived works stay GPL): GPL-3.0-or-later
+    LGPL-3.0-or-later (weak copyleft, may be linked from code under other licenses): LGPL-3.0-or-later
+    AGPL-3.0-or-later (copyleft that also covers use over a network): AGPL-3.0-or-later
     None (not licensed for redistribution): none
   # A private repo is not licensed to anyone unless its owner says so.
   default: "{{ 'MIT' if public else 'none' }}"
 
+# Only the permissive texts carry a copyright line. The GNU texts are fixed, and
+# their copyright notice goes in each source file instead.
 copyright_year:
   type: str
-  when: "{{ license != 'none' }}"
+  when: "{{ license in ('MIT', 'Apache-2.0', 'BSD-3-Clause') }}"
   ask: "{{ customise }}"
   help: Copyright year in the license
   default: "{{ '%Y' | strftime }}"
@@ -307,6 +337,25 @@ module_name:
     `{{ module_name }}` is a Python keyword, so the package could not be imported: pick another module name.
     {% endif %}
 
+# `flat` is for adopting the template in a repo whose package already sits at the
+# root: no src/ stub, and no starter tests that import it. web-service,
+# data-pipeline and the python image need the starter modules, so they stay `src`.
+# docker_stacks is asked later, so its validator refuses flat with the python image.
+python_layout:
+  type: str
+  when: "{{ 'python' in stacks }}"
+  ask: "{{ customise }}"
+  help: Where the package lives; flat keeps an existing package at the root and adds no stub
+  choices:
+    src/<module> (a new package): src
+    <module>/ at the root (an existing package): flat
+  default: src
+  validator: >-
+    {% if python_layout == 'flat' and kind in ('web-service', 'data-pipeline') %}
+    The flat layout is for an existing library, app or research package: the web-service
+    and data-pipeline kinds and the python image need their starter modules in src/.
+    {% endif %}
+
 # The default trails a new Python release by 90 days (renovate.json5), so the
 # packages scaffolds install have wheels for it.
 # renovate: datasource=python-version depName=python
@@ -345,6 +394,27 @@ publish_to_pypi:
   default: false
 
 # --- ts -----------------------------------------------------------------------
+
+# The address the accessibility statement and privacy page name. The default is
+# the address Cloudflare Pages gives the project from wrangler.jsonc's name.
+site_url:
+  type: str
+  when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+  ask: "{{ customise }}"
+  help: The web app's public address, for its accessibility statement and privacy page
+  default: "https://{{ slug | replace('.', '-') | replace('_', '-') }}.pages.dev"
+  validator: >-
+    {% if not site_url|regex_search('^https://[^/\\s]+(/[^\\s]*)?$') %}
+    Give the full address, starting with https://.
+    {% endif %}
+
+# Computed, never asked: the date the legal pages start from. They are the
+# project's files from then on (_skip_if_exists), so an update never rewrites it.
+legal_date:
+  type: str
+  when: false
+  # Not %-d, which strftime on Windows rejects.
+  default: "{{ '%d %B %Y' | strftime | regex_replace('^0', '') }}"
 
 # renovate: datasource=node-version depName=node
 node_version:
@@ -452,7 +522,7 @@ govulncheck_version:
 
 # Library kinds only: their public API has to hold for any caller's input. Property
 # tests run with the rest of the tests. Mutation testing takes minutes to hours and
-# its score is noisy, so it is a recipe to run by hand, never a CI step.
+# its score is noisy, so it runs weekly in CI (never on a pull request) and as a recipe by hand.
 test_extras:
   type: str
   multiselect: true
@@ -463,7 +533,7 @@ test_extras:
   help: Extra tests for the library code (none, one or both)
   choices:
     Property tests (generated inputs checked against a rule, run with the tests): property
-    Mutation testing (a `just <stack>-mutation` recipe that checks the tests catch planted bugs): mutation
+    Mutation testing (a `just <stack>-mutation` recipe and a weekly CI run that check the tests catch planted bugs): mutation
   default: []
 
 # Computed, never asked: the versions a new project starts on. Dependabot bumps
@@ -489,6 +559,20 @@ gremlins_version:
   when: false
   default: v0.6.0
 
+# Computed, never asked: the tools mutation.yml installs. `copier update` bumps them;
+# Renovate bumps them here.
+# renovate: datasource=github-releases depName=casey/just
+just_version:
+  type: str
+  when: false
+  default: 1.59.0
+
+# renovate: datasource=crate depName=cargo-mutants
+cargo_mutants_version:
+  type: str
+  when: false
+  default: 27.1.0
+
 # --- docker -------------------------------------------------------------------
 
 # Asked even without `customise`: the right images depend on the stacks, and its
@@ -507,6 +591,9 @@ docker_stacks:
     Pick at least one stack to build an image from.
     {% elif docker_stacks | reject('in', stacks) | list %}
     An image needs its stack: add {{ docker_stacks | reject('in', stacks) | join(' and ') }} to `stacks` too.
+    {% elif 'python' in docker_stacks and python_layout == 'flat' %}
+    The flat layout is for an existing library, app or research package: the web-service
+    and data-pipeline kinds and the python image need their starter modules in src/.
     {% elif 'ts' in docker_stacks and ts_kind == 'web-app' %}
     The ts image is a Node service with /health. A web app is static files that
     Cloudflare Pages serves: drop ts from `docker_stacks`.

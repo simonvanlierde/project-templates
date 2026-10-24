@@ -28,8 +28,8 @@ py-test *args:
     {{ uv }} run pytest {% raw %}{{ args }}{% endraw %}
 {%- if kind == 'library' and 'mutation' in test_extras %}
 
-# Plant small bugs in src/ and report each one the tests miss. Slow: run it before a
-# release or after writing tests, not on every change. `mutmut browse` shows survivors.
+# Plant small bugs in the package and report each one the tests miss. Slow: CI runs it
+# weekly (mutation.yml); run it by hand after writing tests. `mutmut browse` shows survivors.
 py-mutation:
     {{ uv }} run mutmut run
 {%- endif %}
