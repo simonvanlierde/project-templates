@@ -473,9 +473,6 @@ test ! -e a/renovate.json5
 test -f d/renovate.json5
 # Only Dependabot repos need the workflow that hears about template releases.
 test -f a/.github/workflows/copier-update.yml
-# GITHUB_TOKEN can't push a change to .github/workflows/, which most updates carry.
-# shellcheck disable=SC2016 # the literal workflow text, not a shell expansion
-grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' a/.github/workflows/copier-update.yml
 test ! -e d/.github/workflows/copier-update.yml
 test ! -e d/.github/dependabot.yml
 (! grep -q working-directory a/just/go.just)
@@ -814,5 +811,16 @@ grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
 # This repo runs the same DCO check it renders.
 cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
+# copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
+# changes, so without it a workflow change becomes an issue, not a failed push.
+cu=a/.github/workflows/copier-update.yml
+# shellcheck disable=SC2016 # literal workflow text, not shell expansions
+grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' "$cu"
+grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
+# shellcheck disable=SC2016
+grep -q 'gh issue create --title "$title"' "$cu"
+# shellcheck disable=SC2016
+grep -q 'gh pr close "$stale"' "$cu"
+grep -qF 'gh issue list --state all' "$cu"
 
 echo "all render checks passed"
