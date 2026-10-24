@@ -11,7 +11,7 @@ workflows hold a token that can publish.
 | This repository's CI | Renders answer combinations and runs each generated project's checks | Nothing outside its own runner; it publishes only this template's releases |
 | The generated project's CI | Runs the stack workflows on pull requests, on pushes to main and weekly | Read-only by default: each workflow sets `contents: read` or no permissions at all, and a job asks for more only where it needs it |
 | The dependency bot (Renovate or Dependabot) | Opens pull requests that bump dependencies, lockfiles and pinned actions | A branch and a pull request; it can't merge unless the project turns on auto-merge |
-| The `copier update` workflow (Dependabot projects) | Weekly, renders the newest template release and opens a pull request | Its token can push to any branch without protection; the script pushes only `chore/copier-update` and opens that pull request |
+| The `copier update` workflow (Dependabot projects) | Weekly, renders the newest template release and opens a pull request | Its token can push to any branch without protection; the script pushes only `chore/copier-update` and opens that pull request, or, when it can't push a workflow change, opens an issue and closes that pull request |
 | The maintainer | Reviews and merges pull requests, pushes `vX.Y.Z` tags | `main`, and what a tag publishes |
 
 ## Render

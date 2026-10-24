@@ -30,8 +30,8 @@ Upgrade steps:
   before a root `CONTRIBUTING.md`, so if you have your own, keep one and delete the other.
 - With `dependency_bot=dependabot`: create a fine-grained token with read and write access
   to Contents, Pull requests and Workflows on the repo, and store it as the
-  `COPIER_UPDATE_TOKEN` secret. Without it, the new weekly `copier-update` workflow can't
-  push an update that changes a workflow
+  `COPIER_UPDATE_TOKEN` secret. Without it, the new weekly `copier-update` workflow opens
+  an issue instead of a PR for an update that changes a workflow
   ([Hearing about new releases](docs/usage.md#hearing-about-new-releases)).
 - `README.md`, `CHANGELOG.md` and the citation files (`CITATION.cff`, `.zenodo.json`,
   `codemeta.json`) are now your project's, and this update already leaves them alone. So
@@ -45,6 +45,7 @@ Upgrade steps:
 - Run `just repo-settings` once after the update, and in a new project after the first
   push. It protects `main` and, in a public repo, turns on private vulnerability
   reporting, which `SECURITY.md` points to.
+- Run `prek install` again in each clone, so the new commit-msg hook is installed.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -86,6 +87,11 @@ Upgrade steps:
 
 ### Added
 
+- Commit message rules in `committed.toml`: Conventional Commits, an imperative summary,
+  no period. A `committed` commit-msg hook checks each commit, skipping merge
+  commits, and a new `pr-title.yml` workflow checks the pull request title, which a squash
+  merge turns into the commit subject. Dependabot and Renovate now write PR titles in the
+  same form, `chore(deps): ...`.
 - GPL-3.0-or-later and AGPL-3.0-or-later as `license` answers, with
   the GNU texts in `LICENSE`. These texts have no copyright line, so they don't ask
   `copyright_year`.
@@ -287,8 +293,9 @@ Upgrade steps:
 - With `dependency_bot: dependabot`, a `copier-update` workflow opens a weekly PR that
   runs `copier update` to the newest template tag, with conflicted files listed in the
   PR body. It pushes with a `COPIER_UPDATE_TOKEN` secret, a fine-grained token you create.
-  Without one it uses `GITHUB_TOKEN`, which GitHub stops from pushing workflow changes,
-  and the PR's own CI does not start. See
+  Without one it uses `GITHUB_TOKEN`, which GitHub stops from pushing workflow changes, so
+  such an update opens an issue asking you to run it locally, and other update PRs start
+  no CI. See
   [Hearing about new releases](docs/usage.md#hearing-about-new-releases).
 
 ### Fixed

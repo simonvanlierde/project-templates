@@ -473,9 +473,6 @@ test ! -e a/renovate.json5
 test -f d/renovate.json5
 # Only Dependabot repos need the workflow that hears about template releases.
 test -f a/.github/workflows/copier-update.yml
-# GITHUB_TOKEN can't push a change to .github/workflows/, which most updates carry.
-# shellcheck disable=SC2016 # the literal workflow text, not a shell expansion
-grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' a/.github/workflows/copier-update.yml
 test ! -e d/.github/workflows/copier-update.yml
 test ! -e d/.github/dependabot.yml
 (! grep -q working-directory a/just/go.just)
@@ -629,8 +626,25 @@ grep -qF 'needs.check.outputs.playwright }}-noble' d/.github/workflows/ts.yml
 grep -q 'fonts-dejavu-core' d/.github/workflows/ts.yml
 grep -qx '          path: web/playwright-report/' d/.github/workflows/ts.yml
 grep -q 'stages: \[pre-push\]' d/.pre-commit-config.yaml
-grep -qx 'default_install_hook_types: \[pre-commit, pre-push\]' d/.pre-commit-config.yaml
+grep -qx 'default_install_hook_types: \[pre-commit, commit-msg, pre-push\]' d/.pre-commit-config.yaml
 (! grep -q 'pre-push' a/.pre-commit-config.yaml)
+# Commit messages and PR titles: one committed.toml, read by the commit-msg hook and
+# the pr-title workflow, in every render. The bots write titles that pass it.
+grep -qx 'default_install_hook_types: \[pre-commit, commit-msg\]' a/.pre-commit-config.yaml
+for r in a b c d; do
+  grep -qx 'style = "conventional"' "$r/committed.toml"
+  grep -qx '      - id: committed' "$r/.pre-commit-config.yaml"
+  grep -q 'uvx committed@[0-9.]* --config committed.toml --commit-file -' "$r/.github/workflows/pr-title.yml"
+  committed=$(sed -n 's/.*uvx committed@\([0-9.]*\) .*/\1/p' "$r/.github/workflows/pr-title.yml")
+  for msg in 'chore: update from template v1.0.0' 'chore(deps): bump x from 1 to 2' 'feat!: drop x' 'revert: feat: add x'; do
+    printf '%s\n' "$msg" | uvx -q "committed@$committed" --config "$r/committed.toml" --commit-file - >/dev/null
+  done
+  for msg in 'Add x' 'Revert "feat: add x"' 'feat: add x.'; do
+    (! printf '%s\n' "$msg" | uvx -q "committed@$committed" --config "$r/committed.toml" --commit-file - >/dev/null 2>&1)
+  done
+done
+test "$(grep -c 'commit-message: {prefix: chore, include: scope}' a/.github/dependabot.yml)" -eq 5
+grep -q "extends: \['config:recommended', ':semanticCommits'\]" d/renovate.json5
 grep -qx 'playwright-report/' d/.gitignore
 # Outside CI, reusing a server on the preview port would test whichever app holds it.
 (! grep -q reuseExistingServer d/web/playwright.config.ts)
@@ -793,8 +807,20 @@ grep -q '^## Scope' a/.github/SECURITY.md
 grep -q 'Signed-off-by:' a/.github/CONTRIBUTING.md
 grep -q '^## Who maintains this' a/.github/CONTRIBUTING.md
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
+grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
 # This repo runs the same DCO check it renders.
 cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
+# copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
+# changes, so without it a workflow change becomes an issue, not a failed push.
+cu=a/.github/workflows/copier-update.yml
+# shellcheck disable=SC2016 # literal workflow text, not shell expansions
+grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' "$cu"
+grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
+# shellcheck disable=SC2016
+grep -q 'gh issue create --title "$title"' "$cu"
+# shellcheck disable=SC2016
+grep -q 'gh pr close "$stale"' "$cu"
+grep -qF 'gh issue list --state all' "$cu"
 
 echo "all render checks passed"
