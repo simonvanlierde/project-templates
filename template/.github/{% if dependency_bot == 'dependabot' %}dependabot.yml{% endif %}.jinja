@@ -8,6 +8,8 @@
 #
 # No docker ecosystem: it reads FROM lines only, and those tags are copier answers,
 # so its PRs would fight the next `copier update`.
+# `commit-message` gives each PR a Conventional Commits title, `chore(deps): bump ...`, which
+# the pr-title workflow checks.
 version: 2
 
 # Actions and hook revs are all CI and dev tooling, so they share one weekly PR. Fewer
@@ -15,6 +17,8 @@ version: 2
 multi-ecosystem-groups:
   actions-and-hooks:
     schedule: {interval: weekly}
+    # Members of a group can't set commit-message; the group sets it for them.
+    commit-message: {prefix: chore, include: scope}
 
 updates:
   - package-ecosystem: github-actions
@@ -45,6 +49,7 @@ updates:
     directory: {{'/' if dir == '.' else '/' ~ dir}}
     schedule: {interval: weekly}
     cooldown: {default-days: 7, semver-major-days: 30}
+    commit-message: {prefix: chore, include: scope}
     groups:
       runtime:
         dependency-type: production

@@ -5,6 +5,9 @@
 #
 # Revs are commit SHAs, since tags are mutable; Renovate moves each SHA and its
 # `# frozen:` tag together.
+
+# `prek install` sets up both: the commit message is checked as you commit.
+default_install_hook_types: [pre-commit, commit-msg]
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
@@ -19,6 +22,14 @@ repos:
       - id: trailing-whitespace
         # The Apache license text is byte-exact from the GitHub licenses API.
         exclude: 'LICENSE.*\.jinja$'
+
+  # Commit messages follow committed.toml, as in a generated project.
+  - repo: https://github.com/crate-ci/committed
+    rev: faeed42f2e10c244533a01525f13c4d8b6ce383f # frozen: v1.1.11
+    hooks:
+      - id: committed
+        # git writes a merge commit's message itself, so skip the check during a merge.
+        entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || exec committed "$@"' --
 
   # Also parses renovate.json5, which check-json cannot.
   - repo: https://github.com/simonvanlierde/check-json5

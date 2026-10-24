@@ -21,6 +21,11 @@ formats.{% endif %}
   `type(scope): summary`, in the imperative, lower case, with no period. Add a body only
   when the change needs one, with a bullet per logical chunk.
 - **The pull request title** becomes the squash commit subject, so it follows the same rule.
+- **Both are checked** against [`committed.toml`](../committed.toml): a commit-msg
+  hook (installed by `prek install`) refuses a commit message that breaks the rule, and
+  the `pull request title` check fails a pull request whose title does. Lower case isn't
+  checked. A revert is titled `revert: <original subject>`: rename the
+  `Revert "..."` title that GitHub's Revert button writes.
 - **The pull request body** has the shape of
   [the pull request template](pull_request_template.md): what it fixes and why, three or
   four bullets, and a `Tests:` line.

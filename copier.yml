@@ -478,6 +478,14 @@ go_version:
   help: Minimum Go version (go.mod `go` directive)
   default: "1.27"
 
+# Computed, never asked: the committed the pr-title workflow runs. The commit-msg hook
+# pins its own rev in .pre-commit-config.yaml, which the dependency bot moves.
+# renovate: datasource=pypi depName=committed
+committed_version:
+  type: str
+  when: false
+  default: 1.1.11
+
 # Computed, never asked: the uv the generated workflows install. Pinned because
 # CI runs `uv audit`, a preview command that can change in any uv release.
 # renovate: datasource=pypi depName=uv
