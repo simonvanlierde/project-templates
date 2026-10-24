@@ -25,7 +25,7 @@ Upgrade steps:
 - A private repo: answer no to the new `public` question, and `.github/SECURITY.md`,
   `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml` go. Your license answer stays as it is.
 - A public repo: the update adds `.github/CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
-  `pull_request_template.md` and a `dco` check on pull requests from outside contributors,
+  `pull_request_template.md` and a `dco` check on pull requests from forks,
   and `SECURITY.md` gains a Scope section to fill in. GitHub shows `.github/CONTRIBUTING.md`
   before a root `CONTRIBUTING.md`, so if you have your own, keep one and delete the other.
 - With `dependency_bot=dependabot`: create a fine-grained token with read and write access
