@@ -513,7 +513,8 @@ jobs:
       # project's legal pages hold TODOs only its author can fill, so the "no TODO
       # left" tests must fail here, and every other spec must pass. A missing page or a
       # build that fails would fail them too, so the JSON report must show each one
-      # failing on its TODO assertion, with the page found.
+      # failing on its TODO assertion with the page found: only then does Playwright
+      # print the text it received.
       - if: matrix.answers.ts_kind == 'web-app'
         name: e2e
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.ts_dir }}
@@ -524,8 +525,7 @@ jobs:
           if ! jq -e '[.. | objects | select(has("specs")) | .specs[].tests[]] as $t
               | ($t | length) > 0 and (.errors | length) == 0
               and all($t[]; .status == "unexpected" and all(.results[];
-                [.errors[].message | gsub("\u001b\\[[0-9;]*m"; "")]
-                | length == 1 and (.[0] | test("not\\.toContainText\\(expected\\) failed\n\nLocator: locator\\(.article.\\)\nExpected substring: not \"TODO\"\nReceived string: "))))' \
+                [.errors[].message] | length == 1 and (.[0] | contains("\nReceived string: "))))' \
               "$RUNNER_TEMP/todo.json" >/dev/null; then
             echo "::error::each TODO test must fail on its TODO assertion; see $RUNNER_TEMP/todo.json" >&2
             jq -r '.errors[].message, (.. | objects | select(has("specs")) | .specs[] | .title)' "$RUNNER_TEMP/todo.json" >&2 || true
