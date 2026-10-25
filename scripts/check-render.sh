@@ -785,6 +785,7 @@ FAKE
 chmod +x "$fake/gh"
 (
   cd a
+  # shellcheck disable=SC2030 # each fake gh run sets its own PATH and FAKE_LOG
   export FAKE_LOG="$fake/log" PATH="$fake:$PATH"
   just repo-settings >/dev/null
   just repo-settings >/dev/null
@@ -827,10 +828,76 @@ cu=a/.github/workflows/copier-update.yml
 # shellcheck disable=SC2016 # literal workflow text, not shell expansions
 grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' "$cu"
 grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
-# shellcheck disable=SC2016
-grep -q 'gh issue create --title "$title"' "$cu"
-# shellcheck disable=SC2016
-grep -q 'gh pr close "$stale"' "$cu"
-grep -qF 'gh issue list --state all' "$cu"
+# The run below stands in true or false for this expression.
+grep -qF "HAS_TOKEN: \${{ secrets.COPIER_UPDATE_TOKEN != '' }}" "$cu"
+# Run the step's script against a fake gh, a fake uvx that changes a workflow, a template
+# repo with two tags and a bare repo standing in for GitHub. GIT_ALLOW_PROTOCOL=file makes
+# a push that misses the rewrite fail instead of reaching github.com.
+cuh=$(mktemp -d)
+sed '1,/^        run: |-$/d; s/^          //' "$cu" >"$cuh/run.sh"
+cat >"$cuh/gh" <<'FAKE'
+#!/usr/bin/env bash
+echo "$*" >>"$FAKE_LOG"
+case "$1 $2" in
+  "issue list") echo "${FAKE_ISSUE:-}" ;;
+  "pr list") echo "${FAKE_PR:-}" ;;
+esac
+FAKE
+cat >"$cuh/uvx" <<'FAKE'
+#!/usr/bin/env bash
+echo "uvx $*" >>"$FAKE_LOG"
+mkdir -p .github/workflows
+echo "# from the template" >>.github/workflows/ci.yml
+FAKE
+chmod +x "$cuh/gh" "$cuh/uvx"
+(
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_ALLOW_PROTOCOL=file
+  g=(git -c user.name=t -c user.email=t@example.org -c init.defaultBranch=main)
+  "${g[@]}" init -q "$cuh/tpl"
+  "${g[@]}" -C "$cuh/tpl" commit -q --allow-empty -m one
+  "${g[@]}" -C "$cuh/tpl" tag v0.9.0
+  "${g[@]}" -C "$cuh/tpl" tag v0.10.0
+  # name, HAS_TOKEN, the open PR and the issue the fake gh finds ("-": none).
+  while read -r name token pr issue; do
+    p=$cuh/$name
+    "${g[@]}" init -q --bare "$p.git"
+    "${g[@]}" init -q "$p"
+    printf '_commit: v0.9.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
+    "${g[@]}" -C "$p" add .copier-answers.yml
+    "${g[@]}" -C "$p" commit -q -m init
+    (
+      cd "$p"
+      # shellcheck disable=SC2031 # each fake gh run sets its own PATH and FAKE_LOG
+      export PATH="$cuh:$PATH" FAKE_LOG="$p.log" FAKE_PR="${pr#-}" FAKE_ISSUE="${issue#-}" \
+        GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION=9.19.1
+      export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
+        GIT_CONFIG_VALUE_0="https://x-access-token:$GH_TOKEN@github.com/$REPO.git"
+      bash --noprofile --norc -eo pipefail "$cuh/run.sh" >/dev/null 2>&1
+    )
+  done <<'CASES'
+issue false 7 -
+asked false - 3
+push true - -
+edit true 7 -
+CASES
+  cd "$cuh"
+  # Newest tag by version, not by name.
+  grep -qx 'uvx copier@9.19.1 update --defaults --vcs-ref v0.10.0' issue.log
+  # No token and a workflow change: one issue, the older PR closed, no push.
+  grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
+  grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
+  grep -q '^pr close 7 --delete-branch ' issue.log
+  (! "${g[@]}" -C issue.git rev-parse -q --verify chore/copier-update)
+  # An issue that exists, open or closed, is not asked again.
+  (! grep -q '^issue create' asked.log)
+  # A token pushes the branch with the workflow change, then opens or updates the PR.
+  for r in push edit; do
+    "${g[@]}" -C "$r.git" show chore/copier-update:.github/workflows/ci.yml | grep -qx '# from the template'
+    (! grep -q '^issue ' "$r.log")
+  done
+  grep -q '^pr create --head chore/copier-update --base main ' push.log
+  grep -q '^pr edit chore/copier-update ' edit.log
+  (! grep -q '^pr create' edit.log)
+)
 
 echo "all render checks passed"
