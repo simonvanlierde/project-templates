@@ -33,6 +33,13 @@ py-test *args:
 py-mutation:
     {{ uv }} run mutmut run
 {%- endif %}
+{%- if kind == 'library' and 'property' in test_extras %}
+
+# The tests under Hypothesis's "long" profile (tests/conftest.py): 10,000 examples a
+# property instead of 100. CI runs it weekly (property.yml).
+py-property:
+    {{ uv }} run pytest --hypothesis-profile=long
+{%- endif %}
 {%- if kind == 'data-pipeline' %}
 
 # Download each implemented source in sources.toml to data/raw/, with a fetch record.

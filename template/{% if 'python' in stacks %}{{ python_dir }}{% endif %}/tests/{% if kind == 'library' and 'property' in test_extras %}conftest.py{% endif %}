@@ -1,0 +1,7 @@
+"""Hypothesis profiles. `just py-property` runs the tests under the long one."""
+
+from hypothesis import settings
+
+# Built on the default profile, not the "ci" one Hypothesis loads in CI, so each weekly
+# run draws new inputs. print_blob prints how to replay a failure.
+settings.register_profile("long", max_examples=10_000, print_blob=True)

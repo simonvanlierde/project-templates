@@ -93,13 +93,13 @@ grep -q 'project edit' "$out/h/go.mod"
 grep -q 'project record' "$out/h/docs/decisions/README.md"
 (! grep -q 'project edit' "$out/h/docs/decisions/0000-template.md")
 
-# m: every stack a library, nested, with the mutation extra: mutation.yml gets a job for
-# each. a has libraries too but no extras, so it must render no mutation.yml.
+# m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
+# job for each. a has libraries too but no extras, so it must render neither.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
-  --data 'test_extras=[mutation]' . "$out/m"
+  --data 'test_extras=[property, mutation]' . "$out/m"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -439,6 +439,26 @@ steps = wf["jobs"]["rust"]["steps"]
 assert any("test ! -s crates/lib/mutants.out/missed.txt" in s.get("run", "") for s in steps), steps
 assert any(s.get("with", {}).get("path") == "crates/lib/mutants.out/" for s in steps), steps
 PY
+# property.yml: the same shape, running each stack's property or fuzz recipe.
+test -f m/.github/workflows/property.yml
+test ! -e a/.github/workflows/property.yml
+python3 - <<'PY'
+import yaml
+wf = yaml.safe_load(open("m/.github/workflows/property.yml"))
+assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
+assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
+assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
+assert all(j["timeout-minutes"] == 60 for j in wf["jobs"].values())
+for job, recipe in (("python", "py-property"), ("ts", "ts-property"), ("rust", "rs-property"), ("go", "go-fuzz")):
+    assert any(s.get("run") == f"just {recipe}" for s in wf["jobs"][job]["steps"]), job
+# go-fuzz runs in go_dir, so the failing inputs land under it.
+assert any(s.get("with", {}).get("path") == "svc/testdata/fuzz/" for s in wf["jobs"]["go"]["steps"])
+PY
+for recipe in py-property ts-property rs-property go-fuzz; do
+  grep -q "^just $recipe " m/README.md
+done
+test -f m/py/tests/conftest.py
+test ! -e a/tests/conftest.py
 # From a tag, the answers file names the canonical source. From any other
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
 # itself be a release tag, so render a is held to whichever its _commit is.

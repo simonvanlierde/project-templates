@@ -49,7 +49,8 @@ The hadolint hook runs from its Docker image, so the git hooks need Docker runni
 just check       # lint, types and tests for every stack here{% if 'docker' in stacks %} (it doesn't build the image: `just up` and the docker workflow do){% endif %}
 just fmt         # apply each stack's fixes and formatting
 just hooks       # the git hooks, as the checks workflow runs them{% if 'mutation' in test_extras %}{% for prefix, on in [('py', 'python' in stacks and kind == 'library'), ('ts', 'ts' in stacks and ts_kind == 'library'), ('rs', 'rust' in stacks and rust_kind == 'library'), ('go', 'go' in stacks and go_kind == 'library')] if on %}
-just {{ prefix }}-mutation   # do the tests catch planted bugs? Slow: CI runs it weekly (mutation.yml){% endfor %}{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}
+just {{ prefix }}-mutation   # do the tests catch planted bugs? Slow: CI runs it weekly (mutation.yml){% endfor %}{% endif %}{% if 'property' in test_extras %}{% for recipe, on in [('py-property', 'python' in stacks and kind == 'library'), ('ts-property', 'ts' in stacks and ts_kind == 'library'), ('rs-property', 'rust' in stacks and rust_kind == 'library'), ('go-fuzz', 'go' in stacks and go_kind == 'library')] if on %}
+just {{ recipe }}   # the property tests on far more inputs. CI runs it weekly (property.yml){% endfor %}{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}
 just ts-e2e      # accessibility, CSP and privacy checks in Chromium, against the production build{% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}
 just pipeline    # fetch, build and validate every source in sources.toml{% endif %}{% if 'docker' in stacks %}
 just up          # run each service in its container, rebuilt on source changes{% endif %}

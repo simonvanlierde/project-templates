@@ -322,6 +322,14 @@ inputs, and shrinks any input that fails to the simplest one. The examples test 
 sample `add` function and run with the other tests. Go's `FuzzAdd` runs on its seeds in
 `go test`; `go test -fuzz=FuzzAdd` keeps generating inputs until you stop it.
 
+Once a week, `.github/workflows/property.yml` runs them at length, one job per library
+stack, never on a pull request. Each job runs a recipe you can run by hand:
+`just py-property` (Hypothesis's `long` profile from `tests/conftest.py`, 10,000
+examples a property), `just ts-property` (fast-check, 10,000 runs), `just rs-property`
+(proptest, 10,000 cases) or `just go-fuzz` (`FuzzAdd` for 10 minutes; pass
+`-fuzztime=30s` for less). A failing input fails the job; the Go job uploads it from
+`testdata/fuzz/`.
+
 Mutation testing plants small bugs in your code, such as `+` turned into `-`, and
 reports each one the tests don't catch. A run takes minutes to hours, and some
 surviving mutants change nothing a test could see. So CI runs it once a week, from

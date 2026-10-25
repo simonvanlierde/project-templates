@@ -30,3 +30,11 @@
 {{ wd }}go-mutation:
     go run github.com/go-gremlins/gremlins/cmd/gremlins@{{ gremlins_version }} unleash
 {%- endif %}
+{%- if go_kind == 'library' and 'property' in test_extras %}
+
+# Generate inputs for FuzzAdd for 10 minutes; a later -fuzztime wins (`just go-fuzz
+# -fuzztime=30s`). A failing input is saved under testdata/fuzz/FuzzAdd/. CI runs it
+# weekly (property.yml).
+{{ wd }}go-fuzz *args:
+    go test -run='^$' -fuzz='^FuzzAdd$' -fuzztime=10m . {% raw %}{{ args }}{% endraw %}
+{%- endif %}
