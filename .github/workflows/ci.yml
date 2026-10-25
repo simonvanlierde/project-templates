@@ -227,6 +227,15 @@ jobs:
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: just py-mutation py-property
 
+      # A new Hypothesis profile copies the loaded one, here the derandomized "ci"
+      # profile, which would make the weekly run repeat its inputs.
+      - if: matrix.answers.test_extras
+        name: long profile draws new inputs
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
+        run: >-
+          uv run python -I -c 'import sys; sys.path.insert(0, "tests"); import conftest;
+          from hypothesis import settings; assert not settings.get_profile("long").derandomize'
+
       # The library's python.yml tests every version from python_min up. Run the
       # tests on each, so a floor the code can't meet fails here.
       - if: matrix.answers.kind == 'library'
@@ -705,7 +714,7 @@ jobs:
 
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj
-        run: just go-mutation && just go-fuzz -fuzztime=10s
+        run: just go-mutation && just go-property -fuzztime=10s
 
   ok:
     # The one check the main ruleset requires, so jobs and matrix rows can change

@@ -129,7 +129,7 @@ Upgrade steps:
   and never run on a pull request. Each job runs a new recipe you can also run by hand:
   `just py-property` (Hypothesis, 10,000 examples a property), `just ts-property`
   (fast-check, 10,000 runs), `just rs-property` (proptest, 10,000 cases) or
-  `just go-fuzz` (`FuzzAdd` for 10 minutes). A failing input fails the job. A Python
+  `just go-property` (fuzzes `FuzzAdd` for 10 minutes). A failing input fails the job. A Python
   library gains `tests/conftest.py`, which registers the Hypothesis profile.
 - A `public` question, yes by default. No leaves out `.github/SECURITY.md`,
   `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml`, and makes

@@ -326,8 +326,9 @@ Once a week, `.github/workflows/property.yml` runs them at length, one job per l
 stack, never on a pull request. Each job runs a recipe you can run by hand:
 `just py-property` (Hypothesis's `long` profile from `tests/conftest.py`, 10,000
 examples a property), `just ts-property` (fast-check, 10,000 runs), `just rs-property`
-(proptest, 10,000 cases) or `just go-fuzz` (`FuzzAdd` for 10 minutes; pass
-`-fuzztime=30s` for less). A failing input fails the job; the Go job uploads it from
+(proptest, 10,000 cases) or `just go-property` (fuzzes `FuzzAdd` for 10 minutes; pass
+`-fuzztime=30s` for less). The 10,000 applies to properties that do not set their own
+count: a test's own `@settings`, `numRuns` or `ProptestConfig` wins. A failing input fails the job; the Go job uploads it from
 `testdata/fuzz/`.
 
 Mutation testing plants small bugs in your code, such as `+` turned into `-`, and

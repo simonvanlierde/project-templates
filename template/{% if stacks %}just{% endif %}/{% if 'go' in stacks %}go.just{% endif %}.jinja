@@ -32,9 +32,9 @@
 {%- endif %}
 {%- if go_kind == 'library' and 'property' in test_extras %}
 
-# Generate inputs for FuzzAdd for 10 minutes; a later -fuzztime wins (`just go-fuzz
+# Fuzz FuzzAdd for 10 minutes; a later -fuzztime wins (`just go-property
 # -fuzztime=30s`). A failing input is saved under testdata/fuzz/FuzzAdd/. CI runs it
 # weekly (property.yml).
-{{ wd }}go-fuzz *args:
+{{ wd }}go-property *args:
     go test -run='^$' -fuzz='^FuzzAdd$' -fuzztime=10m . {% raw %}{{ args }}{% endraw %}
 {%- endif %}

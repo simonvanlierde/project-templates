@@ -4,9 +4,9 @@
 {%- set go = 'go' in stacks and go_kind == 'library' -%}
 name: property
 
-# The property tests at length once a week, with the same `just <stack>-property` and
-# `just go-fuzz` recipes you run by hand. The test job runs them briefly on every
-# change; this run tries far more inputs. A failing input fails the job. Run it from the
+# The property tests at length once a week, with the same `just <stack>-property`
+# recipes you run by hand. The test job runs them briefly on every change; this run
+# tries far more inputs, and fuzzes Go's FuzzAdd. A failing input fails the job. Run it from the
 # Actions tab with "Run workflow" after you change the tests.
 on:
   schedule:
@@ -132,7 +132,7 @@ jobs:
         with:
           tool: just@{{ just_version }}
 
-      - run: just go-fuzz
+      - run: just go-property
       # The failing input, which `go test` reads back from testdata/fuzz/ to replay it.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()

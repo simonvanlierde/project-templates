@@ -449,16 +449,16 @@ assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
 assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
 assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
 assert all(j["timeout-minutes"] == 60 for j in wf["jobs"].values())
-for job, recipe in (("python", "py-property"), ("ts", "ts-property"), ("rust", "rs-property"), ("go", "go-fuzz")):
+for job, recipe in (("python", "py-property"), ("ts", "ts-property"), ("rust", "rs-property"), ("go", "go-property")):
     assert any(s.get("run") == f"just {recipe}" for s in wf["jobs"][job]["steps"]), job
-# go-fuzz runs in go_dir, so the failing inputs land under it.
+# go-property runs in go_dir, so the failing inputs land under it.
 assert any(s.get("with", {}).get("path") == "svc/testdata/fuzz/" for s in wf["jobs"]["go"]["steps"])
 PY
-for recipe in py-property ts-property rs-property go-fuzz; do
-  grep -q "^just $recipe " m/README.md
+for stack in py ts rs go; do
+  grep -q "^just $stack-property " m/README.md
 done
 test -f m/py/tests/conftest.py
-test ! -e a/tests/conftest.py
+test ! -e k/tests/conftest.py
 # From a tag, the answers file names the canonical source. From any other
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
 # itself be a release tag, so render a is held to whichever its _commit is.
