@@ -211,6 +211,11 @@ Upgrade steps:
   review, and when a first visit sets a cookie, stores anything in the browser or loads a
   file from another site. [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for
   filling the pages in, linked from each page's notes ([Legal pages](docs/usage.md#legal-pages)).
+- A public repo of a kind that has `CITATION.cff` (library, research, data-pipeline) gets
+  `fair.yml`, which runs `howfairis` weekly and lists each fair-software.eu check in the job
+  summary, and a fair-software.eu badge in the README. The job fails below `FAIR_MIN` filled
+  dots out of five. A new repo has three, so that is the starting floor: raise it as you
+  add a registry entry and the OpenSSF Best Practices badge, and edit the badge to match.
 - With `dependency_bot: dependabot`, a `copier-update` workflow opens a weekly PR that
   runs `copier update` to the newest template tag, with conflicted files listed in the
   PR body. It pushes with a `COPIER_UPDATE_TOKEN` secret, a fine-grained token you create.
