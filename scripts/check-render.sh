@@ -323,6 +323,13 @@ grep -qx '      id-token: write # to publish the results' a/.github/workflows/sc
 grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md
 test ! -e b/.github/workflows/scorecard.yml
 (! grep -q -i scorecard b/README.md)
+# fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
+# and public; b is private, d is public but a web-app kind with no citation files.
+grep -qx "      - run: uvx howfairis@0.14.2 $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1)" a/.github/workflows/fair.yml
+grep -q 'img.shields.io/badge/fair--software.eu' a/README.md
+test ! -e b/.github/workflows/fair.yml
+(! grep -q fair-software.eu b/README.md)
+test ! -e j/.github/workflows/fair.yml
 # Badges follow their answers: a has codspeed only; c has codecov, codspeed, PyPI and npm;
 # d has codecov alone; b has none.
 grep -qF 'https://app.codspeed.io/' a/README.md

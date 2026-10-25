@@ -204,6 +204,11 @@ Upgrade steps:
   review, and when a first visit sets a cookie, stores anything in the browser or loads a
   file from another site. [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for
   filling the pages in, linked from each page's notes ([Legal pages](docs/usage.md#legal-pages)).
+- A public repo of a kind that has `CITATION.cff` (library, research, data-pipeline) gets
+  `fair.yml`, which runs `howfairis` weekly against the repo, and a fair-software.eu badge in
+  the README. A new repo scores three of five until it is in a registry and has the OpenSSF
+  Best Practices badge, so a score below five does not fail the run. Edit the badge to the
+  score the run prints.
 
 ### Changed
 
