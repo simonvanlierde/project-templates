@@ -54,7 +54,8 @@ To skip the questions, `--data-file answers.yml` reads answers from a file, and
 `dco.yml` sign-off check, which only outsiders need, and licenses nothing unless you pick a
 license under `customise`. When the repo goes public, run
 `copier update --data public=true`: that adds the files back. It does not change a
-license you already answered.
+license you already answered, and without `customise` a private repo stored `none`
+without asking, so pass `--data license=MIT` (or another) too.
 
 A public repo also gets `.github/workflows/scorecard.yml`, which publishes its
 [OpenSSF Scorecard](https://scorecard.dev) for the README badge. The workflow needs a public
@@ -252,8 +253,9 @@ need two packages in the same language, switch to that language's workspace tool
 this template. The same command lets you change your answers: add a stack or turn on a
 publish option, and Copier writes the new files.
 
-`CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`, `codemeta.json`),
-`docs/decisions/README.md`, a `web-app`'s starter files and Go's `go.mod` are written once
+`README.md`, `CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`,
+`codemeta.json`), `docs/decisions/README.md`, a `web-app`'s starter files, a published
+TypeScript library's `<package>.api.md` and Go's `go.mod` are written once
 and then belong to your project: an update never touches them, so your release tool or
 your own edits own them. A template release that changes them says so in the template's
 changelog, for you to copy over by hand. `go mod tidy` rewrites `go.mod` and Dependabot
@@ -387,14 +389,14 @@ and a starter benchmark per stack: a `pytest-codspeed` test in `tests/test_bench
 and a divan bench through `codspeed-divan-compat` in `benches/codspeed.rs`. CodSpeed
 measures them in simulation mode on every pull request and every push to main, so each
 pull request has a base to compare with. The workflow signs in with OpenID Connect, so
-there is no secret. Replace the starter benchmarks with calls into your own code. Two steps
-no file can do:
+there is no secret. Replace the starter benchmarks with calls into your own code. In a
+library they call the sample `add`, so one without it fails to collect or compile them. In an
+existing project, run `copier update --data codspeed=true`. Then two steps no file can do:
 
 1. Import the repository on [codspeed.io](https://codspeed.io). Until you do, uploads fail
    with 401 "Repository not found".
 2. In the repository's settings on codspeed.io, set Pull Request comments to "On Change".
    `codspeed.yml` has no option for it.
-3. Run `copier update --data codspeed=true`.
 
 ## Dependency updates
 
