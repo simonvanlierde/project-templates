@@ -35,6 +35,8 @@ for (const path of ROUTES) {
     }));
     expect(stored).toEqual({ localStorage: 0, sessionStorage: 0, indexedDB: [], caches: [], serviceWorkers: 0 });
     const own = new URL(page.url()).origin;
+    // The page's own files must show up, or the capture saw nothing and proves nothing.
+    expect([...origins]).toContain(own);
     expect([...origins].filter((origin) => origin !== own && !OTHER_ORIGINS.includes(origin))).toEqual([]);
   });
 }
