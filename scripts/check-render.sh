@@ -785,7 +785,7 @@ FAKE
 chmod +x "$fake/gh"
 (
   cd a
-  # shellcheck disable=SC2030 # each fake gh run sets its own PATH and FAKE_LOG
+  # shellcheck disable=SC2030 # the about test and the copier-update run below set their own PATH
   export FAKE_LOG="$fake/log" PATH="$fake:$PATH"
   just repo-settings >/dev/null
   just repo-settings >/dev/null
@@ -797,6 +797,15 @@ chmod +x "$fake/gh"
   cmp "$FAKE_LOG.body" .github/rulesets/main.json
 )
 (! grep -q private-vulnerability-reporting b/justfile)
+# repo-about: the About box comes from the answers. No description answer leaves the description alone;
+# a quote in it survives the shell; topics only get added.
+for r in a b d; do
+  # shellcheck disable=SC2031 # $fake/gh from the repo-settings test, logging every call
+  (cd "$r" && FAKE_LOG="$fake/about-$r" PATH="$fake:$PATH" just repo-about >/dev/null)
+done
+grep -qxF -- 'repo edit --add-topic python --add-topic typescript --add-topic rust --add-topic go --add-topic docker' "$fake/about-a"
+grep -qxF -- "repo edit --description A \"quoted\" one --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
+grep -qxF -- 'repo edit --homepage https://pipe-me.pages.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
   r=${answers%%/*}
@@ -820,8 +829,9 @@ grep -q '^## Who maintains this' a/.github/CONTRIBUTING.md
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
-# This repo runs the same DCO check it renders.
+# This repo runs the same DCO check and commit rules it renders.
 cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
+cmp "$repo/committed.toml" "$repo/template/committed.toml"
 # copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml
