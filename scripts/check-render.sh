@@ -323,6 +323,20 @@ grep -qx '      id-token: write # to publish the results' a/.github/workflows/sc
 grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md
 test ! -e b/.github/workflows/scorecard.yml
 (! grep -q -i scorecard b/README.md)
+# fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
+# and public. b is citable-less and private; h is public but has no citation files.
+grep -qx "          uvx howfairis@0.14.2 $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
+# shellcheck disable=SC2016 # the $ is literal workflow text
+grep -qF 'cat out.txt >> "$GITHUB_STEP_SUMMARY"' a/.github/workflows/fair.yml
+grep -qx '      FAIR_MIN: 3' a/.github/workflows/fair.yml
+grep -qx 'permissions: {}' a/.github/workflows/fair.yml
+(! grep -q continue-on-error a/.github/workflows/fair.yml)
+# howfairis order: repository, license, registry, citation, checklist.
+grep -qF 'fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8F%20%20%E2%97%8B-orange' a/README.md
+test ! -e b/.github/workflows/fair.yml
+(! grep -q fair-software.eu b/README.md)
+test ! -e h/.github/workflows/fair.yml
+(! grep -q fair-software.eu h/README.md)
 # Badges follow their answers: a has codspeed only; c has codecov, codspeed, PyPI and npm;
 # d has codecov alone; b has none.
 grep -qF 'https://app.codspeed.io/' a/README.md
