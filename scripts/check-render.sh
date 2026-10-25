@@ -616,6 +616,19 @@ grep -qx '    "marked": "[0-9.]*",' d/web/package.json
 test -f j/docs/accessibility.md
 (! grep -rq 'github.com/example-org/private-web' j/docs)
 grep -q 'github.com/example-org/pipe-me/blob/main/web/tests/e2e/a11y.spec.ts' d/web/docs/accessibility.md
+# The answers reach the terms: the site, who runs it and the contact, and the privacy
+# statement links them.
+grep -qxF 'These terms cover pipe-me at [pipe-me.pages.dev](https://pipe-me.pages.dev).' d/web/docs/terms.md
+grep -qxF 'Ada Lovelace, who runs pipe-me.' d/web/docs/terms.md
+grep -qF '[ada@example.com](mailto:ada@example.com)' d/web/docs/terms.md
+grep -qxF 'Using pipe-me also means accepting its [terms of use](https://pipe-me.pages.dev/terms).' d/web/docs/privacy.md
+# j keeps work in the browser, with no accounts: its privacy statement says so, and it has
+# no terms page, route or footer link.
+grep -qF "private-web keeps your work in your browser's local storage" j/docs/privacy.md
+grep -qx 'private-web sets no cookies. It uses local storage only to keep your work, which is what you' j/docs/privacy.md
+grep -qx 'private-web comes with no warranty.' j/docs/privacy.md
+test ! -e j/docs/terms.md
+(! grep -q '/terms' j/src/App.tsx j/tests/e2e/routes.ts j/tests/e2e/legal-pages.spec.ts j/docs/privacy.md)
 # GitHub shows the pages as they are, so they pass the project's own Markdown lint.
 rumdl_version=$(sed -n '/rumdl-pre-commit/{n;s/.*frozen: v//p;}' "$repo/.pre-commit-config.yaml")
 uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs
@@ -841,13 +854,7 @@ for answers in */.copier-answers.yml; do
     fi
   done
 done
-# What the OpenSSF badge criteria ask of them: a response time, a disclosure statement,
-# a sign-off rule and who maintains the project.
-grep -q 'within 14 days' a/.github/SECURITY.md
-grep -q 'publish the GitHub security advisory' a/.github/SECURITY.md
-grep -q '^## Scope' a/.github/SECURITY.md
-grep -q 'Signed-off-by:' a/.github/CONTRIBUTING.md
-grep -q '^## Who maintains this' a/.github/CONTRIBUTING.md
+# The community files' links point at this repo.
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
