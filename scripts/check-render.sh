@@ -829,8 +829,9 @@ grep -q '^## Who maintains this' a/.github/CONTRIBUTING.md
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
-# This repo runs the same DCO check it renders.
+# This repo runs the same DCO check and commit rules it renders.
 cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
+cmp "$repo/committed.toml" "$repo/template/committed.toml"
 # copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml
