@@ -7,18 +7,13 @@ import { ROUTES } from "./routes";
  * so a new app fails here until its author fills the pages in.
  */
 
+const PAGES = [
+  ["/accessibility", "Accessibility statement"],
+  ["/privacy", "Privacy statement"],
 {%- if user_data == 'accounts' %}
-const PAGES = [
-  ["/accessibility", "Accessibility statement"],
-  ["/privacy", "Privacy statement"],
   ["/terms", "Terms of use"],
-] as const;
-{%- else %}
-const PAGES = [
-  ["/accessibility", "Accessibility statement"],
-  ["/privacy", "Privacy statement"],
-] as const;
 {%- endif %}
+] as const;
 
 for (const [href, name] of PAGES) {
   test(`${href} renders and gives an email contact`, async ({ page }) => {
