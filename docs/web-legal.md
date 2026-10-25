@@ -27,17 +27,32 @@ in the same pull request.
 - **A public-sector site in the EU** falls under the Web Accessibility Directive, (EU) 2016/2102,
   and must publish its country's model accessibility statement, which builds on the EU model in
   [Implementing Decision (EU) 2018/1523](https://eur-lex.europa.eu/eli/dec_impl/2018/1523/oj).
-  That model differs from this page in three ways. Its status says the site is "fully
-  compliant", "partially compliant" or "not compliant" with a named standard, with no "not
-  assessed". The standard is usually EN 301 549, which the Commission named as the harmonised
-  standard under article 6 of the Directive
-  ([Implementing Decision (EU) 2018/2048](https://eur-lex.europa.eu/eli/dec_impl/2018/2048/oj), as
-  amended), and whose web requirements build on WCAG. And it ends with an "Enforcement procedure"
-  section: a description of, and a link to, where people can turn when the reply to their
-  feedback is not good enough, with the enforcement body's contact details. In the Netherlands that is
-  the statement the Bdto (Besluit digitale toegankelijkheid overheid) requires, made with the
-  wizard on [toegankelijkheidsverklaring.nl](https://www.toegankelijkheidsverklaring.nl/) and
-  listed in its register. Link it from "About this statement" and keep this page as the readable
+  Its mandatory sections differ from this page:
+  - **Compliance status:** "fully compliant", "partially compliant" or "not compliant" with a
+    named standard, or with the national law. There is no "not assessed". The standard is
+    usually EN 301 549, which the Commission named as the harmonised standard under article 6
+    of the Directive
+    ([Implementing Decision (EU) 2018/2048](https://eur-lex.europa.eu/eli/dec_impl/2018/2048/oj),
+    as amended), and whose web requirements build on WCAG.
+  - **Non-accessible content:** split by reason: non-compliance with the national law, a
+    "disproportionate burden" exemption (article 5 of the Directive), or content outside the
+    law's scope, with accessible alternatives where there are any. This page has one "Known
+    problems" list.
+  - **Preparation of this accessibility statement:** the date it was prepared, the method
+    (an evaluation such as a self-assessment or an assessment by a third party, article 3(1) of
+    the Decision) and
+    the date of the last review. This page's "About this statement" holds the same facts.
+  - **Feedback and contact information:** a feedback mechanism for reporting problems and for
+    asking for content the Directive leaves out, and who handles it. "Tell us about a problem"
+    covers the first part only.
+  - **Enforcement procedure:** a description of, and a link to, where people can turn when
+    the reply to their feedback is not good enough, with the enforcement body's contact
+    details. This page has no such section.
+
+  In the Netherlands the statement is the one the Bdto (Besluit digitale toegankelijkheid
+  overheid) requires, made with the wizard on
+  [toegankelijkheidsverklaring.nl](https://www.toegankelijkheidsverklaring.nl/) and listed in its
+  register. Link it from "About this statement" and keep this page as the readable
   version.
 
 ## Accessibility statement
@@ -62,8 +77,11 @@ in the same pull request.
   (13(1)(c)) and "the period for which the personal data will be stored, or if that is not
   possible, the criteria used to determine that period" (13(2)(a)). Article 6(1) lists the legal
   bases. An account is usually "necessary for the performance of a contract" with the user (b).
-  For server logs, recital 49 says processing "strictly necessary and proportionate for the
-  purposes of ensuring network and information security" is a legitimate interest (f).
+  For server logs, recital 49 gives network and information security as an example of a
+  legitimate interest (f): processing "strictly necessary and proportionate" for it
+  "constitutes a legitimate interest of the data controller concerned". A statement that relies
+  on 6(1)(f) must also name the interest it pursues (13(1)(d)), such as keeping the site
+  running and safe.
 - Change "Last updated" with every edit to the page.
 - Keep Cloudflare Web Analytics off for the Pages project. When it is on, "Cloudflare will
   automatically add the JavaScript snippet to your Pages site on the next deployment"
