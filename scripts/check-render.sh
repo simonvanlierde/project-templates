@@ -830,11 +830,11 @@ grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' "$cu"
 grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
 # The run below stands in true or false for this expression.
 grep -qF "HAS_TOKEN: \${{ secrets.COPIER_UPDATE_TOKEN != '' }}" "$cu"
-# Run the step's script against a fake gh, a fake uvx that changes a workflow, a template
+# Run the step's script against a fake gh, a fake uvx that changes one file, a template
 # repo with two tags and a bare repo standing in for GitHub. GIT_ALLOW_PROTOCOL=file makes
 # a push that misses the rewrite fail instead of reaching github.com.
 cuh=$(mktemp -d)
-sed '1,/^        run: |-$/d; s/^          //' "$cu" >"$cuh/run.sh"
+awk '/^        run: \|-$/{f=1;next} f&&NF&&!/^          /{exit} f{sub(/^          /,"");print}' "$cu" >"$cuh/run.sh"
 cat >"$cuh/gh" <<'FAKE'
 #!/usr/bin/env bash
 echo "$*" >>"$FAKE_LOG"
@@ -846,39 +846,49 @@ FAKE
 cat >"$cuh/uvx" <<'FAKE'
 #!/usr/bin/env bash
 echo "uvx $*" >>"$FAKE_LOG"
-mkdir -p .github/workflows
-echo "# from the template" >>.github/workflows/ci.yml
+mkdir -p "$(dirname "$FAKE_FILE")"
+echo "# from the template" >>"$FAKE_FILE"
 FAKE
 chmod +x "$cuh/gh" "$cuh/uvx"
 (
-  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_ALLOW_PROTOCOL=file
-  g=(git -c user.name=t -c user.email=t@example.org -c init.defaultBranch=main)
-  "${g[@]}" init -q "$cuh/tpl"
-  "${g[@]}" -C "$cuh/tpl" commit -q --allow-empty -m one
-  "${g[@]}" -C "$cuh/tpl" tag v0.9.0
-  "${g[@]}" -C "$cuh/tpl" tag v0.10.0
-  # name, HAS_TOKEN, the open PR and the issue the fake gh finds ("-": none).
-  while read -r name token pr issue; do
+  # A subshell drops the ERR trap; set -E would fire it in every (! ...) below.
+  trap 'echo "check-render: failed at line $LINENO" >&2' ERR
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_ALLOW_PROTOCOL=file \
+    GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.org GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.org
+  git init -q -b main "$cuh/tpl"
+  git -C "$cuh/tpl" commit -q --allow-empty -m one
+  git -C "$cuh/tpl" tag v0.9.0
+  git -C "$cuh/tpl" tag v0.10.0
+  # name, HAS_TOKEN, the open PR and the issue the fake gh finds ("-": none), and the
+  # file the update changes.
+  while read -r name token pr issue file; do
     p=$cuh/$name
-    "${g[@]}" init -q --bare "$p.git"
-    "${g[@]}" init -q "$p"
+    git init -q --bare "$p.git"
+    # An open PR has its branch on the remote, on a history the update does not extend.
+    if [ "$pr" != - ]; then git -C "$cuh/tpl" push -q "$p.git" HEAD:refs/heads/chore/copier-update; fi
+    git init -q -b main "$p"
     printf '_commit: v0.9.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
-    "${g[@]}" -C "$p" add .copier-answers.yml
-    "${g[@]}" -C "$p" commit -q -m init
+    git -C "$p" add .copier-answers.yml
+    git -C "$p" commit -q -m init
     (
       cd "$p"
       # shellcheck disable=SC2031 # each fake gh run sets its own PATH and FAKE_LOG
       export PATH="$cuh:$PATH" FAKE_LOG="$p.log" FAKE_PR="${pr#-}" FAKE_ISSUE="${issue#-}" \
+        FAKE_FILE="${file:-.github/workflows/ci.yml}" \
         GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION=9.19.1
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
         GIT_CONFIG_VALUE_0="https://x-access-token:$GH_TOKEN@github.com/$REPO.git"
-      bash --noprofile --norc -eo pipefail "$cuh/run.sh" >/dev/null 2>&1
+      bash --noprofile --norc -eo pipefail "$cuh/run.sh" >"$p.out" 2>&1 || {
+        cat "$p.out" >&2
+        exit 1
+      }
     )
   done <<'CASES'
 issue false 7 -
 asked false - 3
 push true - -
 edit true 7 -
+plain false - - README.md
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
@@ -887,15 +897,17 @@ CASES
   grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
   grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
   grep -q '^pr close 7 --delete-branch ' issue.log
-  (! "${g[@]}" -C issue.git rev-parse -q --verify chore/copier-update)
+  (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml)
   # An issue that exists, open or closed, is not asked again.
   (! grep -q '^issue create' asked.log)
-  # A token pushes the branch with the workflow change, then opens or updates the PR.
-  for r in push edit; do
-    "${g[@]}" -C "$r.git" show chore/copier-update:.github/workflows/ci.yml | grep -qx '# from the template'
-    (! grep -q '^issue ' "$r.log")
+  # A token pushes the branch with the workflow change, over the open PR's, then opens or
+  # updates the PR. So does no token with no workflow change.
+  for r in push:.github/workflows/ci.yml edit:.github/workflows/ci.yml plain:README.md; do
+    git -C "${r%%:*}.git" show "chore/copier-update:${r#*:}" | grep -qx '# from the template'
+    (! grep -q '^issue ' "${r%%:*}.log")
   done
   grep -q '^pr create --head chore/copier-update --base main ' push.log
+  grep -q '^pr create --head chore/copier-update --base main ' plain.log
   grep -q '^pr edit chore/copier-update ' edit.log
   (! grep -q '^pr create' edit.log)
 )
