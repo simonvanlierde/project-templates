@@ -1,6 +1,7 @@
 {%- set host = site_url | regex_replace('^https://', '') | regex_replace('/.*$', '') -%}
 <!--
-Keep this page true. The app serves it at /privacy, without this note.
+Keep this page true. The app serves it at /privacy, without this note. Keep Cloudflare Web
+Analytics off for this project: it adds a script that this page says the app doesn't load.
 https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md
 says how to fill it in, and how the template builds and tests it.
 -->
@@ -23,10 +24,10 @@ settings.
 TODO: list what the app stores in the browser, in plain words, such as "the list you are
 editing".
 {%- else %}
-TODO: list what an account holds (such as an email address, a display name and a hashed password),
-what users upload, who can see each, where it is stored (the provider and the country), and how
-long each is kept, including in backups. Say what happens to uploads when someone deletes their
-account.
+TODO: list what an account holds (such as an email address, a display name and a hashed password)
+and what users upload. For each, say what it is for, the legal basis (such as the contract with
+the user), who can see it, where it is stored (the provider and the country), and how long it is
+kept, including in backups. Say what happens to uploads when someone deletes their account.
 {%- endif %}
 
 ## Server logs
@@ -34,7 +35,8 @@ account.
 [Cloudflare Pages](https://www.cloudflare.com/privacypolicy/) hosts {{ project_name }}. To send you
 a page, the host sees your IP address and browser details, which can count as personal data.
 
-TODO: say what the host logs, how long it keeps it, and whether you can see those logs.
+TODO: say what the host logs, what for (such as keeping the site running and safe), the legal
+basis (such as a legitimate interest), how long the logs are kept, and whether you can see them.
 
 ## Cookies and storage
 {% if user_data == 'nothing' %}

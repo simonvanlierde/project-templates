@@ -24,8 +24,17 @@ in the same pull request.
 - **An app run for an organisation** (a university, a company, a public body): the organisation is
   the controller, not you. Name it on the privacy statement, have its privacy officer review the
   text before launch, and link the organisation's own privacy statement from yours.
-- **A public-sector site in the EU** must publish its country's model accessibility statement,
-  which builds on the EU model in Implementing Decision (EU) 2018/1523. In the Netherlands that is
+- **A public-sector site in the EU** falls under the Web Accessibility Directive, (EU) 2016/2102,
+  and must publish its country's model accessibility statement, which builds on the EU model in
+  [Implementing Decision (EU) 2018/1523](https://eur-lex.europa.eu/eli/dec_impl/2018/1523/oj).
+  That model differs from this page in three ways. Its status says the site is "fully
+  compliant", "partially compliant" or "not compliant" with a named standard, with no "not
+  assessed". The standard is usually EN 301 549, which the Commission named as the harmonised
+  standard under article 6 of the Directive
+  ([Implementing Decision (EU) 2018/2048](https://eur-lex.europa.eu/eli/dec_impl/2018/2048/oj), as
+  amended), and whose web requirements build on WCAG. And it ends with an "Enforcement procedure"
+  section: a description of, and a link to, where people can turn when the reply to their
+  feedback is not good enough, with the enforcement body's contact details. In the Netherlands that is
   the statement the Bdto (Besluit digitale toegankelijkheid overheid) requires, made with the
   wizard on [toegankelijkheidsverklaring.nl](https://www.toegankelijkheidsverklaring.nl/) and
   listed in its register. Link it from "About this statement" and keep this page as the readable
@@ -47,9 +56,25 @@ in the same pull request.
 
 - Say what is kept, where, for how long, and who else gets it. IP addresses in server logs can
   count as personal data, so the hosting section stays even for an app that keeps nothing.
+- For each kind of data, server logs and accounts alike, give its purpose, its legal basis and
+  how long it is kept. Article 13 of the GDPR lists what a privacy statement must tell people,
+  among them "the purposes of the processing … as well as the legal basis for the processing"
+  (13(1)(c)) and "the period for which the personal data will be stored, or if that is not
+  possible, the criteria used to determine that period" (13(2)(a)). Article 6(1) lists the legal
+  bases. An account is usually "necessary for the performance of a contract" with the user (b).
+  For server logs, recital 49 says processing "strictly necessary and proportionate for the
+  purposes of ensuring network and information security" is a legitimate interest (f).
 - Change "Last updated" with every edit to the page.
-- After the first deploy, look in the host's dashboard for analytics or bot-protection features
-  that set cookies or add scripts. Then check that `curl -sI <site_url> | grep -i set-cookie`
+- Keep Cloudflare Web Analytics off for the Pages project. When it is on, "Cloudflare will
+  automatically add the JavaScript snippet to your Pages site on the next deployment"
+  ([Cloudflare: Enable Web Analytics](https://developers.cloudflare.com/pages/how-to/web-analytics/)),
+  and that script must be allowed in the Content-Security-Policy's `script-src`
+  ([Web Analytics FAQ](https://developers.cloudflare.com/web-analytics/faq/)). The rendered
+  `public/_headers` blocks it, and the privacy statement says the app loads only its own files.
+  The e2e tests run against a local build, so they can't see it. For visitor numbers, see
+  Analytics below.
+- After the first deploy, look in the host's dashboard for other analytics or bot-protection
+  features that set cookies or add scripts. Then check that `curl -sI <site_url> | grep -i set-cookie`
   prints nothing.
 - Name every outside service the app calls. Loading a font, a script or an image from another site
   sends the visitor's IP address there; a rendered app loads nothing from other sites, and
