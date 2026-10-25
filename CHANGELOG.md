@@ -49,8 +49,11 @@ Upgrade steps:
   `python: lint, types, tests (3.12)` and so on. Until then, pull requests wait on a
   check that never reports.
 - Run `just repo-settings` once after the update, and in a new project after the first
-  push. It protects `main` and, in a public repo, turns on private vulnerability
-  reporting, which `SECURITY.md` points to.
+  push. It protects `main` and the `v*` tags and, in a public repo, turns on private
+  vulnerability reporting, which `SECURITY.md` points to. `main` then requires the `git hooks`,
+  `pull request title`, `dependency review` and, in a public repo, `DCO sign-off` checks: if
+  you renamed any of those jobs, edit `.github/rulesets/main.json` first, or pull requests
+  wait on a check that never reports.
 - Run `prek install` again in each clone, so the new commit-msg hook is installed.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
