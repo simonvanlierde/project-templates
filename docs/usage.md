@@ -73,6 +73,14 @@ again after you edit the file: it updates the ruleset named `main` if there is o
 admin rights, and a paid GitHub plan on a private repo. No status checks are required, since
 the job names depend on your stacks.
 
+## The GitHub About box
+
+`just repo-about` runs `gh repo edit` with your answers, so the About box matches the README:
+the description from `project_description` (left alone when you gave none), the homepage from
+`site_url` for a web app, and a topic per stack (`python`, `typescript`, `rust`, `go`,
+`docker`). It only adds topics, so ones you set by hand stay. Rerun it after you change an
+answer. Needs write access to the repo.
+
 ## Choosing your stacks
 
 The `stacks` question is a multi-select. Pick any combination:
