@@ -813,6 +813,7 @@ FAKE
 chmod +x "$fake/gh"
 (
   cd a
+  # shellcheck disable=SC2030 # the about test below reuses this fake
   export FAKE_LOG="$fake/log" FAKE_DIR="$fake" PATH="$fake:$PATH"
   just repo-settings >/dev/null
   just repo-settings >/dev/null
@@ -841,6 +842,15 @@ chmod +x "$fake/gh"
 )
 (cd b && ! grep -q 'DCO sign-off' .github/rulesets/main.json)
 (! grep -q private-vulnerability-reporting b/justfile)
+# repo-about: the About box comes from the answers. No description answer leaves the description alone;
+# a quote in it survives the shell; topics only get added.
+for r in a b d; do
+  # shellcheck disable=SC2031 # $fake/gh from the repo-settings test, logging every call
+  (cd "$r" && FAKE_LOG="$fake/about-$r" PATH="$fake:$PATH" just repo-about >/dev/null)
+done
+grep -qxF -- 'repo edit --add-topic python --add-topic typescript --add-topic rust --add-topic go --add-topic docker' "$fake/about-a"
+grep -qxF -- "repo edit --description A \"quoted\" one --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
+grep -qxF -- 'repo edit --homepage https://pipe-me.pages.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
   r=${answers%%/*}
@@ -858,8 +868,9 @@ done
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
-# This repo runs the same DCO check it renders.
+# This repo runs the same DCO check and commit rules it renders.
 cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
+cmp "$repo/committed.toml" "$repo/template/committed.toml"
 # Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off
 # without an email, and skips the merge. Trailing whitespace and CRLF still count as signed.
 dco_filter=$(uv run --no-project --with pyyaml python -c '

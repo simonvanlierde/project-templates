@@ -22,8 +22,12 @@ Upgrade steps:
   leaves both files alone. Fill in the TODOs in `docs/`. An app on its own domain: pass
   `--data site_url=https://<your domain>`, or the pages name the `pages.dev` address.
   The weekly copier-update workflow fails until you have run this update by hand once.
-- A private repo: answer no to the new `public` question, and `.github/SECURITY.md`,
-  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml` go. Your license answer stays as it is.
+- **Breaking:** a private repo: pass `--data public=false`. The new `public` question
+  is yes by default, so `copier update --defaults`, Renovate's update PR and the
+  `copier-update` workflow add the public-repo files, including a `scorecard.yml` that
+  fails in a private repo. With no, `.github/SECURITY.md`, `CONTRIBUTING.md`,
+  `CODE_OF_CONDUCT.md`, `pull_request_template.md`, `dco.yml` and `scorecard.yml` go.
+  Your license answer stays as it is.
 - A public repo: the update adds `.github/CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
   `pull_request_template.md` and a `dco` check on pull requests from forks,
   and `SECURITY.md` gains a Scope section to fill in. GitHub shows `.github/CONTRIBUTING.md`
@@ -35,13 +39,15 @@ Upgrade steps:
   ([Hearing about new releases](docs/usage.md#hearing-about-new-releases)).
 - `README.md`, `CHANGELOG.md` and the citation files (`CITATION.cff`, `.zenodo.json`,
   `codemeta.json`) are now your project's, and this update already leaves them alone. So
-  this release's README changes don't arrive: the badges for the options you turned on,
-  the Releasing section, and the `just fmt` and `just hooks` lines. Copy the ones you want
-  from a fresh render with your answers.
+  this release's README changes don't arrive, such as the badges for the options you
+  turned on and the Releasing section. Diff your README against a fresh render with your
+  answers and copy the parts you want.
 - **Breaking:** if a ruleset or branch protection requires the `lint, types, tests` check
   (`lint, types, pipeline, tests` in a `data-pipeline` project), switch it to the new
   name: `python: lint, types, tests` (`python: lint, types, pipeline, tests`) or
-  `ts: lint, types, tests`. Until then, pull requests wait on a check that never reports.
+  `ts: lint, types, tests`. A library runs one per Python version, named
+  `python: lint, types, tests (3.12)` and so on. Until then, pull requests wait on a
+  check that never reports.
 - Run `just repo-settings` once after the update, and in a new project after the first
   push. It protects `main` and, in a public repo, turns on private vulnerability
   reporting, which `SECURITY.md` points to.
@@ -119,6 +125,7 @@ Upgrade steps:
   GitHub release whose notes are that version's `CHANGELOG.md` section, so the two never
   differ.
 - `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged once the checks every PR runs have passed) from `.github/rulesets/main.json`, lets only a repo admin create, move or delete a `v*` tag (`.github/rulesets/tags.json`), since pushing one publishes a release, and in a public repo turns on private vulnerability reporting, which `SECURITY.md` points to. Rerun it any time; it updates the ruleset instead of adding a second.
+- `just repo-about` sets the GitHub About box from your answers with `gh repo edit`: the description from `project_description` (skipped when empty), the homepage from `site_url` in a web app, and a topic per stack. It only adds topics, so ones you set by hand stay. Rerun it any time.
 - With `mutation` in `test_extras`, a weekly CI run of mutation testing:
   `.github/workflows/mutation.yml`, one job per library stack, also startable by hand
   and never run on a pull request. Each job runs the stack's `just <stack>-mutation`
@@ -134,8 +141,8 @@ Upgrade steps:
 - `SECURITY.md` says what to include in a report, promises an answer within 14 days, says
   how a fix is disclosed, and has a scope section to fill in.
 - A `customise` question, no by default, ahead of the advanced questions: license,
-  directories, versions, module names, Codecov, the dependency bot, publishing, test
-  extras and the port. A new Python library, TypeScript web app or data pipeline now
+  directories, versions, module names, Codecov, CodSpeed, the dependency bot,
+  publishing, test extras, the port and the site URL. A new Python library, TypeScript web app or data pipeline now
   asks 10 questions, or 11 for a web app, down from 18, 14 and 15. Every question says what it changes.
   [The questions](docs/usage.md#the-questions) lists them with their defaults.
 - `copier copy` says where your details can be saved before it asks, and lists the
@@ -204,6 +211,13 @@ Upgrade steps:
   review, and when a first visit sets a cookie, stores anything in the browser or loads a
   file from another site. [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for
   filling the pages in, linked from each page's notes ([Legal pages](docs/usage.md#legal-pages)).
+- With `dependency_bot: dependabot`, a `copier-update` workflow opens a weekly PR that
+  runs `copier update` to the newest template tag, with conflicted files listed in the
+  PR body. It pushes with a `COPIER_UPDATE_TOKEN` secret, a fine-grained token you create.
+  Without one it uses `GITHUB_TOKEN`, which GitHub stops from pushing workflow changes, so
+  such an update opens an issue asking you to run it locally, and other update PRs start
+  no CI. See
+  [Hearing about new releases](docs/usage.md#hearing-about-new-releases).
 
 ### Changed
 
@@ -293,13 +307,6 @@ Upgrade steps:
   template release. Before, the one-week release age held those PRs back for good, because
   template tags carry no release date. The docs say how Dependabot users hear about
   releases.
-- With `dependency_bot: dependabot`, a `copier-update` workflow opens a weekly PR that
-  runs `copier update` to the newest template tag, with conflicted files listed in the
-  PR body. It pushes with a `COPIER_UPDATE_TOKEN` secret, a fine-grained token you create.
-  Without one it uses `GITHUB_TOKEN`, which GitHub stops from pushing workflow changes, so
-  such an update opens an issue asking you to run it locally, and other update PRs start
-  no CI. See
-  [Hearing about new releases](docs/usage.md#hearing-about-new-releases).
 
 ### Fixed
 

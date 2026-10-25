@@ -77,3 +77,13 @@ repo-settings:
     gh api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting >/dev/null 2>"$err" || fail
     echo "Turned on private vulnerability reporting."
 {%- endif %}
+
+# Set the GitHub About box from your answers: description{% if 'ts' in stacks and ts_kind == 'web-app' %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
+repo-about:
+    gh repo edit
+{%- if project_description %} --description {{ "'" ~ project_description | replace("'", "'\\''") ~ "'" }}
+{%- endif %}
+{%- if 'ts' in stacks and ts_kind == 'web-app' %} --homepage '{{ site_url }}'
+{%- endif %}
+{%- for t in [('python' in stacks, 'python'), ('ts' in stacks, 'typescript'), ('rust' in stacks, 'rust'), ('go' in stacks, 'go'), ('docker' in stacks, 'docker')] if t[0] %} --add-topic {{ t[1] }}
+{%- endfor %}
