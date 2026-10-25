@@ -495,8 +495,8 @@ uv_version:
   when: false
   default: 0.13.0
 
-# Computed, never asked: the griffe that python.yml's api job and `just py-check` run
-# with uvx when publish_to_pypi is on. It compares the public API with the last git tag.
+# Computed, never asked: the griffe that python.yml's api job runs with uvx when
+# publish_to_pypi is on. It compares the public API with the last git tag.
 # renovate: datasource=pypi depName=griffe
 griffe_version:
   type: str
