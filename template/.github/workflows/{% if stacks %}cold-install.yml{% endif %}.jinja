@@ -1,0 +1,83 @@
+name: cold install
+
+# Runs the README's setup and task commands as written, in a container that has none
+# of the tools the README asks for, so a step the README leaves out fails here before
+# it fails a new contributor. It runs the ```sh blocks under `## Development`, from
+# the checkout: a `pip install` or `npm install` of the published package can't pass
+# before the first release, so keep those under another heading.
+on:
+  pull_request:
+    paths: [README.md]
+  schedule:
+    - cron: "47 5 * * 1" # Mondays, 05:47 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+jobs:
+  readme:
+    name: README commands, fresh container
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Debian with git, curl and a C compiler, like a new contributor's machine. Pinned
+    # to a digest, so a moved tag can't swap the image; bump it with the tag's new one.
+    container: buildpack-deps:trixie@sha256:880a5e3d451b50a7b1acd06093a980771a40c2fac2bce29a2145e0f4825266f4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The tools the README's "You need" sentence names, and nothing more.
+{%- if 'python' in stacks or 'ts' not in stacks %}
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "{{ uv_version }}"
+{%- endif %}
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: just@{{ just_version }}
+{%- if 'ts' in stacks %}
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+{%- if ts_dir != '.' %}
+        with:
+          package_json_file: {{ ts_dir }}/package.json
+{%- endif %}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "{{ node_version }}"
+          package-manager-cache: false
+{%- endif %}
+{%- if 'rust' in stacks %}
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+{%- endif %}
+{%- if 'go' in stacks %}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: {{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod
+          cache: false
+{%- endif %}
+
+      - name: Run the README's Development blocks
+{%- if 'docker' in stacks %}
+        env:
+          # The job container has no Docker daemon to run this hook's image.
+          SKIP: hadolint-docker
+{%- endif %}
+        # shortcut: drops the task lines that need Docker, a browser's system libraries,
+        # live source URLs or hours (their own workflows run them); list a new slow
+        # recipe here when the README gains one.
+        run: |-
+          awk '/^## /{dev = ($0 == "## Development")}
+               dev && /^```/{code = !code && /^```(sh|bash)$/; next}
+               dev && code' README.md |
+            grep -vE '^just +(up|pipeline|ts-e2e|[a-z]+-mutation)( |$)' >"$RUNNER_TEMP/readme.sh" || true
+          test -s "$RUNNER_TEMP/readme.sh" || { echo "no sh block under ## Development in README.md" >&2; exit 1; }
+          bash -ex "$RUNNER_TEMP/readme.sh"

@@ -560,7 +560,7 @@ gremlins_version:
   when: false
   default: v0.6.0
 
-# Computed, never asked: the tools mutation.yml installs. `copier update` bumps them;
+# Computed, never asked: the tools mutation.yml and cold-install.yml install. `copier update` bumps them;
 # Renovate bumps them here.
 # renovate: datasource=github-releases depName=casey/just
 just_version:
