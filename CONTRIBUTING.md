@@ -42,7 +42,7 @@ render into a directory and check it there:
 
 ```sh
 out=$(mktemp -d) && scripts/check-render.sh "$out"
-cd "$out/a" && git init -q && just py-sync check
+cd "$out/a" && git init -q && just py-sync py-check
 ```
 
 ## Tag every change
