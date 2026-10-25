@@ -4,6 +4,8 @@ A rendered web app serves three pages from its `docs/` folder: `accessibility.md
 `/accessibility`, `privacy.md` at `/privacy`, and, for an app with accounts or uploads,
 `terms.md` at `/terms`. Every page links them from its footer. This page lives in the
 [project-templates](https://github.com/simonvanlierde/project-templates) repository, not in your project.
+[Legal pages](usage.md#legal-pages) in the usage guide says how the app builds the pages and
+which tests check them.
 
 These are tips for keeping the pages true, not legal advice. When the stakes are real, ask a
 lawyer or your organisation's privacy officer.
@@ -31,6 +33,9 @@ in the same pull request.
 
 ## Accessibility statement
 
+- Every claim must be checkable in the repository: the tests in `tests/e2e/`, the lint rules in
+  `biome.json`, the styles in `src/app.css`. When you fix a known problem, move its bullet from
+  "Known problems" to "How we check" in the same pull request as the fix.
 - The status says "not assessed" until someone has checked every WCAG 2.2 criterion. Say
   "partially conformant" only when you have, and the known problems name the criteria that fail.
   The statement test refuses "fully conformant": that needs a full external audit, so change the
@@ -102,6 +107,7 @@ in the same pull request.
 
 ## Terms of use
 
-Only an app with accounts or uploads needs terms: who owns uploaded content, the licence it is
+Only an app with accounts or uploads needs terms. Keep them short, and match them to the
+privacy statement. They say who owns uploaded content, the licence it is
 shared under, what users promise, and how to remove it. A free tool with no accounts is covered by
 its licence and the no-warranty line at the end of the privacy statement.

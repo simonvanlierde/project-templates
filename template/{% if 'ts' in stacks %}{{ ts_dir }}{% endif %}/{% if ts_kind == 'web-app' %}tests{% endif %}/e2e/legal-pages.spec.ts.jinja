@@ -1,0 +1,49 @@
+import { expect, test } from "@playwright/test";
+import { ROUTES } from "./routes";
+
+/**
+ * The pages in docs/, as the app renders them, and the footer that links them from
+ * every route. The template leaves a TODO wherever only the project knows the answer,
+ * so a new app fails here until its author fills the pages in.
+ */
+
+{%- if user_data == 'accounts' %}
+const PAGES = [
+  ["/accessibility", "Accessibility statement"],
+  ["/privacy", "Privacy statement"],
+  ["/terms", "Terms of use"],
+] as const;
+{%- else %}
+const PAGES = [
+  ["/accessibility", "Accessibility statement"],
+  ["/privacy", "Privacy statement"],
+] as const;
+{%- endif %}
+
+for (const [href, name] of PAGES) {
+  test(`${href} renders and gives an email contact`, async ({ page }) => {
+    await page.goto(href);
+    await expect(page).toHaveTitle(new RegExp(`^${name}`));
+    const article = page.locator("article");
+    await expect(article.getByRole("heading", { level: 1 })).toHaveText(name);
+    await expect(article.getByRole("link", { name: /@/ }).first()).toHaveAttribute("href", /^mailto:.+@.+/);
+  });
+
+  test(`${href} has no TODO left`, async ({ page }) => {
+    await page.goto(href);
+    await expect(page.locator("article")).not.toContainText("TODO");
+  });
+}
+
+for (const path of ROUTES) {
+  test(`${path} links every page from its footer`, async ({ page }) => {
+    await page.goto(path);
+    const footer = page.getByRole("contentinfo");
+    for (const [href, name] of PAGES) {
+      const link = footer.getByRole("link", { name });
+      await expect(link).toHaveAttribute("href", href);
+      if (href === path) await expect(link).toHaveAttribute("aria-current", "page");
+      else await expect(link).not.toHaveAttribute("aria-current");
+    }
+  });
+}

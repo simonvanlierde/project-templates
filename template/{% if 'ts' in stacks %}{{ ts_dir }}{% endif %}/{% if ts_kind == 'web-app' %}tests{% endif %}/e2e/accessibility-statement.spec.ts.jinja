@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { ROUTES } from "./routes";
 
 /**
  * Guards docs/accessibility.md as the app renders it at /accessibility. The
  * statement's value is that it claims no more than the repo can show, so these
  * fail when it overclaims, loses its contact, or goes a year without review.
- * a11y.spec.ts runs axe over it with the other routes.
+ * a11y.spec.ts runs axe over it with the other routes, and legal-pages.spec.ts
+ * checks its TODOs and footer link.
  */
 
 // The status sentence, with the W3C conformance terms the statement may use.
@@ -56,18 +56,3 @@ test("the statement was reviewed in the last 400 days", async ({ page }) => {
     `"${line}" is over ${MAX_REVIEW_AGE_DAYS} days old. Check docs/accessibility.md against the app as it is now, fix what changed, and set "Last reviewed" to today.`,
   ).toBeLessThan(MAX_REVIEW_AGE_DAYS);
 });
-
-// The template leaves a TODO wherever only the project knows the answer.
-test("the statement has no TODO left", async ({ page }) => {
-  await page.goto("/accessibility");
-  await expect(page.locator("article")).not.toContainText("TODO");
-});
-
-for (const path of ROUTES) {
-  test(`${path} links the statement from its footer`, async ({ page }) => {
-    await page.goto(path);
-    await page.getByRole("contentinfo").getByRole("link", { name: "Accessibility statement" }).click();
-    await expect(page).toHaveURL(/\/accessibility$/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Accessibility statement");
-  });
-}

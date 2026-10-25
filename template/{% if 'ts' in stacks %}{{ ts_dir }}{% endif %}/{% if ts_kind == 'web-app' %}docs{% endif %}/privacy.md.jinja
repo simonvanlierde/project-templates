@@ -1,12 +1,8 @@
 {%- set host = site_url | regex_replace('^https://', '') | regex_replace('/.*$', '') -%}
 <!--
-Keep this page true: it says what the app keeps, and tests/e2e/privacy.spec.ts checks the part a
-test can see, that a first visit sets no cookies, stores nothing and loads only this site's own
-files. When the app starts to keep something new, say so here in the same pull request, and
-change "Last updated" with every edit. If an organisation runs the app, it is the controller:
-name it in the first paragraph instead of the author. The app renders this file at /privacy,
-so write plain Markdown with absolute links. https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md says who is responsible for the text
-and what an organisation's privacy officer should check.
+Keep this page true. The app serves it at /privacy, without this note.
+https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md
+says how to fill it in, and how the template builds and tests it.
 -->
 
 # Privacy statement

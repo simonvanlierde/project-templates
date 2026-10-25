@@ -602,13 +602,14 @@ test -f d/web/wrangler.jsonc
 test -f d/web/tests/e2e/a11y.spec.ts
 test -f d/web/tests/e2e/csp.spec.ts
 # The legal pages: statement and privacy always, terms for accounts or uploads,
-# each a route the axe, CSP and privacy specs visit.
+# each a route the axe, CSP, privacy and legal-page specs visit.
 for page in accessibility privacy terms; do
   test -f "d/web/docs/$page.md"
   grep -q "\"/$page\"" d/web/tests/e2e/routes.ts
 done
 test -f d/web/tests/e2e/privacy.spec.ts
 test -f d/web/tests/e2e/accessibility-statement.spec.ts
+test -f d/web/tests/e2e/legal-pages.spec.ts
 grep -q 'Its conformance is \*\*not assessed\*\*' d/web/docs/accessibility.md
 grep -qx '    "marked": "[0-9.]*",' d/web/package.json
 # A private repo's GitHub links would 404 for visitors, so its legal pages have none.

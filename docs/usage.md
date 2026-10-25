@@ -140,7 +140,10 @@ changes.
 
 Each page is one Markdown file in the app's `docs/` folder. GitHub shows the file as it
 is, and the build turns it into HTML (`marked`, in `vite.config.ts`), so the app ships no
-Markdown code. The build leaves out HTML comments: they are notes for you. `src/App.tsx` serves them, and every page's footer links them:
+Markdown code. Write plain Markdown with absolute links, since the same file is read in
+two places. The build leaves out HTML comments: the note at the top of each page is for
+you, and points to the tips below. `src/App.tsx` serves the pages, and every page's footer
+links them:
 
 | Page                     | Path             | Rendered when              |
 | ------------------------ | ---------------- | -------------------------- |
@@ -152,9 +155,14 @@ The `user_data` answer, "What does the app keep about its users?", has no defaul
 `nothing`, `browser` (local storage only) or `accounts` (accounts or uploads on a
 server). It decides what the privacy statement says, and whether there are terms. The
 answers fill in the name, `site_url`, your email and today's date. The rest is marked
-TODO, and the e2e tests fail until no TODO is left. The
-[CI baseline](ci-baseline.md) says what `accessibility-statement.spec.ts` and
-`privacy.spec.ts` check.
+TODO, so a new app's e2e tests fail until you have filled them in.
+
+Three specs in `tests/e2e/` keep the pages true. `legal-pages.spec.ts` checks that each
+page renders with an email contact and no TODO, and that every route's footer links all
+of them. `accessibility-statement.spec.ts` checks the statement's sections, its status
+and its review date. `privacy.spec.ts` checks that a first visit to any route sets no
+cookies, stores nothing and loads only the app's own files. The
+[CI baseline](ci-baseline.md) has the details.
 
 [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for filling the pages in: who is
 responsible for the data, what an organisation's privacy officer checks, and what the
