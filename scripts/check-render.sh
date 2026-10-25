@@ -907,7 +907,7 @@ CASES
   grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
   grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
   grep -q '^pr close 7 --delete-branch ' issue.log
-  (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml)
+  (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml 2>/dev/null)
   # An issue that exists, open or closed, is not asked again.
   (! grep -q '^issue create' asked.log)
   # A token pushes the branch with the workflow change, over the open PR's, then opens or
