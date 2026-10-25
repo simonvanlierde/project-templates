@@ -64,13 +64,19 @@ sets it up.
 ## Protecting main
 
 `just repo-settings` applies `.github/rulesets/main.json` to the default branch with `gh api`:
-no deletion, no force-push, linear history, and PRs required, squash-merged only. It also
-turns off merge commits and rebase merges in the repo settings. In a public repo it turns
-on private vulnerability reporting, where `SECURITY.md` sends reports. Run it once per repo,
-after the first push, and
-again after you edit the file: it updates the ruleset named `main` if there is one. Needs
-admin rights, and a paid GitHub plan on a private repo. No status checks are required, since
-the job names depend on your stacks.
+no deletion, no force-push, linear history, and PRs required, squash-merged only. A PR also
+waits for the checks that run on every PR: `git hooks`, `pull request title`,
+`dependency review` and, in a public repo, `DCO sign-off`. A skipped job counts as passed, so
+a draft, a private repo's dependency review and a branch's DCO check don't block. The stack
+jobs aren't required: their workflows skip PRs that don't touch the stack, and a required
+check that never reports blocks the PR. Add yours to the file by its job name.
+
+It applies `.github/rulesets/tags.json` to tags starting with `v`, because pushing one
+publishes a release: only a repo admin can create, move or delete them. It also turns off
+merge commits and rebase merges in the repo settings. In a public repo it turns on private
+vulnerability reporting, where `SECURITY.md` sends reports. Run it once per repo, after the
+first push, and again after you edit a file: it updates the rulesets named `main` and
+`tags` if they exist. Needs admin rights, and a paid GitHub plan on a private repo.
 
 ## Choosing your stacks
 
@@ -296,7 +302,7 @@ opens the PR with it, and the PR's own CI starts.
 Without the secret, the workflow falls back to `GITHUB_TOKEN`. An update that touches a
 workflow then opens an issue asking you to run `copier update` locally, and closes an
 older update PR that is still open. Any other update still opens its PR, whose CI starts
-only when you close and reopen it. The fallback also
+only when you close and reopen it, and the required checks wait until then. The fallback also
 needs the repository setting "Allow GitHub Actions to create and approve pull requests".
 Turn it on with
 `gh api -X PUT repos/OWNER/REPO/actions/permissions/workflow -F can_approve_pull_request_reviews=true -f default_workflow_permissions=read`.

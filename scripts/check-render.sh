@@ -771,30 +771,61 @@ grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
 (! grep -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 
-# repo-settings: a fake gh proves the first run POSTs the ruleset file, the second PUTs the same id.
+# repo-settings: a fake gh keeps a list of rulesets and applies the recipe's real --jq
+# filter to it, so the first run POSTs each ruleset file and the second PUTs it by its id.
 test -f a/.github/rulesets/main.json
+test -f a/.github/rulesets/tags.json
 fake=$(mktemp -d)
+echo '[{"name": "other", "id": 7}]' >"$fake/rulesets.json"
 cat >"$fake/gh" <<'FAKE'
 #!/usr/bin/env bash
 echo "$*" >>"$FAKE_LOG"
-case "$*" in
-  *"-X POST"*|*"-X PUT"*) while [ $# -gt 0 ]; do [ "$1" = --input ] && cp "$2" "$FAKE_LOG.body"; shift; done ;;
-  *"/rulesets?includes_parents=false --jq"*) [ -f "$FAKE_LOG.body" ] && echo 42 || true ;;
+call=$*
+input='' filter=''
+while [ $# -gt 0 ]; do
+  case $1 in --input) input=$2 ;; --jq) filter=$2 ;; esac
+  shift
+done
+list=$FAKE_DIR/rulesets.json
+case $call in
+  *"-X POST repos/{owner}/{repo}/rulesets --input"*)
+    jq --slurpfile b "$input" '. + [{name: $b[0].name, id: (length + 41)}]' "$list" >"$list.new"
+    mv "$list.new" "$list"
+    cp "$input" "$FAKE_DIR/posted.$(basename "$input")" ;;
+  *"-X PUT repos/{owner}/{repo}/rulesets/"*) cp "$input" "$FAKE_DIR/put.$(basename "$input")" ;;
+  *"/rulesets?includes_parents=false --jq"*) jq -r "$filter" "$list" ;;
 esac
 FAKE
 chmod +x "$fake/gh"
 (
   cd a
-  export FAKE_LOG="$fake/log" PATH="$fake:$PATH"
+  export FAKE_LOG="$fake/log" FAKE_DIR="$fake" PATH="$fake:$PATH"
   just repo-settings >/dev/null
   just repo-settings >/dev/null
-  grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG" | grep -qx 1
-  grep -qF -- '-X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
-  grep -qF -- 'allow_merge_commit=false' "$FAKE_LOG"
+  test "$(grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG")" = 2
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/43 --input .github/rulesets/tags.json' "$FAKE_LOG"
+  patch=$(grep -- '^api -X PATCH repos/{owner}/{repo} ' "$FAKE_LOG" | head -1)
+  for flag in allow_squash_merge=true allow_merge_commit=false allow_rebase_merge=false; do
+    [[ "$patch " == *" -F $flag "* ]]
+  done
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
-  cmp "$FAKE_LOG.body" .github/rulesets/main.json
+  for f in main tags; do
+    cmp "$fake/posted.$f.json" ".github/rulesets/$f.json"
+    cmp "$fake/put.$f.json" ".github/rulesets/$f.json"
+  done
+  # The required checks are the always-on jobs, by the names the workflows give them.
+  for check in 'git hooks' 'pull request title' 'dependency review' 'DCO sign-off'; do
+    jq -e --arg c "$check" '.rules[] | select(.type == "required_status_checks")
+      | .parameters.required_status_checks | any(.context == $c)' .github/rulesets/main.json >/dev/null
+    grep -rqxF "    name: $check" .github/workflows
+  done
+  # A path filter would leave a required check unreported on some PRs, which blocks them.
+  (! grep -q '^ *paths' .github/workflows/checks.yml .github/workflows/pr-title.yml .github/workflows/dco.yml)
+  jq -e '.target == "tag" and .conditions.ref_name.include == ["refs/tags/v*"]' .github/rulesets/tags.json >/dev/null
 )
+(cd b && ! grep -q 'DCO sign-off' .github/rulesets/main.json)
 (! grep -q private-vulnerability-reporting b/justfile)
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do

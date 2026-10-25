@@ -118,7 +118,7 @@ Upgrade steps:
 - `release.yml` and `.github/scripts/release-notes.sh`: a pushed `vX.Y.Z` tag becomes a
   GitHub release whose notes are that version's `CHANGELOG.md` section, so the two never
   differ.
-- `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged) from `.github/rulesets/main.json`, and in a public repo turns on private vulnerability reporting, which `SECURITY.md` points to. Rerun it any time; it updates the ruleset instead of adding a second.
+- `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged once the checks every PR runs have passed) from `.github/rulesets/main.json`, lets only a repo admin create, move or delete a `v*` tag (`.github/rulesets/tags.json`), since pushing one publishes a release, and in a public repo turns on private vulnerability reporting, which `SECURITY.md` points to. Rerun it any time; it updates the ruleset instead of adding a second.
 - With `mutation` in `test_extras`, a weekly CI run of mutation testing:
   `.github/workflows/mutation.yml`, one job per library stack, also startable by hand
   and never run on a pull request. Each job runs the stack's `just <stack>-mutation`
