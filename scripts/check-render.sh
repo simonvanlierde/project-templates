@@ -1007,6 +1007,11 @@ test "$(jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddd
 # copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml
+# Copier runs unlocked dependencies, so the step that runs it must not hold the token.
+cuh=$(mktemp -d)
+awk -v d="$cuh" '/^      - /{n++} n{print >(d "/step" n)}' "$cu"
+grep -l 'copier@' "$cuh"/step* | grep -q .
+(! grep -l 'copier@' "$cuh"/step* | xargs grep -q COPIER_UPDATE_TOKEN)
 # shellcheck disable=SC2016 # literal workflow text, not shell expansions
 grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' "$cu"
 grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
@@ -1015,8 +1020,11 @@ grep -qF "HAS_TOKEN: \${{ secrets.COPIER_UPDATE_TOKEN != '' }}" "$cu"
 # Run the step's script against a fake gh, a fake uvx that changes one file, a template
 # repo with two tags and a bare repo standing in for GitHub. GIT_ALLOW_PROTOCOL=file makes
 # a push that misses the rewrite fail instead of reaching github.com.
-cuh=$(mktemp -d)
-awk '/^        run: \|-$/{f=1;next} f&&NF&&!/^          /{exit} f{sub(/^          /,"");print}' "$cu" >"$cuh/run.sh"
+# Each step's script: the copier step runs first, with no token, then the push step.
+for n in copier push; do
+  f=$(grep -l "^      - name: $([ $n = copier ] && echo Update || echo Push)" "$cuh"/step*)
+  awk '/^        run: \|-$/{f=1;next} f&&NF&&!/^          /{exit} f{sub(/^          /,"");print}' "$f" >"$cuh/$n.sh"
+done
 cat >"$cuh/gh" <<'FAKE'
 #!/usr/bin/env bash
 echo "$*" >>"$FAKE_LOG"
@@ -1060,10 +1068,20 @@ chmod +x "$cuh/gh" "$cuh/uvx"
         GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION=9.19.1
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
         GIT_CONFIG_VALUE_0="https://x-access-token:$GH_TOKEN@github.com/$REPO.git"
-      bash --noprofile --norc -eo pipefail "$cuh/run.sh" >"$p.out" 2>&1 || {
+      : >"$p.gho"
+      # The copier step gets neither token variable.
+      env -u GH_TOKEN -u HAS_TOKEN GITHUB_OUTPUT="$p.gho" bash --noprofile --norc -eo pipefail "$cuh/copier.sh" >"$p.out" 2>&1 || {
         cat "$p.out" >&2
         exit 1
       }
+      LATEST=$(sed -n 's/^latest=//p' "$p.gho") WORKFLOWS=$(sed -n 's/^workflows=//p' "$p.gho")
+      export LATEST WORKFLOWS
+      if [ -n "$LATEST" ]; then
+        bash --noprofile --norc -eo pipefail "$cuh/push.sh" >>"$p.out" 2>&1 || {
+          cat "$p.out" >&2
+          exit 1
+        }
+      fi
     )
   done <<'CASES'
 issue false 7 -

@@ -379,6 +379,9 @@ Upgrade steps:
   made in the publish job, which runs no project code.
 - The hooks job installs a set prek version, 0.5.5, instead of the newest one on each run,
   and gives the read-only GitHub token to the zizmor hook only.
+- The `copier-update` workflow runs Copier in a step of its own, without your
+  `COPIER_UPDATE_TOKEN`. A second step holds the token and does the push, the PR and the
+  issue. Copier installs its dependencies unpinned, so they no longer run next to the token.
 
 ## [0.10.0] - 2026-10-16
 
