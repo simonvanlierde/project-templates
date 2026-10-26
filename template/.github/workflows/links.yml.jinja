@@ -2,7 +2,8 @@ name: links
 
 # The lychee git hook runs offline and checks only relative links. A web link can die
 # without a commit, so this checks every link in the Markdown and HTML files weekly,
-# with network access. The job summary lists the dead ones.
+# with network access. The job summary lists the dead ones. A new repo's run is red
+# until its badge and tag links resolve, which needs the first push and release.
 on:
   schedule:
     - cron: "37 5 * * 4" # Thursdays, 05:37 UTC
