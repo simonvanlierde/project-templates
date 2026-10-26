@@ -26,15 +26,15 @@ env:
   # renovate: datasource=pypi depName=copier
   COPIER_VERSION: 9.19.1
   # renovate: datasource=pypi depName=zizmor
-  ZIZMOR_VERSION: 1.30.1
+  ZIZMOR_VERSION: 1.31.1
   # renovate: datasource=github-releases depName=jdx/jactionlint
   JACTIONLINT_VERSION: 2.2.0
   # renovate: datasource=pypi depName=check-jsonschema
   CHECK_JSONSCHEMA_VERSION: 0.38.2
   # renovate: datasource=pypi depName=rust-just
-  JUST_VERSION: 1.58.0
+  JUST_VERSION: 1.59.0
   # renovate: datasource=npm depName=renovate
-  RENOVATEBOT_VERSION: 44.155.8
+  RENOVATEBOT_VERSION: 44.167.5
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -619,7 +619,7 @@ jobs:
           toolchain: stable
           components: clippy, rustfmt
 
-      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: cargo-nextest,cargo-deny${{ matrix.answers.test_extras && ',cargo-mutants' || '' }}
 
