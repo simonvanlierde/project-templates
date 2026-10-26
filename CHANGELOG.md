@@ -96,6 +96,12 @@ Upgrade steps:
 
 ### Added
 
+- A `cold-install.yml` workflow runs the shell blocks under the README's `## Development`
+  heading as written, in a Debian container with only the tools the README says you
+  need, so a setup step the README leaves out fails in CI. It runs weekly and on pull
+  requests that change `README.md`. It skips `just up`, `just pipeline`, `just ts-e2e`
+  and the mutation and property recipes, which need Docker, a browser, live sources or hours.
+  Your README stays yours on `copier update`, so the job runs whatever it says now.
 - Commit message rules in `committed.toml`: Conventional Commits, an imperative summary,
   no period. A `committed` commit-msg hook checks each commit, skipping merge
   commits, and a new `pr-title.yml` workflow checks the pull request title, which a squash
@@ -325,6 +331,7 @@ Upgrade steps:
 
 ### Fixed
 
+- The README of a TypeScript project names Node.js among the tools you need.
 - The weekly scheduled run and a push to `main` no longer cancel each other in
   `python.yml` and `docker.yml`. A cancelled weekly run used to skip that week's tripwire
   tests in a `data-pipeline` project.

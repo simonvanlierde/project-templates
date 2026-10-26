@@ -19,6 +19,7 @@
 {% set tools = [
   ('[uv](https://docs.astral.sh/uv/)', 'python' in stacks or 'ts' not in stacks),
   ('[just](https://just.systems)', true),
+  ('[Node.js](https://nodejs.org)', 'ts' in stacks),
   ('[pnpm](https://pnpm.io)', 'ts' in stacks),
   ('[cargo](https://rustup.rs)', 'rust' in stacks),
   ('[Go](https://go.dev/dl/)', 'go' in stacks),

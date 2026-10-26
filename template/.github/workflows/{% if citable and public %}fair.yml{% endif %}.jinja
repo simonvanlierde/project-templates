@@ -25,7 +25,7 @@ jobs:
           version: "{{ uv_version }}"
       # NOTE: not tracked by Renovate; howfairis has had no release since 0.14.2 (2022-09).
       # howfairis exits 1 below five checks, so the score is read from its output.
-      - run: |
+      - run: |-
           uvx howfairis@0.14.2 https://github.com/{{ github_user }}/{{ slug }} | tee out.txt || true
           cat out.txt >> "$GITHUB_STEP_SUMMARY"
           score=$(grep '^Calculated compliance' out.txt | grep -o '●' | wc -l)
