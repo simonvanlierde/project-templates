@@ -341,6 +341,9 @@ Upgrade steps:
 
 ### Fixed
 
+- With `dependency_bot: renovate`, the comments in `pyproject.toml`, `pnpm-workspace.yaml`
+  and `.pre-commit-config.yaml` no longer say Dependabot waits the week or moves the hook
+  SHAs.
 - The README of a TypeScript project names Node.js among the tools you need.
 - The weekly scheduled run and a push to `main` no longer cancel each other in
   `python.yml` and `docker.yml`. A cancelled weekly run used to skip that week's tripwire

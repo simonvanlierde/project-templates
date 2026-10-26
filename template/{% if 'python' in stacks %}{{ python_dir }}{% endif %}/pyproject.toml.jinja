@@ -88,8 +88,8 @@ requires = ["uv_build>=0.12.19,<0.14.0"]
 build-backend = "uv_build"
 
 # Resolve only releases at least a week old: a compromised release is usually
-# caught and yanked within that window. Dependabot's cooldown waits the same. Set here,
-# not user-wide, so every machine writes the same uv.lock.
+# caught and yanked within that window. The dependency bot waits the same week.
+# Set here, not user-wide, so every machine writes the same uv.lock.
 [tool.uv]
 exclude-newer = "1 week"
 

@@ -14,7 +14,7 @@
 #
 # Python projects get prek from `uv tool install prek`. TypeScript-only projects
 # get it from the @j178/prek devDependency. Revs are commit SHAs, since tags are
-# mutable; Dependabot moves each SHA and its `# frozen:` tag together.
+# mutable; the dependency bot moves each SHA and its `# frozen:` tag together.
 
 # `prek install` sets up each of these: the commit message is checked as you commit{% if 'ts' in stacks and ts_kind == 'web-app' %},
 # and the unit tests run before each push{% endif %}.
