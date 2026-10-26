@@ -51,6 +51,13 @@ ts-api:
 ts-mutation:
     {{ pnpm }} exec stryker run
 {%- endif %}
+{%- if ts_kind == 'library' and 'property' in test_extras %}
+
+# The tests with fast-check at 10,000 runs a property instead of 100 (FC_NUM_RUNS,
+# read in src/index.test.ts). CI runs it weekly (property.yml).
+ts-property:
+    FC_NUM_RUNS=10000 {{ pnpm }} exec vitest run
+{%- endif %}
 {%- if ts_kind == 'web-app' %}
 
 # Playwright against the production build: the accessibility and CSP specs.
