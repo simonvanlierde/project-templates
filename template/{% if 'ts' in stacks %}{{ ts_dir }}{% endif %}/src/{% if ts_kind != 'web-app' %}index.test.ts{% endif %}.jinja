@@ -14,6 +14,13 @@ test("adds", () => {
 {%- endif %}
 {%- if prop %}
 
+// `just ts-property` sets FC_NUM_RUNS for a longer run than the default 100.
+// shortcut: configures this file only; move it to a vitest setupFiles module once a
+// second file has properties.
+if (process.env.FC_NUM_RUNS) {
+  fc.configureGlobal({ numRuns: Number(process.env.FC_NUM_RUNS) });
+}
+
 // fast-check tries many pairs, and shrinks any that fails to the simplest one.
 test("order does not matter", () => {
   fc.assert(fc.property(fc.integer(), fc.integer(), (left, right) => add(left, right) === add(right, left)));

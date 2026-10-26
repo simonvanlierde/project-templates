@@ -533,7 +533,7 @@ test_extras:
   ask: "{{ customise }}"
   help: Extra tests for the library code (none, one or both)
   choices:
-    Property tests (generated inputs checked against a rule, run with the tests): property
+    Property tests (generated inputs checked against a rule, run with the tests and at length in a weekly CI run): property
     Mutation testing (a `just <stack>-mutation` recipe and a weekly CI run that check the tests catch planted bugs): mutation
   default: []
 
@@ -560,7 +560,7 @@ gremlins_version:
   when: false
   default: v0.6.0
 
-# Computed, never asked: the tools mutation.yml installs. `copier update` bumps them;
+# Computed, never asked: the tools mutation.yml and property.yml install. `copier update` bumps them;
 # Renovate bumps them here.
 # renovate: datasource=github-releases depName=casey/just
 just_version:

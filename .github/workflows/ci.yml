@@ -132,7 +132,7 @@ jobs:
               kind: library
               module_name: smokepkg
               publish_to_pypi: true
-          # Property tests and the mutation recipe, run once to prove the recipe works.
+          # Property tests and the mutation and property recipes, run once to prove the recipes work.
           - name: library (test extras)
             answers:
               project_name: ci-extras
@@ -225,7 +225,16 @@ jobs:
 
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
-        run: just py-mutation
+        run: just py-mutation py-property
+
+      # A new Hypothesis profile copies the loaded one, here the derandomized "ci"
+      # profile, which would make the weekly run repeat its inputs.
+      - if: matrix.answers.test_extras
+        name: long profile draws new inputs
+        working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
+        run: >-
+          uv run python -I -c 'import sys; sys.path.insert(0, "tests"); import conftest;
+          from hypothesis import settings; assert not settings.get_profile("long").derandomize'
 
       # The library's python.yml tests every version from python_min up. Run the
       # tests on each, so a floor the code can't meet fails here.
@@ -506,7 +515,7 @@ jobs:
       # Then the checks again: biome reads .gitignore, so a report left unignored fails them.
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj
-        run: just ts-mutation ts-check
+        run: just ts-mutation ts-property ts-check
 
       # The accessibility, CSP and privacy specs. Chromium installs on the runner here;
       # the generated ts.yml runs the same specs in the Playwright container. A new
@@ -633,7 +642,7 @@ jobs:
 
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj
-        run: just rs-mutation
+        run: just rs-mutation rs-property
 
   go:
     # The go stack, one row per module kind: the library flat (go_dir left at its
@@ -705,7 +714,7 @@ jobs:
 
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj
-        run: just go-mutation
+        run: just go-mutation && just go-property -fuzztime=10s
 
   ok:
     # The one check the main ruleset requires, so jobs and matrix rows can change
