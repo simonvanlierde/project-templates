@@ -134,6 +134,13 @@ Upgrade steps:
   and never run on a pull request. Each job runs the stack's `just <stack>-mutation`
   recipe. The Rust job fails when a mutant survives; the others print the survivors and
   pass.
+- With `property` in `test_extras`, a weekly CI run of the property tests at length:
+  `.github/workflows/property.yml`, one job per library stack, also startable by hand
+  and never run on a pull request. Each job runs a new recipe you can also run by hand:
+  `just py-property` (Hypothesis, 10,000 examples a property), `just ts-property`
+  (fast-check, 10,000 runs), `just rs-property` (proptest, 10,000 cases) or
+  `just go-property` (fuzzes `FuzzAdd` for 10 minutes). A failing input fails the job. A Python
+  library gains `tests/conftest.py`, which registers the Hypothesis profile.
 - A `public` question, yes by default. No leaves out `.github/SECURITY.md`,
   `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and `dco.yml`, and makes
   `none` the license default. See [Public repos](docs/usage.md#public-repos).
@@ -214,6 +221,11 @@ Upgrade steps:
   review, and when a first visit sets a cookie, stores anything in the browser or loads a
   file from another site. [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for
   filling the pages in, linked from each page's notes ([Legal pages](docs/usage.md#legal-pages)).
+- A public repo of a kind that has `CITATION.cff` (library, research, data-pipeline) gets
+  `fair.yml`, which runs `howfairis` weekly and lists each fair-software.eu check in the job
+  summary, and a fair-software.eu badge in the README. The job fails below `FAIR_MIN` filled
+  dots out of five. A new repo has three, so that is the starting floor: raise it as you
+  add a registry entry and the OpenSSF Best Practices badge, and edit the badge to match.
 - With `dependency_bot: dependabot`, a `copier-update` workflow opens a weekly PR that
   runs `copier update` to the newest template tag, with conflicted files listed in the
   PR body. It pushes with a `COPIER_UPDATE_TOKEN` secret, a fine-grained token you create.

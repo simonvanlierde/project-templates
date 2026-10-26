@@ -93,13 +93,13 @@ grep -q 'project edit' "$out/h/go.mod"
 grep -q 'project record' "$out/h/docs/decisions/README.md"
 (! grep -q 'project edit' "$out/h/docs/decisions/0000-template.md")
 
-# m: every stack a library, nested, with the mutation extra: mutation.yml gets a job for
-# each. a has libraries too but no extras, so it must render no mutation.yml.
+# m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
+# job for each. a has libraries too but no extras, so it must render neither.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
-  --data 'test_extras=[mutation]' . "$out/m"
+  --data 'test_extras=[property, mutation]' . "$out/m"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -323,6 +323,20 @@ grep -qx '      id-token: write # to publish the results' a/.github/workflows/sc
 grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md
 test ! -e b/.github/workflows/scorecard.yml
 (! grep -q -i scorecard b/README.md)
+# fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
+# and public. b is citable-less and private; h is public but has no citation files.
+grep -qx "          uvx howfairis@0.14.2 $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
+# shellcheck disable=SC2016 # the $ is literal workflow text
+grep -qF 'cat out.txt >> "$GITHUB_STEP_SUMMARY"' a/.github/workflows/fair.yml
+grep -qx '      FAIR_MIN: 3' a/.github/workflows/fair.yml
+grep -qx 'permissions: {}' a/.github/workflows/fair.yml
+(! grep -q continue-on-error a/.github/workflows/fair.yml)
+# howfairis order: repository, license, registry, citation, checklist.
+grep -qF 'fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8F%20%20%E2%97%8B-orange' a/README.md
+test ! -e b/.github/workflows/fair.yml
+(! grep -q fair-software.eu b/README.md)
+test ! -e h/.github/workflows/fair.yml
+(! grep -q fair-software.eu h/README.md)
 # Badges follow their answers: a has codspeed only; c has codecov, codspeed, PyPI and npm;
 # d has codecov alone; b has none.
 grep -qF 'https://app.codspeed.io/' a/README.md
@@ -439,6 +453,26 @@ steps = wf["jobs"]["rust"]["steps"]
 assert any("test ! -s crates/lib/mutants.out/missed.txt" in s.get("run", "") for s in steps), steps
 assert any(s.get("with", {}).get("path") == "crates/lib/mutants.out/" for s in steps), steps
 PY
+# property.yml: the same shape, running each stack's property or fuzz recipe.
+test -f m/.github/workflows/property.yml
+test ! -e a/.github/workflows/property.yml
+python3 - <<'PY'
+import yaml
+wf = yaml.safe_load(open("m/.github/workflows/property.yml"))
+assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
+assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
+assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
+assert all(j["timeout-minutes"] == 60 for j in wf["jobs"].values())
+for job, recipe in (("python", "py-property"), ("ts", "ts-property"), ("rust", "rs-property"), ("go", "go-property")):
+    assert any(s.get("run") == f"just {recipe}" for s in wf["jobs"][job]["steps"]), job
+# go-property runs in go_dir, so the failing inputs land under it.
+assert any(s.get("with", {}).get("path") == "svc/testdata/fuzz/" for s in wf["jobs"]["go"]["steps"])
+PY
+for stack in py ts rs go; do
+  grep -q "^just $stack-property " m/README.md
+done
+test -f m/py/tests/conftest.py
+test ! -e k/tests/conftest.py
 # From a tag, the answers file names the canonical source. From any other
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
 # itself be a release tag, so render a is held to whichever its _commit is.
@@ -813,7 +847,7 @@ FAKE
 chmod +x "$fake/gh"
 (
   cd a
-  # shellcheck disable=SC2030 # the about test below reuses this fake
+  # shellcheck disable=SC2030 # the about test and the copier-update run below set their own PATH
   export FAKE_LOG="$fake/log" FAKE_DIR="$fake" PATH="$fake:$PATH"
   just repo-settings >/dev/null
   just repo-settings >/dev/null
@@ -895,10 +929,88 @@ cu=a/.github/workflows/copier-update.yml
 # shellcheck disable=SC2016 # literal workflow text, not shell expansions
 grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' "$cu"
 grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
-# shellcheck disable=SC2016
-grep -q 'gh issue create --title "$title"' "$cu"
-# shellcheck disable=SC2016
-grep -q 'gh pr close "$stale"' "$cu"
-grep -qF 'gh issue list --state all' "$cu"
+# The run below stands in true or false for this expression.
+grep -qF "HAS_TOKEN: \${{ secrets.COPIER_UPDATE_TOKEN != '' }}" "$cu"
+# Run the step's script against a fake gh, a fake uvx that changes one file, a template
+# repo with two tags and a bare repo standing in for GitHub. GIT_ALLOW_PROTOCOL=file makes
+# a push that misses the rewrite fail instead of reaching github.com.
+cuh=$(mktemp -d)
+awk '/^        run: \|-$/{f=1;next} f&&NF&&!/^          /{exit} f{sub(/^          /,"");print}' "$cu" >"$cuh/run.sh"
+cat >"$cuh/gh" <<'FAKE'
+#!/usr/bin/env bash
+echo "$*" >>"$FAKE_LOG"
+case "$1 $2" in
+  "issue list") echo "${FAKE_ISSUE:-}" ;;
+  "pr list") echo "${FAKE_PR:-}" ;;
+esac
+FAKE
+cat >"$cuh/uvx" <<'FAKE'
+#!/usr/bin/env bash
+echo "uvx $*" >>"$FAKE_LOG"
+mkdir -p "$(dirname "$FAKE_FILE")"
+echo "# from the template" >>"$FAKE_FILE"
+FAKE
+chmod +x "$cuh/gh" "$cuh/uvx"
+(
+  # A subshell drops the ERR trap; set -E would fire it in every (! ...) below.
+  trap 'echo "check-render: failed at line $LINENO" >&2' ERR
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_ALLOW_PROTOCOL=file \
+    GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.org GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.org
+  git init -q -b main "$cuh/tpl"
+  git -C "$cuh/tpl" commit -q --allow-empty -m one
+  git -C "$cuh/tpl" tag v0.9.0
+  git -C "$cuh/tpl" tag v0.10.0
+  # name, HAS_TOKEN, the open PR and the issue the fake gh finds ("-": none), and the
+  # file the update changes.
+  while read -r name token pr issue file; do
+    p=$cuh/$name
+    git init -q --bare "$p.git"
+    # An open PR has its branch on the remote, on a history the update does not extend.
+    if [ "$pr" != - ]; then git -C "$cuh/tpl" push -q "$p.git" HEAD:refs/heads/chore/copier-update; fi
+    git init -q -b main "$p"
+    printf '_commit: v0.9.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
+    git -C "$p" add .copier-answers.yml
+    git -C "$p" commit -q -m init
+    (
+      cd "$p"
+      # shellcheck disable=SC2031 # each fake gh run sets its own PATH and FAKE_LOG
+      export PATH="$cuh:$PATH" FAKE_LOG="$p.log" FAKE_PR="${pr#-}" FAKE_ISSUE="${issue#-}" \
+        FAKE_FILE="${file:-.github/workflows/ci.yml}" \
+        GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION=9.19.1
+      export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
+        GIT_CONFIG_VALUE_0="https://x-access-token:$GH_TOKEN@github.com/$REPO.git"
+      bash --noprofile --norc -eo pipefail "$cuh/run.sh" >"$p.out" 2>&1 || {
+        cat "$p.out" >&2
+        exit 1
+      }
+    )
+  done <<'CASES'
+issue false 7 -
+asked false - 3
+push true - -
+edit true 7 -
+plain false - - README.md
+CASES
+  cd "$cuh"
+  # Newest tag by version, not by name.
+  grep -qx 'uvx copier@9.19.1 update --defaults --vcs-ref v0.10.0' issue.log
+  # No token and a workflow change: one issue, the older PR closed, no push.
+  grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
+  grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
+  grep -q '^pr close 7 --delete-branch ' issue.log
+  (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml 2>/dev/null)
+  # An issue that exists, open or closed, is not asked again.
+  (! grep -q '^issue create' asked.log)
+  # A token pushes the branch with the workflow change, over the open PR's, then opens or
+  # updates the PR. So does no token with no workflow change.
+  for r in push:.github/workflows/ci.yml edit:.github/workflows/ci.yml plain:README.md; do
+    git -C "${r%%:*}.git" show "chore/copier-update:${r#*:}" | grep -qx '# from the template'
+    (! grep -q '^issue ' "${r%%:*}.log")
+  done
+  grep -q '^pr create --head chore/copier-update --base main ' push.log
+  grep -q '^pr create --head chore/copier-update --base main ' plain.log
+  grep -q '^pr edit chore/copier-update ' edit.log
+  (! grep -q '^pr create' edit.log)
+)
 
 echo "all render checks passed"

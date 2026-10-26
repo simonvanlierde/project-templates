@@ -48,7 +48,7 @@ jobs:
           enable-cache: true
           version: "{{ uv_version }}"
 
-      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: just@{{ just_version }}
 
@@ -89,7 +89,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: just@{{ just_version }}
 
@@ -115,7 +115,7 @@ jobs:
           workspaces: {{ rust_dir }}
 {%- endif %}
 
-      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: just@{{ just_version }},cargo-mutants@{{ cargo_mutants_version }}
 
@@ -145,7 +145,7 @@ jobs:
           go-version-file: {{ go_dir ~ '/' if go_dir != '.' else '' }}go.mod
           cache-dependency-path: {{ go_dir ~ '/' if go_dir != '.' else '' }}go.sum
 
-      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: just@{{ just_version }}
 
