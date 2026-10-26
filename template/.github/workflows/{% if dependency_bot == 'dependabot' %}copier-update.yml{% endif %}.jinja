@@ -45,12 +45,6 @@ jobs:
       # The template runs no Copier tasks, so there is no --trust.
 {%- raw %}
       - name: Update from the newest template tag
-        env:
-          # A fine-grained token with contents, pull requests and workflows write on this repo.
-          GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}
-          HAS_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN != '' }}
-          REPO: ${{ github.repository }}
-          BASE: ${{ github.event.repository.default_branch }}
         shell: bash
         run: |-
           branch=chore/copier-update
@@ -85,11 +79,34 @@ jobs:
             fi
           } >body.md
 
-          if [ "$HAS_TOKEN" != true ] && git diff --cached --name-only --no-renames | grep -q '^\.github/workflows/'; then
-            title="Update from template $latest by hand"
+          if git diff --cached --name-only --no-renames | grep -q '^\.github/workflows/'; then
+            echo "workflows=true" >>"$GITHUB_OUTPUT"
+          fi
+          git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
+            commit -q -m "chore: update from template $latest"
+          echo "latest=$latest" >>"$GITHUB_OUTPUT"
+        id: copier
+
+      # Copier runs unlocked dependencies, so it never sees the token. This step only pushes
+      # what the last one committed and talks to GitHub.
+      - name: Push the update and open the PR
+        if: steps.copier.outputs.latest != ''
+        env:
+          # A fine-grained token with contents, pull requests and workflows write on this repo.
+          GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}
+          HAS_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN != '' }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.repository.default_branch }}
+          LATEST: ${{ steps.copier.outputs.latest }}
+          WORKFLOWS: ${{ steps.copier.outputs.workflows }}
+        shell: bash
+        run: |-
+          branch=chore/copier-update
+          if [ "$HAS_TOKEN" != true ] && [ "$WORKFLOWS" = true ]; then
+            title="Update from template $LATEST by hand"
             {
-              echo "Template \`$latest\` changes files in \`.github/workflows/\`, and \`GITHUB_TOKEN\` can't push those."
-              echo "Run \`copier update --vcs-ref $latest\` locally and open the PR yourself, or add a \`COPIER_UPDATE_TOKEN\` secret (see the template's docs/usage.md) so this workflow can."
+              echo "Template \`$LATEST\` changes files in \`.github/workflows/\`, and \`GITHUB_TOKEN\` can't push those."
+              echo "Run \`copier update --vcs-ref $LATEST\` locally and open the PR yourself, or add a \`COPIER_UPDATE_TOKEN\` secret (see the template's docs/usage.md) so this workflow can."
             } >issue.md
             # A closed issue counts too, so closing it stops the weekly reminder for this tag.
             if [ -z "$(gh issue list --state all --search "\"$title\" in:title" --json number --jq '.[0].number')" ]; then
@@ -98,19 +115,18 @@ jobs:
             # An open PR from an older tag would now disagree with the issue.
             stale=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')
             if [ -n "$stale" ]; then
-              gh pr close "$stale" --delete-branch --comment "Superseded by template \`$latest\`, which needs a local update: see the issue \"$title\"."
+              gh pr close "$stale" --delete-branch --comment "Superseded by template \`$LATEST\`, which needs a local update: see the issue \"$title\"."
             fi
             echo "::warning::$title: GITHUB_TOKEN can't push workflow changes"
             exit 0
           fi
 
-          git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
-            commit -q -m "chore: update from template $latest"
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"
+          # A hook the update planted in .git/hooks would run here, next to the token.
+          git -c core.hooksPath=/dev/null push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"
 
           if [ -n "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')" ]; then
-            gh pr edit "$branch" --title "chore: update from template $latest" --body-file body.md
+            gh pr edit "$branch" --title "chore: update from template $LATEST" --body-file body.md
           else
-            gh pr create --head "$branch" --base "$BASE" --title "chore: update from template $latest" --body-file body.md
+            gh pr create --head "$branch" --base "$BASE" --title "chore: update from template $LATEST" --body-file body.md
           fi
 {%- endraw %}
