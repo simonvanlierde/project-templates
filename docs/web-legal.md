@@ -4,6 +4,8 @@ A rendered web app serves three pages from its `docs/` folder: `accessibility.md
 `/accessibility`, `privacy.md` at `/privacy`, and, for an app with accounts or uploads,
 `terms.md` at `/terms`. Every page links them from its footer. This page lives in the
 [project-templates](https://github.com/simonvanlierde/project-templates) repository, not in your project.
+[Legal pages](usage.md#legal-pages) in the usage guide says how the app builds the pages and
+which tests check them.
 
 These are tips for keeping the pages true, not legal advice. When the stakes are real, ask a
 lawyer or your organisation's privacy officer.
@@ -22,15 +24,42 @@ in the same pull request.
 - **An app run for an organisation** (a university, a company, a public body): the organisation is
   the controller, not you. Name it on the privacy statement, have its privacy officer review the
   text before launch, and link the organisation's own privacy statement from yours.
-- **A public-sector site in the EU** must publish its country's model accessibility statement,
-  which builds on the EU model in Implementing Decision (EU) 2018/1523. In the Netherlands that is
-  the statement the Bdto (Besluit digitale toegankelijkheid overheid) requires, made with the
-  wizard on [toegankelijkheidsverklaring.nl](https://www.toegankelijkheidsverklaring.nl/) and
-  listed in its register. Link it from "About this statement" and keep this page as the readable
+- **A public-sector site in the EU** falls under the Web Accessibility Directive, (EU) 2016/2102,
+  and must publish its country's model accessibility statement, which builds on the EU model in
+  [Implementing Decision (EU) 2018/1523](https://eur-lex.europa.eu/eli/dec_impl/2018/1523/oj).
+  Its mandatory sections differ from this page:
+  - **Compliance status:** "fully compliant", "partially compliant" or "not compliant" with a
+    named standard, or with the national law. There is no "not assessed". The standard is
+    usually EN 301 549, which the Commission named as the harmonised standard under article 6
+    of the Directive
+    ([Implementing Decision (EU) 2018/2048](https://eur-lex.europa.eu/eli/dec_impl/2018/2048/oj),
+    as amended), and whose web requirements build on WCAG.
+  - **Non-accessible content:** split by reason: non-compliance with the national law, a
+    "disproportionate burden" exemption (article 5 of the Directive), or content outside the
+    law's scope, with accessible alternatives where there are any. This page has one "Known
+    problems" list.
+  - **Preparation of this accessibility statement:** the date it was prepared, the method
+    (an evaluation such as a self-assessment or an assessment by a third party, article 3(1) of
+    the Decision) and
+    the date of the last review. This page's "About this statement" holds the same facts.
+  - **Feedback and contact information:** a feedback mechanism for reporting problems and for
+    asking for content the Directive leaves out, and who handles it. "Tell us about a problem"
+    covers the first part only.
+  - **Enforcement procedure:** a description of, and a link to, where people can turn when
+    the reply to their feedback is not good enough, with the enforcement body's contact
+    details. This page has no such section.
+
+  In the Netherlands the statement is the one the Bdto (Besluit digitale toegankelijkheid
+  overheid) requires, made with the wizard on
+  [toegankelijkheidsverklaring.nl](https://www.toegankelijkheidsverklaring.nl/) and listed in its
+  register. Link it from "About this statement" and keep this page as the readable
   version.
 
 ## Accessibility statement
 
+- Every claim must be checkable in the repository: the tests in `tests/e2e/`, the lint rules in
+  `biome.json`, the styles in `src/app.css`. When you fix a known problem, move its bullet from
+  "Known problems" to "How we check" in the same pull request as the fix.
 - The status says "not assessed" until someone has checked every WCAG 2.2 criterion. Say
   "partially conformant" only when you have, and the known problems name the criteria that fail.
   The statement test refuses "fully conformant": that needs a full external audit, so change the
@@ -42,9 +71,28 @@ in the same pull request.
 
 - Say what is kept, where, for how long, and who else gets it. IP addresses in server logs can
   count as personal data, so the hosting section stays even for an app that keeps nothing.
+- For each kind of data, server logs and accounts alike, give its purpose, its legal basis and
+  how long it is kept. Article 13 of the GDPR lists what a privacy statement must tell people,
+  among them "the purposes of the processing … as well as the legal basis for the processing"
+  (13(1)(c)) and "the period for which the personal data will be stored, or if that is not
+  possible, the criteria used to determine that period" (13(2)(a)). Article 6(1) lists the legal
+  bases. An account is usually "necessary for the performance of a contract" with the user (b).
+  For server logs, recital 49 gives network and information security as an example of a
+  legitimate interest (f): processing "strictly necessary and proportionate" for it
+  "constitutes a legitimate interest of the data controller concerned". A statement that relies
+  on 6(1)(f) must also name the interest it pursues (13(1)(d)), such as keeping the site
+  running and safe.
 - Change "Last updated" with every edit to the page.
-- After the first deploy, look in the host's dashboard for analytics or bot-protection features
-  that set cookies or add scripts. Then check that `curl -sI <site_url> | grep -i set-cookie`
+- Keep Cloudflare Web Analytics off for the Pages project. When it is on, "Cloudflare will
+  automatically add the JavaScript snippet to your Pages site on the next deployment"
+  ([Cloudflare: Enable Web Analytics](https://developers.cloudflare.com/pages/how-to/web-analytics/)),
+  and that script must be allowed in the Content-Security-Policy's `script-src`
+  ([Web Analytics FAQ](https://developers.cloudflare.com/web-analytics/faq/)). The rendered
+  `public/_headers` blocks it, and the privacy statement says the app loads only its own files.
+  The e2e tests run against a local build, so they can't see it. For visitor numbers, see
+  Analytics below.
+- After the first deploy, look in the host's dashboard for other analytics or bot-protection
+  features that set cookies or add scripts. Then check that `curl -sI <site_url> | grep -i set-cookie`
   prints nothing.
 - Name every outside service the app calls. Loading a font, a script or an image from another site
   sends the visitor's IP address there; a rendered app loads nothing from other sites, and
@@ -102,6 +150,7 @@ in the same pull request.
 
 ## Terms of use
 
-Only an app with accounts or uploads needs terms: who owns uploaded content, the licence it is
+Only an app with accounts or uploads needs terms. Keep them short, and match them to the
+privacy statement. They say who owns uploaded content, the licence it is
 shared under, what users promise, and how to remove it. A free tool with no accounts is covered by
 its licence and the no-warranty line at the end of the privacy statement.
