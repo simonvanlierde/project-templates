@@ -2,8 +2,8 @@
 # `packages:` list.
 
 # Resolve only releases at least a week old (in minutes): a compromised release
-# is usually caught and yanked within that window. Dependabot's cooldown waits
-# the same.
+# is usually caught and yanked within that window. The dependency bot waits the
+# same week.
 minimumReleaseAge: 10080
 # `pnpm audit --fix=update` lists a fresh security fix under minimumReleaseAgeExclude;
 # pnpm drops an entry once the lockfile no longer holds that version.
