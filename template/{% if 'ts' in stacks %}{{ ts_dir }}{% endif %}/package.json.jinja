@@ -28,7 +28,7 @@
 {%- if not publish_to_npm %}
   "private": true,
 {%- endif %}
-  "packageManager": "pnpm@12.13.0",
+  "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">={{ node_version }}"
   },
@@ -74,14 +74,14 @@
 {%- if web_framework == 'preact' %}
     "preact": "^11.0.1"
 {%- else %}
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
 {%- endif %}
   },
 {%- endif %}
   "devDependencies": {
 {%- if web %}
-    "@axe-core/playwright": "^4.13.0",
+    "@axe-core/playwright": "^4.14.0",
 {%- endif %}
     "@biomejs/biome": "^2.5.15",
     "@j178/prek": "^0.5.5",
@@ -93,7 +93,7 @@
     "@stryker-mutator/vitest-runner": "^10.0.0",
 {%- endif %}
 {%- if web %}
-    "@playwright/test": "^1.64.0",
+    "@playwright/test": "^1.64.1",
 {#- @testing-library/react takes the DOM library as a peer; the preact one bundles it. #}
 {%- if web_framework == 'preact' %}
     "@testing-library/preact": "^3.2.4",
@@ -108,14 +108,14 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
 {%- endif %}
-    "@vitest/coverage-v8": "^5.0.4",
+    "@vitest/coverage-v8": "^5.0.5",
 {%- if ts_kind == 'library' and 'property' in test_extras %}
     "fast-check": "^4.10.2",
 {%- endif %}
 {%- if web %}
-    "jsdom": "^30.1.2",
+    "jsdom": "^30.1.3",
 {%- endif %}
-    "knip": "^6.41.0",
+    "knip": "^6.42.0",
 {%- if web %}
 {#- Exact: a change in how it renders the legal pages comes in its own bump, not in a lockfile refresh. #}
     "marked": "18.1.1",
@@ -127,6 +127,6 @@
 {%- if web %}
     "vite": "^8.3.4",
 {%- endif %}
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.5"
   }
 }
