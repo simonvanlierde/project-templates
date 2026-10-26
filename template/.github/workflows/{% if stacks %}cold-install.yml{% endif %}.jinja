@@ -80,7 +80,7 @@ jobs:
           awk '/^## /{dev = ($0 == "## Development")}
                dev && /^```/{code = !code && /^```(sh|bash|shell)[[:space:]]*$/; next}
                dev && code' README.md |
-            grep -vE '^[[:space:]]*just +(up|pipeline|ts-e2e|[a-z]+-mutation)( |$)' >"$RUNNER_TEMP/readme.sh" || true
+            grep -vE '^[[:space:]]*just +(up|pipeline|ts-e2e|[a-z]+-(mutation|property))( |$)' >"$RUNNER_TEMP/readme.sh" || true
           if ! test -s "$RUNNER_TEMP/readme.sh"; then
             echo "README.md has no sh block under ## Development to run. Add one with the setup commands, or delete .github/workflows/cold-install.yml." >&2
             exit 1

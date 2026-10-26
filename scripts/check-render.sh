@@ -319,6 +319,9 @@ grep -q '^just check ' "$out/d-readme.sh"
 cold c >"$out/c-readme.sh"
 grep -q '^just hooks ' "$out/c-readme.sh"
 (! grep -q -- '-mutation' "$out/c-readme.sh")
+cold m >"$out/m-readme.sh"
+grep -q '^just check ' "$out/m-readme.sh"
+(! grep -qE -- '-(mutation|property)' "$out/m-readme.sh")
 # Any sh, bash or shell fence, trailing spaces and all. Indented slow recipes are
 # dropped too; other languages and other sections are not run.
 mkdir -p "$out/fence/.github/workflows"
