@@ -121,7 +121,8 @@ jobs:
             exit 0
           fi
 
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"
+          # A hook the update planted in .git/hooks would run here, next to the token.
+          git -c core.hooksPath=/dev/null push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"
 
           if [ -n "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')" ]; then
             gh pr edit "$branch" --title "chore: update from template $LATEST" --body-file body.md
