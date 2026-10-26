@@ -88,6 +88,25 @@ the description from `project_description` (left alone when you gave none), the 
 `docker`). It only adds topics, so ones you set by hand stay. Rerun it after you change an
 answer. Needs write access to the repo.
 
+## Spelling and link checks
+
+Two git hooks check the prose. `typos` finds misspelt words in code, comments and docs,
+fixes the ones it is sure of and fails the commit so you see the fix. When it flags a word
+that is right, such as a name or an abbreviation, list it in a `_typos.toml` at the root:
+
+```toml
+[default.extend-words]
+ue = "ue"
+```
+
+`lychee` checks the links in Markdown and HTML files. The hook runs offline, so it checks
+only relative links, such as `docs/usage.md` or `../README.md`, and fails on one that
+points at a missing file. Web links die without a commit, so `.github/workflows/links.yml`
+checks every link, with network access, on Thursdays and when you run it by hand. Its job
+summary lists the dead links. A badge for a package you have not published yet, such as
+PyPI's, fails it until the first release. In a private repo it skips links to the repo
+itself, which only signed-in members can open.
+
 ## Choosing your stacks
 
 The `stacks` question is a multi-select. Pick any combination:
@@ -109,6 +128,11 @@ Code recommendations. Unless `public=false`, it also gets the community files in
 Every project also gets `docs/decisions/`, for decision records: one numbered file per
 decision, such as `0001-one-parser.md`, saying what was chosen, why, and what it costs.
 Copy `0000-template.md` for a new record and list it in the folder's `README.md`.
+
+Every project also gets a short `AGENTS.md` for coding agents: the `just check` command, the
+test recipe of each stack you picked, and where the docs are. It is filled from your answers
+and the rendered `justfile`, so `copier update` rewrites it when your stacks change. Put your
+own notes for agents in another file, or `copier update` overwrites them.
 
 ## TypeScript kinds
 

@@ -55,6 +55,9 @@ Upgrade steps:
   you renamed any of those jobs, edit `.github/rulesets/main.json` first, or pull requests
   wait on a check that never reports.
 - Run `prek install` again in each clone, so the new commit-msg hook is installed.
+- The new `typos` and `lychee` hooks run on every file in CI's git hooks job. After the
+  update, run `prek run --all-files typos lychee`, review what typos fixed, and fix the
+  dead links lychee lists, or that job fails.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
   installs with `--locked` and `--frozen-lockfile`.
@@ -108,6 +111,13 @@ Upgrade steps:
   requests that change `README.md`. It skips `just up`, `just pipeline`, `just ts-e2e`
   and the mutation and property recipes, which need Docker, a browser, live sources or hours.
   Your README stays yours on `copier update`, so the job runs whatever it says now.
+- Spelling and link checks. A `typos` git hook finds misspelt words and a `lychee` hook
+  finds relative links to missing files in Markdown and HTML. The lychee hook runs
+  offline, so a new weekly `links.yml` workflow checks the web links too. List a word
+  typos must leave alone in `_typos.toml` ([Spelling and link checks](docs/usage.md#spelling-and-link-checks)).
+- A short `AGENTS.md` in every project, for coding agents: the `just check` command, each
+  stack's test recipe and where the docs are. It names only recipes the project's
+  `justfile` has.
 - Commit message rules in `committed.toml`: Conventional Commits, an imperative summary,
   no period. A `committed` commit-msg hook checks each commit, skipping merge
   commits, and a new `pr-title.yml` workflow checks the pull request title, which a squash

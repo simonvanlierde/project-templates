@@ -705,7 +705,7 @@ test ! -e j/docs/terms.md
 (! grep -q '/terms' j/src/App.tsx j/tests/e2e/routes.ts j/tests/e2e/legal-pages.spec.ts j/docs/privacy.md)
 # GitHub shows the pages as they are, so they pass the project's own Markdown lint.
 rumdl_version=$(sed -n '/rumdl-pre-commit/{n;s/.*frozen: v//p;}' "$repo/.pre-commit-config.yaml")
-uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs
+uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs d/AGENTS.md
 test ! -e a/docs/privacy.md
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json
@@ -741,6 +741,35 @@ for r in a b c d; do
     (! printf '%s\n' "$msg" | uvx -q "committed@$committed" --config "$r/committed.toml" --commit-file - >/dev/null 2>&1)
   done
 done
+# Spelling and links: a fresh render passes both hooks, and fails them on a misspelt
+# word and on a relative link to a missing file. prek needs a git repo, so each check
+# runs in a copy. lychee runs offline in the hook; links.yml checks the web weekly.
+PREK_VERSION=${PREK_VERSION:-$(sed -n 's/^ *PREK_VERSION: *//p' "$repo/.github/workflows/ci.yml")}
+prek=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --all-files)
+for r in a b d; do
+  rm -rf "$r-hooks"
+  cp -R "$r" "$r-hooks"
+  git -C "$r-hooks" init -q
+  git -C "$r-hooks" add -A
+  (cd "$r-hooks" && "${prek[@]}" typos lychee >/dev/null)
+done
+printf 'This is definately wrong.\n' >a-hooks/docs/typo.md
+printf 'See [the guide](missing.md).\n' >a-hooks/docs/dead.md
+git -C a-hooks add docs/typo.md docs/dead.md
+(cd a-hooks && ! "${prek[@]}" typos >typos.log 2>&1)
+grep -qx 'This is definitely wrong.' a-hooks/docs/typo.md
+(cd a-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
+grep -q 'docs/missing.md.*File not found' a-hooks/lychee.log
+rm -rf a-hooks b-hooks d-hooks
+for r in a b; do
+  grep -qx '      - id: typos' "$r/.pre-commit-config.yaml"
+  grep -qx '        entry: lychee --no-progress --offline' "$r/.pre-commit-config.yaml"
+  grep -q 'lycheeverse/lychee-action@' "$r/.github/workflows/links.yml"
+  grep -q 'cron:' "$r/.github/workflows/links.yml"
+done
+# A private repo's own pages need a sign-in, so its link check skips them.
+(! grep -q -- '--exclude' a/.github/workflows/links.yml)
+grep -qF -- "--exclude '^https://github\\.com/example-org/odd-name--co([/#?]|\$)'" b/.github/workflows/links.yml
 test "$(grep -c 'commit-message: {prefix: chore, include: scope}' a/.github/dependabot.yml)" -eq 5
 grep -q "extends: \['config:recommended', ':semanticCommits'\]" d/renovate.json5
 grep -qx 'playwright-report/' d/.gitignore
@@ -839,6 +868,23 @@ for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' 
 done
 recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
+
+# AGENTS.md names the check and test recipes, so each must be one the justfile has.
+# h is go alone and d a nested web app, beside every stack in a and c.
+# shellcheck disable=SC2016 # the backticks are literal Markdown
+for r in a c d h; do
+  check=$(sed -n 's/^Run `just \([a-z-]*\)` before.*/\1/p' "$r/AGENTS.md")
+  test -n "$check"
+  recipes=" $(cd "$r" && just --summary) "
+  [[ $recipes == *" $check "* ]]
+  for t in $(grep -o '`just [a-z]*-test`' "$r/AGENTS.md" | tr -d '`' | cut -d' ' -f2); do
+    [[ $recipes == *" $t "* ]]
+  done
+done
+test "$(grep -c -- '-test`' a/AGENTS.md)" = 4
+# shellcheck disable=SC2016
+grep -qF 'are in `web/docs/`' d/AGENTS.md
+(! grep -q CONTRIBUTING b/AGENTS.md)
 
 # The generated workflows are linted, never run: a typo in a run line fails only
 # in the new project.
