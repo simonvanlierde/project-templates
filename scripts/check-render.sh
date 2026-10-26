@@ -303,11 +303,13 @@ test "$("$notes" 1.0.0 "$out/sample-changelog.md")" = $'\n- first release'
 (! "$notes" 2.0.0 "$out/sample-changelog.md" 2>/dev/null)
 (! "$notes" 1.0 "$out/sample-changelog.md" 2>/dev/null)
 # cold-install.yml runs the README's Development blocks. Run its step with `bash -ex`
-# swapped for `cat` to see which commands it picks: d's README has the install lines
-# and `just check`, and the Docker, pipeline and e2e recipes are left out.
+# swapped for `cat`, and without the chown, to see which commands it picks: d's README
+# has the install lines and `just check`, and the Docker, pipeline and e2e recipes are
+# left out.
 cold() {
-  sed -n '/^        run: |-$/,$p' "$1/.github/workflows/cold-install.yml" |
-    sed '1d; s/^          //; s/^bash -ex /cat /' | (cd "$1" && RUNNER_TEMP=$out bash)
+  awk '/^        run: \|-$/ {on = 1; next} on && NF && !/^          / {exit} on' \
+    "$1/.github/workflows/cold-install.yml" |
+    sed 's/^          //; /^chown /d; s/^bash -ex /cat /' | (cd "$1" && RUNNER_TEMP=$out bash)
 }
 cold d >"$out/d-readme.sh"
 grep -qx 'uv sync --directory pipe' "$out/d-readme.sh"
@@ -317,6 +319,21 @@ grep -q '^just check ' "$out/d-readme.sh"
 cold c >"$out/c-readme.sh"
 grep -q '^just hooks ' "$out/c-readme.sh"
 (! grep -q -- '-mutation' "$out/c-readme.sh")
+# Any sh, bash or shell fence, trailing spaces and all. Indented slow recipes are
+# dropped too; other languages and other sections are not run.
+mkdir -p "$out/fence/.github/workflows"
+cp d/.github/workflows/cold-install.yml "$out/fence/.github/workflows/"
+printf '%s\n' '## Development' '```shell' 'echo from-shell' '```' '```sh ' '  just up' \
+  'echo from-sh' '```' '```python' 'echo from-python' '```' '## License' '```sh' \
+  'echo from-license' '```' >"$out/fence/README.md"
+cold "$out/fence" >"$out/fence-readme.sh"
+test "$(cat "$out/fence-readme.sh")" = $'echo from-shell\necho from-sh'
+# k kept its own README, which has no Development block: the job says what to do.
+if cold k >/dev/null 2>"$out/k-cold.log"; then
+  echo "cold-install ran on a README with no Development block" >&2
+  exit 1
+fi
+grep -qF 'or delete .github/workflows/cold-install.yml' "$out/k-cold.log"
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 grep -q '"private": true' a/package.json
 # The one-week release age, in both resolvers.

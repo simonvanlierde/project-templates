@@ -43,6 +43,16 @@
   // drifts, which ci.yml's renovate extract job checks.
   customManagers: [
     {
+      // Workflow container images pinned as tag@digest. The Jinja tags in the
+      // workflow templates break the github-actions manager's YAML parse of `container:`.
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)\\.github/workflows/.+/"],
+      matchStrings: [
+        "container: (?<depName>[a-z0-9./_-]+):(?<currentValue>[\\w.-]+)@(?<currentDigest>sha256:[0-9a-f]{64})",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
       // Includes the root config: the built-in pre-commit manager is off by default.
       customType: "regex",
       managerFilePatterns: ["/(^|/)\\.pre-commit-config\\.yaml(\\.jinja)?$/"],

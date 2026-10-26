@@ -106,7 +106,7 @@ jobs:
           # One anchor per manager block (rust-lang/rust: copier.yml). copier and renovate come from the
           # githubActionsVersions preset, which also matches nothing silently when it drifts.
           for dep in actions/checkout ghcr.io/astral-sh/uv pre-commit/pre-commit-hooks \
-                     uv_build pytest pnpm @biomejs/biome rust-lang/rust copier renovate; do
+                     uv_build pytest pnpm @biomejs/biome rust-lang/rust copier renovate buildpack-deps; do
             grep -qF "\"depName\": \"$dep\"" extract.log \
               || { echo "not extracted: $dep — a manager pattern in renovate.json5 broke"; exit 1; }
           done
