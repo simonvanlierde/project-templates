@@ -1,0 +1,32 @@
+{%- set tests = [] -%}
+{%- if 'python' in stacks %}{% set _ = tests.append(('py-test', 'Python')) %}{% endif -%}
+{%- if 'ts' in stacks %}{% set _ = tests.append(('ts-test', 'TypeScript')) %}{% endif -%}
+{%- if 'rust' in stacks %}{% set _ = tests.append(('rs-test', 'Rust')) %}{% endif -%}
+{%- if 'go' in stacks %}{% set _ = tests.append(('go-test', 'Go')) %}{% endif -%}
+# AGENTS.md
+
+Notes for coding agents working on {{ project_name }}. The `justfile` holds every command;
+`just` lists them.
+
+## Check
+
+Run `just check` before you call a change done. It runs what CI runs for each stack.
+`just fmt` fixes what it can first.
+{%- if tests %}
+
+## Test
+{% for recipe, label in tests %}
+- {{ label }}: `just {{ recipe }}`. Extra arguments reach the test runner.
+{%- endfor %}
+{%- endif %}
+
+## Docs
+
+`README.md` says how to set up, run and release the project. Record user-facing changes
+under `[Unreleased]` in `CHANGELOG.md`.
+{%- if public %}
+`.github/CONTRIBUTING.md` has the commit and sign-off rules.
+{%- endif %}
+{%- if 'ts' in stacks and ts_kind == 'web-app' %}
+The legal pages the web app serves are in `{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/`.
+{%- endif %}

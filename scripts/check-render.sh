@@ -700,7 +700,7 @@ test ! -e j/docs/terms.md
 (! grep -q '/terms' j/src/App.tsx j/tests/e2e/routes.ts j/tests/e2e/legal-pages.spec.ts j/docs/privacy.md)
 # GitHub shows the pages as they are, so they pass the project's own Markdown lint.
 rumdl_version=$(sed -n '/rumdl-pre-commit/{n;s/.*frozen: v//p;}' "$repo/.pre-commit-config.yaml")
-uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs
+uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs d/AGENTS.md
 test ! -e a/docs/privacy.md
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json
@@ -834,6 +834,23 @@ for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' 
 done
 recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
+
+# AGENTS.md names the check and test recipes, so each must be one the justfile has.
+# h is go alone and d a nested web app, beside every stack in a and c.
+# shellcheck disable=SC2016 # the backticks are literal Markdown
+for r in a c d h; do
+  check=$(sed -n 's/^Run `just \([a-z-]*\)` before.*/\1/p' "$r/AGENTS.md")
+  test -n "$check"
+  recipes=" $(cd "$r" && just --summary) "
+  [[ $recipes == *" $check "* ]]
+  for t in $(grep -o '`just [a-z]*-test`' "$r/AGENTS.md" | tr -d '`' | cut -d' ' -f2); do
+    [[ $recipes == *" $t "* ]]
+  done
+done
+test "$(grep -c -- '-test`' a/AGENTS.md)" = 4
+# shellcheck disable=SC2016
+grep -qF 'are in `web/docs/`' d/AGENTS.md
+(! grep -q CONTRIBUTING b/AGENTS.md)
 
 # The generated workflows are linted, never run: a typo in a run line fails only
 # in the new project.
