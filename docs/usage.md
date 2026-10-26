@@ -31,6 +31,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | `dependency_bot`                                | Dependabot                                       |
 | `codecov`                                       | off                                              |
 | `codspeed`                                      | off ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
+| `openssf_badge`                                 | none ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `module_name`, `go_module`                      | made from the project name and GitHub user       |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | the current releases; `python_min` two minors below `python_version` |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | off ([Publishing](#publishing))           |
@@ -276,7 +277,7 @@ this template. The same command lets you change your answers: add a stack or tur
 publish option, and Copier writes the new files.
 
 `README.md`, `CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`,
-`codemeta.json`), `docs/decisions/README.md`, a `web-app`'s starter files, a published
+`codemeta.json`), `docs/decisions/README.md`, the silver-badge documents, a `web-app`'s starter files, a published
 TypeScript library's `<package>.api.md` and Go's `go.mod` are written once
 and then belong to your project: an update never touches them, so your release tool or
 your own edits own them. A template release that changes them says so in the template's
@@ -428,6 +429,24 @@ existing project, run `copier update --data codspeed=true`. Then two steps no fi
    with 401 "Repository not found".
 2. In the repository's settings on codspeed.io, set Pull Request comments to "On Change".
    `codspeed.yml` has no option for it.
+
+## OpenSSF Best Practices badge
+
+`openssf_badge` (none by default, asked in a public repo with a license) prepares the
+files the [OpenSSF Best Practices badge](https://www.bestpractices.dev) asks for. The
+public community files, the license, `CHANGELOG.md` and the tests already cover most of
+the passing criteria.
+
+- `passing` adds a Tests and code style section to `.github/CONTRIBUTING.md`: changes
+  come with tests, and the linters each stack runs are its coding standards.
+- `silver` adds that, plus three skeletons to fill in: `GOVERNANCE.md` (roles, who holds
+  which keys, what happens if a maintainer is gone), `docs/roadmap.md` (the next year,
+  and what is out of scope) and `docs/assurance-case.md` (threat model, trust boundaries,
+  secure design, weaknesses countered). They belong to your project once written.
+
+The template can't earn the badge for you. Register the project on bestpractices.dev,
+answer its questionnaire, and add the badge it gives you to the README. Silver also asks
+for things no file shows, such as signed releases and a bus factor of two.
 
 ## Dependency updates
 

@@ -79,16 +79,21 @@ grep -q 'project edit' "$out/d/web/docs/privacy.md"
 (! grep -q 'project edit' "$out/d/web/vite.config.ts")
 
 # h: a go library named like the Example file. The unit test must not share its path
-# with example_test.go, which a project_name of `example` would otherwise claim.
+# with example_test.go, which a project_name of `example` would otherwise claim. The
+# only silver-badge render.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' . "$out/h"
+  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
 # The decisions index belongs to the project too; the record template does not.
 echo '- project record' >>"$out/h/docs/decisions/README.md"
 echo 'project edit' >>"$out/h/docs/decisions/0000-template.md"
+# The badge documents are filled in by the project. Rendered first, then kept.
+test -f "$out/h/docs/assurance-case.md"
+echo 'project edit' >>"$out/h/docs/assurance-case.md"
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' . "$out/h" >/dev/null 2>&1
+  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h" >/dev/null 2>&1
+grep -q 'project edit' "$out/h/docs/assurance-case.md"
 grep -q 'project edit' "$out/h/go.mod"
 grep -q 'project record' "$out/h/docs/decisions/README.md"
 (! grep -q 'project edit' "$out/h/docs/decisions/0000-template.md")
@@ -99,7 +104,7 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
-  --data 'test_extras=[property, mutation]' . "$out/m"
+  --data 'test_extras=[property, mutation]' --data openssf_badge=passing . "$out/m"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -937,6 +942,25 @@ done
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
+# OpenSSF badge: passing (m) adds the test policy and a coding-standards line per stack;
+# silver (h) also adds the governance, roadmap and assurance-case skeletons. a is public
+# with the default none, so it gets neither.
+badge_docs=(GOVERNANCE.md docs/roadmap.md docs/assurance-case.md)
+for r in a m; do
+  for f in "${badge_docs[@]}"; do test ! -e "$r/$f"; done
+done
+(! grep -q '## Tests and code style' a/.github/CONTRIBUTING.md)
+grep -q '## Tests and code style' m/.github/CONTRIBUTING.md
+test "$(grep -c '^- \(Python\|TypeScript\|Rust\|Go\): ' m/.github/CONTRIBUTING.md)" = 4
+grep -qx -- '- Go: gofmt and \[golangci-lint\](https://golangci-lint.run).' h/.github/CONTRIBUTING.md
+for f in "${badge_docs[@]}"; do test -f "h/$f"; done
+# The four parts the silver assurance_case criterion names, in a short skeleton.
+for heading in 'Threat model' 'Trust boundaries' 'Secure design principles' 'Weaknesses countered'; do
+  grep -qx "## $heading" h/docs/assurance-case.md
+done
+test "$(wc -l <h/docs/assurance-case.md)" -le 60
+grep -qF '| Maintainer |' h/GOVERNANCE.md
+grep -qx 'Bus factor: TODO (the number of people who could keep the project going alone).' h/GOVERNANCE.md
 # This repo runs the same DCO check and commit rules it renders.
 cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
 cmp "$repo/committed.toml" "$repo/template/committed.toml"

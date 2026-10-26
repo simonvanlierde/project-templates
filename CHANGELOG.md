@@ -96,6 +96,12 @@ Upgrade steps:
 
 ### Added
 
+- An `openssf_badge` question, asked in a public repo with a license, for the
+  [OpenSSF Best Practices badge](https://www.bestpractices.dev). `passing` adds a test
+  policy and each stack's coding standards to `.github/CONTRIBUTING.md`. `silver` also
+  adds `GOVERNANCE.md`, `docs/roadmap.md` and `docs/assurance-case.md`, short skeletons
+  you fill in and then own. It defaults to `none`, so an update changes nothing unless
+  you pass `--data openssf_badge=passing` (or `silver`).
 - A `cold-install.yml` workflow runs the shell blocks under the README's `## Development`
   heading as written, in a Debian container with only the tools the README says you
   need, so a setup step the README leaves out fails in CI. It runs weekly and on pull
