@@ -109,6 +109,9 @@ Upgrade steps:
   finds relative links to missing files in Markdown and HTML. The lychee hook runs
   offline, so a new weekly `links.yml` workflow checks the web links too. List a word
   typos must leave alone in `_typos.toml` ([Spelling and link checks](docs/usage.md#spelling-and-link-checks)).
+- A short `AGENTS.md` in every project, for coding agents: the `just check` command, each
+  stack's test recipe and where the docs are. It names only recipes the project's
+  `justfile` has.
 - Commit message rules in `committed.toml`: Conventional Commits, an imperative summary,
   no period. A `committed` commit-msg hook checks each commit, skipping merge
   commits, and a new `pr-title.yml` workflow checks the pull request title, which a squash

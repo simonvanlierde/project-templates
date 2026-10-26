@@ -128,6 +128,11 @@ Every project also gets `docs/decisions/`, for decision records: one numbered fi
 decision, such as `0001-one-parser.md`, saying what was chosen, why, and what it costs.
 Copy `0000-template.md` for a new record and list it in the folder's `README.md`.
 
+Every project also gets a short `AGENTS.md` for coding agents: the `just check` command, the
+test recipe of each stack you picked, and where the docs are. It is filled from your answers
+and the rendered `justfile`, so `copier update` rewrites it when your stacks change. Put your
+own notes for agents in another file, or `copier update` overwrites them.
+
 ## TypeScript kinds
 
 `ts_kind` picks what the TypeScript package is:
