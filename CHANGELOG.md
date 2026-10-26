@@ -49,8 +49,11 @@ Upgrade steps:
   `python: lint, types, tests (3.12)` and so on. Until then, pull requests wait on a
   check that never reports.
 - Run `just repo-settings` once after the update, and in a new project after the first
-  push. It protects `main` and, in a public repo, turns on private vulnerability
-  reporting, which `SECURITY.md` points to.
+  push. It protects `main` and the `v*` tags and, in a public repo, turns on private
+  vulnerability reporting, which `SECURITY.md` points to. `main` then requires the `git hooks`,
+  `pull request title`, `dependency review` and, in a public repo, `DCO sign-off` checks: if
+  you renamed any of those jobs, edit `.github/rulesets/main.json` first, or pull requests
+  wait on a check that never reports.
 - Run `prek install` again in each clone, so the new commit-msg hook is installed.
 - After the update, refresh the lockfiles for your stacks and commit them: `uv lock`,
   `pnpm install`, `just go-sync`. This release bumps dev tools in every stack, and CI
@@ -124,7 +127,7 @@ Upgrade steps:
 - `release.yml` and `.github/scripts/release-notes.sh`: a pushed `vX.Y.Z` tag becomes a
   GitHub release whose notes are that version's `CHANGELOG.md` section, so the two never
   differ.
-- `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged) from `.github/rulesets/main.json`, and in a public repo turns on private vulnerability reporting, which `SECURITY.md` points to. Rerun it any time; it updates the ruleset instead of adding a second.
+- `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged once the checks every PR runs have passed) from `.github/rulesets/main.json`, lets only a repo admin create, move or delete a `v*` tag (`.github/rulesets/tags.json`), since pushing one publishes a release, and in a public repo turns on private vulnerability reporting, which `SECURITY.md` points to. Rerun it any time; it updates the ruleset instead of adding a second.
 - `just repo-about` sets the GitHub About box from your answers with `gh repo edit`: the description from `project_description` (skipped when empty), the homepage from `site_url` in a web app, and a topic per stack. It only adds topics, so ones you set by hand stay. Rerun it any time.
 - With `mutation` in `test_extras`, a weekly CI run of mutation testing:
   `.github/workflows/mutation.yml`, one job per library stack, also startable by hand

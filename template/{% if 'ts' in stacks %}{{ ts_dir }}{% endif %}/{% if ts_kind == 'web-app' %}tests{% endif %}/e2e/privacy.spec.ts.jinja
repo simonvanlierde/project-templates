@@ -13,14 +13,6 @@ const OTHER_ORIGINS: string[] = [];
 // How long a page may sit idle before the checks. Storage or a request made later
 // than this, or only after the user acts, is not seen.
 const SETTLE_MS = 3_000;
-{%- if user_data == 'accounts' %}
-const LEGAL_PAGES = [
-  ["/privacy", "Privacy statement"],
-  ["/terms", "Terms of use"],
-] as const;
-{%- else %}
-const LEGAL_PAGES = [["/privacy", "Privacy statement"]] as const;
-{%- endif %}
 
 for (const path of ROUTES) {
   test(`${path} sets no cookies, stores nothing and loads only its own files`, async ({ page, context }) => {
@@ -43,33 +35,8 @@ for (const path of ROUTES) {
     }));
     expect(stored).toEqual({ localStorage: 0, sessionStorage: 0, indexedDB: [], caches: [], serviceWorkers: 0 });
     const own = new URL(page.url()).origin;
+    // The page's own files must show up, or the capture saw nothing and proves nothing.
+    expect([...origins]).toContain(own);
     expect([...origins].filter((origin) => origin !== own && !OTHER_ORIGINS.includes(origin))).toEqual([]);
-  });
-
-  test(`${path} links the legal pages from its footer`, async ({ page }) => {
-    await page.goto(path);
-    const footer = page.getByRole("contentinfo");
-    for (const [href, name] of LEGAL_PAGES) {
-      const link = footer.getByRole("link", { name });
-      await expect(link).toHaveAttribute("href", href);
-      if (href === path) await expect(link).toHaveAttribute("aria-current", "page");
-      else await expect(link).not.toHaveAttribute("aria-current");
-    }
-  });
-}
-
-for (const [href, name] of LEGAL_PAGES) {
-  test(`${href} renders and gives an email contact`, async ({ page }) => {
-    await page.goto(href);
-    await expect(page).toHaveTitle(new RegExp(`^${name}`));
-    const article = page.locator("article");
-    await expect(article.getByRole("heading", { level: 1 })).toHaveText(name);
-    await expect(article.getByRole("link", { name: /@/ }).first()).toHaveAttribute("href", /^mailto:.+@.+/);
-  });
-
-  // The template leaves a TODO wherever only the project knows the answer.
-  test(`${href} has no TODO left`, async ({ page }) => {
-    await page.goto(href);
-    await expect(page.locator("article")).not.toContainText("TODO");
   });
 }

@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { ROUTES } from "./routes";
 
 /**
  * Guards docs/accessibility.md as the app renders it at /accessibility. The
  * statement's value is that it claims no more than the repo can show, so these
- * fail when it overclaims, loses its contact, or goes a year without review.
- * a11y.spec.ts runs axe over it with the other routes.
+ * fail when it overclaims, promises no reply time, or goes a year without review.
+ * a11y.spec.ts runs axe over it with the other routes, and legal-pages.spec.ts
+ * checks its title, email contact, TODOs and footer link.
  */
 
 // The status sentence, with the W3C conformance terms the statement may use.
@@ -26,17 +26,13 @@ const DAY_MS = 86_400_000;
 
 test("the statement renders its sections and claims no more than was checked", async ({ page }) => {
   await page.goto("/accessibility");
-  await expect(page).toHaveTitle(/^Accessibility statement/);
   const statement = page.locator("article");
-  await expect(statement.getByRole("heading", { level: 1 })).toHaveText("Accessibility statement");
   await expect(statement.getByRole("heading", { level: 2 })).toHaveText(SECTIONS);
 
   // The term must sit in the status sentence, not anywhere on the page.
   await expect(statement.getByText(/^Its conformance is /)).toHaveText(STATUS);
   await expect(statement).not.toContainText(/fully conformant/i);
 
-  // Email first: a GitHub account must never be the only way to report a barrier.
-  await expect(statement.getByRole("link", { name: /@/ }).first()).toHaveAttribute("href", /^mailto:.+@.+/);
   await expect(statement).toContainText(/within \d+ working days/);
 });
 
@@ -56,18 +52,3 @@ test("the statement was reviewed in the last 400 days", async ({ page }) => {
     `"${line}" is over ${MAX_REVIEW_AGE_DAYS} days old. Check docs/accessibility.md against the app as it is now, fix what changed, and set "Last reviewed" to today.`,
   ).toBeLessThan(MAX_REVIEW_AGE_DAYS);
 });
-
-// The template leaves a TODO wherever only the project knows the answer.
-test("the statement has no TODO left", async ({ page }) => {
-  await page.goto("/accessibility");
-  await expect(page.locator("article")).not.toContainText("TODO");
-});
-
-for (const path of ROUTES) {
-  test(`${path} links the statement from its footer`, async ({ page }) => {
-    await page.goto(path);
-    await page.getByRole("contentinfo").getByRole("link", { name: "Accessibility statement" }).click();
-    await expect(page).toHaveURL(/\/accessibility$/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Accessibility statement");
-  });
-}

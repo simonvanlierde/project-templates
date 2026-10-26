@@ -4,13 +4,9 @@
 {%- if public %}[{{ path }}]({{ blob }}{{ path }}){% else %}`{{ path }}`{% endif -%}
 {%- endmacro -%}
 <!--
-Keep this statement true. Every claim must be checkable in this repository: the tests in
-tests/e2e/, the lint rules in biome.json, the styles in src/app.css. When a known problem is
-fixed, move its bullet from "Known problems" to "How we check" in the same pull request as the
-fix. The app renders this file at /accessibility, so write plain Markdown with absolute links.
-tests/e2e/accessibility-statement.spec.ts checks the headings, the status, the contact, the
-"Last reviewed" date, and that no TODO is left. A public-sector site must also publish its
-country's model statement and link it from "About this statement" (see https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md).
+Keep this page true. The app serves it at /accessibility, without this note.
+https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md
+says how to fill it in, and how the template builds and tests it.
 -->
 
 # Accessibility statement

@@ -636,19 +636,33 @@ test -f d/web/wrangler.jsonc
 test -f d/web/tests/e2e/a11y.spec.ts
 test -f d/web/tests/e2e/csp.spec.ts
 # The legal pages: statement and privacy always, terms for accounts or uploads,
-# each a route the axe, CSP and privacy specs visit.
+# each a route the axe, CSP, privacy and legal-page specs visit.
 for page in accessibility privacy terms; do
   test -f "d/web/docs/$page.md"
   grep -q "\"/$page\"" d/web/tests/e2e/routes.ts
 done
 test -f d/web/tests/e2e/privacy.spec.ts
 test -f d/web/tests/e2e/accessibility-statement.spec.ts
+test -f d/web/tests/e2e/legal-pages.spec.ts
 grep -q 'Its conformance is \*\*not assessed\*\*' d/web/docs/accessibility.md
 grep -qx '    "marked": "[0-9.]*",' d/web/package.json
 # A private repo's GitHub links would 404 for visitors, so its legal pages have none.
 test -f j/docs/accessibility.md
 (! grep -rq 'github.com/example-org/private-web' j/docs)
 grep -q 'github.com/example-org/pipe-me/blob/main/web/tests/e2e/a11y.spec.ts' d/web/docs/accessibility.md
+# The answers reach the terms: the site, who runs it and the contact, and the privacy
+# statement links them.
+grep -qxF 'These terms cover pipe-me at [pipe-me.pages.dev](https://pipe-me.pages.dev).' d/web/docs/terms.md
+grep -qxF 'Ada Lovelace, who runs pipe-me.' d/web/docs/terms.md
+grep -qF '[ada@example.com](mailto:ada@example.com)' d/web/docs/terms.md
+grep -qxF 'Using pipe-me also means accepting its [terms of use](https://pipe-me.pages.dev/terms).' d/web/docs/privacy.md
+# j keeps work in the browser, with no accounts: its privacy statement says so, and it has
+# no terms page, route or footer link.
+grep -qF "private-web keeps your work in your browser's local storage" j/docs/privacy.md
+grep -qx 'private-web sets no cookies. It uses local storage only to keep your work, which is what you' j/docs/privacy.md
+grep -qx 'private-web comes with no warranty.' j/docs/privacy.md
+test ! -e j/docs/terms.md
+(! grep -q '/terms' j/src/App.tsx j/tests/e2e/routes.ts j/tests/e2e/legal-pages.spec.ts j/docs/privacy.md)
 # GitHub shows the pages as they are, so they pass the project's own Markdown lint.
 rumdl_version=$(sed -n '/rumdl-pre-commit/{n;s/.*frozen: v//p;}' "$repo/.pre-commit-config.yaml")
 uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs
@@ -805,31 +819,62 @@ grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
 (! grep -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 
-# repo-settings: a fake gh proves the first run POSTs the ruleset file, the second PUTs the same id.
+# repo-settings: a fake gh keeps a list of rulesets and applies the recipe's real --jq
+# filter to it, so the first run POSTs each ruleset file and the second PUTs it by its id.
 test -f a/.github/rulesets/main.json
+test -f a/.github/rulesets/tags.json
 fake=$(mktemp -d)
+echo '[{"name": "other", "id": 7}]' >"$fake/rulesets.json"
 cat >"$fake/gh" <<'FAKE'
 #!/usr/bin/env bash
 echo "$*" >>"$FAKE_LOG"
-case "$*" in
-  *"-X POST"*|*"-X PUT"*) while [ $# -gt 0 ]; do [ "$1" = --input ] && cp "$2" "$FAKE_LOG.body"; shift; done ;;
-  *"/rulesets?includes_parents=false --jq"*) [ -f "$FAKE_LOG.body" ] && echo 42 || true ;;
+call=$*
+input='' filter=''
+while [ $# -gt 0 ]; do
+  case $1 in --input) input=$2 ;; --jq) filter=$2 ;; esac
+  shift
+done
+list=$FAKE_DIR/rulesets.json
+case $call in
+  *"-X POST repos/{owner}/{repo}/rulesets --input"*)
+    jq --slurpfile b "$input" '. + [{name: $b[0].name, id: (length + 41)}]' "$list" >"$list.new"
+    mv "$list.new" "$list"
+    cp "$input" "$FAKE_DIR/posted.$(basename "$input")" ;;
+  *"-X PUT repos/{owner}/{repo}/rulesets/"*) cp "$input" "$FAKE_DIR/put.$(basename "$input")" ;;
+  *"/rulesets?includes_parents=false --jq"*) jq -r "$filter" "$list" ;;
 esac
 FAKE
 chmod +x "$fake/gh"
 (
   cd a
   # shellcheck disable=SC2030 # the about test and the copier-update run below set their own PATH
-  export FAKE_LOG="$fake/log" PATH="$fake:$PATH"
+  export FAKE_LOG="$fake/log" FAKE_DIR="$fake" PATH="$fake:$PATH"
   just repo-settings >/dev/null
   just repo-settings >/dev/null
-  grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG" | grep -qx 1
-  grep -qF -- '-X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
-  grep -qF -- 'allow_merge_commit=false' "$FAKE_LOG"
+  test "$(grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG")" = 2
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/43 --input .github/rulesets/tags.json' "$FAKE_LOG"
+  patch=$(grep -- '^api -X PATCH repos/{owner}/{repo} ' "$FAKE_LOG" | head -1)
+  for flag in allow_squash_merge=true allow_merge_commit=false allow_rebase_merge=false; do
+    [[ "$patch " == *" -F $flag "* ]]
+  done
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
-  cmp "$FAKE_LOG.body" .github/rulesets/main.json
+  for f in main tags; do
+    cmp "$fake/posted.$f.json" ".github/rulesets/$f.json"
+    cmp "$fake/put.$f.json" ".github/rulesets/$f.json"
+  done
+  # The required checks are the always-on jobs, by the names the workflows give them.
+  for check in 'git hooks' 'pull request title' 'dependency review' 'DCO sign-off'; do
+    jq -e --arg c "$check" '.rules[] | select(.type == "required_status_checks")
+      | .parameters.required_status_checks | any(.context == $c)' .github/rulesets/main.json >/dev/null
+    grep -rqxF "    name: $check" .github/workflows
+  done
+  # A path filter would leave a required check unreported on some PRs, which blocks them.
+  (! grep -q '^ *paths' .github/workflows/checks.yml .github/workflows/pr-title.yml .github/workflows/dco.yml)
+  jq -e '.target == "tag" and .conditions.ref_name.include == ["refs/tags/v*"]' .github/rulesets/tags.json >/dev/null
 )
+(cd b && ! grep -q 'DCO sign-off' .github/rulesets/main.json)
 (! grep -q private-vulnerability-reporting b/justfile)
 # repo-about: the About box comes from the answers. No description answer leaves the description alone;
 # a quote in it survives the shell; topics only get added.
@@ -853,19 +898,31 @@ for answers in */.copier-answers.yml; do
     fi
   done
 done
-# What the OpenSSF badge criteria ask of them: a response time, a disclosure statement,
-# a sign-off rule and who maintains the project.
-grep -q 'within 14 days' a/.github/SECURITY.md
-grep -q 'publish the GitHub security advisory' a/.github/SECURITY.md
-grep -q '^## Scope' a/.github/SECURITY.md
-grep -q 'Signed-off-by:' a/.github/CONTRIBUTING.md
-grep -q '^## Who maintains this' a/.github/CONTRIBUTING.md
+# The community files' links point at this repo.
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
 # This repo runs the same DCO check and commit rules it renders.
 cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
 cmp "$repo/committed.toml" "$repo/template/committed.toml"
+# Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off
+# without an email, and skips the merge. Trailing whitespace and CRLF still count as signed.
+dco_filter=$(uv run --no-project --with pyyaml python -c '
+import re, sys, yaml
+run = yaml.safe_load(open(sys.argv[1]))["jobs"]["sign-off"]["steps"][0]["run"]
+print(re.search(r"--jq \x27(.*?)\x27\)", run, re.S).group(1))' "$repo/.github/workflows/dco.yml")
+commits=$(mktemp)
+cat >"$commits" <<'JSON'
+[
+  {"sha": "aaaaaaa1", "parents": [{}], "commit": {"message": "feat: signed\n\nSigned-off-by: Ada Lovelace <ada@example.com>"}},
+  {"sha": "bbbbbbb2", "parents": [{}], "commit": {"message": "fix: unsigned"}},
+  {"sha": "ccccccc3", "parents": [{}, {}], "commit": {"message": "Merge branch 'main'"}},
+  {"sha": "ddddddd4", "parents": [{}], "commit": {"message": "fix: malformed\n\nSigned-off-by: Ada Lovelace"}},
+  {"sha": "eeeeeee5", "parents": [{}], "commit": {"message": "fix: trailing space\n\nSigned-off-by: Ada Lovelace <ada@example.com>  "}},
+  {"sha": "fffffff6", "parents": [{}], "commit": {"message": "fix: crlf\r\n\r\nSigned-off-by: Ada Lovelace <ada@example.com>\r\n"}}
+]
+JSON
+test "$(jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed')"
 # copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml
