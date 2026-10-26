@@ -127,6 +127,27 @@ repos:
     hooks:
       - id: rumdl
         args: [--fix]
+
+  # Misspelt words in code, comments and docs. It fixes the ones it is sure of and
+  # fails, so you review the fix. List a word it must leave alone in _typos.toml.
+  - repo: https://github.com/crate-ci/typos
+    rev: 7f9d0819ca1c008ade73f4b41fa9d258d48f605b # frozen: v1.51.1
+    hooks:
+      - id: typos
+
+  # Dead relative links in Markdown and HTML. Offline, so a commit never waits on the
+  # network: the weekly links.yml checks the web links. lychee's own hook installs its
+  # binary with an unpinned install script, so this takes upstream's wheel from PyPI
+  # at an exact version instead.
+  - repo: local
+    hooks:
+      - id: lychee
+        name: lychee --offline
+        entry: lychee --no-progress --offline
+        language: python
+        additional_dependencies: [lychee-bin==0.24.2]
+        types_or: [markdown, html]
+        require_serial: true
 {%- if 'python' in stacks or 'ts' in stacks or 'rust' in stacks or 'go' in stacks %}
 
   - repo: local
