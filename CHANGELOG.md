@@ -99,6 +99,8 @@ Upgrade steps:
 
 ### Added
 
+- The code of conduct tells readers that a report about the maintainer can go to GitHub
+  instead, through Report abuse.
 - A `cold-install.yml` workflow runs the shell blocks under the README's `## Development`
   heading as written, in a Debian container with only the tools the README says you
   need, so a setup step the README leaves out fails in CI. It runs weekly and on pull
@@ -252,6 +254,9 @@ Upgrade steps:
 
 ### Changed
 
+- A web app with `user_data=accounts` refuses `code@duinlab.nl` as `author_email`: an app
+  that keeps personal data on a server needs its own contact address. Pass another
+  address to `copier update` if you hit this.
 - `copier copy` keeps an existing `README.md`, and `copier update` no longer touches it.
   Template changes to the README, this release's included, reach existing projects only
   by hand.

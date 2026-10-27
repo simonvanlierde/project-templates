@@ -219,6 +219,8 @@ author_email:
   validator: >-
     {% if not author_email|regex_search('^[^@\\s]+@[^@\\s]+$') %}
     Give an email address: package metadata, SECURITY.md and the code of conduct use it.
+    {% elif user_data|default('') == 'accounts' and author_email|lower == 'code@duinlab.nl' %}
+    An app that keeps personal data on a server needs its own contact address, for example <app>@duinlab.nl.
     {% endif %}
 
 author_orcid:
