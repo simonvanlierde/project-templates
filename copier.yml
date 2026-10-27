@@ -9,13 +9,17 @@ _min_copier_version: "9.19.0"
 # legal pages, which the project rewrites from day one. go.mod is rewritten by the
 # first `go mod tidy`, and Dependabot bumps its requirements after that; its module
 # path and go version are answers fixed at copy time. The decisions index gains a
-# line with each record the project writes. Each entry starts with `/`:
+# line with each record the project writes. The silver-badge documents are skeletons
+# the project fills in. Each entry starts with `/`:
 # copier matches these like .gitignore lines, so a bare README.md would also skip
 # data/README.md.
 _skip_if_exists:
   - /README.md
   - /CHANGELOG.md
   - /docs/decisions/README.md
+  - /GOVERNANCE.md
+  - /docs/roadmap.md
+  - /docs/assurance-case.md
   - /CITATION.cff
   - /.zenodo.json
   - /codemeta.json
@@ -324,6 +328,19 @@ codspeed:
   help: Benchmark pull requests on CodSpeed (needs the repository imported on codspeed.io)
   default: false
 
+# The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
+# projects. These documents are starting points for the project to complete.
+openssf_badge:
+  type: str
+  when: "{{ public and license != 'none' }}"
+  ask: "{{ customise }}"
+  help: OpenSSF Best Practices badge level to prepare for; adds the documents its criteria ask for
+  choices:
+    None: none
+    Passing (CONTRIBUTING.md gains a test policy and the coding standards): passing
+    Silver (passing, plus GOVERNANCE.md, docs/roadmap.md and docs/assurance-case.md to fill in): silver
+  default: none
+
 # --- python -------------------------------------------------------------------
 
 module_name:
@@ -575,6 +592,19 @@ cargo_mutants_version:
   type: str
   when: false
   default: 27.1.0
+
+# Computed workflow tools follow template updates; Dependabot cannot read uvx pins.
+# renovate: datasource=pypi depName=copier
+copier_version:
+  type: str
+  when: false
+  default: 9.19.1
+
+# renovate: datasource=pypi depName=howfairis
+howfairis_version:
+  type: str
+  when: false
+  default: 0.14.2
 
 # --- docker -------------------------------------------------------------------
 

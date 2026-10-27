@@ -13,6 +13,8 @@ out=${1:?usage: scripts/check-render.sh OUT_DIR}
 # replaces your own copier settings for this run.
 export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
 COPIER_VERSION=${COPIER_VERSION:-$(sed -n 's/^ *COPIER_VERSION: *//p' .github/workflows/ci.yml)}
+copier_pin=$(sed -n '/^copier_version:/,/^$/s/^  default: //p' copier.yml)
+howfairis_pin=$(sed -n '/^howfairis_version:/,/^$/s/^  default: //p' copier.yml)
 copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwrite)
 
 # a: every stack, other answers at their defaults, but for an author name with a
@@ -32,9 +34,13 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'project_name=Odd "Name" & Co!' \
   --data 'project_description=A "quoted" one' \
   --data 'author_name=Ada "X" Lovelace' \
-  --data public=false --data 'stacks=[python,ts,docker]' \
+  --data public=false --data openssf_badge=silver --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
   --data 'docker_stacks=[python,ts]' . "$out/b"
+# Explicit badge answers cannot add public-policy documents to a private project.
+for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
+  test ! -e "$out/b/$f"
+done
 
 # c: the only render with nested paths, at two depths to catch hardcoded
 # up-paths. The rust crate and go module are the binary kind. Render a has the
@@ -79,16 +85,25 @@ grep -q 'project edit' "$out/d/web/docs/privacy.md"
 (! grep -q 'project edit' "$out/d/web/vite.config.ts")
 
 # h: a go library named like the Example file. The unit test must not share its path
-# with example_test.go, which a project_name of `example` would otherwise claim.
+# with example_test.go, which a project_name of `example` would otherwise claim. The
+# only silver-badge render.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' . "$out/h"
+  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
 # The decisions index belongs to the project too; the record template does not.
 echo '- project record' >>"$out/h/docs/decisions/README.md"
 echo 'project edit' >>"$out/h/docs/decisions/0000-template.md"
+# The badge documents are filled in by the project. Rendered first, then kept.
+for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
+  test -f "$out/h/$f"
+  echo 'project edit' >>"$out/h/$f"
+done
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' . "$out/h" >/dev/null 2>&1
+  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h" >/dev/null 2>&1
+for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
+  grep -q 'project edit' "$out/h/$f"
+done
 grep -q 'project edit' "$out/h/go.mod"
 grep -q 'project record' "$out/h/docs/decisions/README.md"
 (! grep -q 'project edit' "$out/h/docs/decisions/0000-template.md")
@@ -99,7 +114,7 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
-  --data 'test_extras=[property, mutation]' . "$out/m"
+  --data 'test_extras=[property, mutation]' --data openssf_badge=passing . "$out/m"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -207,7 +222,13 @@ refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=
 # A binary never uses the Go package name, so a digit-leading project name is fine.
 # Its gitignored build output drops the module path's /v2.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
-  --data go_kind=binary --data go_module=github.com/example-org/1tool/v2 . "$out/i"
+  --data go_kind=binary --data go_module=github.com/example-org/1tool/v2 \
+  --data license=none --data openssf_badge=silver . "$out/i"
+# A public repo without an open-source license is also outside the badge scope.
+for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
+  test ! -e "$out/i/$f"
+done
+(! grep -q '## Tests and code style' "$out/i/.github/CONTRIBUTING.md")
 # l: a flat Python package next to a ts image. Only the python image needs src/.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=flat-ts-image \
   --data 'stacks=[python,ts,docker]' --data python_layout=flat --data ts_dir=web \
@@ -219,7 +240,7 @@ test ! -e "$out/l/src"
   --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
 
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
-import ast, json, json5, os, pathlib, tomllib, yaml
+import ast, json, json5, os, pathlib, subprocess, tempfile, tomllib, yaml
 
 load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
@@ -251,6 +272,31 @@ assert "given-names: \"Ada\"" in (out / "a/CITATION.cff").read_text()
 docker = yaml.safe_load((out / "c/.github/workflows/docker.yml").read_text())["jobs"]
 assert any("trivy-action" in s.get("uses", "") for s in docker["build"]["steps"]), docker["build"]
 assert not any("trivy-action" in s.get("uses", "") for s in docker["push"]["steps"]), docker["push"]
+# PyPI finishes before GitHub becomes immutable; the write job executes no project code.
+python_release = yaml.safe_load((out / "c/.github/workflows/python-release.yml").read_text())["jobs"]
+release = python_release["release"]
+assert release["needs"] == "publish", release
+assert release["permissions"] == {"contents": "write"}, release
+assert not any("checkout" in s.get("uses", "") for s in release["steps"]), release
+publish_script = release["steps"][-1]["run"]
+for fail_create, expected in [(False, ["create", "edit"]), (True, ["create"])]:
+    with tempfile.TemporaryDirectory() as tmp:
+        work = pathlib.Path(tmp)
+        for directory in ("dist", "provenance", "notes", "bin"):
+            (work / directory).mkdir()
+        (work / "dist/package.whl").touch()
+        (work / "provenance/bundle.json").write_text("{}")
+        (work / "notes/notes.md").write_text("Release notes")
+        gh = work / "bin/gh"
+        gh.write_text('#!/bin/sh\nprintf "%s\\n" "$2" >>calls\n'
+                      'test "$2" != create || test "$FAIL_CREATE" != true\n')
+        gh.chmod(0o755)
+        result = subprocess.run(["bash", "-c", publish_script], cwd=work,
+                                env={"PATH": f"{work / 'bin'}:/usr/bin:/bin", "TAG": "v1.2.3",
+                                     "FAIL_CREATE": str(fail_create).lower()}, check=False)
+        assert (result.returncode != 0) == fail_create, result
+        assert (work / "calls").read_text().splitlines() == expected
+        assert (work / "provenance/mono-me-1.2.3.sigstore.json").is_file()
 # A ruleset requires a check by its job name, so two jobs with one name can't be told
 # apart. a, b, c and d each render more than one stack.
 for render in "abcdm":
@@ -363,7 +409,7 @@ test ! -e b/.github/workflows/scorecard.yml
 (! grep -q -i scorecard b/README.md)
 # fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
 # and public. b is citable-less and private; h is public but has no citation files.
-grep -qx "          uvx howfairis@0.14.2 $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
+grep -qx "          uvx howfairis@$howfairis_pin $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
 # shellcheck disable=SC2016 # the $ is literal workflow text
 grep -qF 'cat out.txt >> "$GITHUB_STEP_SUMMARY"' a/.github/workflows/fair.yml
 grep -qx '      FAIR_MIN: 3' a/.github/workflows/fair.yml
@@ -505,6 +551,12 @@ for job, recipe in (("python", "py-property"), ("ts", "ts-property"), ("rust", "
     assert any(s.get("run") == f"just {recipe}" for s in wf["jobs"][job]["steps"]), job
 # go-property runs in go_dir, so the failing inputs land under it.
 assert any(s.get("with", {}).get("path") == "svc/testdata/fuzz/" for s in wf["jobs"]["go"]["steps"])
+steps = wf["jobs"]["go"]["steps"]
+cache = next(s for s in steps if s.get("uses", "").startswith("actions/cache@"))
+assert cache["with"]["path"] == "${{ steps.fuzz-cache.outputs.path }}/fuzz"
+assert cache["with"]["key"] == "go-fuzz-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}"
+assert cache["with"]["restore-keys"] == "go-fuzz-${{ runner.os }}-"
+assert steps.index(cache) < next(i for i, s in enumerate(steps) if s.get("run") == "just go-property")
 PY
 for stack in py ts rs go; do
   grep -q "^just $stack-property " m/README.md
@@ -603,9 +655,15 @@ grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/s
 # Another stack's secrets stay out of an image's build context.
 grep -qx '\*\*/.env' c/apps/web/.dockerignore
 grep -qx '\*\*/.env' c/api/.dockerignore
-# Both release workflows exist.
+# Both package workflows exist; Python creates the GitHub release after PyPI.
+test ! -e c/.github/workflows/release.yml
 test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
+grep -qx "    needs: publish" c/.github/workflows/python-release.yml
+grep -q -- '--draft --verify-tag' c/.github/workflows/python-release.yml
+grep -q -- '--draft=false' c/.github/workflows/python-release.yml
+# shellcheck disable=SC2016 # literal workflow expression
+grep -qF '${{ steps.attest.outputs.bundle-path }}' c/.github/workflows/python-release.yml
 # The API-break checks render with the publish answers, and only with them: griffe in CI from
 # the repository root, so its search path carries the nested dir; the npm report beside
 # the nested package.
@@ -630,7 +688,7 @@ grep -qF 'paths: ["api/**", "apps/web/**", ".github/workflows/docker.yml"]' c/.g
 grep -q 'ghcr. also to .main' c/README.md
 # The publish job has no checkout; the wheels land in the root dist/.
 grep -qx '          path: dist/' c/.github/workflows/python-release.yml
-# A release made by release.yml's GITHUB_TOKEN starts no workflow, so publishing
+# A release made with GITHUB_TOKEN starts no workflow, so npm publishing
 # must follow the tag push, not the release.
 grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/python-release.yml
 grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/ts-release.yml
@@ -986,6 +1044,25 @@ done
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
+# OpenSSF badge: passing (m) adds the test policy and a coding-standards line per stack;
+# silver (h) also adds the governance, roadmap and assurance-case skeletons. a is public
+# with the default none, so it gets neither.
+badge_docs=(GOVERNANCE.md docs/roadmap.md docs/assurance-case.md)
+for r in a m; do
+  for f in "${badge_docs[@]}"; do test ! -e "$r/$f"; done
+done
+(! grep -q '## Tests and code style' a/.github/CONTRIBUTING.md)
+grep -q '## Tests and code style' m/.github/CONTRIBUTING.md
+test "$(grep -c '^- \(Python\|TypeScript\|Rust\|Go\): ' m/.github/CONTRIBUTING.md)" = 4
+grep -qx -- '- Go: gofmt and \[golangci-lint\](https://golangci-lint.run).' h/.github/CONTRIBUTING.md
+for f in "${badge_docs[@]}"; do test -f "h/$f"; done
+# The four parts the silver assurance_case criterion names, in a short skeleton.
+for heading in 'Threat model' 'Trust boundaries' 'Secure design principles' 'Weaknesses countered'; do
+  grep -qx "## $heading" h/docs/assurance-case.md
+done
+test "$(wc -l <h/docs/assurance-case.md)" -le 60
+grep -qF '| Maintainer |' h/GOVERNANCE.md
+grep -qx 'Bus factor: TODO (the fewest people whose departure would leave the project unable to continue).' h/GOVERNANCE.md
 # This repo runs the same DCO check and commit rules it renders.
 cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
 cmp "$repo/committed.toml" "$repo/template/committed.toml"
@@ -1010,7 +1087,16 @@ test "$(jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddd
 # copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml
-# Copier runs unlocked dependencies, so the step that runs it must not hold the token.
+# Copier dependencies and the push token must run on separate workers.
+uv run --no-project --with pyyaml python - "$cu" <<'PYTEST'
+import sys, yaml
+jobs = yaml.safe_load(open(sys.argv[1]))["jobs"]
+assert jobs["update"]["permissions"] == {"contents": "read"}
+assert "COPIER_UPDATE_TOKEN" not in str(jobs["update"])
+assert jobs["push"]["needs"] == "update"
+assert any(s.get("uses", "").startswith("actions/download-artifact@") for s in jobs["push"]["steps"])
+assert not any("uvx" in s.get("run", "") for s in jobs["push"]["steps"])
+PYTEST
 cuh=$(mktemp -d)
 awk -v d="$cuh" '/^      - /{n++} n{print >(d "/step" n)}' "$cu"
 grep -l 'copier@' "$cuh"/step* | grep -q .
@@ -1024,8 +1110,9 @@ grep -qF "HAS_TOKEN: \${{ secrets.COPIER_UPDATE_TOKEN != '' }}" "$cu"
 # repo with two tags and a bare repo standing in for GitHub. GIT_ALLOW_PROTOCOL=file makes
 # a push that misses the rewrite fail instead of reaching github.com.
 # Each step's script: the copier step runs first, with no token, then the push step.
-for n in copier push; do
-  f=$(grep -l "^      - name: $([ $n = copier ] && echo Update || echo Push)" "$cuh"/step*)
+for n in copier apply push; do
+  case $n in copier) name=Update ;; apply) name=Apply ;; push) name=Push ;; esac
+  f=$(grep -l "^      - name: $name" "$cuh"/step*)
   awk '/^        run: \|-$/{f=1;next} f&&NF&&!/^          /{exit} f{sub(/^          /,"");print}' "$f" >"$cuh/$n.sh"
 done
 cat >"$cuh/gh" <<'FAKE'
@@ -1063,12 +1150,15 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     printf '_commit: v0.9.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
     git -C "$p" add .copier-answers.yml
     git -C "$p" commit -q -m init
+    # The privileged job starts from a clean checkout, not the generator's worktree.
+    git clone -q "$p" "$p-clean"
     (
       cd "$p"
-      # shellcheck disable=SC2031 # each fake gh run sets its own PATH and FAKE_LOG
+      # shellcheck disable=SC2030,SC2031 # each fake run sets its own environment
       export PATH="$cuh:$PATH" FAKE_LOG="$p.log" FAKE_PR="${pr#-}" FAKE_ISSUE="${issue#-}" \
         FAKE_FILE="${file:-.github/workflows/ci.yml}" \
-        GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION=9.19.1
+        GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION="$copier_pin" \
+        RUNNER_TEMP="$p-runner"
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
         GIT_CONFIG_VALUE_0="https://x-access-token:$GH_TOKEN@github.com/$REPO.git"
       : >"$p.gho"
@@ -1077,9 +1167,15 @@ chmod +x "$cuh/gh" "$cuh/uvx"
         cat "$p.out" >&2
         exit 1
       }
+      # shellcheck disable=SC2030 # each fake run reads its own outputs
       LATEST=$(sed -n 's/^latest=//p' "$p.gho") WORKFLOWS=$(sed -n 's/^workflows=//p' "$p.gho")
       export LATEST WORKFLOWS
       if [ -n "$LATEST" ]; then
+        cd "$p-clean"
+        bash --noprofile --norc -eo pipefail "$cuh/apply.sh" >>"$p.out" 2>&1 || {
+          cat "$p.out" >&2
+          exit 1
+        }
         bash --noprofile --norc -eo pipefail "$cuh/push.sh" >>"$p.out" 2>&1 || {
           cat "$p.out" >&2
           exit 1
@@ -1095,7 +1191,7 @@ plain false - - README.md
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
-  grep -qx 'uvx copier@9.19.1 update --defaults --vcs-ref v0.10.0' issue.log
+  grep -qx "uvx copier@$copier_pin update --defaults --vcs-ref v0.10.0" issue.log
   # No token and a workflow change: one issue, the older PR closed, no push.
   grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
   grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
@@ -1113,6 +1209,36 @@ CASES
   grep -q '^pr create --head chore/copier-update --base main ' plain.log
   grep -q '^pr edit chore/copier-update ' edit.log
   (! grep -q '^pr create' edit.log)
+  # Patch data must never replace Git configuration, and artifact symlinks are refused.
+  git clone -q "$cuh/tpl" "$cuh/reject-checkout"
+  mkdir -p "$cuh/reject/copier-update"
+  echo body >"$cuh/reject/copier-update/body.md"
+  cat >"$cuh/reject/copier-update/update.patch" <<'PATCH'
+diff --git a/.git/config b/.git/config
+new file mode 100644
+--- /dev/null
++++ b/.git/config
+@@ -0,0 +1 @@
++unsafe config
+PATCH
+  (
+    cd "$cuh/reject-checkout"
+    # shellcheck disable=SC2031 # the rejection check sets its own environment
+    export RUNNER_TEMP="$cuh/reject" LATEST=v0.10.0
+    if bash --noprofile --norc -eo pipefail "$cuh/apply.sh" >"$cuh/rejected.log" 2>&1; then
+      echo "accepted a patch to Git configuration" >&2
+      exit 1
+    fi
+    grep -qF ".git/config:" "$cuh/rejected.log"
+    mv "$RUNNER_TEMP/copier-update/update.patch" "$RUNNER_TEMP/config.patch"
+    ln -s "$RUNNER_TEMP/config.patch" "$RUNNER_TEMP/copier-update/update.patch"
+    if bash --noprofile --norc -eo pipefail "$cuh/apply.sh" >"$cuh/rejected.log" 2>&1; then
+      echo "accepted a symlink artifact" >&2
+      exit 1
+    fi
+    # The symlink fails before Git gets to parse its invalid patch.
+    (! grep -qF '.git/config' "$cuh/rejected.log")
+  )
 )
 
 echo "all render checks passed"

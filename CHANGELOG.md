@@ -10,8 +10,15 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-27
+
 Upgrade steps:
 
+- With `publish_to_pypi`: push the version tag and approve `pypi`; let `python-release.yml`
+  create the GitHub release. It replaces `release.yml` and attaches the distributions
+  and their provenance before publishing. Do not create the GitHub release by hand.
+  If PyPI succeeds but the release job fails, delete any leftover draft and re-run
+  only the `release` job ([recovery steps](docs/usage.md#publishing)).
 - **Breaking:** install Copier 9.19 or later (`uv tool upgrade copier`) before you run
   `copier update`. Renovate's copier manager installs the latest Copier.
 - **Breaking:** a web app made from an untagged main asks the new `user_data` question,
@@ -93,14 +100,24 @@ Upgrade steps:
     `just build` has written one.
 - **Breaking:** `python-release.yml` and `ts-release.yml` now run when a `vX.Y.Z` tag is
   pushed, not when a GitHub release is published. Add the `## [X.Y.Z]` section to
-  `CHANGELOG.md` before you tag. The new `release.yml` creates the release from it, and
-  fails when the section is missing. Releases created by `GITHUB_TOKEN` don't start other
+  `CHANGELOG.md` before you tag. The release workflow reads that section and fails
+  when it is missing. Releases created by `GITHUB_TOKEN` don't start other
   workflows, so the publish workflows could not follow the release.
 
 ### Added
 
+- Weekly Go property runs cache generated fuzz inputs so each run resumes the
+  coverage the previous runs found.
+- Copier and howfairis workflow pins follow template updates. Renovate tracks their
+  versions in the template, so they no longer need separate manual bumps.
 - The code of conduct tells readers that a report about the maintainer can go to GitHub
   instead, through Report abuse.
+- An `openssf_badge` question, asked in a public repo with a license, for the
+  [OpenSSF Best Practices badge](https://www.bestpractices.dev). `passing` adds a test
+  policy and each stack's coding standards to `.github/CONTRIBUTING.md`. `silver` also
+  adds `GOVERNANCE.md`, `docs/roadmap.md` and `docs/assurance-case.md`, short skeletons
+  you fill in and then own. It defaults to `none`, so an update changes nothing unless
+  you pass `--data openssf_badge=passing` (or `silver`).
 - A `cold-install.yml` workflow runs the shell blocks under the README's `## Development`
   heading as written, in a Debian container with only the tools the README says you
   need, so a setup step the README leaves out fails in CI. It runs weekly and on pull
@@ -142,7 +159,7 @@ Upgrade steps:
   main, weekly and when branch protection changes, publishes the score for the README
   badge and uploads the findings to code scanning. A private repo gets none. After the
   update, the first run on main publishes the score.
-- `release.yml` and `.github/scripts/release-notes.sh`: a pushed `vX.Y.Z` tag becomes a
+- The release workflows and `.github/scripts/release-notes.sh`: a pushed `vX.Y.Z` tag becomes a
   GitHub release whose notes are that version's `CHANGELOG.md` section, so the two never
   differ.
 - `just repo-settings` protects the default branch with a GitHub ruleset (no deletion, no force-push, linear history, PRs squash-merged once the checks every PR runs have passed) from `.github/rulesets/main.json`, lets only a repo admin create, move or delete a `v*` tag (`.github/rulesets/tags.json`), since pushing one publishes a release, and in a public repo turns on private vulnerability reporting, which `SECURITY.md` points to. Rerun it any time; it updates the ruleset instead of adding a second.
@@ -301,8 +318,6 @@ Upgrade steps:
     v0.2.0, and its comments cover every key. The example source is pinned to a
     datasets/co2-ppm commit, so CI and the tripwire tests no longer follow a moving
     branch.
-  - Until sourceledger 0.2.0 is a week old on PyPI, `pyproject.toml` pins its tag's
-    source archive.
 - **Breaking:** `just validate` in a `data-pipeline` project needs each implemented source
   to state `license` (an SPDX id) and `redistribute` (whether the raw file may be
   republished), beside `terms`. The free-text terms stay for people; these two are for a
@@ -378,6 +393,9 @@ Upgrade steps:
 
 ### Security
 
+- The weekly Copier updater renders in a read-only job. A fresh job applies only
+  the patch before pushing, so Copier's dependencies cannot alter the runner that
+  holds the update token.
 - With `publish_to_ghcr`, the image push job runs in a `ghcr` environment, as PyPI and npm
   releases already do. Limit it to `main` and `v*` tags with a required reviewer in the
   repository's settings (see the README's Releasing section); until then GitHub creates it
@@ -387,9 +405,6 @@ Upgrade steps:
   made in the publish job, which runs no project code.
 - The hooks job installs a set prek version, 0.5.5, instead of the newest one on each run,
   and gives the read-only GitHub token to the zizmor hook only.
-- The `copier-update` workflow runs Copier in a step of its own, without your
-  `COPIER_UPDATE_TOKEN`. A second step holds the token and does the push, the PR and the
-  issue. Copier installs its dependencies unpinned, so they no longer run next to the token.
 
 ## [0.10.0] - 2026-10-16
 
@@ -640,7 +655,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/simonvanlierde/project-templates/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/simonvanlierde/project-templates/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/simonvanlierde/project-templates/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/simonvanlierde/project-templates/compare/v0.8.1...v0.9.0

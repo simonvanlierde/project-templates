@@ -26,11 +26,9 @@ dependencies = [
   "uvicorn>=0.54.0",
 ]
 {%- elif kind == 'data-pipeline' %}
-# fetch, build and validate. The v0.2.0 tag's source archive until that release is a
-# week old on PyPI, which exclude-newer below requires. An archive, not git+, so the
-# Docker build stage needs no git. Add the `xlsx` extra to read Excel sources.
+# fetch, build and validate. Add the `xlsx` extra to read Excel sources.
 dependencies = [
-  "sourceledger @ https://github.com/simonvanlierde/sourceledger/archive/3e44e857b7a0ef545ebb32461df78fc071fa3da8.tar.gz",
+  "sourceledger>=0.2.0",
 ]
 {%- else %}
 dependencies = []

@@ -91,8 +91,8 @@
       datasourceTemplate: "npm",
     },
     {
-      // copier.yml defaults Renovate can bump: the language versions and the go
-      // stack's tool pins, each under a `# renovate: datasource=... depName=...`
+      // copier.yml defaults Renovate can bump: language versions and workflow
+      // tool pins, each under a `# renovate: datasource=... depName=...`
       // comment. Quotes around the value stay outside the capture.
       customType: "regex",
       managerFilePatterns: ["/^copier\\.yml$/"],

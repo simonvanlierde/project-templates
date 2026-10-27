@@ -33,6 +33,11 @@ defaults, and asks a new question like any other. With `--defaults`, as the week
 workflow runs it, a new answer takes its default, or stops the update if it has none,
 unless `--data` passes it.
 
+The weekly workflow runs Copier in a read-only job. It passes a binary patch and PR
+text to a fresh job, which applies the patch and opens the update PR. That job never
+runs files from the update or imports its Git configuration or hooks. The push token
+is available only there, away from Copier and its dependencies.
+
 ## Workflows that can publish
 
 These rendered workflows ask for `id-token: write`, an OpenID Connect token that an outside
@@ -41,7 +46,7 @@ takes the token.
 
 | Workflow | Renders with | Runs on | What the token can do | What limits it |
 | --- | --- | --- | --- | --- |
-| `python-release.yml` | `publish_to_pypi` | a pushed `vX.Y.Z` tag | Upload to PyPI (trusted publishing) and sign attestations | The token is only in the `publish` job, which runs no project code and installs nothing; the `pypi` environment should be limited to `v*` tags |
+| `python-release.yml` | `publish_to_pypi` | a pushed `vX.Y.Z` tag | Upload to PyPI (trusted publishing), sign attestations, then publish a GitHub release with distributions and provenance | The OIDC token is only in `publish`; a separate `release` job has only `contents: write`. Neither runs project code; the `pypi` environment should be limited to `v*` tags |
 | `ts-release.yml` | `publish_to_npm` | a pushed `vX.Y.Z` tag | Publish to npm | The same split: `publish` only uploads the tarball `build` made; the `npm` environment should be limited to `v*` tags |
 | `docker.yml`, `push` job | `publish_to_ghcr` | pushes to main and tags, and manual runs | Sign the image's provenance, with `packages: write` to push to GHCR | Pull requests run only the `build` job, which has no write scope; the `ghcr` environment should be limited and need a reviewer |
 | `benchmarks.yml` | `codspeed` | pull requests, pushes to main and manual runs | Upload benchmark results to CodSpeed | GitHub gives pull requests from forks no OIDC token. A branch in the repo itself can still upload false results, which affects the benchmark report only |
