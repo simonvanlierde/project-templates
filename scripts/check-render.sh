@@ -242,6 +242,31 @@ test ! -e "$out/l/src"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
 
+# Every file in template/ must land in at least one render above. No tool measures
+# coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the
+# template, each file holding only its line number in files.txt, with each render's
+# stored answers. Copier decides every file name, so conditional names need no parsing.
+probe=$out/coverage
+mkdir -p "$probe/template"
+cp -R copier.yml includes "$probe/"
+(cd template && find . -type f | LC_ALL=C sort) >"$probe/files.txt"
+n=0
+while IFS= read -r f; do
+  n=$((n + 1))
+  mkdir -p "$probe/template/${f%/*}"
+  echo "$n" >"$probe/template/$f"
+done <"$probe/files.txt"
+for answers in "$out"/*/.copier-answers.yml; do
+  case_dir=${answers%/.copier-answers.yml}
+  "${copier[@]}" --quiet --data-file "$answers" "$probe" "$probe/out/${case_dir##*/}" >/dev/null
+done
+missing=$(comm -23 <(seq "$n" | sort) <(find "$probe/out" -type f -exec cat {} + | sort -u))
+if [ -n "$missing" ]; then
+  echo "no render produces these template files; add a case or a --data that does:" >&2
+  for i in $missing; do sed -n "${i}p" "$probe/files.txt" >&2; done
+  exit 1
+fi
+
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
 import ast, json, json5, os, pathlib, subprocess, tempfile, tomllib, yaml
 
