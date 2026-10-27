@@ -10,11 +10,6 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
-### Fixed
-
-- A project description with `"""`, `*/` or a line break is refused. It
-  broke the Python docstring or the Go and TypeScript comments it lands in.
-
 ## [0.11.0] - 2026-10-27
 
 Upgrade steps:
@@ -366,6 +361,8 @@ Upgrade steps:
 
 ### Fixed
 
+- A project description with `"""`, `*/` or a line break is refused. It
+  broke the Python docstring or the Go and TypeScript comments it lands in.
 - With `dependency_bot: renovate`, the comments in `pyproject.toml`, `pnpm-workspace.yaml`
   and `.pre-commit-config.yaml` no longer say Dependabot waits the week or moves the hook
   SHAs.
