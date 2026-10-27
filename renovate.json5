@@ -21,6 +21,8 @@
   // exclude-newer, pnpm minimumReleaseAge). The wait gives a hijacked release
   // time to be yanked, and matches Dependabot's cooldown in scaffolds.
   minimumReleaseAge: "7 days",
+  // The dco workflow checks every pull request, Renovate's included.
+  commitBody: "Signed-off-by: {{{gitAuthor}}}",
   // A datasource with no release timestamps (some image digests) updates without
   // the wait instead of never.
   minimumReleaseAgeBehaviour: "timestamp-optional",

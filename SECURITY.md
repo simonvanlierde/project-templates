@@ -38,6 +38,9 @@ this repository points at the commit the command prints. It proves where the rel
 from, not that its code is safe. The signing key belongs to GitHub, not to a maintainer.
 Releases up to v0.8.0 came before immutable releases and have no attestation.
 
+From v0.11.0 on, the maintainer also signs each tag with his own key, and GitHub shows it
+as Verified. The release workflow refuses a tag it can't verify.
+
 Releases here attach no files. Where a release does attach one, such as a generated
 project's Python release, `gh release verify-asset vX.Y.Z <file>` checks a downloaded copy
 against the release's attestation.

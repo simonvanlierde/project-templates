@@ -65,9 +65,11 @@ after each change you want projects to receive, and add an entry to
 [CHANGELOG.md](CHANGELOG.md). Its introduction says which part of the version to bump.
 
 Before you tag, move the `[Unreleased]` entries under a `## [X.Y.Z] - YYYY-MM-DD`
-heading and add its compare link. Pushing the tag `vX.Y.Z` runs the release workflow,
-which publishes a GitHub release with that section as its notes. A tag with no section
-fails the workflow and publishes nothing. Releases here are immutable, so don't create
+heading and add its compare link, and merge that. Then run `scripts/tag-release.sh X.Y.Z`.
+It signs the tag `vX.Y.Z` on `origin/main` with your git signing key and pushes it, which
+runs the release workflow. The workflow publishes a GitHub release with that version's
+section as its notes. It refuses a tag GitHub can't verify as signed, or one with no
+CHANGELOG section, and then publishes nothing. Releases here are immutable, so don't create
 one by hand first: the workflow leaves an existing release as it is.
 
 ## Write pull requests for any reader
@@ -100,9 +102,9 @@ Every commit in a pull request carries a `Signed-off-by:` line, which says you w
 change or have the right to submit it under the MIT license: the
 [Developer Certificate of Origin 1.1](https://developercertificate.org/). `git commit -s`
 adds it. To add it to commits you already made, run `git rebase --signoff upstream/main`
-(the branch you started from) and force-push the branch. The `dco` workflow fails a pull
-request from a fork with a commit that lacks it. Pull requests from a branch in this
-repository skip it.
+(the branch you started from) and force-push the branch. The `dco` workflow fails any pull
+request with a commit that lacks it, the maintainer's and Renovate's included. Renovate
+adds the line itself.
 
 ## How pull requests merge
 
