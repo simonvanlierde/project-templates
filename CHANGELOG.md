@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- The template itself has a Zenodo DOI, [10.5281/zenodo.23701980](https://doi.org/10.5281/zenodo.23701980), which always points to the newest release. `CITATION.cff` and the README carry it.
+
 ## [0.11.0] - 2026-10-27
 
 Upgrade steps:
