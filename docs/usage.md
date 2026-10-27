@@ -73,12 +73,25 @@ a draft, a private repo's dependency review and a branch's DCO check don't block
 jobs aren't required: their workflows skip PRs that don't touch the stack, and a required
 check that never reports blocks the PR. Add yours to the file by its job name.
 
+A public repo also needs one approving review, given after the last push; a new push
+dismisses an earlier approval. Scorecard's branch protection check scores at most 4 of 10
+without an approval, and 8 with these settings. A repo admin can still merge without an
+approval: the merge box offers to bypass the rules. In a public repo the required checks
+sit in a second ruleset, `.github/rulesets/main-checks.json` (add yours there), so a bypass
+of the review can't skip them by accident. Only an admin can bypass that one. With
+`dependency_bot=renovate`, the Renovate app may skip the review too, so its minor and patch
+updates merge themselves once their checks pass. It cannot skip the checks. Dependabot PRs
+always wait for you: merging them automatically would need a workflow with
+`contents: write` and Actions allowed to approve pull requests. A private repo keeps one
+ruleset with no approval and no bypass.
+
 It applies `.github/rulesets/tags.json` to tags starting with `v`, because pushing one
 publishes a release: only a repo admin can create, move or delete them. It also turns off
 merge commits and rebase merges in the repo settings. In a public repo it turns on private
 vulnerability reporting, where `SECURITY.md` sends reports. Run it once per repo, after the
-first push, and again after you edit a file: it updates the rulesets named `main` and
-`tags` if they exist. Needs admin rights, and a paid GitHub plan on a private repo.
+first push, and again after you edit a file or a `copier update` changes one: it updates
+the rulesets named `main`, `main-checks` and `tags` if they exist, and creates the rest.
+Needs admin rights, and a paid GitHub plan on a private repo.
 
 ## The GitHub About box
 

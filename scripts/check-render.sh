@@ -889,6 +889,12 @@ test "$(grep -c 'multi-ecosystem-group: actions-and-hooks' a/.github/dependabot.
 grep -q "groupName: 'actions and hooks'" d/renovate.json5
 # Lock refreshes carry transitive security fixes, and the week's wait would block them.
 grep -A3 'lockFileMaintenance: {' d/renovate.json5 | grep -q 'minimumReleaseAge: null'
+# Minor and patch updates and the relock merge themselves, by Renovate, so the merge uses
+# its app's bypass. Nothing else does: majors, copier and the actions group stay manual.
+grep -qx '  platformAutomerge: false,' d/renovate.json5
+grep -A4 'lockFileMaintenance: {' d/renovate.json5 | grep -qx '    automerge: true,'
+grep -B3 'automerge: true' d/renovate.json5 | grep -q "groupName: 'runtime'"
+test "$(grep -c 'automerge: true' d/renovate.json5)" = 2
 # Exemptions that `pnpm audit --fix` writes for fresh security fixes clean themselves up.
 grep -qx 'minimumReleaseAgeExcludePrune: true' d/web/pnpm-workspace.yaml
 # Only data-pipeline renders it.
@@ -1013,6 +1019,7 @@ grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows
 # repo-settings: a fake gh keeps a list of rulesets and applies the recipe's real --jq
 # filter to it, so the first run POSTs each ruleset file and the second PUTs it by its id.
 test -f a/.github/rulesets/main.json
+test -f a/.github/rulesets/main-checks.json
 test -f a/.github/rulesets/tags.json
 fake=$(mktemp -d)
 echo '[{"name": "other", "id": 7}]' >"$fake/rulesets.json"
@@ -1042,30 +1049,51 @@ chmod +x "$fake/gh"
   export FAKE_LOG="$fake/log" FAKE_DIR="$fake" PATH="$fake:$PATH"
   just repo-settings >/dev/null
   just repo-settings >/dev/null
-  test "$(grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG")" = 2
+  test "$(grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG")" = 3
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
-  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/43 --input .github/rulesets/tags.json' "$FAKE_LOG"
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/43 --input .github/rulesets/main-checks.json' "$FAKE_LOG"
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/44 --input .github/rulesets/tags.json' "$FAKE_LOG"
   patch=$(grep -- '^api -X PATCH repos/{owner}/{repo} ' "$FAKE_LOG" | head -1)
   for flag in allow_squash_merge=true allow_merge_commit=false allow_rebase_merge=false; do
     [[ "$patch " == *" -F $flag "* ]]
   done
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
-  for f in main tags; do
+  for f in main main-checks tags; do
     cmp "$fake/posted.$f.json" ".github/rulesets/$f.json"
     cmp "$fake/put.$f.json" ".github/rulesets/$f.json"
   done
   # The required checks are the always-on jobs, by the names the workflows give them.
   for check in 'git hooks' 'pull request title' 'dependency review' 'DCO sign-off'; do
     jq -e --arg c "$check" '.rules[] | select(.type == "required_status_checks")
-      | .parameters.required_status_checks | any(.context == $c)' .github/rulesets/main.json >/dev/null
+      | .parameters.required_status_checks | any(.context == $c)' .github/rulesets/main-checks.json >/dev/null
     grep -rqxF "    name: $check" .github/workflows
   done
+  # Public: one approval from someone who did not push last, so Scorecard's branch
+  # protection can reach 8. An admin may merge without one, but not without the checks,
+  # which sit in a ruleset of their own so a bypass of the review leaves them on.
+  jq -e '(.rules[] | select(.type == "pull_request").parameters
+      | .required_approving_review_count == 1 and .dismiss_stale_reviews_on_push and .require_last_push_approval)
+    and ([.rules[].type] | index("required_status_checks") == null)
+    and .bypass_actors == [{actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "pull_request"}]' \
+    .github/rulesets/main.json >/dev/null
+  jq -e '[.rules[].type] == ["required_status_checks"]
+    and .bypass_actors == [{actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "pull_request"}]' \
+    .github/rulesets/main-checks.json >/dev/null
   # A path filter would leave a required check unreported on some PRs, which blocks them.
   (! grep -q '^ *paths' .github/workflows/checks.yml .github/workflows/pr-title.yml .github/workflows/dco.yml)
   jq -e '.target == "tag" and .conditions.ref_name.include == ["refs/tags/v*"]' .github/rulesets/tags.json >/dev/null
 )
 (cd b && ! grep -q 'DCO sign-off' .github/rulesets/main.json)
+# Renovate's app skips the review, so its PRs merge themselves, but never the checks.
+jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
+jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null
+# Private: no approval, no bypass and the checks in main itself, as before.
+test ! -e b/.github/rulesets/main-checks.json
+grep -qx '    for name in main tags; do' b/justfile
+jq -e '(.rules[] | select(.type == "pull_request").parameters
+    | .required_approving_review_count == 0 and (.dismiss_stale_reviews_on_push | not) and (.require_last_push_approval | not))
+  and (.rules | any(.type == "required_status_checks")) and (has("bypass_actors") | not)' b/.github/rulesets/main.json >/dev/null
 (! grep -q private-vulnerability-reporting b/justfile)
 # repo-about: the About box comes from the answers. No description answer leaves the description alone;
 # a quote in it survives the shell; topics only get added.

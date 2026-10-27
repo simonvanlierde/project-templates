@@ -68,7 +68,7 @@ scanning covers the server side.
 | Left out | Reason | Add it when |
 | --- | --- | --- |
 | CodeQL | Minutes per run and gigabytes of memory, for little signal on a small repo that already runs ruff and ty. | The repo grows a web surface or outside contributors. Default setup is a toggle in the repository settings; it needs no YAML. |
-| Renovate from Actions | Needs a GitHub App and two secrets. Dependabot needs neither and covers every ecosystem here, including hook revs. The hosted Renovate app is the `dependency_bot=renovate` answer. | You need automerge, or Renovate options the hosted app doesn't run. |
+| Renovate from Actions | Needs a GitHub App and two secrets. Dependabot needs neither and covers every ecosystem here, including hook revs. The hosted Renovate app is the `dependency_bot=renovate` answer. | You need Renovate options the hosted app doesn't run. |
 | release-please | Research repos release rarely, and Zenodo archives a tagged release. A release PR on every push is noise. | Releases become frequent enough that writing the changelog by hand costs time. |
 | Secret scan over full history | GitHub secret scanning and push protection cover public repos at no cost. The hook covers local commits. | The repo is private without GitHub Advanced Security. |
 | Base images pinned to a digest | The `FROM` tags are copier answers (`python_version`, `node_version`), so Dependabot's docker ecosystem would fight `copier update` over them. | The image runs in production: pin `FROM ...@sha256:` and add a docker entry to `dependabot.yml`. |

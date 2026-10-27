@@ -47,7 +47,7 @@ fmt:
 hooks:
     {% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run -a
 
-# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass) and the v* tags{% if public %}. Turn on private vulnerability reporting{% endif %}. Safe to rerun.
+# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on private vulnerability reporting{% endif %}. Safe to rerun.
 repo-settings:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -61,7 +61,7 @@ repo-settings:
     # Merge-method switches live on the repo itself; the ruleset also limits the PR button.
     gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false >/dev/null 2>"$err" || fail
     # Each file's "name" matches its file name, so the recipe needs no jq to read it.
-    for name in main tags; do
+    for name in main{% if public %} main-checks{% endif %} tags; do
         file=.github/rulesets/$name.json
         id=$(gh api "repos/{owner}/{repo}/rulesets?includes_parents=false" --jq ".[] | select(.name == \"$name\") | .id" 2>"$err") || fail
         if [ -n "$id" ]; then
