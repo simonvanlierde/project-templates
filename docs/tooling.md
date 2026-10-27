@@ -122,6 +122,13 @@ answers, so update them by hand. They are pinned by tag only. Each rebuild takes
 tag's latest security fixes, so a build isn't reproducible byte for byte. This template
 repository uses Renovate, because Dependabot can't parse `.jinja` files.
 
+The same template version and the same answers render the same files, with one exception:
+a web app's legal pages start from the date of the render. The copyright year is an answer,
+so it stays the same. This repository's CI renders with one pinned copier version. The
+installs are not repeatable byte for byte. A fresh render has no lockfiles, and its first
+`uv lock` or `pnpm install` picks the newest releases that are at least a week old on that
+day. Once you commit the lockfiles, CI installs exactly what they list.
+
 `just check` and CI audit dependencies for known advisories:
 
 - `uv audit` checks every locked Python dependency.

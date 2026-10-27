@@ -4,7 +4,8 @@ To report a bug or ask for a feature, open an
 [issue](https://github.com/simonvanlierde/project-templates/issues) with the copier
 answers you used and what the render did. Report a vulnerability as
 [SECURITY.md](SECURITY.md) says, not in an issue. [docs/design.md](docs/design.md)
-describes who acts on a generated project and what render and update do.
+describes who acts on a generated project and what render and update do. Everyone here
+follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 You need [uv](https://docs.astral.sh/uv/) (it runs copier), [just](https://just.systems),
 git, and prek for the hooks (`uv tool install prek`, then `prek install`).
@@ -111,8 +112,5 @@ non-major updates merge.
 
 ## Who maintains this
 
-Simon van Lierde ([@simonvanlierde](https://github.com/simonvanlierde)) maintains the
-template: reviews and merges pull requests, and tags releases. Only he can merge to `main`.
-A new maintainer would be named here
-first. If he stops maintaining it, the README says so and the repository is archived;
-anyone may fork it under the MIT license.
+[GOVERNANCE.md](GOVERNANCE.md) names the maintainer, who can merge and release, and what
+happens if he is unavailable.

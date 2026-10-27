@@ -47,6 +47,12 @@ say what each piece is, why it's there, and what I left out on purpose.
 | fair-software.eu check | `fair.yml`, with `public` and a kind that gets `CITATION.cff` | Runs `uvx howfairis` against the repo weekly, and on demand, and lists each of the five recommendations in the job summary. The job fails when fewer than `FAIR_MIN` dots are filled; a new repo has three (repository, license, citation), so raise `FAIR_MIN` as you add a registry entry and the OpenSSF Best Practices badge. The README badge starts at three of five dots; edit it to the score the run prints. howfairis calls GitHub's API without a token. |
 | Publishing from a version tag only | release workflows | `python-release.yml` creates the GitHub release after PyPI succeeds, with distributions and provenance attached before publication. Other projects use `release.yml`. Both use the tag's `CHANGELOG.md` section. No `workflow_dispatch`: a manual run can target any branch, and neither trusted publishing nor the environment checks the ref. |
 
+A render is hardened from the start. Every workflow begins with read-only permissions,
+`contents: read` or none at all, and widens them only for the job that needs more. A
+`web-app` sends a Content-Security-Policy and the other security headers from
+`public/_headers`. The Docker images run as a non-root user
+([Docker images](tooling.md#docker-images)).
+
 GitHub turns off scheduled workflows in a public repository with no activity for 60 days, such
 as the weekly audit, the cold install, the link check, the Scorecard run, the Trivy rebuild, the data-pipeline tripwire and the revisions report. They
 stop without an error, so push a commit or re-enable them under the Actions tab. See
@@ -86,6 +92,14 @@ scanning covers the server side.
   actions. The hooks job runs it in a step of its own, the only one given the read-only
   `github.token`, so the other hooks never see it. Locally, set `GH_TOKEN`
   to get them. Without it, only the offline audits run.
+- Accessibility checks cover the `web-app` kind only: the axe and 320 px reflow tests
+  above. The docs, in this repository and in a render, are plain Markdown that GitHub
+  renders, with no styles or scripts of their own.
+- The local servers speak plain HTTP and are for development on your own machine:
+  `just serve` binds 127.0.0.1, compose publishes ports on 127.0.0.1 only, and Vite's dev
+  and preview servers listen on localhost. What a project publishes goes out over HTTPS:
+  GitHub, PyPI, npm, the GitHub Container Registry and Cloudflare Pages. A web app's
+  `site_url` must start with `https://`.
 - A `data-pipeline` project fetches its sources from their live URLs in CI, and so
   does this template's own CI. `fetch` retries a server error, a rate limit or a
   dropped connection three times over about 35 seconds, so only a longer outage or a
