@@ -256,6 +256,11 @@ Upgrade steps:
   review, and when a first visit sets a cookie, stores anything in the browser or loads a
   file from another site. [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) in the template repository has tips for
   filling the pages in, linked from each page's notes ([Legal pages](docs/usage.md#legal-pages)).
+- A `web-app` gets `docs/accessibility-assessment.md` beside the accessibility statement: a
+  WCAG 2.2 self-assessment with one row for each of the 55 level A and AA criteria, and a
+  result and an evidence column to fill in. The app does not serve it. The statement links
+  it, and may say "partially conformant" only once every row has a result. An update
+  leaves your copy alone.
 - A public repo of a kind that has `CITATION.cff` (library, research, data-pipeline) gets
   `fair.yml`, which runs `howfairis` weekly and lists each fair-software.eu check in the job
   summary, and a fair-software.eu badge in the README. The job fails below `FAIR_MIN` filled

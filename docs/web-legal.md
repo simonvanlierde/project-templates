@@ -60,8 +60,11 @@ in the same pull request.
 - Every claim must be checkable in the repository: the tests in `tests/e2e/`, the lint rules in
   `biome.json`, the styles in `src/app.css`. When you fix a known problem, move its bullet from
   "Known problems" to "How we check" in the same pull request as the fix.
-- The status says "not assessed" until someone has checked every WCAG 2.2 criterion. Say
-  "partially conformant" only when you have, and the known problems name the criteria that fail.
+- The status says "not assessed" until someone has checked every WCAG 2.2 criterion. That
+  check goes in `docs/accessibility-assessment.md`, which the app does not serve: one row for
+  each of the 55 level A and AA criteria, with a result and the evidence for it. Say
+  "partially conformant" only once every row has a result, link the assessment from the status
+  sentence, and name the criteria that fail under "Known problems".
   The statement test refuses "fully conformant": that needs a full external audit, so change the
   test only once you have one.
 - Review it at least once a year. The test fails when "Last reviewed" is more than 400 days old.
