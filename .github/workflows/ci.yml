@@ -524,11 +524,14 @@ jobs:
       # build that fails would fail them too, so the JSON report must show each one
       # failing on its TODO assertion with the page found: only then does Playwright
       # print the text it received.
+      # No --with-deps: ubuntu-latest already has Chromium's libraries and a Latin font,
+      # and apt would only add CJK, Thai and bitmap fonts, from a mirror that has taken 14
+      # minutes for them.
       - if: matrix.answers.ts_kind == 'web-app'
         name: e2e
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.ts_dir }}
         run: |
-          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright install chromium
           just ts-e2e --grep-invert TODO
           PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/todo.json" just ts-e2e --grep TODO --retries 0 --reporter=json >/dev/null || true
           if ! jq -e '[.. | objects | select(has("specs")) | .specs[].tests[]] as $t
