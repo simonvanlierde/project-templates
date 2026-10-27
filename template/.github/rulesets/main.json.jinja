@@ -2,13 +2,14 @@
   "name": "main",
   "target": "branch",
   "enforcement": "active",
-{%- if public %}
+{#- biome keeps a one-item list on one line and splits a longer one #}
+{%- if public and dependency_bot == 'renovate' %}
   "bypass_actors": [
-    { "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }
-{%- if dependency_bot == 'renovate' %},
+    { "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" },
     { "actor_id": 2740, "actor_type": "Integration", "bypass_mode": "pull_request" }
-{%- endif %}
   ],
+{%- elif public %}
+  "bypass_actors": [{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }],
 {%- endif %}
   "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
   "rules": [
