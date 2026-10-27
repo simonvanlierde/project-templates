@@ -80,7 +80,9 @@ approval: the merge box offers to bypass the rules. In a public repo the require
 sit in a second ruleset, `.github/rulesets/main-checks.json` (add yours there), so a bypass
 of the review can't skip them by accident. Only an admin can bypass that one. With
 `dependency_bot=renovate`, the Renovate app may skip the review too, so its minor and patch
-updates merge themselves once their checks pass. It cannot skip the checks. Dependabot PRs
+updates merge themselves once their checks pass. It cannot skip the checks. GitHub accepts the
+app in a ruleset only once it is installed on the repo, so install it before you run the
+recipe. Dependabot PRs
 always wait for you: merging them automatically would need a workflow with
 `contents: write` and Actions allowed to approve pull requests. A private repo keeps one
 ruleset with no approval and no bypass.

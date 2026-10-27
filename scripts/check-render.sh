@@ -1088,6 +1088,22 @@ chmod +x "$fake/gh"
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
 jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null
+# Before the Renovate app is on the repo, GitHub refuses it as a bypass actor. gh prints
+# the reason on stdout, as this fake does, and the recipe says to install the app.
+nobot=$(mktemp -d)
+cat >"$nobot/gh" <<'FAKE'
+#!/usr/bin/env bash
+case $* in
+  *"-X POST"*"rulesets"*)
+    echo '{"message":"Validation Failed","errors":["Actor Renovate integration must be part of the ruleset source or owner organization"],"status":"422"}'
+    echo 'gh: Validation Failed (HTTP 422)' >&2
+    exit 1 ;;
+esac
+FAKE
+chmod +x "$nobot/gh"
+# shellcheck disable=SC2031 # the PATH set for this one command, as above
+(cd d && ! PATH="$nobot:$PATH" just repo-settings 2>"$nobot/err" >/dev/null)
+grep -q 'https://github.com/apps/renovate, then rerun' "$nobot/err"
 # Private: no approval, no bypass and the checks in main itself, as before.
 test ! -e b/.github/rulesets/main-checks.json
 grep -qx '    for name in main tags; do' b/justfile
