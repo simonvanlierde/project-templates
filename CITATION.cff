@@ -3,6 +3,8 @@ cff-version: 1.2.0
 message: If you use this template, please cite it as below.
 type: software
 title: "project-templates"
+# The concept DOI, which always resolves to the newest release.
+doi: "10.5281/zenodo.23701980"
 abstract: >-
   A Copier template for provenance-first data pipelines, where every row of a dataset
   built from public sources says which download it came from, plus Python, TypeScript,
