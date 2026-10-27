@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Fixed
+
+- `just repo-settings` in a public Renovate repo stopped with a bare "Validation Failed" when the Renovate app was not installed yet, because GitHub refuses an app it can't see as a bypass actor. It now shows GitHub's reason and says to install the app first.
+
 ### Added
 
 - The template itself has a Zenodo DOI, [10.5281/zenodo.23701980](https://doi.org/10.5281/zenodo.23701980), which always points to the newest release. `CITATION.cff` and the README carry it.
