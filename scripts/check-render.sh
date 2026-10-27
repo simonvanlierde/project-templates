@@ -1099,8 +1099,13 @@ done
 test "$(wc -l <h/docs/assurance-case.md)" -le 60
 grep -qF '| Maintainer |' h/GOVERNANCE.md
 grep -qx 'Bus factor: TODO (the fewest people whose departure would leave the project unable to continue).' h/GOVERNANCE.md
-# This repo runs the same DCO check and commit rules it renders.
-cmp "$repo/.github/workflows/dco.yml" "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
+# This repo runs the same DCO check and commit rules it renders. One difference: it checks
+# its own branches too, while a render skips them, because Dependabot can't sign off.
+diff <(sed '/^#/d; /^    if: /d' "$repo/.github/workflows/dco.yml") \
+  <(sed '/^#/d; /^    if: /d' "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}")
+grep -qx '    if: github.event.pull_request.head.repo.full_name != github.repository' \
+  "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
+(! grep -q '^    if: ' "$repo/.github/workflows/dco.yml")
 cmp "$repo/committed.toml" "$repo/template/committed.toml"
 # Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off
 # without an email, and skips the merge. Trailing whitespace and CRLF still count as signed.
