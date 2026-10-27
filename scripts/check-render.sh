@@ -200,7 +200,7 @@ refuses 'starting with https://' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=nothing --data site_url=http://example.org
 # An app that keeps personal data on a server needs its own contact address.
 refuses 'needs its own contact address' --data 'stacks=[ts]' --data ts_kind=web-app \
-  --data user_data=accounts --data author_email=code@duinlab.nl
+  --data user_data=accounts --data author_email=Code@duinlab.nl
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
 refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
   --data python_dir=api --data ts_dir=web --data app_port=65535
