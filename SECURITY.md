@@ -23,6 +23,21 @@ A fix ships in a new tagged release, and generated projects receive it with
 with a CVE where one applies, and credit you unless you'd rather not be named. The
 CHANGELOG entry for that release links the advisory.
 
+## What the template promises
+
+A fresh render:
+
+- runs no workflow on `pull_request_target` or `workflow_run`, so code from a fork never
+  runs with write access;
+- gives each workflow read-only permissions unless a job needs more, and gives a
+  publishing token only to the job that uploads;
+- pins every action to a full commit SHA and keeps the token out of checkouts.
+
+It does not promise that the tools it installs are free of vulnerabilities, that a project
+stays safe after its own changes, or the repository settings a render can't create, such as
+environment rules and branch protection. [docs/design.md](docs/design.md#security-assessment)
+lists the main threats and what limits each one.
+
 ## Scope
 
 In scope:
