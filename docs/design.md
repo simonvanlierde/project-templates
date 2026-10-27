@@ -10,7 +10,7 @@ workflows hold a token that can publish.
 | The copier user | Answers the questions and runs `copier copy` or `copier update` on their own machine | Every file in their project, through their own git push |
 | This repository's CI | Renders answer combinations and runs each generated project's checks | Nothing outside its own runner; it publishes only this template's releases |
 | The generated project's CI | Runs the stack workflows on pull requests, on pushes to main and weekly | Read-only by default: each workflow sets `contents: read` or no permissions at all, and a job asks for more only where it needs it |
-| The dependency bot (Renovate or Dependabot) | Opens pull requests that bump dependencies, lockfiles and pinned actions | A branch and a pull request; it can't merge unless the project turns on auto-merge |
+| The dependency bot (Renovate or Dependabot) | Opens pull requests that bump dependencies, lockfiles and pinned actions | A branch and a pull request. Renovate merges its own minor and patch updates, and the weekly relock, once the required checks pass: the `main` ruleset lets its app skip the review, and `main-checks` lets only an admin skip the checks. Dependabot merges nothing |
 | The `copier update` workflow (Dependabot projects) | Weekly, renders the newest template release and opens a pull request | Its token can push to any branch without protection; the script pushes only `chore/copier-update` and opens that pull request, or, when it can't push a workflow change, opens an issue and closes that pull request |
 | The maintainer | Reviews and merges pull requests, pushes `vX.Y.Z` tags | `main`, and what a tag publishes |
 
@@ -110,7 +110,8 @@ scanning are repository settings a render can't make; the project sets them.
   push workflow changes, `copier-update.yml` opens an issue instead of a partial update.
 - **Complete mediation.** Every change to a generated project's main goes through a pull
   request and its required checks: the `main` ruleset in
-  `template/.github/rulesets/main.json.jinja`, which `just repo-settings` applies.
+  `template/.github/rulesets/main.json.jinja`, and in a public repo also `main-checks`,
+  which `just repo-settings` applies. An admin can bypass either from the merge box.
 - **Economy of mechanism.** A render runs no commands, and the update workflow applies a
   plain `git apply` patch: no hooks, no Git configuration from the update.
 - **Open design.** The template, its checks and this case are public. Nothing rests on a

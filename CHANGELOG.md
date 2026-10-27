@@ -59,8 +59,10 @@ Upgrade steps:
   push. It protects `main` and the `v*` tags and, in a public repo, turns on private
   vulnerability reporting, which `SECURITY.md` points to. `main` then requires the `git hooks`,
   `pull request title`, `dependency review` and, in a public repo, `DCO sign-off` checks: if
-  you renamed any of those jobs, edit `.github/rulesets/main.json` first, or pull requests
-  wait on a check that never reports.
+  you renamed any of those jobs, edit `.github/rulesets/main.json` first (in a public repo,
+  `main-checks.json`), or pull requests wait on a check that never reports. In a public
+  repo, `main` also requires an approval from now on; as the repo admin you can merge your
+  own pull requests by ticking the bypass box in the merge box.
 - Run `prek install` again in each clone, so the new commit-msg hook is installed.
 - The new `typos` and `lychee` hooks run on every file in CI's git hooks job. After the
   update, run `prek run --all-files typos lychee`, review what typos fixed, and fix the
@@ -276,6 +278,16 @@ Upgrade steps:
 
 ### Changed
 
+- A public repo's `main` ruleset requires one approving review, given after the last push,
+  and a new push dismisses an earlier one. That lifts Scorecard's branch protection score
+  from at most 4 to 8. A repo admin can bypass the review from the merge box. The required
+  checks move to a second ruleset, `main-checks`, which only an admin can bypass, so a
+  bypass of the review still waits for them. Rerun `just repo-settings` after the update to
+  apply both. A private repo's ruleset is unchanged.
+- With `dependency_bot=renovate`, Renovate merges its own minor and patch updates of the
+  packages CI installs, and the weekly relock, once their checks pass. Its app may bypass
+  the review in a public repo, never the checks. Majors, copier template releases, and the
+  actions and hooks group still wait for you. Dependabot PRs still never merge themselves.
 - A web app with `user_data=accounts` refuses `code@duinlab.nl` as `author_email`: an app
   that keeps personal data on a server needs its own contact address. Pass another
   address to `copier update` if you hit this.
