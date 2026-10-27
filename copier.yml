@@ -30,6 +30,7 @@ _skip_if_exists:
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility.md"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility-assessment.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/privacy.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/terms.md"
   - "/{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"

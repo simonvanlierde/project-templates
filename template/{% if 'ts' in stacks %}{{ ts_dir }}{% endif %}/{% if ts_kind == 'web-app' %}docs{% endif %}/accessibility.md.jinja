@@ -7,6 +7,8 @@
 Keep this page true. The app serves it at /accessibility, without this note.
 https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md
 says how to fill it in, and how the template builds and tests it.
+Say "partially conformant" only once docs/accessibility-assessment.md has a result for every
+criterion, and link it from the status sentence.
 -->
 
 # Accessibility statement
@@ -30,7 +32,9 @@ with a screen reader. List only what a test or a recorded hand check backs.
 
 Its conformance is **not assessed**. Nobody has checked it against every WCAG 2.2 criterion yet,
 and no outside auditor has tested it: the developer checks it. How we check, below, says what is
-checked and how.
+checked and how. The criterion-by-criterion check goes in
+{{ file('docs/accessibility-assessment.md') }}, and the status links it once every criterion
+has a result.
 
 ## Known problems
 

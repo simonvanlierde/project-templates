@@ -77,11 +77,13 @@ echo '// project edit' >>"$out/d/web/src/App.tsx"
 echo '<!-- project edit -->' >>"$out/d/web/index.html"
 echo '// project edit' >>"$out/d/web/vite.config.ts"
 echo '<!-- project edit -->' >>"$out/d/web/docs/privacy.md"
+echo '<!-- project edit -->' >>"$out/d/web/docs/accessibility-assessment.md"
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d" >/dev/null 2>&1
 grep -q 'project edit' "$out/d/web/src/App.tsx"
 grep -q 'project edit' "$out/d/web/index.html"
 grep -q 'project edit' "$out/d/web/docs/privacy.md"
+grep -q 'project edit' "$out/d/web/docs/accessibility-assessment.md"
 (! grep -q 'project edit' "$out/d/web/vite.config.ts")
 
 # h: a go library named like the Example file. The unit test must not share its path
@@ -782,6 +784,12 @@ grep -qx '    "marked": "[0-9.]*",' d/web/package.json
 test -f j/docs/accessibility.md
 (! grep -rq 'github.com/example-org/private-web' j/docs)
 grep -q 'github.com/example-org/pipe-me/blob/main/web/tests/e2e/a11y.spec.ts' d/web/docs/accessibility.md
+# The WCAG 2.2 self-assessment sits beside the statement, which links it: one row per
+# level A and AA criterion, 55 in all, none of them assessed yet. Other kinds have none.
+test "$(grep -cE '^\| [1-4]\.[0-9]+\.[0-9]+ .* \| AA? \| Not assessed \| \|$' d/web/docs/accessibility-assessment.md)" = 55
+grep -qF '(https://github.com/example-org/pipe-me/blob/main/web/docs/accessibility-assessment.md)' d/web/docs/accessibility.md
+grep -qF "\`docs/accessibility-assessment.md\`" j/docs/accessibility.md
+test ! -e m/web/docs/accessibility-assessment.md
 # The answers reach the terms: the site, who runs it and the contact, and the privacy
 # statement links them.
 grep -qxF 'These terms cover pipe-me at [pipe-me.pages.dev](https://pipe-me.pages.dev).' d/web/docs/terms.md
@@ -845,6 +853,11 @@ for r in a b d; do
   git -C "$r-hooks" add -A
   (cd "$r-hooks" && "${prek[@]}" typos lychee >/dev/null)
 done
+# Copier writes the template's commit id into the answers file, and a hex id can spell a
+# word typos rejects, so typos skips that file.
+printf '# definately\n' >>a-hooks/.copier-answers.yml
+git -C a-hooks add .copier-answers.yml
+(cd a-hooks && "${prek[@]}" typos >/dev/null)
 printf 'This is definately wrong.\n' >a-hooks/docs/typo.md
 printf 'See [the guide](missing.md).\n' >a-hooks/docs/dead.md
 git -C a-hooks add docs/typo.md docs/dead.md
