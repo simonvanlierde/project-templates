@@ -77,6 +77,11 @@ project_description:
   type: str
   help: One-line description, for the README, package metadata and citation files
   default: ""
+  # It also lands unescaped in a Python docstring and in Go and TS comments.
+  validator: >-
+    {% if project_description.splitlines()|length > 1 or '"""' in project_description or '*/' in project_description %}
+    Keep the description to one line, without """ or */: it goes into docstrings and code comments.
+    {% endif %}
 
 stacks:
   type: str

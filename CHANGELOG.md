@@ -10,6 +10,11 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Fixed
+
+- A project description with `"""`, `*/` or a line break is refused. It
+  broke the Python docstring or the Go and TypeScript comments it lands in.
+
 ## [0.11.0] - 2026-10-27
 
 Upgrade steps:
