@@ -106,9 +106,14 @@ jobs:
           # One anchor per manager block (rust-lang/rust: copier.yml). copier and renovate come from the
           # githubActionsVersions preset, which also matches nothing silently when it drifts.
           for dep in actions/checkout ghcr.io/astral-sh/uv pre-commit/pre-commit-hooks \
-                     uv_build pytest pnpm @biomejs/biome rust-lang/rust copier renovate buildpack-deps; do
+                     uv_build pytest pnpm @biomejs/biome rust-lang/rust copier howfairis renovate buildpack-deps; do
             grep -qF "\"depName\": \"$dep\"" extract.log \
               || { echo "not extracted: $dep — a manager pattern in renovate.json5 broke"; exit 1; }
+          done
+          # A CI pin must not hide a broken computed-answer match.
+          for dep in copier howfairis; do
+            grep -qF "depName=$dep\\n${dep}_version:" extract.log \
+              || { echo "not extracted from copier.yml: $dep"; exit 1; }
           done
 
   python:
@@ -199,18 +204,6 @@ jobs:
           printf '%s\n' "$ANSWERS" >"$RUNNER_TEMP/answers.yml"
           uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
             --data-file "$RUNNER_TEMP/answers.yml" . "$RUNNER_TEMP/proj"
-
-      # TODO(2026-10-27): delete. certifi 2026.10.19 fixes GHSA-6q48-6c7w-9gw2, which
-      # uv audit fails on, but was uploaded 2026-10-20, inside the one-week
-      # exclude-newer. Only this CI's renders take it early; scaffolds are unchanged.
-      - name: certifi override
-        env:
-          PYTHON_DIR: ${{ matrix.answers.python_dir }}
-        run: |
-          set -euo pipefail
-          sed -i 's/^exclude-newer = "1 week"$/&\nexclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }/' \
-            "$RUNNER_TEMP/proj/${PYTHON_DIR:-.}/pyproject.toml"
-          grep -q '^exclude-newer-package' "$RUNNER_TEMP/proj/${PYTHON_DIR:-.}/pyproject.toml"
 
       - &just
         run: uv tool install "rust-just==$JUST_VERSION"

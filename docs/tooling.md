@@ -141,5 +141,9 @@ Each release workflow splits the build from the publish step:
 2. The publish job downloads the artifact and uploads it. It is the only job with
    `id-token: write`, and it runs no project code.
 
+With PyPI publishing, a final job attaches the distributions and their provenance bundle
+to a draft GitHub release, then publishes it. This job has only `contents: write` and
+runs no project code. Other projects keep the separate `release.yml` workflow.
+
 Images pushed to the GitHub Container Registry carry a software bill of materials
 (SBOM) and a provenance attestation.

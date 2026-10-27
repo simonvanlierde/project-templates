@@ -32,16 +32,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          # index() rather than a regex, so the dots in the version match only dots.
-          awk -v head="## [${TAG#v}]" '
-            index($0, head) == 1 { found = 1; next }
-            found && /^## \[/ { exit }
-            found { print }
-          ' CHANGELOG.md >"$RUNNER_TEMP/notes.md"
-          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
-            echo "::error file=CHANGELOG.md::no '## [${TAG#v}]' section; add it, then delete and re-push $TAG"
-            exit 1
-          fi
+          bash template/.github/scripts/release-notes.sh "$TAG" >"$RUNNER_TEMP/notes.md"
 
       - name: create the release
         env:

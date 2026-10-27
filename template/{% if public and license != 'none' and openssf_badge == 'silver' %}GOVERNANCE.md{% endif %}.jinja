@@ -1,0 +1,43 @@
+# Governance
+
+How decisions about {{ project_name }} are made, who makes them, and how the project
+carries on if a maintainer is gone. [CONTRIBUTING.md](.github/CONTRIBUTING.md) says how
+to propose a change.
+
+## Decisions
+
+<!-- Who decides, and how: one maintainer decides, or maintainers agree by consensus.
+     Where disagreements go. Larger decisions are recorded in docs/decisions/. -->
+
+The maintainers decide. A change lands when a maintainer approves its pull request.
+Decisions that shape the project are recorded in [docs/decisions/](docs/decisions/README.md).
+
+## Roles
+
+<!-- Each role, what it does, and who holds it, by name. -->
+
+| Role | Responsibilities | Held by |
+| --- | --- | --- |
+| Maintainer | Reviews and merges pull requests, triages issues and security reports, makes releases | {{ author_name | trim }} ([@{{ github_user }}](https://github.com/{{ github_user }})) |
+| Contributor | Proposes changes through issues and pull requests | Anyone |
+
+## Keys and secrets
+
+<!-- Who can reach each credential the project depends on. Name people, not "the team". -->
+
+| What | Used for | Held by |
+| --- | --- | --- |
+| GitHub repository admin | Settings, rulesets, secrets | TODO |
+| Release rights | Tags{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}, package registries{% endif %} and GitHub releases | TODO |
+| TODO: deploy or domain account | TODO | TODO |
+
+## Continuity
+
+<!-- What happens within a week if a maintainer dies, is incapacitated or stops
+     responding: who can still triage issues, merge changes and release, and where
+     the access for that is kept. State the bus factor honestly, even when it is 1. -->
+
+Bus factor: TODO (the fewest people whose departure would leave the project unable to continue).
+
+If no maintainer can continue, TODO: who takes over the repository and the keys above,
+and how they get access.

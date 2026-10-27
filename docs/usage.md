@@ -31,6 +31,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | `dependency_bot`                                | Dependabot                                       |
 | `codecov`                                       | off                                              |
 | `codspeed`                                      | off ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
+| `openssf_badge`                                 | none ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `module_name`, `go_module`                      | made from the project name and GitHub user       |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | the current releases; `python_min` two minors below `python_version` |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | off ([Publishing](#publishing))           |
@@ -300,7 +301,7 @@ this template. The same command lets you change your answers: add a stack or tur
 publish option, and Copier writes the new files.
 
 `README.md`, `CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`,
-`codemeta.json`), `docs/decisions/README.md`, a `web-app`'s starter files, a published
+`codemeta.json`), `docs/decisions/README.md`, the silver-badge documents, a `web-app`'s starter files, a published
 TypeScript library's `<package>.api.md` and Go's `go.mod` are written once
 and then belong to your project: an update never touches them, so your release tool or
 your own edits own them. A template release that changes them says so in the template's
@@ -333,7 +334,8 @@ Dependabot can't update a Copier template. With it, the `copier-update` workflow
 the same every Monday, and on demand from the Actions tab. When the newest template tag
 differs from `_commit`, it runs `copier update --defaults` and opens one PR on the branch
 `chore/copier-update`, with conflicted files listed in the body. It does nothing when you
-are up to date. It pins Copier in its `COPIER_VERSION`, which Dependabot does not bump.
+are up to date. The template tracks its Copier version with Renovate. Template updates refresh
+the workflow's `COPIER_VERSION`; Dependabot cannot bump that pin.
 
 Give the workflow a token of its own. GitHub refuses a push with `GITHUB_TOKEN` that
 changes a file in `.github/workflows/`, which most template releases do. Create a
@@ -389,13 +391,29 @@ a mutant survives; list a harmless one in `.cargo/mutants.toml` (`exclude_re`). 
 jobs print the survivors and pass.
 
 OpenSSF Scorecard's Fuzzing check counts fast-check and Go's native fuzzing, not
-Hypothesis or proptest. To add the extras to an existing library, run
+Hypothesis or proptest. Weekly Go runs cache the generated fuzz corpus so each run
+continues from earlier coverage inputs. A failure still uploads its reproducer as an artifact.
+To add the extras to an existing library, run
 `copier update --data 'test_extras=[property]'`.
 
 ## Publishing
 
 To release, add a `## [X.Y.Z]` section to `CHANGELOG.md`, then push the tag `vX.Y.Z`.
-`release.yml` makes the GitHub release from that section.
+With `publish_to_pypi`, `python-release.yml` publishes to PyPI first. It then creates a
+draft GitHub release from that section, attaches the distributions and their Sigstore
+provenance bundle, and publishes the release. Approve the `pypi` environment when prompted.
+Do not create the GitHub release by hand. Other projects use `release.yml` for the release.
+
+If publishing fails, check the registry before retrying. If the version is absent,
+re-run the failed jobs on the same tag. Never move or delete a published release's tag:
+immutable releases protect it, and a registry will not accept changed files for that version.
+
+If PyPI has the version but the GitHub release job failed, re-run only the `release` job.
+Delete any leftover draft first with `gh release delete vX.Y.Z` (without `--cleanup-tag`).
+If the GitHub release is already published and its files are wrong or missing, fix the
+source and release a new patch version. A retry cannot change an immutable release.
+For npm failures after the GitHub release appears, retry the failed publishing job if the
+version is absent from npm; otherwise check the uploaded package before making a new version.
 
 Publishing is off by default. While an option is off, a guard stops an accidental
 release:
@@ -406,7 +424,7 @@ release:
 | `publish_to_npm`  | pnpm refuses to publish (`"private": true`)                 | `ts-release.yml` publishes to npm                        |
 | `publish_to_ghcr` | CI builds the image and tests `/health`, but pushes nothing | CI also pushes the image to the GitHub Container Registry |
 
-Each of `publish_to_pypi` and `publish_to_npm` also adds an API-break check to CI and
+Both publishing options add an API-break check to CI. The npm check also runs in
 `just check` (see the [CI baseline](ci-baseline.md)). With `publish_to_npm`, run
 `just ts-api` once after the update and commit `<package>.api.md`: the template's copy
 describes the sample `add` function.
@@ -452,6 +470,24 @@ existing project, run `copier update --data codspeed=true`. Then two steps no fi
    with 401 "Repository not found".
 2. In the repository's settings on codspeed.io, set Pull Request comments to "On Change".
    `codspeed.yml` has no option for it.
+
+## OpenSSF Best Practices badge
+
+`openssf_badge` (none by default, asked in a public repo with a license) prepares the
+files used by the [OpenSSF Best Practices badge](https://www.bestpractices.dev).
+The public community files, license, changelog and tests provide other starting points
+for its questionnaire. A private repo or one with `license=none` gets no badge documents.
+
+- `passing` adds a Tests and code style section to `.github/CONTRIBUTING.md`: changes
+  come with tests, and the linters each stack runs are its coding standards.
+- `silver` adds that, plus three skeletons to fill in: `GOVERNANCE.md` (roles, who holds
+  which keys, what happens if a maintainer is gone), `docs/roadmap.md` (the next year,
+  and what is out of scope) and `docs/assurance-case.md` (threat model, trust boundaries,
+  secure design, weaknesses countered). They belong to your project once written.
+
+The template can't earn the badge for you. Register the project on bestpractices.dev,
+answer its questionnaire, and add the badge it gives you to the README. Silver also requires
+signed releases intended for widespread use and recommends a bus factor of at least two.
 
 ## Dependency updates
 

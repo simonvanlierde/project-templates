@@ -23,10 +23,9 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "{{ uv_version }}"
-      # NOTE: not tracked by Renovate; howfairis has had no release since 0.14.2 (2022-09).
       # howfairis exits 1 below five checks, so the score is read from its output.
       - run: |-
-          uvx howfairis@0.14.2 https://github.com/{{ github_user }}/{{ slug }} | tee out.txt || true
+          uvx howfairis@{{ howfairis_version }} https://github.com/{{ github_user }}/{{ slug }} | tee out.txt || true
           cat out.txt >> "$GITHUB_STEP_SUMMARY"
           score=$(grep '^Calculated compliance' out.txt | grep -o '●' | wc -l)
           echo "fair-software.eu score: $score of 5 (floor $FAIR_MIN)" | tee -a "$GITHUB_STEP_SUMMARY"

@@ -94,7 +94,8 @@ defaults:
 
 ## More
 
-- [docs/usage.md](docs/usage.md): the stacks, monorepos, updating, publishing and Codecov.
+- [docs/usage.md](docs/usage.md): the stacks, monorepos, updating, publishing, Codecov and
+  the OpenSSF Best Practices badge.
 - [docs/python-kinds.md](docs/python-kinds.md): the Python project kinds.
 - [docs/tooling.md](docs/tooling.md): the tools, lint policies, Docker images,
   dependency updates and release workflows.

@@ -35,6 +35,21 @@ formats.
   **Breaking**, and put upgrade steps first under the version.
 - **The release notes** are that version's changelog section.
 
+{% if license != 'none' and openssf_badge != 'none' -%}
+## Tests and code style
+
+A pull request that adds or changes behaviour adds or updates the tests for it, and
+`just check` passes before it merges. A bug fix comes with a test that failed before the
+fix.
+
+{% if stacks | reject('eq', 'docker') | list %}The code follows the style the linters enforce, and `just fmt` applies most of it:
+
+{% if 'python' in stacks %}- Python: [Ruff](https://docs.astral.sh/ruff/) for lint and format, ty for types.
+{% endif %}{% if 'ts' in stacks %}- TypeScript: [Biome](https://biomejs.dev) for lint and format, `tsc` for types.
+{% endif %}{% if 'rust' in stacks %}- Rust: rustfmt and [Clippy](https://doc.rust-lang.org/clippy/).
+{% endif %}{% if 'go' in stacks %}- Go: gofmt and [golangci-lint](https://golangci-lint.run).
+{% endif %}
+{% endif %}{% endif -%}
 ## Sign off your commits
 
 Every commit in a pull request carries a `Signed-off-by:` line, which says you wrote the

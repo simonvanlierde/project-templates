@@ -3,7 +3,8 @@ name: release
 # A pushed version tag becomes a GitHub release whose notes are that version's
 # CHANGELOG.md section. Releases are immutable, so the notes must be right the first
 # time: a tag with no section fails before anything is published. Make the section
-# before you tag. If a tag fails, delete it, fix CHANGELOG.md and tag again.
+# before you tag. If notes validation fails before publication, fix CHANGELOG.md
+# and recreate the tag. After publication, release a new patch version.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
