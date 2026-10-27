@@ -4,9 +4,11 @@ message: If you use this template, please cite it as below.
 type: software
 title: "project-templates"
 abstract: >-
-  A Copier template for Python, TypeScript, Rust, Go and Docker projects, with
-  supply-chain-hardened CI, a provenance-first data-pipeline kind, a web-app kind with
-  legal pages, and community files for public repos.
+  A Copier template for provenance-first data pipelines, where every row of a dataset
+  built from public sources says which download it came from, plus Python, TypeScript,
+  Rust, Go and Docker projects. Every project gets supply-chain-hardened CI, and public
+  ones get community files and OpenSSF Scorecard; the web-app kind adds legal pages and an
+  accessibility statement.
 authors:
   - given-names: "Simon"
     family-names: "van Lierde"
@@ -18,4 +20,6 @@ keywords:
   - project template
   - research software
   - provenance
+  - data pipeline
+  - supply-chain security
   - web app
