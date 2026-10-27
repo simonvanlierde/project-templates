@@ -109,12 +109,14 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
 (! grep -q 'project edit' "$out/h/docs/decisions/0000-template.md")
 
 # m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
-# job for each. a has libraries too but no extras, so it must render neither.
+# job for each. a has libraries too but no extras, so it must render neither. Also the
+# only BSD-3-Clause render.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
-  --data 'test_extras=[property, mutation]' --data openssf_badge=passing . "$out/m"
+  --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
+  --data license=BSD-3-Clause . "$out/m"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -152,12 +154,13 @@ grep -qx '        run: |-' "$out/k/.github/workflows/copier-update.yml"
 
 # e: released scaffolds render from a tag. A throwaway local tag on HEAD stands
 # in for one. The trap uses -C because the checks below cd out of the repo. The
-# -f on `git tag` covers a killed run that left the tag behind.
+# -f on `git tag` covers a killed run that left the tag behind. Also the only
+# AGPL-3.0-or-later render.
 repo=$PWD
 trap 'git -C "$repo" tag -d check-render-tag >/dev/null 2>&1 || true' EXIT
 git tag -f check-render-tag >/dev/null
 "${copier[@]}" --vcs-ref=check-render-tag \
-  --data project_name=tag-me --data 'stacks=[python]' . "$out/e"
+  --data project_name=tag-me --data 'stacks=[python]' --data license=AGPL-3.0-or-later . "$out/e"
 
 # A web app is static files, so the ts image (a Node service) is refused for it.
 # The grep checks the render failed for this reason, not for an unrelated break.
@@ -712,9 +715,14 @@ grep -qF 'uv and pnpm lock only' d/README.md
 grep -q 'in .pipe/pyproject\.toml. or .minimumReleaseAgeExclude. in .web/pnpm-workspace\.yaml.' d/README.md
 (! grep -q 'exclude-newer' h/README.md)
 grep -q 'Apache License' d/LICENSE
-# Each license text ends in exactly one newline (MIT in a, Apache-2.0 in d), so the
-# end-of-file-fixer hook has nothing to rewrite in a new project.
-for lic in a/LICENSE d/LICENSE; do
+grep -qx 'BSD 3-Clause License' m/LICENSE
+grep -q '^Copyright (c) [0-9]\{4\}, ' m/LICENSE
+grep -q 'GNU AFFERO GENERAL PUBLIC LICENSE' e/LICENSE
+grep -qx 'license = "AGPL-3.0-or-later"' e/pyproject.toml
+# Each license text ends in exactly one newline (MIT in a, Apache-2.0 in d, BSD-3-Clause
+# in m, AGPL-3.0-or-later in e), so the end-of-file-fixer hook has nothing to rewrite in
+# a new project.
+for lic in a/LICENSE d/LICENSE m/LICENSE e/LICENSE; do
   end=$(tail -c 2 "$lic" | od -An -tx1 | tr -d ' \n')
   [[ $end == ??0a && $end != 0a0a ]]
 done
