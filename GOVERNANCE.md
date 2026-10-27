@@ -12,8 +12,8 @@ merges pull requests, triages issues and handles security reports as
 
 Anyone can propose a change in an issue or a pull request, and it is discussed there in the
 open. [CONTRIBUTING.md](CONTRIBUTING.md) says how to make one, and
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) covers how people treat each other. If I turn a
-proposal down, I say why in the issue or pull request. [docs/design.md](docs/design.md)
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) covers how people treat each other. When the
+maintainer turns a proposal down, he says why in the issue or pull request. [docs/design.md](docs/design.md)
 records the design: who acts on a generated project and what render and update do. The
 planned work is in the [roadmap](ROADMAP.md).
 

@@ -28,6 +28,6 @@ This is a short view of what is planned for the template over the next year, to 
 
 - A docs site for library kinds, until one library needs more than its README.
 - Issue forms and a CODEOWNERS file, until other people start contributing.
-- CodeQL, Renovate from Actions, release-please and the other pieces
-  [docs/ci-baseline.md](docs/ci-baseline.md#what-is-left-out-and-why) leaves out, until
-  the reason given there no longer holds.
+- CodeQL, Renovate from Actions, release-please and the other pieces generated projects
+  leave out, as [docs/ci-baseline.md](docs/ci-baseline.md#what-is-left-out-and-why) explains,
+  until the reason given there no longer holds.
