@@ -11,18 +11,12 @@ This is a short view of what is planned for the template over the next year, to 
   so the one-week release-age cutoff lets it in.
 - Add a `just release` recipe and its CI checks to the `data-pipeline` kind, once
   sourceledger has a release step.
-- Raise the `main` ruleset a public render gets: one required approval, approval after the
-  last push, and dismissal of stale reviews. In the same change, let Renovate renders merge
-  non-major updates on their own once they are a week old and CI passes.
-- Add an accessibility assessment to the `web-app` kind: one row per WCAG 2.2 level A and
-  AA criterion, with a result and the evidence for it, linked from the statement.
 - Add a release path for Rust: a `publish_to_crates` answer, crates.io trusted publishing,
   binaries that `cargo binstall` can find, attestations, and a `cargo-semver-checks` step.
 - Turn off Biome's Markdown and YAML formatters in the rendered `biome.json` when the
   template moves to Biome 2.6, which turns them on by default.
-- Get the OpenSSF Best Practices badge at Silver for this repository, and register one
-  generated project for the badge before the README says a fresh render meets it.
-- Archive v1.0.0 on Zenodo, so the template has a DOI.
+- Register one generated project for the OpenSSF Best Practices badge before the README
+  says a fresh render meets it.
 
 ## Not planned
 
