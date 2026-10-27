@@ -104,4 +104,7 @@ defaults:
 - [docs/design.md](docs/design.md): who can change what, and the workflows that can publish.
 - [docs/web-legal.md](docs/web-legal.md): tips for filling in a web app's legal pages.
 - [CONTRIBUTING.md](CONTRIBUTING.md): how to test a template change before you tag it.
-- [SECURITY.md](SECURITY.md): how to report a vulnerability.
+- [SECURITY.md](SECURITY.md): how to report a vulnerability and verify a release.
+- [GOVERNANCE.md](GOVERNANCE.md): who decides, who can release, and who takes over.
+- [ROADMAP.md](ROADMAP.md): what is planned for the next year.
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): how people treat each other here.

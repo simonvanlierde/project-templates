@@ -23,6 +23,25 @@ A fix ships in a new tagged release, and generated projects receive it with
 with a CVE where one applies, and credit you unless you'd rather not be named. The
 CHANGELOG entry for that release links the advisory.
 
+## Verify a release
+
+Releases from v0.8.1 on are immutable: once one is published, no one can add or change its
+files, or move or delete its tag. GitHub also signs an attestation for each one. Check it
+with:
+
+```sh
+gh release verify vX.Y.Z --repo simonvanlierde/project-templates
+```
+
+A pass proves that GitHub's release service signed a statement that release `vX.Y.Z` of
+this repository points at the commit the command prints. It proves where the release came
+from, not that its code is safe. The signing key belongs to GitHub, not to a maintainer.
+Releases up to v0.8.0 came before immutable releases and have no attestation.
+
+Releases here attach no files. Where a release does attach one, such as a generated
+project's Python release, `gh release verify-asset vX.Y.Z <file>` checks a downloaded copy
+against the release's attestation.
+
 ## What the template promises
 
 A fresh render:
