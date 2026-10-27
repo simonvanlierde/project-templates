@@ -129,12 +129,13 @@ scanning are repository settings a render can't make; the project sets them.
   commit their lockfiles, and CI installs exactly what they list. The 7-day
   wait gives a hijacked release time to be caught. This repository's Renovate config
   extends `config:best-practices`, which keeps digests pinned.
-- **Unvalidated answers.** The 21 validators in [`copier.yml`](../copier.yml) check the
-  answers that become names, paths, versions, URLs, ports and identities, and
-  `check-render.sh` asserts that 20 crafted answers are refused with the validator's own
-  message. Free text reaches JSON, YAML and TOML through `to_json`, which render b tests with
-  quotes. The description, copyright year and Node and Go versions have no validator: the
-  copier user is their only author, so a bad one breaks only their own render.
+- **Unvalidated answers.** The 22 validators in [`copier.yml`](../copier.yml) check the
+  answers that become names, paths, versions, URLs, ports and identities, and the
+  description, which lands unescaped in a docstring and in code comments: it must be one
+  line without `"""` or `*/`. `check-render.sh` asserts that 23 crafted answers are refused
+  with the validator's own message. Free text reaches JSON, YAML and TOML through `to_json`,
+  which render b tests with quotes. The copyright year and the Node and Go versions have no
+  validator: the copier user is their only author, so a bad one breaks only their own render.
 - **Untested template files.** `check-render.sh` fails when a file in `template/` lands
   in no render, so every file is rendered and checked at least once.
 
@@ -149,5 +150,5 @@ what limits each one:
 | Code in a release job takes the publishing token | A malicious package or image is published under the project's name | The OIDC token is only in the upload job, which runs no project code; the release environments should be limited to `v*` tags |
 | Copier or one of its dependencies alters the weekly update job | It pushes to the project with the job's token | Copier runs in a read-only job; a fresh job applies the patch and alone holds the push token (fixed in 0.11.0) |
 | A compromised action or package version | Its code runs in CI or in the project | Actions are pinned to commit SHAs. Generated projects commit their lockfiles, and Renovate, uv and pnpm skip versions younger than a week |
-| A crafted copier answer breaks out of a generated file | A broken or unsafe render | The 21 validators in `copier.yml` check the answers that become names, paths, versions and identities before rendering |
+| A crafted copier answer breaks out of a generated file | A broken or unsafe render | The 22 validators in `copier.yml` check the answers that become names, paths, versions and identities, and the description, before rendering |
 | A secret is committed to this repository | The secret leaks | betterleaks runs as a hook, and GitHub secret scanning with push protection is on |
