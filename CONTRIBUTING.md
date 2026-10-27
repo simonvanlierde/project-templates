@@ -45,6 +45,18 @@ out=$(mktemp -d) && scripts/check-render.sh "$out"
 cd "$out/a" && git init -q && just py-sync py-check
 ```
 
+The hooks in [.pre-commit-config.yaml](.pre-commit-config.yaml) are the coding standards:
+shellcheck and shfmt for shell, yamllint and yamlfmt for YAML, rumdl for Markdown,
+zizmor and jactionlint for workflows, and committed for commit messages. The generated
+projects' own linters, such as ruff and biome, run in CI on each render.
+
+## Add a test with each change
+
+A change that adds a question, an answer or a generated file adds the check that proves
+it in the same pull request: a case in `scripts/check-render.sh`, or a step in the CI job
+for that stack. A bug fix adds a check that fails without the fix. Fix each warning a hook
+or linter gives, or silence it where it occurs and say why.
+
 ## Tag every change
 
 `copier update` in a generated project only sees tagged releases. Tag this repository
