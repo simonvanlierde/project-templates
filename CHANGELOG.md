@@ -366,6 +366,8 @@ Upgrade steps:
 
 ### Fixed
 
+- The typos hook skips `.copier-answers.yml`. The template commit id Copier writes there
+  could spell a word typos rejects and fail the hook after a `copier update`.
 - A project description with `"""`, `*/` or a line break is refused. It
   broke the Python docstring or the Go and TypeScript comments it lands in.
 - With `dependency_bot: renovate`, the comments in `pyproject.toml`, `pnpm-workspace.yaml`

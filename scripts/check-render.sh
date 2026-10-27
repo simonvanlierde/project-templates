@@ -853,6 +853,11 @@ for r in a b d; do
   git -C "$r-hooks" add -A
   (cd "$r-hooks" && "${prek[@]}" typos lychee >/dev/null)
 done
+# Copier writes the template's commit id into the answers file, and a hex id can spell a
+# word typos rejects, so typos skips that file.
+printf '# definately\n' >>a-hooks/.copier-answers.yml
+git -C a-hooks add .copier-answers.yml
+(cd a-hooks && "${prek[@]}" typos >/dev/null)
 printf 'This is definately wrong.\n' >a-hooks/docs/typo.md
 printf 'See [the guide](missing.md).\n' >a-hooks/docs/dead.md
 git -C a-hooks add docs/typo.md docs/dead.md
