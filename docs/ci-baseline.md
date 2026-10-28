@@ -94,7 +94,8 @@ scanning covers the server side.
   `github.token`, so the other hooks never see it. Locally, set `GH_TOKEN`
   to get them. Without it, only the offline audits run.
 - Accessibility checks cover the `web-app` kind only: the axe and 320 px reflow tests
-  above. The docs, in this repository and in a render, are plain Markdown that GitHub
+  above. A command-line program gets `docs/accessibility.md`, a statement of how it prints
+  that nothing tests. The docs, in this repository and in a render, are plain Markdown that GitHub
   renders, with no styles or scripts of their own.
 - The local servers speak plain HTTP and are for development on your own machine:
   `just serve` binds 127.0.0.1, compose publishes ports on 127.0.0.1 only, and Vite's dev

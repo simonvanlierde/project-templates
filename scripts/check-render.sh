@@ -1139,6 +1139,15 @@ grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTI
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
 grep -qx '## Scope and response' a/.github/CONTRIBUTING.md
 grep -q 'within about two weeks' a/.github/CONTRIBUTING.md
+# A command-line program (c's Rust and Go binaries, d's pipeline) gets the CLI statement
+# at the root; a's libraries and research package don't. d's nested web app keeps its own.
+for r in c d; do
+  grep -qx '# Accessibility' "$r/docs/accessibility.md"
+  grep -qF 'NO_COLOR' "$r/docs/accessibility.md"
+  grep -qF '<ada@example.com>' "$r/docs/accessibility.md"
+done
+test ! -e a/docs/accessibility.md
+grep -qx '# Accessibility statement' d/web/docs/accessibility.md
 # The README's status sentence follows the answer; only a public repo points to CONTRIBUTING.md.
 grep -qx 'Status: experimental. It may change in ways that break your code, without notice.' a/README.md
 grep -qx 'Status: maintenance. Bugs and security issues get fixed; new features are unlikely.' m/README.md

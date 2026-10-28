@@ -142,6 +142,14 @@ Each stack also gets its own CI workflow in `.github/workflows/` and its own rec
 Code recommendations. Unless `public=false`, it also gets the community files in `.github/`:
 `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and a pull request template. A Python project also picks a [kind](python-kinds.md).
 
+A Rust or Go `binary` and a Python `data-pipeline` are command-line programs, so they also
+get `docs/accessibility.md`: four claims about how the program prints (colour is never the
+only signal, `NO_COLOR` and `--color never` turn colour off, plain output when not on a
+terminal, errors as `file:line:col` on standard error) and your email for problems. The
+template writes the claims but does not test them: check each one holds for your program
+before you publish, and reword or delete the ones that don't. A web app at the repo root
+keeps its own accessibility statement at that path instead.
+
 Every project also gets `docs/decisions/`, for decision records: one numbered file per
 decision, such as `0001-one-parser.md`, saying what was chosen, why, and what it costs.
 Copy `0000-template.md` for a new record and list it in the folder's `README.md`.
