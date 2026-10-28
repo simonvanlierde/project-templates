@@ -25,6 +25,7 @@ Upgrade steps:
 
 ### Fixed
 
+- `fair.yml` called GitHub's API anonymously, so on a runner whose IP had used up its 60 requests an hour, howfairis scored checks as missing without an error. It now passes the job's token as `APIKEY_GITHUB`.
 - `fair.yml` scored the checklist as missing on every repo with an OpenSSF Best Practices badge, because the howfairis on PyPI (0.14.2) predates the `www.bestpractices.dev` badge URL. It now runs howfairis 0.15.0 from its GitHub tag, which reads that URL; PyPI has no 0.15.0 yet.
 - `biome check` failed on every new TypeScript project with biome 2.6, which formats Markdown and YAML too. `biome.json` now leaves those files to rumdl and yamlfmt.
 - `just repo-settings` in a public Renovate repo stopped with a bare "Validation Failed" when the Renovate app was not installed yet, because GitHub refuses an app it can't see as a bypass actor. It now shows GitHub's reason and says to install the app first.
