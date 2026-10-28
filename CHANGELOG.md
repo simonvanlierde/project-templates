@@ -27,6 +27,7 @@ Upgrade steps:
 
 ### Added
 
+- A new `status` question (`experimental`, the default, `stable`, `maintenance` or `archived`, under `customise`) puts one status sentence under the README's badges. A public repo's README also says where questions and bugs go. An existing project's README is its own, so `copier update` adds neither: copy them from a fresh render.
 - A public repo gets issue forms in `.github/ISSUE_TEMPLATE/`: one for bugs and one for feature requests. Blank issues are turned off, and a link sends questions to `CONTRIBUTING.md`. Vulnerabilities go to private reporting, as before. A private repo gets none.
 - The template itself has a Zenodo DOI, [10.5281/zenodo.23701980](https://doi.org/10.5281/zenodo.23701980), which always points to the newest release. `CITATION.cff` and the README carry it.
 

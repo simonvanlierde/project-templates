@@ -112,13 +112,13 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
 
 # m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
-# only BSD-3-Clause render.
+# only BSD-3-Clause render, and the only one not experimental.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause . "$out/m"
+  --data license=BSD-3-Clause --data status=maintenance . "$out/m"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -1137,6 +1137,11 @@ done
 # The community files' links point at this repo.
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
+# The README's status sentence follows the answer; only a public repo points to CONTRIBUTING.md.
+grep -qx 'Status: experimental. It may change in ways that break your code, without notice.' a/README.md
+grep -qx 'Status: maintenance. Bugs and security issues get fixed; new features are unlikely.' m/README.md
+grep -qxF 'Questions and bugs: see [CONTRIBUTING.md](.github/CONTRIBUTING.md).' a/README.md
+(! grep -q 'Questions and bugs' b/README.md)
 grep -qx 'blank_issues_enabled: false' a/.github/ISSUE_TEMPLATE/config.yml
 grep -qx '    url: https://github.com/example-org/render-me/blob/main/.github/CONTRIBUTING.md' \
   a/.github/ISSUE_TEMPLATE/config.yml

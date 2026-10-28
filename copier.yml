@@ -347,6 +347,19 @@ openssf_badge:
     Silver (passing, plus GOVERNANCE.md, docs/roadmap.md and docs/assurance-case.md to fill in): silver
   default: none
 
+# One sentence under the README's badges. The README is the project's after the first
+# render, so later answers don't reach it: edit the sentence by hand.
+status:
+  type: str
+  ask: "{{ customise }}"
+  help: How far along the project is, for the status sentence in the README
+  choices:
+    Experimental (may change without notice): experimental
+    Stable (breaking changes are rare and announced): stable
+    Maintenance (fixes only, no new features): maintenance
+    Archived (no longer maintained): archived
+  default: experimental
+
 # --- python -------------------------------------------------------------------
 
 module_name:
