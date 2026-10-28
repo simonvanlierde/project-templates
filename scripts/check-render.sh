@@ -467,7 +467,7 @@ test ! -e b/.github/workflows/scorecard.yml
 (! grep -q -i scorecard b/README.md)
 # fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
 # and public. b is citable-less and private; h is public but has no citation files.
-grep -qx "          uvx howfairis@$howfairis_pin $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
+grep -qx "          uvx --from git+https://github.com/fair-software/howfairis@$howfairis_pin howfairis $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
 # shellcheck disable=SC2016 # the $ is literal workflow text
 grep -qF 'cat out.txt >> "$GITHUB_STEP_SUMMARY"' a/.github/workflows/fair.yml
 grep -qx '      FAIR_MIN: 3' a/.github/workflows/fair.yml

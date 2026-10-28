@@ -628,11 +628,13 @@ copier_version:
   when: false
   default: 9.19.1
 
-# renovate: datasource=pypi depName=howfairis
+# A GitHub tag, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
+# badge URL (fair-software/howfairis#383).
+# renovate: datasource=github-tags depName=fair-software/howfairis
 howfairis_version:
   type: str
   when: false
-  default: 0.14.2
+  default: 0.15.0
 
 # --- docker -------------------------------------------------------------------
 

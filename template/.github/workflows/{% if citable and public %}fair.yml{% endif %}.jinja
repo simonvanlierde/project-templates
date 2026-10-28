@@ -25,7 +25,7 @@ jobs:
           version: "{{ uv_version }}"
       # howfairis exits 1 below five checks, so the score is read from its output.
       - run: |-
-          uvx howfairis@{{ howfairis_version }} https://github.com/{{ github_user }}/{{ slug }} | tee out.txt || true
+          uvx --from git+https://github.com/fair-software/howfairis@{{ howfairis_version }} howfairis https://github.com/{{ github_user }}/{{ slug }} | tee out.txt || true
           cat out.txt >> "$GITHUB_STEP_SUMMARY"
           score=$(grep '^Calculated compliance' out.txt | grep -o '●' | wc -l)
           echo "fair-software.eu score: $score of 5 (floor $FAIR_MIN)" | tee -a "$GITHUB_STEP_SUMMARY"
