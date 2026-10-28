@@ -1137,6 +1137,8 @@ done
 # The community files' links point at this repo.
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
+grep -qx '## Scope and response' a/.github/CONTRIBUTING.md
+grep -q 'within about two weeks' a/.github/CONTRIBUTING.md
 # The README's status sentence follows the answer; only a public repo points to CONTRIBUTING.md.
 grep -qx 'Status: experimental. It may change in ways that break your code, without notice.' a/README.md
 grep -qx 'Status: maintenance. Bugs and security issues get fixed; new features are unlikely.' m/README.md
