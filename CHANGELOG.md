@@ -16,6 +16,7 @@ Upgrade steps:
 
 ### Changed
 
+- New citable public projects no longer get a fair-software.eu badge at three of five dots. Add it once `fair.yml` scores five of five: set `FAIR_MIN: 5` and paste the snippet howfairis prints in the job summary. `copier update` removes the three-dot badge from a README that still has it unchanged.
 - **Breaking** for `openssf_badge=silver`: the `dco` check runs on every pull request, the maintainers' branches included, as the silver badge's DCO criterion asks of every developer. A commit-msg hook refuses an unsigned commit before the push. Commits Dependabot or Renovate write in their own pull requests are exempt. Below silver, only pull requests from forks are checked, as before.
 - The copier-update workflow signs off its commit.
 - Pull requests restore the CI caches main saved and save none of their own, in every workflow that caches: uv, Rust, the pnpm store, Go, the git hook environments and trivy's database. GitHub lets only the pull request read a cache it saves, and a repo holds 10 GB of caches before it evicts the oldest, so those caches pushed out main's and new pull requests built cold. The `pr title` workflow, which runs on pull requests only, no longer caches uv.
