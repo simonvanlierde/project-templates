@@ -37,6 +37,8 @@ jobs:
 {%- if 'python' in stacks or 'ts' not in stacks %}
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
+          # The weekly run saves the cache; a pull request only reads it.
+          save-cache: {% raw %}${{ github.event_name != 'pull_request' }}{% endraw %}
           version: "{{ uv_version }}"
 {%- endif %}
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27

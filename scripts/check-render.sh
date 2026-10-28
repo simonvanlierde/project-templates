@@ -340,6 +340,31 @@ for render in "abcdm":
                 names.setdefault(job["name"], []).append(f"{wf.name}:{job_id}")
     dupes = {n: where for n, where in names.items() if len(where) > 1}
     assert not dupes, f"{render}: jobs share a name: {dupes}"
+# A pull request saves no cache: only it could read one, and it evicts main's. Each
+# action that caches by default must carry its switch. CodSpeed's instrument cache has
+# no save switch and is left on.
+off_pr = "${{ github.event_name != 'pull_request' }}"
+saves = {
+    "actions/cache": lambda w, cond: "github.event_name != 'pull_request'" not in cond,
+    "actions/cache/save": lambda w, cond: "github.event_name != 'pull_request'" not in cond,
+    "astral-sh/setup-uv": lambda w, cond: w.get("enable-cache") is not False and w.get("save-cache") != off_pr,
+    "Swatinem/rust-cache": lambda w, cond: w.get("save-if") != off_pr,
+    "actions/setup-node": lambda w, cond: bool(w.get("cache")),
+    "actions/setup-go": lambda w, cond: w.get("cache") is not False,
+    "golangci/golangci-lint-action": lambda w, cond: w.get("skip-save-cache") != "${{ github.event_name == 'pull_request' }}",
+    "j178/prek-action": lambda w, cond: w.get("cache") is not False,
+    "aquasecurity/trivy-action": lambda w, cond: w.get("cache") != off_pr,
+}
+for render in "abcdm":
+    for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
+        doc = yaml.safe_load(wf.read_text())
+        if "pull_request" not in doc[True]:
+            continue
+        for job_id, job in doc["jobs"].items():
+            for step in job.get("steps", []):
+                check = saves.get(step.get("uses", "").split("@")[0])
+                if check and check(step.get("with") or {}, str(step.get("if", ""))):
+                    raise AssertionError(f"{render}/{wf.name}:{job_id}: {step['uses']} saves a cache on pull requests")
 PY
 
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.

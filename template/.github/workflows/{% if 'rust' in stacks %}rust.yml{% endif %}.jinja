@@ -34,9 +34,12 @@ jobs:
           toolchain: stable
           components: clippy, rustfmt
 
+      # Saved off pull requests only: a cache a pull request saves is readable by that
+      # pull request alone, and it pushes main's entries out of the 10 GB per-repo limit.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-{%- if rust_dir != '.' %}
         with:
+          save-if: {% raw %}${{ github.event_name != 'pull_request' }}{% endraw %}
+{%- if rust_dir != '.' %}
           workspaces: {{ rust_dir }}
 {%- endif %}
 

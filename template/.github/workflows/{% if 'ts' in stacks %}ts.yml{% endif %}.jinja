@@ -1,4 +1,5 @@
 {% from 'includes/triggers.jinja' import push_and_pr -%}
+{%- set lock = ('' if ts_dir == '.' else ts_dir ~ '/') ~ 'pnpm-lock.yaml' -%}
 name: ts
 
 on:
@@ -23,9 +24,8 @@ jobs:
       playwright: {% raw %}${{ steps.playwright.outputs.version }}{% endraw %}
 {%- endif %}
 {%- if ts_dir != '.' %}
-    # Only `run:` steps take this. Point the setup actions at the package separately:
-    # pnpm/action-setup reads `packageManager` from a package.json, and setup-node hashes
-    # a lockfile to key its cache.
+    # Only `run:` steps take this. Point pnpm/action-setup at the package separately: it
+    # reads `packageManager` from a package.json. The cache keys name the lockfile's path.
     defaults:
       run:
         working-directory: {{ ts_dir }}
@@ -44,12 +44,26 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "{{ node_version }}"
-          cache: pnpm
-{%- if ts_dir != '.' %}
-          cache-dependency-path: {{ ts_dir }}/pnpm-lock.yaml
-{%- endif %}
+
+      # The pnpm store is cached by hand: setup-node's cache saves on every event and has
+      # no switch to stop that. A cache a pull request saves is readable by that pull
+      # request alone, and it pushes main's entries out of the 10 GB per-repo limit, so
+      # pull requests only restore.
+      - id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - id: pnpm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: {% raw %}${{ steps.pnpm-store.outputs.path }}{% endraw %}
+          key: pnpm-check-{% raw %}${{ runner.os }}-${{ hashFiles('{% endraw %}{{ lock }}{% raw %}') }}{% endraw %}
+          restore-keys: pnpm-check-{% raw %}${{ runner.os }}-{% endraw %}
 
       - run: pnpm install --frozen-lockfile
+      - if: github.event_name != 'pull_request' && steps.pnpm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: {% raw %}${{ steps.pnpm-store.outputs.path }}{% endraw %}
+          key: {% raw %}${{ steps.pnpm-cache.outputs.cache-primary-key }}{% endraw %}
 {%- if ts_kind == 'web-app' %}
 
       # The e2e container's tag must match the installed Playwright exactly, so it
@@ -121,12 +135,24 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "{{ node_version }}"
-          cache: pnpm
-{%- if ts_dir != '.' %}
-          cache-dependency-path: {{ ts_dir }}/pnpm-lock.yaml
-{%- endif %}
+
+      # Cached by hand, saved off pull requests only, as in the check job. The container's
+      # store path differs from the runner's, so this is a cache of its own.
+      - id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - id: pnpm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: {% raw %}${{ steps.pnpm-store.outputs.path }}{% endraw %}
+          key: pnpm-e2e-{% raw %}${{ runner.os }}-${{ hashFiles('{% endraw %}{{ lock }}{% raw %}') }}{% endraw %}
+          restore-keys: pnpm-e2e-{% raw %}${{ runner.os }}-{% endraw %}
 
       - run: pnpm install --frozen-lockfile
+      - if: github.event_name != 'pull_request' && steps.pnpm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: {% raw %}${{ steps.pnpm-store.outputs.path }}{% endraw %}
+          key: {% raw %}${{ steps.pnpm-cache.outputs.cache-primary-key }}{% endraw %}
       - run: pnpm run test:e2e
 
       - if: failure()
