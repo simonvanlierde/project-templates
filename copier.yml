@@ -199,7 +199,7 @@ citable:
 # question had SECURITY.md, and an update with the default keeps it.
 public:
   type: bool
-  help: Will the repo be public? Yes adds the community files in .github/ (SECURITY.md says where to report a vulnerability), CONTRIBUTING.md, CODE_OF_CONDUCT.md, a pull request template and the dco.yml sign-off check
+  help: Will the repo be public? Yes adds the community files in .github/ (SECURITY.md says where to report a vulnerability), CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue forms, a pull request template and the dco.yml sign-off check
   default: true
 
 github_user:

@@ -1125,7 +1125,8 @@ for answers in */.copier-answers.yml; do
   r=${answers%%/*}
   # e renders a tag on HEAD, so it lacks uncommitted edits.
   [ "$r" = e ] && continue
-  for f in SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md pull_request_template.md workflows/dco.yml; do
+  for f in SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md pull_request_template.md workflows/dco.yml \
+    ISSUE_TEMPLATE/bug.yml ISSUE_TEMPLATE/feature.yml ISSUE_TEMPLATE/config.yml; do
     if grep -qx 'public: false' "$answers"; then
       test ! -e "$r/.github/$f"
     else
@@ -1136,6 +1137,9 @@ done
 # The community files' links point at this repo.
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
+grep -qx 'blank_issues_enabled: false' a/.github/ISSUE_TEMPLATE/config.yml
+grep -qx '    url: https://github.com/example-org/render-me/blob/main/.github/CONTRIBUTING.md' \
+  a/.github/ISSUE_TEMPLATE/config.yml
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
 # OpenSSF badge: passing (m) adds the test policy and a coding-standards line per stack;
 # silver (h) also adds the governance, roadmap and assurance-case skeletons. a is public

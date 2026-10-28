@@ -335,6 +335,14 @@ jobs:
           uvx --from "check-jsonschema==$CHECK_JSONSCHEMA_VERSION" check-jsonschema \
             --builtin-schema vendor.citation-file-format "$RUNNER_TEMP"/[acd]/CITATION.cff
 
+      # GitHub ignores an issue form that breaks its schema and shows a blank issue instead.
+      - name: issue forms schema
+        run: |
+          uvx --from "check-jsonschema==$CHECK_JSONSCHEMA_VERSION" check-jsonschema \
+            --builtin-schema vendor.github-issue-forms "$RUNNER_TEMP"/a/.github/ISSUE_TEMPLATE/{bug,feature}.yml
+          uvx --from "check-jsonschema==$CHECK_JSONSCHEMA_VERSION" check-jsonschema \
+            --builtin-schema vendor.github-issue-config "$RUNNER_TEMP"/a/.github/ISSUE_TEMPLATE/config.yml
+
   update:
     # Scaffolds from the last tag, then runs `copier update` to the pushed commit, as a
     # real project does.
