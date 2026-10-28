@@ -12,6 +12,7 @@ changes are marked **Breaking**.
 
 ### Fixed
 
+- `biome check` failed on every new TypeScript project with biome 2.6, which formats Markdown and YAML too. `biome.json` now leaves those files to rumdl and yamlfmt.
 - `just repo-settings` in a public Renovate repo stopped with a bare "Validation Failed" when the Renovate app was not installed yet, because GitHub refuses an app it can't see as a bypass actor. It now shows GitHub's reason and says to install the app first.
 
 ### Added
