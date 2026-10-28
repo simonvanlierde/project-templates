@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- JSON files are checked by [jsonvet](https://github.com/simonvanlierde/jsonvet) 3.2.0, the new name of check-json5, in every project, not only TypeScript ones: `.vscode/` and `.github/rulesets/` JSON ship with every stack. It reads `.json` files as JSON5, so comments and trailing commas still pass, and fails on syntax errors and duplicate keys.
+
 ### Fixed
 
 - `biome check` failed on every new TypeScript project with biome 2.6, which formats Markdown and YAML too. `biome.json` now leaves those files to rumdl and yamlfmt.

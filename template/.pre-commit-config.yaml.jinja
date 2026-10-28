@@ -56,14 +56,14 @@ repos:
       - id: committed
         # git writes a merge commit's message itself, so skip the check during a merge.
         entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || exec committed "$@"' --
-{%- if 'ts' in stacks %}
 
-  # Tolerates JSONC configs (tsconfig, VS Code settings).
-  - repo: https://github.com/simonvanlierde/check-json5
-    rev: b181775ed9b46429cf4150c514645224c8b77499 # frozen: v1.4.1
+  # Not gated to ts: .vscode/ and .github/rulesets/ JSON ship to every stack.
+  # .json files are read as JSON5, so comments and trailing commas in tsconfig
+  # and VS Code settings pass; syntax errors and duplicate keys fail.
+  - repo: https://github.com/simonvanlierde/jsonvet
+    rev: 022d320d5b971eccb28cfa6ce205152cbb382e53 # frozen: v3.2.0
     hooks:
-      - id: check-json5
-{%- endif %}
+      - id: jsonvet
 
   # Formats first, so yamllint below sees the formatted file.
   - repo: https://github.com/google/yamlfmt
