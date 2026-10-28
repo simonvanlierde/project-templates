@@ -58,7 +58,11 @@ change or have the right to submit it under this project's license: the
 adds the line. To add it to commits you already made, run
 `git rebase --signoff upstream/main` (the branch you started from) and force-push the branch.
 
+{% if openssf_badge == 'silver' -%}
+The `dco` workflow checks every pull request, the maintainers' included, and fails on a commit without the line. Only commits a bot wrote in a pull request a bot opened are skipped. The commit-msg hook refuses an unsigned commit before you push it.
+{%- else -%}
 The `dco` workflow checks every pull request from a fork and fails on a commit without the line. Pull requests from a branch in this repository skip it: pushing that branch already needed write access.
+{%- endif %}
 
 ## Who maintains this
 

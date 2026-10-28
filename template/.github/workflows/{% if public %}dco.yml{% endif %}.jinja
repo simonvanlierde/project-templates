@@ -1,9 +1,17 @@
 name: dco
 
+{% if openssf_badge == 'silver' -%}
+# Every commit in a pull request must carry a Signed-off-by line: the Developer
+# Certificate of Origin, as CONTRIBUTING.md asks and the silver badge's dco criterion
+# requires of every developer, the maintainers included. A commit a bot wrote, in a pull
+# request a bot opened, is skipped: Dependabot can't sign off, and a bot can't certify the
+# DCO anyway. A human commit pushed onto a bot's branch is still checked.
+{%- else -%}
 # Every commit in a pull request from a fork must carry a Signed-off-by line: the
 # Developer Certificate of Origin, as CONTRIBUTING.md asks. A pull request from a
 # branch in this repository skips the job, which counts as passing: pushing that
 # branch already needed write access.
+{%- endif %}
 on:
   pull_request:
 
@@ -11,13 +19,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: {% raw %}${{ github.workflow }}-${{ github.ref }}{% endraw %}
   cancel-in-progress: true
 
 jobs:
   sign-off:
     name: DCO sign-off
+{%- if openssf_badge != 'silver' %}
     if: github.event.pull_request.head.repo.full_name != github.repository
+{%- endif %}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -25,13 +35,15 @@ jobs:
     steps:
       - name: check every commit
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          REPO: {% raw %}${{ github.repository }}{% endraw %}
+          PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
+          PR_BY_BOT: {% raw %}${{ github.event.pull_request.user.type == 'Bot' }}{% endraw %}
         run: |-
           set -euo pipefail
           missing=$(gh api --paginate "repos/$REPO/pulls/$PR/commits" --jq '.[]
             | select((.parents | length) < 2)
+            | select(env.PR_BY_BOT != "true" or .author.type != "Bot")
             | select([.commit.message | split("\n")[] | select(test("^Signed-off-by: .+ <[^>]+>\\s*$"))] | length == 0)
             | .sha[0:7] + " " + (.commit.message | split("\n")[0])')
           if [ -n "$missing" ]; then
