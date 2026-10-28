@@ -69,7 +69,8 @@ sets it up.
 no deletion, no force-push, linear history, and PRs required, squash-merged only. A PR also
 waits for the checks that run on every PR: `git hooks`, `pull request title`,
 `dependency review` and, in a public repo, `DCO sign-off`. A skipped job counts as passed, so
-a draft, a private repo's dependency review and a branch's DCO check don't block. The stack
+a draft, a private repo's dependency review and, below `openssf_badge=silver`, a branch's DCO
+check don't block. The stack
 jobs aren't required: their workflows skip PRs that don't touch the stack, and a required
 check that never reports blocks the PR. Add yours to the file by its job name.
 
