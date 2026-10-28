@@ -27,6 +27,7 @@ Upgrade steps:
 
 ### Added
 
+- [docs/usage.md](docs/usage.md#making-a-repo-public) has a checklist for making a private repo public: a secret scan over the full history, the name on PyPI, crates.io and npm, a clean issue list and the README status sentence.
 - A Rust or Go `binary` and a Python `data-pipeline` get `docs/accessibility.md`: how the program prints (colour is never the only signal, `NO_COLOR` and `--color never` are honoured, plain output off a terminal, errors as `file:line:col` on standard error) and the author's email for problems. Check each claim holds for your program before you publish it. An existing project gets the file on `copier update` and keeps its own edits after that.
 - A public repo's `CONTRIBUTING.md` has a "Scope and response" section: one maintainer, a reply within about two weeks, an issue before a large pull request, and out-of-scope pull requests closed with a link to it.
 - A new `status` question (`experimental`, the default, `stable`, `maintenance` or `archived`, under `customise`) puts one status sentence under the README's badges. A public repo's README also says where questions and bugs go. An existing project's README is its own, so `copier update` adds neither: copy them from a fresh render.

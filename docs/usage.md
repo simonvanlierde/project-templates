@@ -64,6 +64,30 @@ A public repo also gets `.github/workflows/scorecard.yml`, which publishes its
 repo, so a private one gets neither. Scorecard rates branch protection too: [Protecting main](#protecting-main)
 sets it up.
 
+### Making a repo public
+
+Before you switch a private repo to public, check:
+
+1. No secret in any commit. The git hook scans only what you stage, so scan the whole
+   history once, every branch included:
+
+   ```sh
+   betterleaks git --log-opts=--all .
+   ```
+
+   A secret it finds is leaked even after you delete it: revoke it, then rewrite the
+   history or start a fresh repo.
+2. The name is free where you will publish:
+   [PyPI](https://pypi.org/search/), [crates.io](https://crates.io) and
+   [npm](https://www.npmjs.com). `npm view <name>` and `cargo search <name>` answer from
+   the command line.
+3. The issue list is clean: close or edit issues that hold private notes, names or
+   links, since they go public with the code.
+4. The README's status sentence says where the project stands. The README is yours after
+   the first render, so edit the sentence by hand.
+
+Then run `copier update --data public=true`, as above.
+
 ## Protecting main
 
 `just repo-settings` applies `.github/rulesets/main.json` to the default branch with `gh api`:
