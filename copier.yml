@@ -20,6 +20,7 @@ _skip_if_exists:
   - /GOVERNANCE.md
   - /docs/roadmap.md
   - /docs/assurance-case.md
+  - /docs/accessibility.md
   - /CITATION.cff
   - /.zenodo.json
   - /codemeta.json
@@ -195,11 +196,19 @@ citable:
   when: false
   default: "{{ 'python' in stacks and kind in ('library', 'research', 'data-pipeline') }}"
 
+# Computed, never asked: the kinds that ship a command-line program, which get
+# docs/accessibility.md. A data pipeline's `<slug> fetch|build|validate` is one; a web
+# service's console script only starts the server.
+cli:
+  type: bool
+  when: false
+  default: "{{ ('rust' in stacks and rust_kind == 'binary') or ('go' in stacks and go_kind == 'binary') or ('python' in stacks and kind == 'data-pipeline') }}"
+
 # What only outsiders need. True by default: answers files from before this
 # question had SECURITY.md, and an update with the default keeps it.
 public:
   type: bool
-  help: Will the repo be public? Yes adds the community files in .github/ (SECURITY.md says where to report a vulnerability), CONTRIBUTING.md, CODE_OF_CONDUCT.md, a pull request template and the dco.yml sign-off check
+  help: Will the repo be public? Yes adds the community files in .github/ (SECURITY.md says where to report a vulnerability), CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue forms, a pull request template and the dco.yml sign-off check
   default: true
 
 github_user:
@@ -346,6 +355,19 @@ openssf_badge:
     Passing (CONTRIBUTING.md gains a test policy and the coding standards): passing
     Silver (passing, plus GOVERNANCE.md, docs/roadmap.md and docs/assurance-case.md to fill in): silver
   default: none
+
+# One sentence under the README's badges. The README is the project's after the first
+# render, so later answers don't reach it: edit the sentence by hand.
+status:
+  type: str
+  ask: "{{ customise }}"
+  help: How far along the project is, for the status sentence in the README
+  choices:
+    Experimental (may change without notice): experimental
+    Stable (breaking changes are rare and announced): stable
+    Maintenance (fixes only, no new features): maintenance
+    Archived (no longer maintained): archived
+  default: experimental
 
 # --- python -------------------------------------------------------------------
 

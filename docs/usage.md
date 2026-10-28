@@ -32,6 +32,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | `codecov`                                       | off                                              |
 | `codspeed`                                      | off ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
 | `openssf_badge`                                 | none ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
+| `status`                                        | experimental: the README's status sentence (`stable`, `maintenance` or `archived`) |
 | `module_name`, `go_module`                      | made from the project name and GitHub user       |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | the current releases; `python_min` two minors below `python_version` |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | off ([Publishing](#publishing))           |
@@ -51,8 +52,8 @@ To skip the questions, `--data-file answers.yml` reads answers from a file, and
 ## Public repos
 
 `public` is yes by default. Answer no for a private repo, and the template leaves out
-`.github/SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` and the
-`dco.yml` sign-off check, which only outsiders need, and licenses nothing unless you pick a
+`.github/SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md`, the
+issue forms in `ISSUE_TEMPLATE/` and the `dco.yml` sign-off check, which only outsiders need, and licenses nothing unless you pick a
 license under `customise`. When the repo goes public, run
 `copier update --data public=true`: that adds the files back. It does not change a
 license you already answered, and without `customise` a private repo stored `none`
@@ -62,6 +63,30 @@ A public repo also gets `.github/workflows/scorecard.yml`, which publishes its
 [OpenSSF Scorecard](https://scorecard.dev) for the README badge. The workflow needs a public
 repo, so a private one gets neither. Scorecard rates branch protection too: [Protecting main](#protecting-main)
 sets it up.
+
+### Making a repo public
+
+Before you switch a private repo to public, check:
+
+1. No secret in any commit. The git hook scans only what you stage, so scan the whole
+   history once, every branch included:
+
+   ```sh
+   betterleaks git --log-opts=--all .
+   ```
+
+   A secret it finds is leaked even after you delete it: revoke it, then rewrite the
+   history or start a fresh repo.
+2. The name is free where you will publish:
+   [PyPI](https://pypi.org/search/), [crates.io](https://crates.io) and
+   [npm](https://www.npmjs.com). `npm view <name>` and `cargo search <name>` answer from
+   the command line.
+3. The issue list is clean: close or edit issues that hold private notes, names or
+   links, since they go public with the code.
+4. The README's status sentence says where the project stands. The README is yours after
+   the first render, so edit the sentence by hand.
+
+Then run `copier update --data public=true`, as above.
 
 ## Protecting main
 
@@ -140,6 +165,14 @@ Each stack also gets its own CI workflow in `.github/workflows/` and its own rec
 (unless `license=none`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS
 Code recommendations. Unless `public=false`, it also gets the community files in `.github/`:
 `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and a pull request template. A Python project also picks a [kind](python-kinds.md).
+
+A Rust or Go `binary` and a Python `data-pipeline` are command-line programs, so they also
+get `docs/accessibility.md`: four claims about how the program prints (colour is never the
+only signal, `NO_COLOR` and `--color never` turn colour off, plain output when not on a
+terminal, errors as `file:line:col` on standard error) and your email for problems. The
+template writes the claims but does not test them: check each one holds for your program
+before you publish, and reword or delete the ones that don't. A web app at the repo root
+keeps its own accessibility statement at that path instead.
 
 Every project also gets `docs/decisions/`, for decision records: one numbered file per
 decision, such as `0001-one-parser.md`, saying what was chosen, why, and what it costs.

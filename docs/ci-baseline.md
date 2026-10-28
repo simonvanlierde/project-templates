@@ -21,7 +21,8 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Dependency review | `checks.yml`, PRs only | Fails a PR that adds a dependency with a known advisory. |
 | Dependabot (or Renovate) with a one-week cooldown | `.github/dependabot.yml`, or `renovate.json5` with `dependency_bot=renovate` | Updates wait until a compromised release has usually been yanked. Security updates skip the wait. Dependabot groups npm security updates into one pull request. |
 | `SECURITY.md` | `.github/`, with `public` (the default) | Tells a reporter where to send a vulnerability privately, what to include, when to expect an answer (14 days) and how a fix is disclosed. |
-| `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` | `.github/`, with `public` | Tell contributors how to report a bug, set up and check a change, the commit, pull request and changelog conventions, the sign-off rule and who maintains the project, and the Contributor Covenant 3.0. |
+| `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md` | `.github/`, with `public` | Tell contributors how to report a bug, set up and check a change, the commit, pull request and changelog conventions, the sign-off rule, who maintains the project, how soon to expect a reply and when to open an issue before a pull request, and the Contributor Covenant 3.0. |
+| Issue forms | `.github/ISSUE_TEMPLATE/`, with `public` | A bug form and a feature form ask for what a report needs. Blank issues are off, and questions go to `CONTRIBUTING.md`, so the issue list holds only reports. CI checks the forms against GitHub's schema. |
 | DCO sign-off check | `dco.yml`, with `public` | Fails a pull request from a fork with a commit that has no `Signed-off-by:` line, the Developer Certificate of Origin that CONTRIBUTING.md asks for. Pull requests from a branch in the repository skip it, except with `openssf_badge=silver`, where it checks every pull request and the commit-msg hook refuses an unsigned commit. A bot's own commits in a bot's pull request are skipped. |
 | `CITATION.cff`, `.zenodo.json`, `codemeta.json` | `library`, `research` and `data-pipeline` kinds | GitHub's "Cite this repository" button reads `CITATION.cff`, Zenodo reads `.zenodo.json` when it archives a release, and software indexes read `codemeta.json` (CodeMeta 4.0). A hook checks `CITATION.cff` against its schema. |
 | Tests on every supported Python | `python.yml`, `library` kind | A library declares `requires-python >= python_min` and CI tests each minor from there to `python_version`. The default floor is two minors below, after [SPEC 0](https://scientific-python.org/specs/spec-0000/). |
@@ -74,7 +75,7 @@ scanning covers the server side.
 | Base images pinned to a digest | The `FROM` tags are copier answers (`python_version`, `node_version`), so Dependabot's docker ecosystem would fight `copier update` over them. | The image runs in production: pin `FROM ...@sha256:` and add a docker entry to `dependabot.yml`. |
 | One required "CI result" job | A single workflow per stack is short enough to list its jobs in branch protection. | The job list grows past what you want to maintain by hand. |
 | `cargo-semver-checks` | The Rust stack has no crates.io release workflow yet, so no publish answer to hang it on. | A `publish_to_crates` option lands. |
-| CODEOWNERS, issue templates | Single-author repos. | Other people start contributing. |
+| CODEOWNERS | Single-author repos. | Other people start contributing. |
 | A deploy workflow for the `web-app` kind | Cloudflare Pages' Git integration builds every push and gives each pull request a preview URL, with no API token stored in GitHub. | You deploy somewhere without a Git integration, or need a check to pass before a deploy. |
 | Firefox, WebKit and mobile browsers in the e2e job | Each browser multiplies the job's time, and a small app rarely breaks in only one engine. | The app uses an API whose support differs between browsers. Add a project to `playwright.config.ts`. |
 | A build step that hashes inline scripts into the policy | The policy allows no inline script at all, so there is nothing to hash. Code that must run before first paint goes in a file under `public/`. | Never, while that rule holds. |
@@ -93,7 +94,8 @@ scanning covers the server side.
   `github.token`, so the other hooks never see it. Locally, set `GH_TOKEN`
   to get them. Without it, only the offline audits run.
 - Accessibility checks cover the `web-app` kind only: the axe and 320 px reflow tests
-  above. The docs, in this repository and in a render, are plain Markdown that GitHub
+  above. A command-line program gets `docs/accessibility.md`, a statement of how it prints
+  that nothing tests. The docs, in this repository and in a render, are plain Markdown that GitHub
   renders, with no styles or scripts of their own.
 - The local servers speak plain HTTP and are for development on your own machine:
   `just serve` binds 127.0.0.1, compose publishes ports on 127.0.0.1 only, and Vite's dev
