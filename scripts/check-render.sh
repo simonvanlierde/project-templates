@@ -296,7 +296,7 @@ zenodo = json.loads((out / "c/.zenodo.json").read_text())
 assert {"upload_type", "title", "description", "creators", "license"} <= zenodo.keys(), zenodo
 assert zenodo["creators"][0]["name"] == "Lovelace, Ada", zenodo
 codemeta = json.loads((out / "a/codemeta.json").read_text())
-assert codemeta["@context"] == "https://w3id.org/codemeta/4.0", codemeta
+assert codemeta["@context"] == "https://w3id.org/codemeta/3.0", codemeta
 # A leading space in the author name must not leave the given name empty.
 assert codemeta["author"][0]["givenName"] == "Ada", codemeta
 assert "given-names: \"Ada\"" in (out / "a/CITATION.cff").read_text()

@@ -18,6 +18,7 @@ Upgrade steps:
 
 - **Breaking** for `openssf_badge=silver`: the `dco` check runs on every pull request, the maintainers' branches included, as the silver badge's DCO criterion asks of every developer. A commit-msg hook refuses an unsigned commit before the push. Commits Dependabot or Renovate write in their own pull requests are exempt. Below silver, only pull requests from forks are checked, as before.
 - The copier-update workflow signs off its commit.
+- `codemeta.json` declares CodeMeta 3.0 instead of 4.0, because Software Heritage's indexer reads only 2.0 and 3.0 and skipped the file. The fields are the same in both.
 - JSON files are checked by [jsonvet](https://github.com/simonvanlierde/jsonvet) 3.2.0, the new name of check-json5, in every project, not only TypeScript ones: `.vscode/` and `.github/rulesets/` JSON ship with every stack. It reads `.json` files as JSON5, so comments and trailing commas still pass, and fails on syntax errors and duplicate keys.
 
 ### Fixed
