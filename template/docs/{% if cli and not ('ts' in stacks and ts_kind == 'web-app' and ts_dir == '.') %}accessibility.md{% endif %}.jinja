@@ -1,0 +1,23 @@
+<!--
+Check each claim below against {{ project_name }} before you publish it, and reword or
+delete any that does not hold. The template writes these claims; it does not test them.
+-->
+
+# Accessibility
+
+{{ project_name }} is a command-line program. It should work with a screen reader, in a
+terminal without colour, and in scripts and CI logs:
+
+- Colour is never the only signal. A coloured message also says in words what it means,
+  such as `error:` or `warning:`.
+- It prints no colour when the [`NO_COLOR`](https://no-color.org) environment variable is
+  set or when you pass `--color never`.
+- When its output is not a terminal, such as a pipe, a file or a CI log, it prints plain
+  lines, with no spinners, progress bars or cursor movement.
+- It writes errors to standard error, and an error about a file names the place as
+  `file:line:col`, so an editor or a screen reader can jump to it.
+
+## Contact
+
+If {{ project_name }} is hard to use with your setup, email <{{ author_email }}>. Say what
+you tried, what you use (terminal, screen reader, operating system) and what happened.

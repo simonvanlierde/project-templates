@@ -19,6 +19,7 @@ Upgrade steps:
 - **Breaking** for `openssf_badge=silver`: the `dco` check runs on every pull request, the maintainers' branches included, as the silver badge's DCO criterion asks of every developer. A commit-msg hook refuses an unsigned commit before the push. Commits Dependabot or Renovate write in their own pull requests are exempt. Below silver, only pull requests from forks are checked, as before.
 - The copier-update workflow signs off its commit.
 - Pull requests restore the CI caches main saved and save none of their own, in every workflow that caches: uv, Rust, the pnpm store, Go, the git hook environments and trivy's database. GitHub lets only the pull request read a cache it saves, and a repo holds 10 GB of caches before it evicts the oldest, so those caches pushed out main's and new pull requests built cold. The `pr title` workflow, which runs on pull requests only, no longer caches uv.
+- `codemeta.json` declares CodeMeta 3.0 instead of 4.0, because Software Heritage's indexer reads only 2.0 and 3.0 and skipped the file. The fields are the same in both.
 - JSON files are checked by [jsonvet](https://github.com/simonvanlierde/jsonvet) 3.2.0, the new name of check-json5, in every project, not only TypeScript ones: `.vscode/` and `.github/rulesets/` JSON ship with every stack. It reads `.json` files as JSON5, so comments and trailing commas still pass, and fails on syntax errors and duplicate keys.
 
 ### Fixed
@@ -28,6 +29,11 @@ Upgrade steps:
 
 ### Added
 
+- [docs/usage.md](docs/usage.md#making-a-repo-public) has a checklist for making a private repo public: a secret scan over the full history, the name on PyPI, crates.io and npm, a clean issue list and the README status sentence.
+- A Rust or Go `binary` and a Python `data-pipeline` get `docs/accessibility.md`: how the program prints (colour is never the only signal, `NO_COLOR` and `--color never` are honoured, plain output off a terminal, errors as `file:line:col` on standard error) and the author's email for problems. Check each claim holds for your program before you publish it. An existing project gets the file on `copier update` and keeps its own edits after that.
+- A public repo's `CONTRIBUTING.md` has a "Scope and response" section: one maintainer, a reply within about two weeks, an issue before a large pull request, and out-of-scope pull requests closed with a link to it.
+- A new `status` question (`experimental`, the default, `stable`, `maintenance` or `archived`, under `customise`) puts one status sentence under the README's badges. A public repo's README also says where questions and bugs go. An existing project's README is its own, so `copier update` adds neither: copy them from a fresh render.
+- A public repo gets issue forms in `.github/ISSUE_TEMPLATE/`: one for bugs and one for feature requests. Blank issues are turned off, and a link sends questions to `CONTRIBUTING.md`. Vulnerabilities go to private reporting, as before. A private repo gets none.
 - The template itself has a Zenodo DOI, [10.5281/zenodo.23701980](https://doi.org/10.5281/zenodo.23701980), which always points to the newest release. `CITATION.cff` and the README carry it.
 
 ## [0.11.0] - 2026-10-27

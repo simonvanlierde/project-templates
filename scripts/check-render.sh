@@ -112,13 +112,13 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
 
 # m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
-# only BSD-3-Clause render.
+# only BSD-3-Clause render, and the only one not experimental.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause . "$out/m"
+  --data license=BSD-3-Clause --data status=maintenance . "$out/m"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -296,7 +296,7 @@ zenodo = json.loads((out / "c/.zenodo.json").read_text())
 assert {"upload_type", "title", "description", "creators", "license"} <= zenodo.keys(), zenodo
 assert zenodo["creators"][0]["name"] == "Lovelace, Ada", zenodo
 codemeta = json.loads((out / "a/codemeta.json").read_text())
-assert codemeta["@context"] == "https://w3id.org/codemeta/4.0", codemeta
+assert codemeta["@context"] == "https://w3id.org/codemeta/3.0", codemeta
 # A leading space in the author name must not leave the given name empty.
 assert codemeta["author"][0]["givenName"] == "Ada", codemeta
 assert "given-names: \"Ada\"" in (out / "a/CITATION.cff").read_text()
@@ -1150,7 +1150,8 @@ for answers in */.copier-answers.yml; do
   r=${answers%%/*}
   # e renders a tag on HEAD, so it lacks uncommitted edits.
   [ "$r" = e ] && continue
-  for f in SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md pull_request_template.md workflows/dco.yml; do
+  for f in SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md pull_request_template.md workflows/dco.yml \
+    ISSUE_TEMPLATE/bug.yml ISSUE_TEMPLATE/feature.yml ISSUE_TEMPLATE/config.yml; do
     if grep -qx 'public: false' "$answers"; then
       test ! -e "$r/.github/$f"
     else
@@ -1161,6 +1162,25 @@ done
 # The community files' links point at this repo.
 grep -qF 'https://github.com/example-org/render-me/issues)' a/.github/CONTRIBUTING.md
 grep -qF '(../committed.toml)' a/.github/CONTRIBUTING.md
+grep -qx '## Scope and response' a/.github/CONTRIBUTING.md
+grep -q 'within about two weeks' a/.github/CONTRIBUTING.md
+# A command-line program (c's Rust and Go binaries, d's pipeline) gets the CLI statement
+# at the root; a's libraries and research package don't. d's nested web app keeps its own.
+for r in c d; do
+  grep -qx '# Accessibility' "$r/docs/accessibility.md"
+  grep -qF 'NO_COLOR' "$r/docs/accessibility.md"
+  grep -qF '<ada@example.com>' "$r/docs/accessibility.md"
+done
+test ! -e a/docs/accessibility.md
+grep -qx '# Accessibility statement' d/web/docs/accessibility.md
+# The README's status sentence follows the answer; only a public repo points to CONTRIBUTING.md.
+grep -qx 'Status: experimental. It may change in ways that break your code, without notice.' a/README.md
+grep -qx 'Status: maintenance. Bugs and security issues get fixed; new features are unlikely.' m/README.md
+grep -qxF 'Questions and bugs: see [CONTRIBUTING.md](.github/CONTRIBUTING.md).' a/README.md
+(! grep -q 'Questions and bugs' b/README.md)
+grep -qx 'blank_issues_enabled: false' a/.github/ISSUE_TEMPLATE/config.yml
+grep -qx '    url: https://github.com/example-org/render-me/blob/main/.github/CONTRIBUTING.md' \
+  a/.github/ISSUE_TEMPLATE/config.yml
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
 # OpenSSF badge: passing (m) adds the test policy and a coding-standards line per stack;
 # silver (h) also adds the governance, roadmap and assurance-case skeletons. a is public
