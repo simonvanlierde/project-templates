@@ -471,6 +471,7 @@ grep -qx "          uvx --from git+https://github.com/fair-software/howfairis@$h
 # shellcheck disable=SC2016 # the $ is literal workflow text
 grep -qF 'cat out.txt >> "$GITHUB_STEP_SUMMARY"' a/.github/workflows/fair.yml
 grep -qx '      FAIR_MIN: 3' a/.github/workflows/fair.yml
+grep -qxF "      APIKEY_GITHUB: x-access-token:\${{ github.token }}" a/.github/workflows/fair.yml
 grep -qx 'permissions: {}' a/.github/workflows/fair.yml
 (! grep -q continue-on-error a/.github/workflows/fair.yml)
 # howfairis order: repository, license, registry, citation, checklist.
