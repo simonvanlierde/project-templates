@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 10
     env:
       # Filled dots required out of five. A new repo has three: raise this as you earn the rest.
+      # At five, add the README badge whose snippet howfairis prints in the job summary.
       FAIR_MIN: 3
     steps:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0

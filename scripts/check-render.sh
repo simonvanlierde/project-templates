@@ -474,7 +474,8 @@ grep -qx '      FAIR_MIN: 3' a/.github/workflows/fair.yml
 grep -qx 'permissions: {}' a/.github/workflows/fair.yml
 (! grep -q continue-on-error a/.github/workflows/fair.yml)
 # howfairis order: repository, license, registry, citation, checklist.
-grep -qF 'fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8F%20%20%E2%97%8B-orange' a/README.md
+# The badge waits for 5 of 5, so no render ships one.
+(! grep -q fair-software.eu a/README.md)
 test ! -e b/.github/workflows/fair.yml
 (! grep -q fair-software.eu b/README.md)
 test ! -e h/.github/workflows/fair.yml
