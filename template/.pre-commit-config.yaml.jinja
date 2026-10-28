@@ -56,6 +56,18 @@ repos:
       - id: committed
         # git writes a merge commit's message itself, so skip the check during a merge.
         entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || exec committed "$@"' --
+{%- if openssf_badge == 'silver' %}
+
+  # The dco workflow fails a pull request with an unsigned commit, so refuse one here. Merge
+  # commits are skipped, as the workflow skips them.
+  - repo: local
+    hooks:
+      - id: dco-signoff
+        name: commit message has a Signed-off-by line (git commit -s)
+        entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || grep -q "^Signed-off-by:" "$1"' --
+        language: system
+        stages: [commit-msg]
+{%- endif %}
 
   # Not gated to ts: .vscode/ and .github/rulesets/ JSON ship to every stack.
   # .json files are read as JSON5, so comments and trailing commas in tsconfig

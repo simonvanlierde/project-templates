@@ -1156,13 +1156,15 @@ done
 test "$(wc -l <h/docs/assurance-case.md)" -le 60
 grep -qF '| Maintainer |' h/GOVERNANCE.md
 grep -qx 'Bus factor: TODO (the fewest people whose departure would leave the project unable to continue).' h/GOVERNANCE.md
-# This repo runs the same DCO check and commit rules it renders. One difference: it checks
-# its own branches too, while a render skips them, because Dependabot can't sign off.
-diff <(sed '/^#/d; /^    if: /d' "$repo/.github/workflows/dco.yml") \
-  <(sed '/^#/d; /^    if: /d' "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}")
+# This repo runs the silver render's DCO check, hook and commit rules: it checks its own
+# branches too. Below silver a render checks only pull requests from forks.
+diff "$repo/.github/workflows/dco.yml" h/.github/workflows/dco.yml
 grep -qx '    if: github.event.pull_request.head.repo.full_name != github.repository' \
-  "$repo/template/.github/workflows/{% if public %}dco.yml{% endif %}"
-(! grep -q '^    if: ' "$repo/.github/workflows/dco.yml")
+  a/.github/workflows/dco.yml
+(! grep -q '^    if: ' h/.github/workflows/dco.yml)
+grep -q 'id: dco-signoff' h/.pre-commit-config.yaml
+(! grep -q 'id: dco-signoff' a/.pre-commit-config.yaml)
+grep -q 'the maintainers. included' h/.github/CONTRIBUTING.md
 cmp "$repo/committed.toml" "$repo/template/committed.toml"
 # Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off
 # without an email, and skips the merge. Trailing whitespace and CRLF still count as signed.
@@ -1178,10 +1180,13 @@ cat >"$commits" <<'JSON'
   {"sha": "ccccccc3", "parents": [{}, {}], "commit": {"message": "Merge branch 'main'"}},
   {"sha": "ddddddd4", "parents": [{}], "commit": {"message": "fix: malformed\n\nSigned-off-by: Ada Lovelace"}},
   {"sha": "eeeeeee5", "parents": [{}], "commit": {"message": "fix: trailing space\n\nSigned-off-by: Ada Lovelace <ada@example.com>  "}},
-  {"sha": "fffffff6", "parents": [{}], "commit": {"message": "fix: crlf\r\n\r\nSigned-off-by: Ada Lovelace <ada@example.com>\r\n"}}
+  {"sha": "fffffff6", "parents": [{}], "commit": {"message": "fix: crlf\r\n\r\nSigned-off-by: Ada Lovelace <ada@example.com>\r\n"}},
+  {"sha": "1111111a", "parents": [{}], "author": {"type": "Bot"}, "commit": {"message": "chore(deps): bump"}}
 ]
 JSON
-test "$(jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed')"
+# A bot's commit counts only in a pull request a person opened.
+test "$(PR_BY_BOT=false jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n1111111 chore(deps): bump')"
+test "$(PR_BY_BOT=true jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed')"
 # copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml

@@ -130,7 +130,7 @@ jobs:
           git apply --index "$artifact/update.patch"
           git -c core.hooksPath=/dev/null -c user.name=github-actions[bot] \
             -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
-            commit -q -m "chore: update from template $LATEST"
+            commit -q -s -m "chore: update from template $LATEST"
 
       - name: Push the update and open the PR
         env:

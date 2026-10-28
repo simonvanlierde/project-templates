@@ -499,6 +499,10 @@ for its questionnaire. A private repo or one with `license=none` gets no badge d
   which keys, what happens if a maintainer is gone), `docs/roadmap.md` (the next year,
   and what is out of scope) and `docs/assurance-case.md` (threat model, trust boundaries,
   secure design, weaknesses countered). They belong to your project once written.
+  Silver's DCO criterion covers every developer, so the `dco` check also runs on your own
+  branches, and a commit-msg hook refuses a commit without a `Signed-off-by:` line: use
+  `git commit -s`. Commits Dependabot or Renovate write in their own pull requests are
+  exempt.
 
 The template can't earn the badge for you. Register the project on bestpractices.dev,
 answer its questionnaire, and add the badge it gives you to the README. Silver also requires

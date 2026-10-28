@@ -1,8 +1,10 @@
 name: dco
 
 # Every commit in a pull request must carry a Signed-off-by line: the Developer
-# Certificate of Origin, as CONTRIBUTING.md asks. That holds for the maintainer's own
-# branches too; Renovate adds the line through commitBody in renovate.json5.
+# Certificate of Origin, as CONTRIBUTING.md asks and the silver badge's dco criterion
+# requires of every developer, the maintainers included. A commit a bot wrote, in a pull
+# request a bot opened, is skipped: Dependabot can't sign off, and a bot can't certify the
+# DCO anyway. A human commit pushed onto a bot's branch is still checked.
 on:
   pull_request:
 
@@ -26,10 +28,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          PR_BY_BOT: ${{ github.event.pull_request.user.type == 'Bot' }}
         run: |-
           set -euo pipefail
           missing=$(gh api --paginate "repos/$REPO/pulls/$PR/commits" --jq '.[]
             | select((.parents | length) < 2)
+            | select(env.PR_BY_BOT != "true" or .author.type != "Bot")
             | select([.commit.message | split("\n")[] | select(test("^Signed-off-by: .+ <[^>]+>\\s*$"))] | length == 0)
             | .sha[0:7] + " " + (.commit.message | split("\n")[0])')
           if [ -n "$missing" ]; then
