@@ -18,6 +18,7 @@ Upgrade steps:
 
 - **Breaking** for `openssf_badge=silver`: the `dco` check runs on every pull request, the maintainers' branches included, as the silver badge's DCO criterion asks of every developer. A commit-msg hook refuses an unsigned commit before the push. Commits Dependabot or Renovate write in their own pull requests are exempt. Below silver, only pull requests from forks are checked, as before.
 - The copier-update workflow signs off its commit.
+- Pull requests restore the CI caches main saved and save none of their own, in every workflow that caches: uv, Rust, the pnpm store, Go, the git hook environments and trivy's database. GitHub lets only the pull request read a cache it saves, and a repo holds 10 GB of caches before it evicts the oldest, so those caches pushed out main's and new pull requests built cold. The `pr title` workflow, which runs on pull requests only, no longer caches uv.
 - JSON files are checked by [jsonvet](https://github.com/simonvanlierde/jsonvet) 3.2.0, the new name of check-json5, in every project, not only TypeScript ones: `.vscode/` and `.github/rulesets/` JSON ship with every stack. It reads `.json` files as JSON5, so comments and trailing commas still pass, and fails on syntax errors and duplicate keys.
 
 ### Fixed

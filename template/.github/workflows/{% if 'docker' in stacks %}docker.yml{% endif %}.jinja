@@ -33,10 +33,21 @@
       # Lists HIGH and CRITICAL vulnerabilities that already have a fix. Only the weekly
       # run fails on them: a fix often waits days on a rebuilt base image, and a gate
       # that is red on every pull request in the meantime stops being read.
+      # trivy-action saves its database cache on every event, with no switch for that
+      # alone. A cache a pull request saves is readable by that pull request alone, so a
+      # pull request restores the newest database here and turns the action's cache off.
+      # The path and key prefix are trivy-action's defaults.
+      - if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: {% raw %}${{ github.workspace }}{% endraw %}/.cache/trivy
+          key: cache-trivy-
+          restore-keys: cache-trivy-
       - name: scan image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: {% raw %}${{ matrix.tag }}{% endraw %}
+          cache: {% raw %}${{ github.event_name != 'pull_request' }}{% endraw %}
           ignore-unfixed: true
           severity: HIGH,CRITICAL
           exit-code: {% raw %}${{ github.event_name == 'schedule' && '1' || '0' }}{% endraw %}

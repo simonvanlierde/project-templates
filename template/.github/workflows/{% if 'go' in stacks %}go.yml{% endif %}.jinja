@@ -30,17 +30,35 @@ jobs:
         with:
           persist-credentials: false
 
-      # Go from go.mod's `go` directive.
+      # Go from go.mod's `go` directive. The module and build caches are kept by hand
+      # below: setup-go's cache saves on every event and has no switch to stop that.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: {{ d }}go.mod
-          cache-dependency-path: {{ d }}go.sum
+          cache: false
+
+      # A cache a pull request saves is readable by that pull request alone, and it
+      # pushes main's entries out of the 10 GB per-repo limit, so pull requests only
+      # restore. The save step at the end runs off pull requests.
+      - id: go-env
+        run: |
+          echo "modcache=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+          echo "buildcache=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+      - id: go-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            {% raw %}${{ steps.go-env.outputs.modcache }}{% endraw %}
+            {% raw %}${{ steps.go-env.outputs.buildcache }}{% endraw %}
+          key: go-{% raw %}${{ runner.os }}-${{ hashFiles('{% endraw %}{{ d }}go.sum{% raw %}') }}{% endraw %}
+          restore-keys: go-{% raw %}${{ runner.os }}-{% endraw %}
 
       # `run` also reports files the formatters in .golangci.yml would change,
       # so this covers `golangci-lint fmt --diff` too.
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: {{ golangci_lint_version }}
+          skip-save-cache: {% raw %}${{ github.event_name == 'pull_request' }}{% endraw %}
 {%- if go_dir != '.' %}
           working-directory: {{ go_dir }}
 {%- endif %}
@@ -48,3 +66,11 @@ jobs:
       # go test also runs every Example and checks its Output comment.
       - run: go test -race ./...
       - run: go tool govulncheck ./...
+
+      - if: github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            {% raw %}${{ steps.go-env.outputs.modcache }}{% endraw %}
+            {% raw %}${{ steps.go-env.outputs.buildcache }}{% endraw %}
+          key: {% raw %}${{ steps.go-cache.outputs.cache-primary-key }}{% endraw %}
