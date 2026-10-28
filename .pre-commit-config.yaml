@@ -31,6 +31,16 @@ repos:
         # git writes a merge commit's message itself, so skip the check during a merge.
         entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || exec committed "$@"' --
 
+  # The dco workflow fails a pull request with an unsigned commit, so refuse one here. Merge
+  # commits are skipped, as the workflow skips them.
+  - repo: local
+    hooks:
+      - id: dco-signoff
+        name: commit message has a Signed-off-by line (git commit -s)
+        entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || grep -q "^Signed-off-by:" "$1"' --
+        language: system
+        stages: [commit-msg]
+
   # Also parses renovate.json5, which check-json cannot.
   - repo: https://github.com/simonvanlierde/jsonvet
     rev: 022d320d5b971eccb28cfa6ce205152cbb382e53 # frozen: v3.2.0
