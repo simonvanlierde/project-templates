@@ -2,7 +2,7 @@
     vcs.root: biome looks for .gitignore beside biome.json, and the only .gitignore
     is at the repository root, so nested packages point back up at it. -#}
 {
-  "$schema": "https://biomejs.dev/schemas/latest/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": { "includes": ["**", "!.vscode"] },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "formatter": { "indentStyle": "space", "lineWidth": 120 },
