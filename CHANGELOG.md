@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- JSON files are checked by [jsonvet](https://github.com/simonvanlierde/jsonvet) 3.2.0, the new name of check-json5, in every project, not only TypeScript ones: `.vscode/` and `.github/rulesets/` JSON ship with every stack. It reads `.json` files as JSON5, so comments and trailing commas still pass, and fails on syntax errors and duplicate keys.
+
 ### Fixed
 
 - `just repo-settings` in a public Renovate repo stopped with a bare "Validation Failed" when the Renovate app was not installed yet, because GitHub refuses an app it can't see as a bypass actor. It now shows GitHub's reason and says to install the app first.
