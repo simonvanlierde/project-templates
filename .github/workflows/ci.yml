@@ -82,7 +82,7 @@ jobs:
     steps:
       - *checkout
 
-      # Renovate supports only the active node LTS line.
+      # The node major that renovate's package.json `engines` allows, which can lag the active LTS.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
