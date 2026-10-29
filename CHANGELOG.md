@@ -12,7 +12,7 @@ changes are marked **Breaking**.
 
 ### Added
 
-- Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).
+- Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. The Code of Conduct keeps the Contributor Covenant's CC-BY-SA-4.0. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).
 - Research and data-pipeline projects ask `data_license` for what they commit under `data/`: CC-BY-4.0 by default for research, CC0-1.0 for a pipeline. Until now data took the code license.
 - [docs/usage.md](docs/usage.md#licenses) says which code license to pick.
 

@@ -1,0 +1,6 @@
+includes/license.jinja holds the standard texts of the MIT, Apache-2.0, BSD-3-Clause,
+GPL-3.0-or-later and AGPL-3.0-or-later licenses, which the template renders into new
+projects. They are not licensed under this repository's MIT license. Each text may be
+copied verbatim on the terms its steward gives: the Free Software Foundation for the GNU
+licenses, the Apache Software Foundation for Apache-2.0, and the Open Source Initiative's
+published templates for MIT and BSD-3-Clause.

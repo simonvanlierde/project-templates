@@ -1,0 +1,25 @@
+# Who holds the copyright on each file and under which license, per the REUSE spec
+# (https://reuse.software). The texts are in LICENSES/; the `reuse` hook checks every file.
+version = 1
+
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "2026 Simon van Lierde"
+SPDX-License-Identifier = "MIT"
+
+# The Code of Conduct, here and in the template, is the Contributor Covenant 3.0.
+[[annotations]]
+path = ["CODE_OF_CONDUCT.md", "template/.github/*CODE_OF_CONDUCT.md*"]
+SPDX-FileCopyrightText = "Organization for Ethical Source"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# License texts the template renders into new projects.
+[[annotations]]
+path = "includes/license.jinja"
+SPDX-FileCopyrightText = "The license stewards named in LICENSES/LicenseRef-license-texts.txt"
+SPDX-License-Identifier = "LicenseRef-license-texts"
+
+[[annotations]]
+path = ["template/*LICENSES*/*CC-BY-4.0.txt*", "template/*LICENSES*/*CC0-1.0.txt*", "template/*LICENSES*/*CC-BY-SA-4.0.txt*"]
+SPDX-FileCopyrightText = "Creative Commons"
+SPDX-License-Identifier = "CC0-1.0"
