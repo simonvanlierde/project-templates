@@ -14,6 +14,10 @@ changes are marked **Breaking**.
 
 - A web app's markdown plugin now strips HTML comments until none are left. One pass over `<!<!---->---->` left a comment behind. CodeQL flagged the single pass as incomplete sanitization (`js/incomplete-multi-character-sanitization`, high) in every rendered web app.
 
+### Security
+
+- `fair.yml` runs howfairis from a pinned commit instead of its `0.15.0` tag, which can be moved, and resolves howfairis' dependencies only to releases at least a week old.
+
 ## [0.12.0] - 2026-10-29
 
 Upgrade steps:
