@@ -1309,6 +1309,16 @@ grep -qx '    if: github.event.pull_request.head.repo.full_name != github.reposi
 (! grep -q '^    if: ' h/.github/workflows/dco.yml)
 grep -q 'id: dco-signoff' h/.pre-commit-config.yaml
 (! grep -q 'id: dco-signoff' a/.pre-commit-config.yaml)
+# The silver hook and sign-off setting need the silver dco.yml, so they follow its
+# condition: b answers silver privately, i publicly without a license.
+grep -q 'web_commit_signoff_required=true' h/justfile
+for r in b i; do
+  (! grep -q 'id: dco-signoff' "$r/.pre-commit-config.yaml")
+  (! grep -q 'web_commit_signoff_required' "$r/justfile")
+done
+grep -qx '    if: github.event.pull_request.head.repo.full_name != github.repository' \
+  i/.github/workflows/dco.yml
+(! grep -q 'the maintainers. included' i/.github/CONTRIBUTING.md)
 grep -q 'the maintainers. included' h/.github/CONTRIBUTING.md
 cmp "$repo/committed.toml" "$repo/template/committed.toml"
 # Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off

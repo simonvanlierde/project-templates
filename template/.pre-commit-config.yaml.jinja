@@ -56,7 +56,7 @@ repos:
       - id: committed
         # git writes a merge commit's message itself, so skip the check during a merge.
         entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || exec committed "$@"' --
-{%- if openssf_badge == 'silver' %}
+{%- if public and license != 'none' and openssf_badge == 'silver' %}
 
   # The dco workflow fails a pull request with an unsigned commit, so refuse one here. Merge
   # commits are skipped, as the workflow skips them.
