@@ -201,6 +201,7 @@ refuses 'An empty value' --data 'stacks=[python]' --data python_dir=
 refuses 'An empty value' --data 'stacks=[ts]' --data ts_dir=
 refuses 'An empty value' --data 'stacks=[rust]' --data rust_dir=
 refuses 'An empty value' --data 'stacks=[go]' --data go_dir=
+refuses 'Give a plain relative path' --data 'stacks=[ts]' --data ts_dir=apps//web
 refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
 refuses 'Keep the description to one line' --data 'project_description=Says """hi"""'
 refuses 'Keep the description to one line' --data 'project_description=Ends a comment */ early'

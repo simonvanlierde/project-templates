@@ -22,6 +22,7 @@ changes are marked **Breaking**.
 - A project description with `{{` no longer breaks the justfile. just read it as a variable, so no recipe ran.
 - A project name ending in `.`, `-` or `_` no longer leaves it on the package, image and Pages names: `app.` made `app-`, and `https://app-.pages.dev` is not a valid address.
 - A project name with `~`, or with `_` at the start or end of a word (`a _b_`), is refused: Markdown read it as strikethrough or emphasis. `_` inside a word, as in `my_app`, is still fine.
+- A package directory with `//`, such as `apps//web`, is refused. It counted as one level too many, so `biome.json` pointed above the repo.
 
 ### Security
 

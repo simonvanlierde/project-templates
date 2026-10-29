@@ -133,7 +133,7 @@ scanning are repository settings a render can't make; the project sets them.
 - **Unvalidated answers.** The 22 validators in [`copier.yml`](../copier.yml) check the
   answers that become names, paths, versions, URLs, ports and identities, and the
   description, which lands unescaped in a docstring and in code comments: it must be one
-  line without `"""`, `*/` or `\`. `check-render.sh` asserts that 26 crafted answers are refused
+  line without `"""`, `*/` or `\`. `check-render.sh` asserts that 27 crafted answers are refused
   with the validator's own message. Free text reaches JSON, YAML and TOML through `to_json`,
   which render b tests with quotes. The copyright year and the Node and Go versions have no
   validator: the copier user is their only author, so a bad one breaks only their own render.
