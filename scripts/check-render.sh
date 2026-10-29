@@ -1446,4 +1446,12 @@ PATCH
   )
 )
 
+# rumdl's MD012 rewrites a README with two blank lines in a row on its first commit.
+for r in a c; do
+  if ! awk '/^$/ { if (++n == 2) exit 1; next } { n = 0 }' "$out/$r/README.md"; then
+    echo "check-render: $r/README.md has two blank lines in a row" >&2
+    exit 1
+  fi
+done
+
 echo "all render checks passed"

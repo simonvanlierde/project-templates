@@ -78,7 +78,7 @@ Approve the `pypi` environment when prompted. Do not create the GitHub release b
 If the release job fails after PyPI succeeds, delete any leftover draft with `gh release delete vX.Y.Z`.
 Re-run only the `release` job. A published immutable release needs a new patch version to fix its files.
 {% else %}`release.yml` makes the GitHub release from that section.
-{% endif %}
+{% endif -%}
 {% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}
 Before the first release, set up the publishing environment
 ({% for name, on in [('pypi', publish_to_pypi), ('npm', publish_to_npm), ('ghcr', publish_to_ghcr)] if on %}`{{ name }}`{% if not loop.last %}, {% endif %}{% endfor %})
