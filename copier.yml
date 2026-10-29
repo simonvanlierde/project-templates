@@ -628,13 +628,14 @@ copier_version:
   when: false
   default: 9.19.1
 
-# A GitHub tag, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
-# badge URL (fair-software/howfairis#383).
+# A GitHub commit, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
+# badge URL (fair-software/howfairis#383). A commit, not the tag, because a tag can be
+# moved. Renovate updates the commit and the tag in the comment together.
 # renovate: datasource=github-tags depName=fair-software/howfairis
 howfairis_version:
   type: str
   when: false
-  default: 0.15.0
+  default: 09f3bea4f13c80f52c59c326b5dd9f93354b40a2 # 0.15.0
 
 # --- docker -------------------------------------------------------------------
 

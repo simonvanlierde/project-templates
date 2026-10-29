@@ -96,11 +96,14 @@
     {
       // copier.yml defaults Renovate can bump: language versions and workflow
       // tool pins, each under a `# renovate: datasource=... depName=...`
-      // comment. Quotes around the value stay outside the capture.
+      // comment. Quotes around the value stay outside the capture. A default that is
+      // a commit SHA carries its tag in a trailing comment, and only the second pattern
+      // matches it: the first needs the line to end after the value.
       customType: "regex",
       managerFilePatterns: ["/^copier\\.yml$/"],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?\\n\\w+:\\n(?:  .*\\n)*?  default: \"?(?<currentValue>[^\"\\s]+)",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?\\n\\w+:\\n(?:  .*\\n)*?  default: \"?(?<currentValue>[^\"\\s]+)\"?\\n",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\w+:\\n(?:  .*\\n)*?  default: (?<currentDigest>[0-9a-f]{40}) # (?<currentValue>\\S+)\\n",
       ],
     },
   ],

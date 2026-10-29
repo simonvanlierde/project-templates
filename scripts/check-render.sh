@@ -14,7 +14,7 @@ out=${1:?usage: scripts/check-render.sh OUT_DIR}
 export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
 COPIER_VERSION=${COPIER_VERSION:-$(sed -n 's/^ *COPIER_VERSION: *//p' .github/workflows/ci.yml)}
 copier_pin=$(sed -n '/^copier_version:/,/^$/s/^  default: //p' copier.yml)
-howfairis_pin=$(sed -n '/^howfairis_version:/,/^$/s/^  default: //p' copier.yml)
+howfairis_pin=$(sed -n '/^howfairis_version:/,/^$/s/^  default: \([^ ]*\).*/\1/p' copier.yml)
 copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwrite)
 
 # a: every stack, other answers at their defaults, but for an author name with a
@@ -273,7 +273,7 @@ if [ -n "$missing" ]; then
 fi
 
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
-import ast, json, json5, os, pathlib, subprocess, tempfile, tomllib, yaml
+import ast, collections, json, json5, os, pathlib, subprocess, tempfile, tomllib, yaml
 
 load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
@@ -342,7 +342,8 @@ for render in "abcdm":
     assert not dupes, f"{render}: jobs share a name: {dupes}"
 # A pull request saves no cache: only it could read one, and it evicts main's. Each
 # action that caches by default must carry its switch. CodSpeed's instrument cache has
-# no save switch and is left on.
+# no save switch and is left on. A job whose `if` excludes pull requests outright (an
+# `&&` chain with no `||`) is skipped, like docker.yml's push job.
 off_pr = "${{ github.event_name != 'pull_request' }}"
 saves = {
     "actions/cache": lambda w, cond: "github.event_name != 'pull_request'" not in cond,
@@ -354,17 +355,28 @@ saves = {
     "golangci/golangci-lint-action": lambda w, cond: w.get("skip-save-cache") != "${{ github.event_name == 'pull_request' }}",
     "j178/prek-action": lambda w, cond: w.get("cache") is not False,
     "aquasecurity/trivy-action": lambda w, cond: w.get("cache") != off_pr,
+    "docker/build-push-action": lambda w, cond: bool(w.get("cache-to")) and "github.event_name == 'push'" not in w["cache-to"],
 }
+checked = collections.Counter()
 for render in "abcdm":
     for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
         doc = yaml.safe_load(wf.read_text())
         if "pull_request" not in doc[True]:
             continue
         for job_id, job in doc["jobs"].items():
+            job_if = str(job.get("if", ""))
+            if "github.event_name != 'pull_request'" in job_if and "||" not in job_if:
+                continue
             for step in job.get("steps", []):
-                check = saves.get(step.get("uses", "").split("@")[0])
+                uses = step.get("uses", "").split("@")[0]
+                check = saves.get(uses)
+                if check:
+                    checked[uses] += 1
                 if check and check(step.get("with") or {}, str(step.get("if", ""))):
                     raise AssertionError(f"{render}/{wf.name}:{job_id}: {step['uses']} saves a cache on pull requests")
+# The steps the table matched, so a renamed action or a moved job can't empty the check.
+assert checked["docker/build-push-action"] >= 1, checked
+assert sum(checked.values()) >= 70, checked  # 75 when this was written
 PY
 
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.
@@ -467,7 +479,7 @@ test ! -e b/.github/workflows/scorecard.yml
 (! grep -q -i scorecard b/README.md)
 # fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
 # and public. b is citable-less and private; h is public but has no citation files.
-grep -qx "          uvx --from git+https://github.com/fair-software/howfairis@$howfairis_pin howfairis $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
+grep -qx "          uvx --exclude-newer \"1 week\" --from git+https://github.com/fair-software/howfairis@$howfairis_pin howfairis $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
 # shellcheck disable=SC2016 # the $ is literal workflow text
 grep -qF 'cat out.txt >> "$GITHUB_STEP_SUMMARY"' a/.github/workflows/fair.yml
 grep -qx '      FAIR_MIN: 3' a/.github/workflows/fair.yml
@@ -917,13 +929,22 @@ done
 # runs in a copy. lychee runs offline in the hook; links.yml checks the web weekly.
 PREK_VERSION=${PREK_VERSION:-$(sed -n 's/^ *PREK_VERSION: *//p' "$repo/.github/workflows/ci.yml")}
 prek=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --all-files)
-for r in a b d; do
+for r in a b d h; do
   rm -rf "$r-hooks"
   cp -R "$r" "$r-hooks"
   git -C "$r-hooks" init -q
   git -C "$r-hooks" add -A
-  (cd "$r-hooks" && "${prek[@]}" typos lychee >/dev/null)
+  (cd "$r-hooks" && "${prek[@]}" typos lychee jsonvet >/dev/null)
 done
+# The local citation hook passes on a fresh citable render (a). h's commit-msg hook takes a
+# sign-off with an email, and refuses one without.
+(cd a-hooks && "${prek[@]}" citation >/dev/null)
+dco_hook=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --hook-stage commit-msg --commit-msg-filename msg dco-signoff)
+printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg
+(cd h-hooks && "${dco_hook[@]}" >/dev/null)
+printf 'feat: x\n\nSigned-off-by: Ada Lovelace\n' >h-hooks/msg
+(cd h-hooks && ! "${dco_hook[@]}" >/dev/null 2>&1)
+rm -rf h-hooks
 # Copier writes the template's commit id into the answers file, and a hex id can spell a
 # word typos rejects, so typos skips that file.
 printf '# definately\n' >>a-hooks/.copier-answers.yml
@@ -1283,12 +1304,14 @@ cat >"$commits" <<'JSON'
   {"sha": "ddddddd4", "parents": [{}], "commit": {"message": "fix: malformed\n\nSigned-off-by: Ada Lovelace"}},
   {"sha": "eeeeeee5", "parents": [{}], "commit": {"message": "fix: trailing space\n\nSigned-off-by: Ada Lovelace <ada@example.com>  "}},
   {"sha": "fffffff6", "parents": [{}], "commit": {"message": "fix: crlf\r\n\r\nSigned-off-by: Ada Lovelace <ada@example.com>\r\n"}},
-  {"sha": "1111111a", "parents": [{}], "author": {"type": "Bot"}, "commit": {"message": "chore(deps): bump"}}
+  {"sha": "1111111a", "parents": [{}], "author": {"type": "Bot"}, "commit": {"message": "chore(deps): bump"}},
+  {"sha": "2222222b", "parents": [{}], "author": {"type": "User"}, "commit": {"message": "fix: human on a bot branch"}}
 ]
 JSON
-# A bot's commit counts only in a pull request a person opened.
-test "$(PR_BY_BOT=false jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n1111111 chore(deps): bump')"
-test "$(PR_BY_BOT=true jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed')"
+# A bot's commit counts only in a pull request a person opened. A person's commit counts
+# in a bot's pull request too.
+test "$(PR_BY_BOT=false jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n1111111 chore(deps): bump\n2222222 fix: human on a bot branch')"
+test "$(PR_BY_BOT=true jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n2222222 fix: human on a bot branch')"
 # copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml
