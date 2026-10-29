@@ -524,7 +524,9 @@ jobs:
       # left" tests must fail here, and every other spec must pass. A missing page or a
       # build that fails would fail them too, so the JSON report must show each one
       # failing on its TODO assertion with the page found: only then does Playwright
-      # print the text it received.
+      # print the text it received. The one exception is a page with nothing to fill in
+      # (the privacy statement when user_data is "nothing"): its test may pass, and the
+      # first run above has already shown that the page loads.
       # No --with-deps: ubuntu-latest already has Chromium's libraries and a Latin font,
       # and apt would only add CJK, Thai and bitmap fonts, from a mirror that has taken 14
       # minutes for them.
@@ -537,8 +539,9 @@ jobs:
           PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/todo.json" just ts-e2e --grep TODO --retries 0 --reporter=json >/dev/null || true
           if ! jq -e '[.. | objects | select(has("specs")) | .specs[].tests[]] as $t
               | ($t | length) > 0 and (.errors | length) == 0
-              and all($t[]; .status == "unexpected" and all(.results[];
-                [.errors[].message] | length == 1 and (.[0] | contains("\nReceived string: "))))' \
+              and all($t[]; .status == "expected" or (.status == "unexpected" and all(.results[];
+                [.errors[].message] | length == 1 and (.[0] | contains("\nReceived string: ")))))
+              and any($t[]; .status == "unexpected")' \
               "$RUNNER_TEMP/todo.json" >/dev/null; then
             echo "::error::each TODO test must fail on its TODO assertion; see $RUNNER_TEMP/todo.json" >&2
             jq -r '.errors[].message, (.. | objects | select(has("specs")) | .specs[] | .title)' "$RUNNER_TEMP/todo.json" >&2 || true

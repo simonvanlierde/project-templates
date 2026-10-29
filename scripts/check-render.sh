@@ -866,12 +866,13 @@ grep -qx '    "marked": "[0-9.]*",' d/web/package.json
 # A private repo's GitHub links would 404 for visitors, so its legal pages have none.
 test -f j/docs/accessibility.md
 (! grep -rq 'github.com/example-org/private-web' j/docs)
-grep -q 'github.com/example-org/pipe-me/blob/main/web/tests/e2e/a11y.spec.ts' d/web/docs/accessibility.md
-# The WCAG 2.2 self-assessment sits beside the statement, which links it: one row per
-# level A and AA criterion, 55 in all, none of them assessed yet. Other kinds have none.
+grep -qF '[tests/e2e](https://github.com/example-org/pipe-me/tree/main/web/tests/e2e)' d/web/docs/accessibility.md
+grep -qF "are in \`tests/e2e\`." j/docs/accessibility.md
+# The WCAG 2.2 self-assessment sits beside the statement, which links it only once every row
+# has a result: one row per level A and AA criterion, 55 in all, none of them assessed yet.
+# Other kinds have none.
 test "$(grep -cE '^\| [1-4]\.[0-9]+\.[0-9]+ .* \| AA? \| Not assessed \| \|$' d/web/docs/accessibility-assessment.md)" = 55
-grep -qF '(https://github.com/example-org/pipe-me/blob/main/web/docs/accessibility-assessment.md)' d/web/docs/accessibility.md
-grep -qF "\`docs/accessibility-assessment.md\`" j/docs/accessibility.md
+(! grep -q 'accessibility-assessment.md)' d/web/docs/accessibility.md)
 test ! -e m/web/docs/accessibility-assessment.md
 # The answers reach the terms: the site, who runs it and the contact, and the privacy
 # statement links them.
@@ -881,8 +882,9 @@ grep -qF '[ada@example.com](mailto:ada@example.com)' d/web/docs/terms.md
 grep -qxF 'Using pipe-me also means accepting its [terms of use](https://pipe-me.pages.dev/terms).' d/web/docs/privacy.md
 # j keeps work in the browser, with no accounts: its privacy statement says so, and it has
 # no terms page, route or footer link.
-grep -qF "private-web keeps your work in your browser's local storage" j/docs/privacy.md
-grep -qx 'private-web sets no cookies. It uses local storage only to keep your work, which is what you' j/docs/privacy.md
+grep -qxF 'private-web keeps your work on your device. It isn'"'"'t sent to us or to anyone else.' j/docs/privacy.md
+grep -qF "private-web saves your work in your browser's local storage" j/docs/privacy.md
+grep -qx "private-web sets no cookies, so there's no cookie banner. Local storage holds only what you" j/docs/privacy.md
 grep -qx 'private-web comes with no warranty.' j/docs/privacy.md
 test ! -e j/docs/terms.md
 (! grep -q '/terms' j/src/App.tsx j/tests/e2e/routes.ts j/tests/e2e/legal-pages.spec.ts j/docs/privacy.md)
