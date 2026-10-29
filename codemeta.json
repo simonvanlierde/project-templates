@@ -1,0 +1,27 @@
+{
+  "@context": "https://w3id.org/codemeta/3.0",
+  "@type": "SoftwareSourceCode",
+  "name": "project-templates",
+  "description": "A Copier template for provenance-first data pipelines, where every row of a dataset built from public sources says which download it came from, plus Python, TypeScript, Rust, Go and Docker projects. Every project gets supply-chain-hardened CI, and public ones get community files and OpenSSF Scorecard; the web-app kind adds legal pages and an accessibility statement.",
+  "author": [
+    {
+      "@type": "Person",
+      "@id": "https://orcid.org/0009-0006-6953-909X",
+      "givenName": "Simon",
+      "familyName": "van Lierde"
+    }
+  ],
+  "codeRepository": "https://github.com/simonvanlierde/project-templates",
+  "issueTracker": "https://github.com/simonvanlierde/project-templates/issues",
+  "license": "https://spdx.org/licenses/MIT",
+  "identifier": "https://doi.org/10.5281/zenodo.23701980",
+  "keywords": [
+    "copier",
+    "project template",
+    "research software",
+    "provenance",
+    "data pipeline",
+    "supply-chain security",
+    "web app"
+  ]
+}
