@@ -7,9 +7,11 @@
 
 Run from the repo root: `just citation` writes both files, and `just citation --check`
 writes nothing and fails when either disagrees with CITATION.cff. Only the fields
-CITATION.cff holds are written (title, description, version, date, authors, licence,
-DOI and repository); anything else you add to the JSON files, such as Zenodo
-communities or CodeMeta keywords, stays as it is.
+CITATION.cff holds are written: title, description, authors, licence and repository
+into both, and version, release date and DOI into codemeta.json only. Zenodo takes the
+version and date from the release itself. Other top-level fields you add to the JSON
+files, such as Zenodo communities or CodeMeta keywords, stay as they are; the author
+lists are rewritten whole.
 """
 
 import importlib
@@ -29,15 +31,20 @@ def drop_none(d: dict) -> dict:
     return {k: v for k, v in d.items() if v is not None}
 
 
+def family_name(a: dict) -> str | None:
+    """Return the family name with its particle, such as "van Lierde", or None."""
+    return " ".join(filter(None, [a.get("name-particle"), a.get("family-names")])) or None
+
+
 def zenodo(cff: dict, lic: str | None) -> dict:
     """Return the .zenodo.json fields CITATION.cff holds; None means drop the key."""
     creators = []
     for a in cff["authors"]:
-        given, family, orcid = a.get("given-names"), a.get("family-names"), a.get("orcid")
+        given, orcid = a.get("given-names"), a.get("orcid")
         creators.append(
             drop_none(
                 {
-                    "name": a.get("name") or (f"{family}, {given}" if given else family),
+                    "name": a.get("name") or ", ".join(filter(None, [family_name(a), given])),
                     "orcid": orcid and orcid.removeprefix(ORCID),
                     "affiliation": a.get("affiliation"),
                 }
@@ -47,8 +54,8 @@ def zenodo(cff: dict, lic: str | None) -> dict:
         "upload_type": "software",
         "title": cff["title"],
         "description": cff.get("abstract") or cff["title"],
-        "version": cff.get("version"),
-        "publication_date": cff.get("date-released"),
+        # NOTE: no version or date either. A version left stale in CITATION.cff would
+        # label every later archive wrong; without one Zenodo takes the release's tag.
         "creators": creators,
         # Without a licence Zenodo would publish the files as CC-BY-4.0. `closed`
         # publishes the metadata and DOI, but not the files.
@@ -65,20 +72,21 @@ def codemeta(cff: dict, lic: str | None) -> dict:
     for a in cff["authors"]:
         # A CFF entity (an organisation) has `name`; a person has given and family names.
         person = {"@type": "Person", "@id": a.get("orcid"), "givenName": a.get("given-names")}
-        person["familyName"] = a.get("family-names")
+        person["familyName"] = family_name(a)
         p = {"@type": "Organization", "name": a["name"]} if a.get("name") else person
         p["email"] = a.get("email")
         aff = a.get("affiliation")
         p["affiliation"] = aff and {"@type": "Organization", "name": aff}
         authors.append(drop_none(p))
-    doi = cff.get("doi")
+    doi, date = cff.get("doi"), cff.get("date-released")
     return {
         "@context": "https://w3id.org/codemeta/3.0",
         "@type": "SoftwareSourceCode",
         "name": cff["title"],
         "description": cff.get("abstract"),
         "version": cff.get("version"),
-        "datePublished": cff.get("date-released"),
+        # YAML reads an unquoted date as a date; JSON holds it as text.
+        "datePublished": date and str(date),
         "identifier": doi and f"https://doi.org/{doi}",
         "author": authors,
         "codeRepository": cff.get("repository-code"),
@@ -102,24 +110,23 @@ def main() -> int:
     check = sys.argv[1:] == ["--check"]
     if sys.argv[1:] not in ([], ["--check"]):
         sys.exit("usage: citation.py [--check]")
-    # The round trip turns the dates YAML parses into the strings the JSON files hold.
-    cff = json.loads(json.dumps(yaml.safe_load(Path("CITATION.cff").read_text()), default=str))
-    # YAML reads an unquoted `version: 1.0` as a number.
-    if cff.get("version") is not None:
-        cff["version"] = str(cff["version"])
+    cff = yaml.safe_load(Path("CITATION.cff").read_text(encoding="utf-8"))
+    # YAML reads an unquoted 1.10 as the number 1.1, so the text is already lost.
+    if not isinstance(cff.get("version"), (str, type(None))):
+        sys.exit('CITATION.cff: quote the version, e.g. version: "1.10"')
     lic = cff.get("license")
     if isinstance(lic, list):
         sys.exit("CITATION.cff: give one licence, not a list; Zenodo takes one")
     stale = []
     for name, build in ((".zenodo.json", zenodo), ("codemeta.json", codemeta)):
         path = Path(name)
-        old = json.loads(path.read_text()) if path.exists() else {}
+        old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
         new = merge(old, build(cff, lic))
         if new == old:
             continue
         stale.append(name)
         if not check:
-            path.write_text(json.dumps(new, indent=2, ensure_ascii=False) + "\n")
+            path.write_text(json.dumps(new, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     if stale and check:
         sys.stderr.write(f"out of date with CITATION.cff: {', '.join(stale)}. Run `just citation` to rewrite.\n")
         return 1

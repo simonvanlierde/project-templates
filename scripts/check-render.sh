@@ -545,14 +545,35 @@ cp a/.github/scripts/citation.py cite/.github/scripts/
 printf 'version: "1.2.0"\ndate-released: 2026-10-29\ndoi: 10.5281/zenodo.1234\n' >>cite/CITATION.cff
 sed -i.bak 's/"name": "render-me",/&\n  "version": "0.9.0",/' cite/codemeta.json
 grep -q '"version": "0.9.0"' cite/codemeta.json
-(cd cite && ! uv run -q --script .github/scripts/citation.py --check 2>/dev/null)
+(cd cite && ! uv run -q --script .github/scripts/citation.py --check 2>../cite.err)
+grep -q 'out of date with CITATION.cff: codemeta.json' cite.err
 (cd cite && uv run -q --script .github/scripts/citation.py >/dev/null)
 (cd cite && uv run -q --script .github/scripts/citation.py --check)
 grep -q '"version": "1.2.0"' cite/codemeta.json
+grep -q '"datePublished": "2026-10-29"' cite/codemeta.json
 grep -q '"identifier": "https://doi.org/10.5281/zenodo.1234"' cite/codemeta.json
-grep -q '"publication_date": "2026-10-29"' cite/.zenodo.json
 # Zenodo reads a `doi` key as a DOI the upload already has, and mints none of its own.
-(! grep -q '"doi"' cite/.zenodo.json)
+# Version and date stay out too: without them Zenodo takes the release's tag and date.
+(! grep -q -e '"doi"' -e '"version"' -e '"publication_date"' cite/.zenodo.json)
+# YAML reads an unquoted 1.10 as the number 1.1, so the script refuses it.
+sed -i.bak 's/^version: "1.2.0"$/version: 1.10/' cite/CITATION.cff
+(cd cite && ! uv run -q --script .github/scripts/citation.py 2>../cite.err)
+grep -q 'quote the version' cite.err
+# A name particle goes before the family name, and a person may have a given name only.
+cat >cite/CITATION.cff <<'EOF'
+cff-version: 1.2.0
+message: Cite it.
+title: render-me
+authors:
+  - given-names: Ada
+    name-particle: van
+    family-names: Lierde
+  - given-names: Plato
+EOF
+(cd cite && uv run -q --script .github/scripts/citation.py >/dev/null)
+grep -q '"name": "van Lierde, Ada"' cite/.zenodo.json
+grep -q '"name": "Plato"' cite/.zenodo.json
+grep -q '"familyName": "van Lierde"' cite/codemeta.json
 # The library (c) is tested from python_min up and declares that floor; other
 # kinds pin python_version and run once.
 min=$(sed -n 's/^python_min: *//p' c/.copier-answers.yml | tr -d "\"'")
