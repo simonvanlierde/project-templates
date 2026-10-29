@@ -139,6 +139,13 @@
       matchDepNames: ["python"],
       minimumReleaseAge: "90 days",
     },
+    // ci.yml runs the Renovate CLI on the node major its `engines` field allows
+    // (^24.11.0 in 44.178.1). Raise this with the RENOVATEBOT_VERSION bump that widens it.
+    {
+      matchFileNames: [".github/workflows/ci.yml"],
+      matchDepNames: ["node"],
+      allowedVersions: "<25",
+    },
     // Maintained (commits in 2026-08) but tagged about once a year, which trips
     // the 1-year abandonment threshold.
     {
