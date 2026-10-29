@@ -12,6 +12,7 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
+- In a `library`, `research` or `data-pipeline` project: run `just citation` after the update and commit what it writes. Add `email:` to the authors in `CITATION.cff` first, or `codemeta.json` loses the email it has.
 - With `openssf_badge=silver`: from this update on, sign off your own commits too (`git commit -s`, or `git rebase --signoff origin/main` for a branch you already have). Run `prek install` again so the new commit-msg hook is active.
 
 ### Changed
@@ -32,6 +33,7 @@ Upgrade steps:
 
 ### Added
 
+- `just citation` writes `.zenodo.json` and `codemeta.json` from `CITATION.cff`, so you edit one file instead of three: title, description, version, release date, authors with their ORCID iD, email and affiliation, licence and repository, and the DOI into `codemeta.json` (in `.zenodo.json` Zenodo would take it for the release's own DOI and mint none). Other fields you add to the JSON files stay. A git hook, which CI also runs, fails while the files disagree, and `just citation --check` runs the same check by hand.
 - [docs/usage.md](docs/usage.md#making-a-repo-public) has a checklist for making a private repo public: a secret scan over the full history, the name on PyPI, crates.io and npm, a clean issue list and the README status sentence.
 - A Rust or Go `binary` and a Python `data-pipeline` get `docs/accessibility.md`: how the program prints (colour is never the only signal, `NO_COLOR` and `--color never` are honoured, plain output off a terminal, errors as `file:line:col` on standard error) and the author's email for problems. Check each claim holds for your program before you publish it. An existing project gets the file on `copier update` and keeps its own edits after that.
 - A public repo's `CONTRIBUTING.md` has a "Scope and response" section: one maintainer, a reply within about two weeks, an issue before a large pull request, and out-of-scope pull requests closed with a link to it.

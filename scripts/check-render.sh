@@ -530,6 +530,29 @@ for f in CITATION.cff .zenodo.json codemeta.json; do
 done
 grep -q check-citation-file-format c/.pre-commit-config.yaml
 (! grep -q check-citation-file-format b/.pre-commit-config.yaml)
+# A fresh render's .zenodo.json and codemeta.json match what `just citation` writes from
+# CITATION.cff. A copy of a, with a release added to CITATION.cff and a stale version in
+# codemeta.json, fails the check until the script rewrites both files.
+for r in a c d; do
+  (cd "$r" && uv run -q --script .github/scripts/citation.py --check)
+  grep -q '^citation \*args:' "$r/justfile"
+done
+test ! -e b/.github/scripts/citation.py
+(! grep -q '^citation' b/justfile)
+mkdir -p cite/.github/scripts
+cp a/CITATION.cff a/.zenodo.json a/codemeta.json cite/
+cp a/.github/scripts/citation.py cite/.github/scripts/
+printf 'version: "1.2.0"\ndate-released: 2026-10-29\ndoi: 10.5281/zenodo.1234\n' >>cite/CITATION.cff
+sed -i.bak 's/"name": "render-me",/&\n  "version": "0.9.0",/' cite/codemeta.json
+grep -q '"version": "0.9.0"' cite/codemeta.json
+(cd cite && ! uv run -q --script .github/scripts/citation.py --check 2>/dev/null)
+(cd cite && uv run -q --script .github/scripts/citation.py >/dev/null)
+(cd cite && uv run -q --script .github/scripts/citation.py --check)
+grep -q '"version": "1.2.0"' cite/codemeta.json
+grep -q '"identifier": "https://doi.org/10.5281/zenodo.1234"' cite/codemeta.json
+grep -q '"publication_date": "2026-10-29"' cite/.zenodo.json
+# Zenodo reads a `doi` key as a DOI the upload already has, and mints none of its own.
+(! grep -q '"doi"' cite/.zenodo.json)
 # The library (c) is tested from python_min up and declares that floor; other
 # kinds pin python_version and run once.
 min=$(sed -n 's/^python_min: *//p' c/.copier-answers.yml | tr -d "\"'")

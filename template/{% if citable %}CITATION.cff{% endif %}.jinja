@@ -1,8 +1,9 @@
 {%- set name = (author_name | trim).split(none, 1) -%}
 # GitHub reads this for its "Cite this repository" button. Zenodo reads
 # .zenodo.json instead when it archives a release, and software indexes read
-# codemeta.json: change authors in all three. Check the name split below: the
-# first word becomes the given name.
+# codemeta.json. Edit this file only, then run `just citation` to write the other
+# two from it; a git hook fails while they disagree. Check the name split below:
+# the first word becomes the given name.
 cff-version: 1.2.0
 message: If you use this software, please cite it as below.
 title: {{ project_name | to_json }}
@@ -19,6 +20,7 @@ authors:
 {%- if author_orcid %}
     orcid: "https://orcid.org/{{ author_orcid }}"
 {%- endif %}
+    email: {{ author_email | to_json }}
 repository-code: "https://github.com/{{ github_user }}/{{ slug }}"
 {%- if license != 'none' %}
 license: {{ license }}
