@@ -878,6 +878,9 @@ test -f d/LICENSES/CC0-1.0.txt
 test -f k/LICENSES/GPL-3.0-or-later.txt
 (! grep -q 'data/' k/REUSE.toml m/REUSE.toml)
 test ! -e b/REUSE.toml
+# A public render's Code of Conduct is the Contributor Covenant, under CC-BY-SA-4.0.
+grep -qx 'path = ".github/CODE_OF_CONDUCT.md"' a/REUSE.toml
+test -f a/LICENSES/CC-BY-SA-4.0.txt
 test ! -e b/LICENSES
 (! grep -q reuse-tool b/.pre-commit-config.yaml)
 reuse_version=$(sed -n '/fsfe\/reuse-tool/{n;s/.*frozen: v//p;}' "$repo/template/.pre-commit-config.yaml.jinja")

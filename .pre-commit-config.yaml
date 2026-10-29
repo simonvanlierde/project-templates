@@ -31,6 +31,12 @@ repos:
         # git writes a merge commit's message itself, so skip the check during a merge.
         entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || exec committed "$@"' --
 
+  # Every file has a copyright and license, from REUSE.toml or its own header.
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: a1bb792acda6fd0724936b4ebbdbc8eceb9c0459 # frozen: v6.2.0
+    hooks:
+      - id: reuse
+
   # The dco workflow fails a pull request with an unsigned commit, so refuse one here. Merge
   # commits are skipped, as the workflow skips them.
   - repo: local
