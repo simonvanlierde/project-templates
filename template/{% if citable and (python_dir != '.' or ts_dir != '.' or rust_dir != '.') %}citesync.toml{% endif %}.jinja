@@ -1,0 +1,7 @@
+{%- set manifests = [] %}
+{%- if 'python' in stacks %}{% set _ = manifests.append(python_dir ~ '/pyproject.toml') %}{% endif %}
+{%- if 'rust' in stacks %}{% set _ = manifests.append(rust_dir ~ '/Cargo.toml') %}{% endif %}
+{%- if 'ts' in stacks %}{% set _ = manifests.append(ts_dir ~ '/package.json') %}{% endif -%}
+# citesync reads the package manifests at the repo root by default. Yours are nested,
+# so this lists them. A private package.json is skipped: it is never published.
+manifests = {{ manifests | map('regex_replace', '^\\./', '') | list | to_json }}

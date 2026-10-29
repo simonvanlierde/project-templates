@@ -126,6 +126,13 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
   --data license=BSD-3-Clause --data status=maintenance --data publish_to_npm=true . "$out/m"
+# w: a Python app, the one render no citation file is for.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
+# r and t: a Rust and a TypeScript library alone, so each gets the citation files with
+# only its own manifest beside them, and t's hooks run through pnpm.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=crate-me --data 'stacks=[rust]' . "$out/r"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true . "$out/t"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -500,7 +507,7 @@ grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md
 test ! -e b/.github/workflows/scorecard.yml
 (! grep -q -i scorecard b/README.md)
 # fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
-# and public. b is citable-less and private; h is public but has no citation files.
+# and public. b is private; h, a public Go library, gets both.
 grep -qx "          uvx --exclude-newer \"1 week\" --from git+https://github.com/fair-software/howfairis@$howfairis_pin howfairis $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
 # shellcheck disable=SC2016 # the $ is literal workflow text
 grep -qF 'cat out.txt >> "$GITHUB_STEP_SUMMARY"' a/.github/workflows/fair.yml
@@ -513,7 +520,7 @@ grep -qx 'permissions: {}' a/.github/workflows/fair.yml
 (! grep -q fair-software.eu a/README.md)
 test ! -e b/.github/workflows/fair.yml
 (! grep -q fair-software.eu b/README.md)
-test ! -e h/.github/workflows/fair.yml
+test -f h/.github/workflows/fair.yml
 (! grep -q fair-software.eu h/README.md)
 # Badges follow their answers: a has codspeed only; c has codecov, codspeed, PyPI and npm;
 # d has codecov alone; b has none.
@@ -554,60 +561,33 @@ done
 # Every render runs the hooks in CI.
 test -f a/.github/workflows/checks.yml
 test -f b/.github/workflows/checks.yml
-# Citation files for the library, research and data-pipeline kinds, at the root
-# even when nested.
-for f in CITATION.cff .zenodo.json codemeta.json; do
-  test -f "a/$f"
-  test -f "c/$f"
-  test -f "d/$f"
-  test ! -e "b/$f"
+# Citation files for each library kind and Python's research and data-pipeline kinds, at
+# the root even when nested. w, an app, gets none.
+for r in a b c d h m r t; do
+  for f in CITATION.cff .zenodo.json codemeta.json; do
+    test -f "$r/$f"
+  done
+  grep -q 'id: citesync$' "$r/.pre-commit-config.yaml"
+  grep -q 'id: citesync-write$' "$r/.pre-commit-config.yaml"
+  grep -q '^citation:' "$r/justfile"
 done
+for f in CITATION.cff .zenodo.json codemeta.json citesync.toml; do
+  test ! -e "w/$f"
+done
+(! grep -q citesync w/.pre-commit-config.yaml)
+(! grep -q '^citation' w/justfile)
 grep -q check-citation-file-format c/.pre-commit-config.yaml
-(! grep -q check-citation-file-format b/.pre-commit-config.yaml)
-# A fresh render's .zenodo.json and codemeta.json match what `just citation` writes from
-# CITATION.cff. A copy of a, with a release added to CITATION.cff and a stale version in
-# codemeta.json, fails the check until the script rewrites both files.
-for r in a c d; do
-  (cd "$r" && uv run -q --script .github/scripts/citation.py --check)
-  grep -q '^citation \*args:' "$r/justfile"
+(! grep -q check-citation-file-format w/.pre-commit-config.yaml)
+grep -qx '    pnpm exec prek run citesync --all-files' t/justfile
+# citesync reads root manifests unless told otherwise, so a nested one gets listed.
+grep -qx 'manifests = \["py/pyproject.toml", "crates/lib/Cargo.toml", "web/package.json"\]' m/citesync.toml
+grep -qx 'manifests = \["api/pyproject.toml", "crates/cli/Cargo.toml", "apps/web/package.json"\]' c/citesync.toml
+for r in a r t; do
+  test ! -e "$r/citesync.toml"
 done
-test ! -e b/.github/scripts/citation.py
-(! grep -q '^citation' b/justfile)
-mkdir -p cite/.github/scripts
-cp a/CITATION.cff a/.zenodo.json a/codemeta.json cite/
-cp a/.github/scripts/citation.py cite/.github/scripts/
-printf 'version: "1.2.0"\ndate-released: 2026-10-29\ndoi: 10.5281/zenodo.1234\n' >>cite/CITATION.cff
-sed -i.bak 's/"name": "render-me",/&\n  "version": "0.9.0",/' cite/codemeta.json
-grep -q '"version": "0.9.0"' cite/codemeta.json
-(cd cite && ! uv run -q --script .github/scripts/citation.py --check 2>../cite.err)
-grep -q 'out of date with CITATION.cff: codemeta.json' cite.err
-(cd cite && uv run -q --script .github/scripts/citation.py >/dev/null)
-(cd cite && uv run -q --script .github/scripts/citation.py --check)
-grep -q '"version": "1.2.0"' cite/codemeta.json
-grep -q '"datePublished": "2026-10-29"' cite/codemeta.json
-grep -q '"identifier": "https://doi.org/10.5281/zenodo.1234"' cite/codemeta.json
-# Zenodo reads a `doi` key as a DOI the upload already has, and mints none of its own.
-# Version and date stay out too: without them Zenodo takes the release's tag and date.
-(! grep -q -e '"doi"' -e '"version"' -e '"publication_date"' cite/.zenodo.json)
-# YAML reads an unquoted 1.10 as the number 1.1, so the script refuses it.
-sed -i.bak 's/^version: "1.2.0"$/version: 1.10/' cite/CITATION.cff
-(cd cite && ! uv run -q --script .github/scripts/citation.py 2>../cite.err)
-grep -q 'quote the version' cite.err
-# A name particle goes before the family name, and a person may have a given name only.
-cat >cite/CITATION.cff <<'EOF'
-cff-version: 1.2.0
-message: Cite it.
-title: render-me
-authors:
-  - given-names: Ada
-    name-particle: van
-    family-names: Lierde
-  - given-names: Plato
-EOF
-(cd cite && uv run -q --script .github/scripts/citation.py >/dev/null)
-grep -q '"name": "van Lierde, Ada"' cite/.zenodo.json
-grep -q '"name": "Plato"' cite/.zenodo.json
-grep -q '"familyName": "van Lierde"' cite/codemeta.json
+grep -qx '  "programmingLanguage": "Rust"' r/codemeta.json
+grep -qx '  "programmingLanguage": "TypeScript"' t/codemeta.json
+grep -qx '  "programmingLanguage": \["Python", "TypeScript", "Rust", "Go"\]' a/codemeta.json
 # The library (c) is tested from python_min up and declares that floor; other
 # kinds pin python_version and run once.
 min=$(sed -n 's/^python_min: *//p' c/.copier-answers.yml | tr -d "\"'")
@@ -983,15 +963,61 @@ for r in a b d h; do
   git -C "$r-hooks" add -A
   (cd "$r-hooks" && "${prek[@]}" typos lychee jsonvet >/dev/null)
 done
-# The local citation hook passes on a fresh citable render (a). h's commit-msg hook takes a
-# sign-off with an email, and refuses one without.
-(cd a-hooks && "${prek[@]}" citation >/dev/null)
+# h's commit-msg hook takes a sign-off with an email, and refuses one without.
 dco_hook=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --hook-stage commit-msg --commit-msg-filename msg dco-signoff)
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg
 (cd h-hooks && "${dco_hook[@]}" >/dev/null)
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace\n' >h-hooks/msg
 (cd h-hooks && ! "${dco_hook[@]}" >/dev/null 2>&1)
 rm -rf h-hooks
+# citesync passes on each fresh citable render: root (a), nested (b, c, d, m), one stack (h, r, t).
+# Adding a release to CITATION.cff leaves codemeta.json stale, which fails the hook until
+# the manual-stage writer fixes it. .zenodo.json never takes the version, date or DOI:
+# Zenodo reads a `doi` key as a DOI the upload already has and mints none, and takes the
+# version and date from the release. The writer re-indents codemeta.json, so a second
+# pass of the hooks over the citation files must leave nothing to change.
+write=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run citesync-write --hook-stage manual --all-files)
+cite_files=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --files CITATION.cff codemeta.json .zenodo.json)
+for r in a b c d h m r t; do
+  rm -rf "$r-cite"
+  cp -R "$r" "$r-cite"
+  git -C "$r-cite" init -q
+  git -C "$r-cite" add -A
+  (cd "$r-cite" && "${prek[@]}" citesync >/dev/null)
+done
+for r in a m r t; do
+  printf 'version: "0.1.0"\ndate-released: 2026-10-29\ndoi: 10.5281/zenodo.1234\n' >>"$r-cite/CITATION.cff"
+  sed -i.bak 's/^  "@type": "SoftwareSourceCode",$/&\n  "version": "0.0.9",/' "$r-cite/codemeta.json"
+  rm "$r-cite/codemeta.json.bak"
+  git -C "$r-cite" add -A
+  (cd "$r-cite" && ! "${prek[@]}" citesync >../cite.err 2>&1)
+  grep -q "version-mismatch.*'0.0.9'" cite.err
+  (cd "$r-cite" && "${write[@]}" >/dev/null || true)
+  (cd "$r-cite" && "${prek[@]}" citesync >/dev/null)
+  grep -q '"version": "0.1.0"' "$r-cite/codemeta.json"
+  (! grep -q -e '"doi"' -e '"version"' -e '"publication_date"' "$r-cite/.zenodo.json")
+  git -C "$r-cite" add -A
+  (cd "$r-cite" && "${cite_files[@]}" >/dev/null || true)
+  git -C "$r-cite" add -A
+  (cd "$r-cite" && "${cite_files[@]}" >/dev/null)
+  git -C "$r-cite" diff --quiet
+done
+# A name particle goes before the family name in .zenodo.json, and a person may have a
+# given name only.
+cat >a-cite/CITATION.cff <<'EOF'
+cff-version: 1.2.0
+message: Cite it.
+title: render-me
+authors:
+  - given-names: Ada
+    name-particle: van
+    family-names: Lierde
+  - given-names: Plato
+EOF
+(cd a-cite && "${write[@]}" >/dev/null 2>&1 || true)
+grep -q '"name": "van Lierde, Ada"' a-cite/.zenodo.json
+grep -q '"name": "Plato"' a-cite/.zenodo.json
+rm -rf a-cite b-cite c-cite d-cite h-cite m-cite r-cite t-cite cite.err
 # Copier writes the template's commit id into the answers file, and a hex id can spell a
 # word typos rejects, so typos skips that file.
 printf '# definately\n' >>a-hooks/.copier-answers.yml

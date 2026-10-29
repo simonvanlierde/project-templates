@@ -134,16 +134,13 @@ repos:
     hooks:
       - id: check-citation-file-format
 
-  # .zenodo.json and codemeta.json are written from CITATION.cff by `just citation`.
-  # prek installs the script's pinned dependencies from its own header.
-  - repo: local
+  # CITATION.cff is the source: .zenodo.json, codemeta.json and the package manifests
+  # must agree with it. `just citation` runs the manual-stage writer to fix them.
+  - repo: https://github.com/simonvanlierde/citesync
+    rev: a3c5a9794449e78a33583e456af41bb24ebd240e # frozen: v0.1.0
     hooks:
-      - id: citation
-        name: citation files agree with CITATION.cff
-        entry: .github/scripts/citation.py --check
-        language: python
-        files: ^(CITATION\.cff|\.zenodo\.json|codemeta\.json|\.github/scripts/citation\.py)$
-        pass_filenames: false
+      - id: citesync
+      - id: citesync-write
 {%- endif %}
 {%- if 'python' in stacks %}
 

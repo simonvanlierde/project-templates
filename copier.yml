@@ -190,11 +190,15 @@ go_package:
   default: "{{ slug|regex_replace('[^a-z0-9]', '') }}"
 
 # Computed, never asked: the kinds that get CITATION.cff, .zenodo.json, codemeta.json
-# and the hook that checks CITATION.cff.
+# and the citesync hooks that keep them and the package manifests in step.
 citable:
   type: bool
   when: false
-  default: "{{ 'python' in stacks and kind in ('library', 'research', 'data-pipeline') }}"
+  default: >-
+    {{ ('python' in stacks and kind in ('library', 'research', 'data-pipeline'))
+    or ('ts' in stacks and ts_kind == 'library')
+    or ('rust' in stacks and rust_kind == 'library')
+    or ('go' in stacks and go_kind == 'library') }}
 
 # Computed, never asked: the kinds that ship a command-line program, which get
 # docs/accessibility.md. A data pipeline's `<slug> fetch|build|validate` is one; a web
