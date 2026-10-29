@@ -395,6 +395,10 @@ test -f a/.github/workflows/release.yml
 grep -qx '## Releasing' a/README.md
 (! grep -q 'Before the first release' a/README.md)
 grep -q 'Before the first release' c/README.md
+# A publishing build takes its version from the manifest, not from the tag.
+(! grep -q 'Set the version in' a/README.md)
+grep -q 'Set the version in .pyproject.toml. and .package.json. to X.Y.Z first' c/README.md
+grep -q 'Set the version in .pyproject.toml. to X.Y.Z first' k/README.md
 test -x a/.github/scripts/release-notes.sh
 cat >"$out/sample-changelog.md" <<'MD'
 # Changelog

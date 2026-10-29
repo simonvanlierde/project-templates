@@ -448,6 +448,8 @@ To add the extras to an existing library, run
 ## Publishing
 
 To release, add a `## [X.Y.Z]` section to `CHANGELOG.md`, then push the tag `vX.Y.Z`.
+With `publish_to_pypi` or `publish_to_npm`, set the version in `pyproject.toml` or
+`package.json` to X.Y.Z first: the build takes the version from there, not from the tag.
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI first. It then creates a
 draft GitHub release from that section, attaches the distributions and their Sigstore
 provenance bundle, and publishes the release. Approve the `pypi` environment when prompted.

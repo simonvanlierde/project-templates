@@ -73,7 +73,8 @@ and remove it a week later ([how](https://github.com/simonvanlierde/project-temp
 ## Releasing
 
 To release, add a `## [X.Y.Z]` section to `CHANGELOG.md`, then push the tag `vX.Y.Z`.
-{% if publish_to_pypi %}`python-release.yml` publishes to PyPI, then creates the GitHub release with the distributions and their provenance bundle.
+{% if publish_to_pypi or publish_to_npm %}Set the version in {{ '`pyproject.toml` and `package.json`' if publish_to_pypi and publish_to_npm else '`pyproject.toml`' if publish_to_pypi else '`package.json`' }} to X.Y.Z first: the build takes the version from there, not from the tag.
+{% endif %}{% if publish_to_pypi %}`python-release.yml` publishes to PyPI, then creates the GitHub release with the distributions and their provenance bundle.
 Approve the `pypi` environment when prompted. Do not create the GitHub release by hand.
 If the release job fails after PyPI succeeds, delete any leftover draft with `gh release delete vX.Y.Z`.
 Re-run only the `release` job. A published immutable release needs a new patch version to fix its files.
