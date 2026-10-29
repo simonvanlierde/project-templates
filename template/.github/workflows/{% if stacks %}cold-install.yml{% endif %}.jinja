@@ -27,7 +27,7 @@ jobs:
     # Debian with git, curl and a C compiler, like a new contributor's machine. Pinned
     # to a digest, so a moved tag can't swap the image. Renovate bumps it; Dependabot
     # doesn't read workflow images, so with Dependabot it moves on `copier update`.
-    container: buildpack-deps:trixie@sha256:880a5e3d451b50a7b1acd06093a980771a40c2fac2bce29a2145e0f4825266f4
+    container: buildpack-deps:trixie@sha256:8db3a3d1e68e0a88ed31c2256d0c0e3b127f80685e6b1f3a9bb31e22638b5e7b
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
