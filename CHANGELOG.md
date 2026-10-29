@@ -20,6 +20,7 @@ changes are marked **Breaking**.
 - A web app's markdown plugin now strips HTML comments until none are left. One pass over `<!<!---->---->` left a comment behind. CodeQL flagged the single pass as incomplete sanitization (`js/incomplete-multi-character-sanitization`, high) in every rendered web app.
 - A project description with a `\` is refused. It went into the package docstring, where an escape such as `\x` is a syntax error, so the package did not import.
 - A project description with `{{` no longer breaks the justfile. just read it as a variable, so no recipe ran.
+- A project name ending in `.`, `-` or `_` no longer leaves it on the package, image and Pages names: `app.` made `app-`, and `https://app-.pages.dev` is not a valid address.
 
 ### Security
 

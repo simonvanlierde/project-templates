@@ -73,7 +73,7 @@ project_name:
 slug:
   type: str
   when: false
-  default: "{{ project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '') }}"
+  default: "{{ project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '')|regex_replace('[._-]+$', '') }}"
 
 project_description:
   type: str

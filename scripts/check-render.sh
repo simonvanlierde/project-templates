@@ -249,6 +249,11 @@ test ! -e "$out/l/src"
 # j: a private web app, so its legal pages must not link a repo visitors can't open.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
+# s: a name ending in `.`, which the slug drops: `app-.pages.dev` is no hostname.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=app. --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data user_data=browser . "$out/s"
+grep -qF '"name": "app",' "$out/s/wrangler.jsonc"
+grep -qx 'site_url: https://app.pages.dev' "$out/s/.copier-answers.yml"
 
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the
