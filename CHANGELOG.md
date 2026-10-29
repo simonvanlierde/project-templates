@@ -13,6 +13,7 @@ changes are marked **Breaking**.
 ### Changed
 
 - A web app's privacy and accessibility statements are rewritten in plain language. The privacy page opens with what is stored and whether anything leaves the device, then says how to delete it, and has no legal jargon. The accessibility page drops test file names and CI details. The TODOs ask for facts in the user's words. `copier update` merges the new wording into pages you have already filled in, so expect conflicts there: keep your facts and take the new phrasing where it fits. [docs/web-legal.md](docs/web-legal.md) now says how to write the pages, with an example.
+- The accessibility statement has no "Tested with" section any more: it only repeated the Chromium line from "How we check", where the browser and any hand tests now go. Its test checks for one heading fewer, so move your hand tests under "How we check" and delete the heading, or the test fails.
 
 ### Fixed
 

@@ -40,7 +40,7 @@ rule yet. {{ author_name }} runs the checks below. No outside expert has tested 
 TODO: list each problem you know of, worst first: what people will notice, what to do instead,
 and a fix date or "No fix planned". End each with the WCAG criterion in brackets, such as
 [1.1.1 Non-text Content]. With none known, write "None that we know of yet."
-{#- The same in every app from here on, apart from the hand tests under Tested with. #}
+{#- The same in every app from here on, apart from the hand tests under How we check. #}
 
 ## Tell us about a problem
 
@@ -68,11 +68,7 @@ These automatic checks run on every proposed change to {{ project_name }}:
   earned, or goes more than 400 days without a review.
 
 Automatic tools find only some problems, so passing them doesn't mean there are none. The tests
-are in {% if public %}[{{ tests }}]({{ tests_url }}){% else %}`{{ tests }}`{% endif %}.
-
-## Tested with
-
-- Chromium, with axe-core, on every proposed change.
+are in {% if public %}[{{ tests }}]({{ tests_url }}){% else %}`{{ tests }}`{% endif %}. They run in Chromium.
 
 TODO: if you tried {{ project_name }} by hand, add each browser and assistive technology with the
 date, such as "Firefox with NVDA on 30 October 2026", and drop the next sentence.
