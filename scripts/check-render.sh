@@ -975,9 +975,10 @@ rm -rf h-hooks
 # the manual-stage writer fixes it. .zenodo.json never takes the version, date or DOI:
 # Zenodo reads a `doi` key as a DOI the upload already has and mints none, and takes the
 # version and date from the release. The writer re-indents codemeta.json, so a second
-# pass of the hooks over the citation files must leave nothing to change.
+# pass of the hooks over the citation files must leave nothing to change. biome is skipped:
+# it runs through pnpm, which CI's render job doesn't install.
 write=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run citesync-write --hook-stage manual --all-files)
-cite_files=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --files CITATION.cff codemeta.json .zenodo.json)
+cite_files=(env SKIP=biome uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --files CITATION.cff codemeta.json .zenodo.json)
 for r in a b c d h m r t; do
   rm -rf "$r-cite"
   cp -R "$r" "$r-cite"
