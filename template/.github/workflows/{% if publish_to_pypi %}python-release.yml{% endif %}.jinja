@@ -59,6 +59,9 @@ jobs:
           enable-cache: false
           version: "{{ uv_version }}"
 
+      # The wheel takes its version from pyproject.toml, not the tag: refuse a mismatch.
+      - run: test "$(uv version --short)" = "${GITHUB_REF_NAME#v}"
+
       # Validate and save the notes before PyPI publishes anything.
       - run: '"$GITHUB_WORKSPACE/.github/scripts/release-notes.sh" "$GITHUB_REF_NAME" "$GITHUB_WORKSPACE/CHANGELOG.md" >"$RUNNER_TEMP/notes.md"'
 

@@ -381,6 +381,7 @@ module_name:
     {% set keywords = ['and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield'] %}
     {% if not module_name|regex_search('^[a-z_][a-z0-9_]*$') %}
     A module name is lower-case letters, digits and `_`, and cannot start with a digit.
+    Answer yes to `customise` to give one when the project name does not make one.
     {% elif module_name in keywords %}
     `{{ module_name }}` is a Python keyword, so the package could not be imported: pick another module name.
     {% endif %}

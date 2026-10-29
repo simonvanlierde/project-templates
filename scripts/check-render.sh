@@ -112,13 +112,13 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
 
 # m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
-# only BSD-3-Clause render, and the only one not experimental.
+# only BSD-3-Clause render, the only one not experimental, and the only npm-only publisher.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause --data status=maintenance . "$out/m"
+  --data license=BSD-3-Clause --data status=maintenance --data publish_to_npm=true . "$out/m"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -208,6 +208,8 @@ refuses 'Keep the description to one line' --data $'project_description=Two\nlin
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
+# A digit-leading name makes no module name, and the question is hidden behind customise.
+refuses 'to give one when the project name does not make one' --data 'stacks=[python]' --data project_name=1abc
 # The name goes into the README and the web app's Markdown pages unescaped.
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my*app'
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my<app>'
@@ -393,6 +395,10 @@ test -f a/.github/workflows/release.yml
 grep -qx '## Releasing' a/README.md
 (! grep -q 'Before the first release' a/README.md)
 grep -q 'Before the first release' c/README.md
+# A publishing build takes its version from the manifest, not from the tag.
+(! grep -q 'Set the version in' a/README.md)
+grep -q 'Set the version in .api/pyproject.toml. and .apps/web/package.json. to X.Y.Z first' c/README.md
+grep -q 'Set the version in .web/package.json. to X.Y.Z first' m/README.md
 test -x a/.github/scripts/release-notes.sh
 cat >"$out/sample-changelog.md" <<'MD'
 # Changelog
@@ -639,7 +645,7 @@ grep -qx 'test_extras: \[\]' a/.copier-answers.yml
 # mutation.yml: only with the extra, one job per library stack, weekly and by hand only.
 test -f m/.github/workflows/mutation.yml
 test ! -e a/.github/workflows/mutation.yml
-python3 - <<'PY'
+uv run --no-project --with pyyaml python - <<'PY'
 import yaml
 wf = yaml.safe_load(open("m/.github/workflows/mutation.yml"))
 assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
@@ -656,7 +662,7 @@ PY
 # property.yml: the same shape, running each stack's property or fuzz recipe.
 test -f m/.github/workflows/property.yml
 test ! -e a/.github/workflows/property.yml
-python3 - <<'PY'
+uv run --no-project --with pyyaml python - <<'PY'
 import yaml
 wf = yaml.safe_load(open("m/.github/workflows/property.yml"))
 assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
@@ -776,6 +782,11 @@ test ! -e c/.github/workflows/release.yml
 test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
 grep -qx "    needs: publish" c/.github/workflows/python-release.yml
+# The build refuses a tag that does not match the manifest version it publishes.
+# shellcheck disable=SC2016 # literal workflow text
+grep -qF 'test "$(uv version --short)" = "${GITHUB_REF_NAME#v}"' c/.github/workflows/python-release.yml
+# shellcheck disable=SC2016 # literal workflow text
+grep -qF '= "${GITHUB_REF_NAME#v}"' c/.github/workflows/ts-release.yml
 grep -q -- '--draft --verify-tag' c/.github/workflows/python-release.yml
 grep -q -- '--draft=false' c/.github/workflows/python-release.yml
 # shellcheck disable=SC2016 # literal workflow expression
