@@ -12,7 +12,7 @@ changes are marked **Breaking**.
 
 ### Fixed
 
-- A web app's markdown plugin now also drops a `<!--` that stripping the HTML comments once leaves behind, as in `<!<!---->--`. CodeQL flagged the single pass as incomplete sanitization (`js/incomplete-multi-character-sanitization`, high) in every rendered web app.
+- A web app's markdown plugin now strips HTML comments until none are left. One pass over `<!<!---->---->` left a comment behind. CodeQL flagged the single pass as incomplete sanitization (`js/incomplete-multi-character-sanitization`, high) in every rendered web app.
 
 ## [0.12.0] - 2026-10-29
 

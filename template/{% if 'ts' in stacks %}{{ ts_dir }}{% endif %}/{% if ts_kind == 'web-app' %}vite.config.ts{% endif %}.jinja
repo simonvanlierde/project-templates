@@ -13,8 +13,12 @@ const markdown = (): Plugin => ({
   name: "markdown-html",
   transform(code, id) {
     if (id.endsWith(".md")) {
-      // The second pass drops a "<!--" the first one leaves, as in "<!<!---->--".
-      const text = code.replace(/<!--[\s\S]*?-->/g, "").replace(/<!--/g, "");
+      // Strip until nothing changes: one pass over "<!<!---->---->" leaves a comment behind.
+      let text = code;
+      for (let before = ""; before !== text; ) {
+        before = text;
+        text = text.replace(/<!--[\s\S]*?-->/g, "");
+      }
       const html = marked.parse(text, { async: false });
       return { code: `export default ${JSON.stringify(html)};`, map: null };
     }
