@@ -32,7 +32,7 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # so the name also reaches the FastAPI title as a Python literal.
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'project_name=Odd "Name" & Co!' \
-  --data 'project_description=A "quoted" one' \
+  --data 'project_description=A "quoted" {{ one }}' \
   --data 'author_name=Ada "X" Lovelace' \
   --data public=false --data openssf_badge=silver --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
@@ -1229,13 +1229,13 @@ jq -e '(.rules[] | select(.type == "pull_request").parameters
   and (.rules | any(.type == "required_status_checks")) and (has("bypass_actors") | not)' b/.github/rulesets/main.json >/dev/null
 (! grep -q private-vulnerability-reporting b/justfile)
 # repo-about: the About box comes from the answers. No description answer leaves the description alone;
-# a quote in it survives the shell; topics only get added.
+# a quote in it survives the shell and braces survive just; topics only get added.
 for r in a b d; do
   # shellcheck disable=SC2031 # $fake/gh from the repo-settings test, logging every call
   (cd "$r" && FAKE_LOG="$fake/about-$r" PATH="$fake:$PATH" just repo-about >/dev/null)
 done
 grep -qxF -- 'repo edit --add-topic python --add-topic typescript --add-topic rust --add-topic go --add-topic docker' "$fake/about-a"
-grep -qxF -- "repo edit --description A \"quoted\" one --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
+grep -qxF -- "repo edit --description A \"quoted\" {{ one }} --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
 grep -qxF -- 'repo edit --homepage https://pipe-me.pages.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do

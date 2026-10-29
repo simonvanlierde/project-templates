@@ -89,7 +89,7 @@ repo-settings:
 # Set the GitHub About box from your answers: description{% if 'ts' in stacks and ts_kind == 'web-app' %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
 repo-about:
     gh repo edit
-{%- if project_description %} --description {{ "'" ~ project_description | replace("'", "'\\''") ~ "'" }}
+{%- if project_description %} --description {{ "'" ~ project_description | replace("'", "'\\''") | replace("{{", "{{{{") ~ "'" }}
 {%- endif %}
 {%- if 'ts' in stacks and ts_kind == 'web-app' %} --homepage '{{ site_url }}'
 {%- endif %}
