@@ -47,7 +47,7 @@ fmt:
 hooks:
     {% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run -a
 {% if citable %}
-# Rewrite .zenodo.json and codemeta.json to agree with CITATION.cff, then check. The writer
+# Rewrite codemeta.json to agree with CITATION.cff, then check. The writer
 # exits 1 whenever it changes a file, so the check that follows decides the result.
 citation:
     -{% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run citesync-write --hook-stage manual --all-files

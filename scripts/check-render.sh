@@ -153,7 +153,7 @@ grep -qx 'module-root = ""' "$out/k/pyproject.toml"
 grep -qx 'source = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/k/LICENSE"
 grep -qx 'license = "GPL-3.0-or-later"' "$out/k/pyproject.toml"
-grep -q '"license": "gpl-3.0-or-later"' "$out/k/.zenodo.json"
+grep -q '"license": "https://spdx.org/licenses/GPL-3.0-or-later"' "$out/k/codemeta.json"
 # A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
 grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
 # Per hook, never top-level: the secret scan and the large-file check still cover data/.
@@ -316,10 +316,7 @@ assert seen > 20, f"only {seen} structured files rendered"
 app = next(out.glob("b/svc/src/*/app.py"))
 title = next(k for k in ast.walk(ast.parse(app.read_text())) if isinstance(k, ast.keyword) and k.arg == "title")
 assert ast.literal_eval(title.value) == 'Odd "Name" & Co!', ast.unparse(title.value)
-# No schema covers these two, so check what Zenodo requires and the CodeMeta context.
-zenodo = json.loads((out / "c/.zenodo.json").read_text())
-assert {"upload_type", "title", "description", "creators", "license"} <= zenodo.keys(), zenodo
-assert zenodo["creators"][0]["name"] == "Lovelace, Ada", zenodo
+# No schema covers codemeta.json, so check the CodeMeta context.
 codemeta = json.loads((out / "a/codemeta.json").read_text())
 assert codemeta["@context"] == "https://w3id.org/codemeta/3.0", codemeta
 # A leading space in the author name must not leave the given name empty.
@@ -561,21 +558,25 @@ done
 # Every render runs the hooks in CI.
 test -f a/.github/workflows/checks.yml
 test -f b/.github/workflows/checks.yml
-# Citation files for each library kind and Python's research and data-pipeline kinds, at
-# the root even when nested. w, an app, gets none.
-for r in a b c d h m r t; do
-  for f in CITATION.cff .zenodo.json codemeta.json; do
+# Citation files for each licensed library kind and Python's research and data-pipeline
+# kinds, at the root even when nested, and never a .zenodo.json. w, an app, gets none, and
+# neither does b, a library with no license, since a Zenodo record needs one.
+for r in a c d h m r t; do
+  for f in CITATION.cff codemeta.json; do
     test -f "$r/$f"
   done
+  test ! -e "$r/.zenodo.json"
   grep -q 'id: citesync$' "$r/.pre-commit-config.yaml"
   grep -q 'id: citesync-write$' "$r/.pre-commit-config.yaml"
   grep -q '^citation:' "$r/justfile"
 done
-for f in CITATION.cff .zenodo.json codemeta.json citesync.toml; do
-  test ! -e "w/$f"
+for r in b w; do
+  for f in CITATION.cff .zenodo.json codemeta.json citesync.toml; do
+    test ! -e "$r/$f"
+  done
+  (! grep -q citesync "$r/.pre-commit-config.yaml")
+  (! grep -q '^citation' "$r/justfile")
 done
-(! grep -q citesync w/.pre-commit-config.yaml)
-(! grep -q '^citation' w/justfile)
 grep -q check-citation-file-format c/.pre-commit-config.yaml
 (! grep -q check-citation-file-format w/.pre-commit-config.yaml)
 grep -qx '    pnpm exec prek run citesync --all-files' t/justfile
@@ -970,16 +971,14 @@ printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace\n' >h-hooks/msg
 (cd h-hooks && ! "${dco_hook[@]}" >/dev/null 2>&1)
 rm -rf h-hooks
-# citesync passes on each fresh citable render: root (a), nested (b, c, d, m), one stack (h, r, t).
+# citesync passes on each fresh citable render: root (a), nested (c, d, m), one stack (h, r, t).
 # Adding a release to CITATION.cff leaves codemeta.json stale, which fails the hook until
-# the manual-stage writer fixes it. .zenodo.json never takes the version, date or DOI:
-# Zenodo reads a `doi` key as a DOI the upload already has and mints none, and takes the
-# version and date from the release. The writer re-indents codemeta.json, so a second
+# the manual-stage writer fixes it. The writer re-indents codemeta.json, so a second
 # pass of the hooks over the citation files must leave nothing to change. biome is skipped:
 # it runs through pnpm, which CI's render job doesn't install.
 write=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run citesync-write --hook-stage manual --all-files)
-cite_files=(env SKIP=biome uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --files CITATION.cff codemeta.json .zenodo.json)
-for r in a b c d h m r t; do
+cite_files=(env SKIP=biome uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --files CITATION.cff codemeta.json)
+for r in a c d h m r t; do
   rm -rf "$r-cite"
   cp -R "$r" "$r-cite"
   git -C "$r-cite" init -q
@@ -996,29 +995,13 @@ for r in a m r t; do
   (cd "$r-cite" && "${write[@]}" >/dev/null || true)
   (cd "$r-cite" && "${prek[@]}" citesync >/dev/null)
   grep -q '"version": "0.1.0"' "$r-cite/codemeta.json"
-  (! grep -q -e '"doi"' -e '"version"' -e '"publication_date"' "$r-cite/.zenodo.json")
   git -C "$r-cite" add -A
   (cd "$r-cite" && "${cite_files[@]}" >/dev/null || true)
   git -C "$r-cite" add -A
   (cd "$r-cite" && "${cite_files[@]}" >/dev/null)
   git -C "$r-cite" diff --quiet
 done
-# A name particle goes before the family name in .zenodo.json, and a person may have a
-# given name only.
-cat >a-cite/CITATION.cff <<'EOF'
-cff-version: 1.2.0
-message: Cite it.
-title: render-me
-authors:
-  - given-names: Ada
-    name-particle: van
-    family-names: Lierde
-  - given-names: Plato
-EOF
-(cd a-cite && "${write[@]}" >/dev/null 2>&1 || true)
-grep -q '"name": "van Lierde, Ada"' a-cite/.zenodo.json
-grep -q '"name": "Plato"' a-cite/.zenodo.json
-rm -rf a-cite b-cite c-cite d-cite h-cite m-cite r-cite t-cite cite.err
+rm -rf a-cite c-cite d-cite h-cite m-cite r-cite t-cite cite.err
 # Copier writes the template's commit id into the answers file, and a hex id can spell a
 # word typos rejects, so typos skips that file.
 printf '# definately\n' >>a-hooks/.copier-answers.yml

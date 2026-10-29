@@ -134,7 +134,7 @@ repos:
     hooks:
       - id: check-citation-file-format
 
-  # CITATION.cff is the source: .zenodo.json, codemeta.json and the package manifests
+  # CITATION.cff is the source: codemeta.json, any .zenodo.json and the package manifests
   # must agree with it. `just citation` runs the manual-stage writer to fix them.
   - repo: https://github.com/simonvanlierde/citesync
     rev: a3c5a9794449e78a33583e456af41bb24ebd240e # frozen: v0.1.0

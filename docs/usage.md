@@ -376,7 +376,7 @@ need two packages in the same language, switch to that language's workspace tool
 this template. The same command lets you change your answers: add a stack or turn on a
 publish option, and Copier writes the new files.
 
-`README.md`, `CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`,
+`README.md`, `CHANGELOG.md`, the citation files (`CITATION.cff`,
 `codemeta.json`), `docs/decisions/README.md`, the silver-badge documents, a `web-app`'s starter files, a published
 TypeScript library's `<package>.api.md` and Go's `go.mod` are written once
 and then belong to your project: an update never touches them, so your release tool or

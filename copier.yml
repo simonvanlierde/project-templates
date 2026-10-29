@@ -22,7 +22,6 @@ _skip_if_exists:
   - /docs/assurance-case.md
   - /docs/accessibility.md
   - /CITATION.cff
-  - /.zenodo.json
   - /codemeta.json
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.tsx"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.test.tsx"
@@ -189,17 +188,6 @@ go_package:
   when: false
   default: "{{ slug|regex_replace('[^a-z0-9]', '') }}"
 
-# Computed, never asked: the kinds that get CITATION.cff, .zenodo.json, codemeta.json
-# and the citesync hooks that keep them and the package manifests in step.
-citable:
-  type: bool
-  when: false
-  default: >-
-    {{ ('python' in stacks and kind in ('library', 'research', 'data-pipeline'))
-    or ('ts' in stacks and ts_kind == 'library')
-    or ('rust' in stacks and rust_kind == 'library')
-    or ('go' in stacks and go_kind == 'library') }}
-
 # Computed, never asked: the kinds that ship a command-line program, which get
 # docs/accessibility.md. A data pipeline's `<slug> fetch|build|validate` is one; a web
 # service's console script only starts the server.
@@ -246,16 +234,6 @@ author_email:
     An app that keeps personal data on a server needs its own contact address, for example <app>@duinlab.nl.
     {% endif %}
 
-author_orcid:
-  type: str
-  when: "{{ citable }}"
-  help: ORCID iD for the citation files, as 0000-0000-0000-0000 (blank for none)
-  default: ""
-  validator: >-
-    {% if author_orcid and not author_orcid|regex_search('^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$') %}
-    Give the bare iD, as 0000-0000-0000-0000, without the https://orcid.org/ prefix.
-    {% endif %}
-
 customise:
   type: bool
   help: Customise advanced settings (license, directories, versions, publishing, CI extras)? No keeps the defaults in docs/usage.md
@@ -276,6 +254,27 @@ license:
     None (not licensed for redistribution): none
   # A private repo is not licensed to anyone unless its owner says so.
   default: "{{ 'MIT' if public else 'none' }}"
+
+# Computed, never asked: the licensed kinds that get CITATION.cff, codemeta.json
+# and the citesync hooks that keep them and the package manifests in step.
+citable:
+  type: bool
+  when: false
+  default: >-
+    {{ license != 'none' and (('python' in stacks and kind in ('library', 'research', 'data-pipeline'))
+    or ('ts' in stacks and ts_kind == 'library')
+    or ('rust' in stacks and rust_kind == 'library')
+    or ('go' in stacks and go_kind == 'library')) }}
+
+author_orcid:
+  type: str
+  when: "{{ citable }}"
+  help: ORCID iD for the citation files, as 0000-0000-0000-0000 (blank for none)
+  default: ""
+  validator: >-
+    {% if author_orcid and not author_orcid|regex_search('^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$') %}
+    Give the bare iD, as 0000-0000-0000-0000, without the https://orcid.org/ prefix.
+    {% endif %}
 
 # Only the permissive texts carry a copyright line. The GNU texts are fixed, and
 # their copyright notice goes in each source file instead.
