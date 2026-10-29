@@ -11,8 +11,10 @@ A Python project also asks for a `kind`:
 | `web-service`   | You run an HTTP service in a container (needs the `docker` stack)  | A FastAPI app with a `/health` endpoint          |
 
 The citation files are `CITATION.cff`, `.zenodo.json` and `codemeta.json`, rendered from
-the same answers. A library also asks for `python_min`, the oldest Python it supports:
-`requires-python` starts there and CI tests every version up to `python_version`.
+the same answers. After that, edit `CITATION.cff` only and run `just citation` to write
+the other two from it; a git hook fails while they disagree. A library also asks for
+`python_min`, the oldest Python it supports: `requires-python` starts there and CI tests
+every version up to `python_version`.
 
 ## data-pipeline
 
