@@ -205,6 +205,7 @@ refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
 refuses 'Keep the description to one line' --data 'project_description=Says """hi"""'
 refuses 'Keep the description to one line' --data 'project_description=Ends a comment */ early'
 refuses 'Keep the description to one line' --data $'project_description=Two\nlines'
+refuses 'Keep the description to one line' --data 'project_description=Has a \x escape'
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
