@@ -26,6 +26,7 @@ changes are marked **Breaking**.
 
 ### Fixed
 
+- `just repo-settings` turns on GitHub's "Automatically delete head branches", so a merged PR's branch goes away.
 - A web app's markdown plugin now strips HTML comments until none are left. One pass over `<!<!---->---->` left a comment behind. CodeQL flagged the single pass as incomplete sanitization (`js/incomplete-multi-character-sanitization`, high) in every rendered web app.
 - A project description with a `\` is refused. It went into the package docstring, where an escape such as `\x` is a syntax error, so the package did not import.
 - A project description with `{{` no longer breaks the justfile. just read it as a variable, so no recipe ran.

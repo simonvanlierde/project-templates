@@ -1206,7 +1206,7 @@ chmod +x "$fake/gh"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/43 --input .github/rulesets/main-checks.json' "$FAKE_LOG"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/44 --input .github/rulesets/tags.json' "$FAKE_LOG"
   patch=$(grep -- '^api -X PATCH repos/{owner}/{repo} ' "$FAKE_LOG" | head -1)
-  for flag in allow_squash_merge=true allow_merge_commit=false allow_rebase_merge=false; do
+  for flag in allow_squash_merge=true allow_merge_commit=false allow_rebase_merge=false delete_branch_on_merge=true; do
     [[ "$patch " == *" -F $flag "* ]]
   done
   # Below silver the sign-off setting stays untouched.

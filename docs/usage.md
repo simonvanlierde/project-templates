@@ -118,7 +118,8 @@ to `REUSE.toml`, and add the text with `reuse download <SPDX id>`.
 ## Protecting main
 
 `just repo-settings` applies `.github/rulesets/main.json` to the default branch with `gh api`:
-no deletion, no force-push, linear history, and PRs required, squash-merged only. A PR also
+no deletion, no force-push, linear history, and PRs required, squash-merged only, with the
+branch deleted once merged. A PR also
 waits for the checks that run on every PR: `git hooks`, `pull request title`,
 `dependency review` and, in a public repo, `DCO sign-off`. A skipped job counts as passed, so
 a draft, a private repo's dependency review and, below `openssf_badge=silver`, a branch's DCO
