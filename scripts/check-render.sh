@@ -29,10 +29,12 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 
 # b: public=false, so no SECURITY.md and a license that defaults to none, and a name, description and author name with punctuation that `slug`
 # strips and `to_json` escapes. A nested web-service beside the root ts package,
-# so the name also reaches the FastAPI title as a Python literal.
+# so the name also reaches the FastAPI title as a Python literal. The description's braces,
+# `$` and `ï` test the escaping in the justfile and the Dockerfile labels.
+# shellcheck disable=SC2016 # a literal $ in the description
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'project_name=Odd "Name" & Co!' \
-  --data 'project_description=A "quoted" {{ one }}' \
+  --data 'project_description=A "quoted" {{ one }}, naïve $USD' \
   --data 'author_name=Ada "X" Lovelace' \
   --data public=false --data openssf_badge=silver --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
@@ -40,6 +42,11 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # Explicit badge answers cannot add public-policy documents to a private project.
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test ! -e "$out/b/$f"
+done
+# A Dockerfile string has no \u escapes and expands $, so neither may reach a LABEL.
+for f in svc/Dockerfile Dockerfile; do
+  # shellcheck disable=SC1003,SC2016 # the line's literal \$ and trailing \
+  grep -qxF '      org.opencontainers.image.description="A \"quoted\" {{ one }}, naïve \$USD" \' "$out/b/$f"
 done
 
 # c: the only render with nested paths, at two depths to catch hardcoded
@@ -1243,7 +1250,7 @@ for r in a b d; do
   (cd "$r" && FAKE_LOG="$fake/about-$r" PATH="$fake:$PATH" just repo-about >/dev/null)
 done
 grep -qxF -- 'repo edit --add-topic python --add-topic typescript --add-topic rust --add-topic go --add-topic docker' "$fake/about-a"
-grep -qxF -- "repo edit --description A \"quoted\" {{ one }} --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
+grep -qxF -- "repo edit --description A \"quoted\" {{ one }}, naïve \$USD --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
 grep -qxF -- 'repo edit --homepage https://pipe-me.pages.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do

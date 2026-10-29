@@ -24,6 +24,7 @@ changes are marked **Breaking**.
 - A project name with `~`, or with `_` at the start or end of a word (`a _b_`), is refused: Markdown read it as strikethrough or emphasis. `_` inside a word, as in `my_app`, is still fine.
 - A package directory with `//`, such as `apps//web`, is refused. It counted as one level too many, so `biome.json` pointed above the repo.
 - A private or unlicensed project given `openssf_badge=silver` no longer gets the sign-off hook, the `web_commit_signoff_required` setting or the silver DCO wording, the same as it gets no silver documents. A private project had the hook with no `dco` workflow behind it, and the next update removed it.
+- The image labels in a Dockerfile show the description and name as written. They were JSON strings, which a Dockerfile reads differently: `Café` showed as `Caf\u00e9`, and `$USD` expanded to nothing.
 
 ### Security
 
