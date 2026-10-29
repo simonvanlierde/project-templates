@@ -639,7 +639,7 @@ grep -qx 'test_extras: \[\]' a/.copier-answers.yml
 # mutation.yml: only with the extra, one job per library stack, weekly and by hand only.
 test -f m/.github/workflows/mutation.yml
 test ! -e a/.github/workflows/mutation.yml
-python3 - <<'PY'
+uv run --no-project --with pyyaml python - <<'PY'
 import yaml
 wf = yaml.safe_load(open("m/.github/workflows/mutation.yml"))
 assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
@@ -656,7 +656,7 @@ PY
 # property.yml: the same shape, running each stack's property or fuzz recipe.
 test -f m/.github/workflows/property.yml
 test ! -e a/.github/workflows/property.yml
-python3 - <<'PY'
+uv run --no-project --with pyyaml python - <<'PY'
 import yaml
 wf = yaml.safe_load(open("m/.github/workflows/property.yml"))
 assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
