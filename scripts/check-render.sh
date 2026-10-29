@@ -29,10 +29,12 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 
 # b: public=false, so no SECURITY.md and a license that defaults to none, and a name, description and author name with punctuation that `slug`
 # strips and `to_json` escapes. A nested web-service beside the root ts package,
-# so the name also reaches the FastAPI title as a Python literal.
+# so the name also reaches the FastAPI title as a Python literal. The description's braces,
+# `$` and `ï` test the escaping in the justfile and the Dockerfile labels.
+# shellcheck disable=SC2016 # a literal $ in the description
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'project_name=Odd "Name" & Co!' \
-  --data 'project_description=A "quoted" one' \
+  --data 'project_description=A "quoted" {{ one }}, naïve $USD' \
   --data 'author_name=Ada "X" Lovelace' \
   --data public=false --data openssf_badge=silver --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
@@ -40,6 +42,11 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # Explicit badge answers cannot add public-policy documents to a private project.
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test ! -e "$out/b/$f"
+done
+# A Dockerfile string has no \u escapes and expands $, so neither may reach a LABEL.
+for f in svc/Dockerfile Dockerfile; do
+  # shellcheck disable=SC1003,SC2016 # the line's literal \$ and trailing \
+  grep -qxF '      org.opencontainers.image.description="A \"quoted\" {{ one }}, naïve \$USD" \' "$out/b/$f"
 done
 
 # c: the only render with nested paths, at two depths to catch hardcoded
@@ -201,10 +208,12 @@ refuses 'An empty value' --data 'stacks=[python]' --data python_dir=
 refuses 'An empty value' --data 'stacks=[ts]' --data ts_dir=
 refuses 'An empty value' --data 'stacks=[rust]' --data rust_dir=
 refuses 'An empty value' --data 'stacks=[go]' --data go_dir=
+refuses 'Give a plain relative path' --data 'stacks=[ts]' --data ts_dir=apps//web
 refuses 'Go keyword' --data 'stacks=[go]' --data project_name=type
 refuses 'Keep the description to one line' --data 'project_description=Says """hi"""'
 refuses 'Keep the description to one line' --data 'project_description=Ends a comment */ early'
 refuses 'Keep the description to one line' --data $'project_description=Two\nlines'
+refuses 'Keep the description to one line' --data 'project_description=Has a \x escape'
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
@@ -213,6 +222,8 @@ refuses 'to give one when the project name does not make one' --data 'stacks=[py
 # The name goes into the README and the web app's Markdown pages unescaped.
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my*app'
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my<app>'
+refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=a _b_'
+refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my~app'
 refuses 'at least one stack' --data 'stacks=[]'
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 refuses 'The flat layout' --data 'stacks=[python,docker]' --data 'docker_stacks=[python]' \
@@ -248,6 +259,11 @@ test ! -e "$out/l/src"
 # j: a private web app, so its legal pages must not link a repo visitors can't open.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
+# s: a name ending in `.`, which the slug drops: `app-.pages.dev` is no hostname.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=app. --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data user_data=browser . "$out/s"
+grep -qF '"name": "app",' "$out/s/wrangler.jsonc"
+grep -qx 'site_url: https://app.pages.dev' "$out/s/.copier-answers.yml"
 
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the
@@ -1246,13 +1262,13 @@ jq -e '(.rules[] | select(.type == "pull_request").parameters
   and (.rules | any(.type == "required_status_checks")) and (has("bypass_actors") | not)' b/.github/rulesets/main.json >/dev/null
 (! grep -q private-vulnerability-reporting b/justfile)
 # repo-about: the About box comes from the answers. No description answer leaves the description alone;
-# a quote in it survives the shell; topics only get added.
+# a quote in it survives the shell and braces survive just; topics only get added.
 for r in a b d; do
   # shellcheck disable=SC2031 # $fake/gh from the repo-settings test, logging every call
   (cd "$r" && FAKE_LOG="$fake/about-$r" PATH="$fake:$PATH" just repo-about >/dev/null)
 done
 grep -qxF -- 'repo edit --add-topic python --add-topic typescript --add-topic rust --add-topic go --add-topic docker' "$fake/about-a"
-grep -qxF -- "repo edit --description A \"quoted\" one --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
+grep -qxF -- "repo edit --description A \"quoted\" {{ one }}, naïve \$USD --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
 grep -qxF -- 'repo edit --homepage https://pipe-me.pages.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
@@ -1318,6 +1334,16 @@ grep -qx '    if: github.event.pull_request.head.repo.full_name != github.reposi
 (! grep -q '^    if: ' h/.github/workflows/dco.yml)
 grep -q 'id: dco-signoff' h/.pre-commit-config.yaml
 (! grep -q 'id: dco-signoff' a/.pre-commit-config.yaml)
+# The silver hook and sign-off setting need the silver dco.yml, so they follow its
+# condition: b answers silver privately, i publicly without a license.
+grep -q 'web_commit_signoff_required=true' h/justfile
+for r in b i; do
+  (! grep -q 'id: dco-signoff' "$r/.pre-commit-config.yaml")
+  (! grep -q 'web_commit_signoff_required' "$r/justfile")
+done
+grep -qx '    if: github.event.pull_request.head.repo.full_name != github.repository' \
+  i/.github/workflows/dco.yml
+(! grep -q 'the maintainers. included' i/.github/CONTRIBUTING.md)
 grep -q 'the maintainers. included' h/.github/CONTRIBUTING.md
 cmp "$repo/committed.toml" "$repo/template/committed.toml"
 # Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off

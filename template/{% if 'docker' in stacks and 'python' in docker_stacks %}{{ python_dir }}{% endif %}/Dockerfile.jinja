@@ -36,11 +36,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:{{ python_version }}-slim-trixie AS runtime
 
 LABEL org.opencontainers.image.source="https://github.com/{{ github_user }}/{{ slug }}" \
-      org.opencontainers.image.description={{ project_description | to_json }} \
+      org.opencontainers.image.description={{ project_description | to_json(ensure_ascii=False) | replace('$', '\\$') }} \
 {%- if license != 'none' %}
       org.opencontainers.image.licenses="{{ license }}" \
 {%- endif %}
-      org.opencontainers.image.title={{ project_name | to_json }}
+      org.opencontainers.image.title={{ project_name | to_json(ensure_ascii=False) | replace('$', '\\$') }}
 
 RUN groupadd --system --gid 1001 app \
  && useradd --system --uid 1001 --gid app --no-create-home app

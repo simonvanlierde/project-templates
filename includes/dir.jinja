@@ -3,7 +3,7 @@
 {% macro dir_error(value, example) -%}
 {% if not value %}
 An empty value is not a path: use `.` for the repo root.
-{% elif value != '.' and (value.startswith(('.', '/')) or value.endswith('/') or '..' in value) %}
-Give a plain relative path such as `{{ example }}`: no leading `./` or `/`, no trailing `/`, no `..`.
+{% elif value != '.' and (value.startswith(('.', '/')) or value.endswith('/') or '//' in value or '..' in value) %}
+Give a plain relative path such as `{{ example }}`: no leading `./` or `/`, no trailing `/`, no `//`, no `..`.
 {% endif %}
 {%- endmacro %}

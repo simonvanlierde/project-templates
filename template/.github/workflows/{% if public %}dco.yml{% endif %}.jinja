@@ -1,6 +1,6 @@
 name: dco
 
-{% if openssf_badge == 'silver' -%}
+{% if public and license != 'none' and openssf_badge == 'silver' -%}
 # Every commit in a pull request must carry a Signed-off-by line: the Developer
 # Certificate of Origin, as CONTRIBUTING.md asks and the silver badge's dco criterion
 # requires of every developer, the maintainers included. A commit a bot wrote, in a pull
@@ -25,7 +25,7 @@ concurrency:
 jobs:
   sign-off:
     name: DCO sign-off
-{%- if openssf_badge != 'silver' %}
+{%- if not (public and license != 'none' and openssf_badge == 'silver') %}
     if: github.event.pull_request.head.repo.full_name != github.repository
 {%- endif %}
     runs-on: ubuntu-latest

@@ -65,15 +65,15 @@ project_name:
   validator: >-
     {% if not (project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '')|regex_search('^[a-z0-9]')) %}
     The name needs a leading ASCII letter or digit: npm, PyPI and image tags are built from it.
-    {% elif project_name|regex_search('[*`\\[\\]<>\\\\]') %}
-    Leave out * ` [ ] < > and \: the name is written into Markdown and HTML pages.
+    {% elif project_name|regex_search('[*~`\\[\\]<>\\\\]|(^|[^A-Za-z0-9])_|_($|[^A-Za-z0-9])') %}
+    Leave out * ~ ` [ ] < > and \, and _ outside a word: the name is written into Markdown and HTML pages.
     {% endif %}
 
 # Computed, not asked. npm, PyPI, compose and image tags need this normalized form.
 slug:
   type: str
   when: false
-  default: "{{ project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '') }}"
+  default: "{{ project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '')|regex_replace('[._-]+$', '') }}"
 
 project_description:
   type: str
@@ -81,8 +81,8 @@ project_description:
   default: ""
   # It also lands unescaped in a Python docstring and in Go and TS comments.
   validator: >-
-    {% if project_description.splitlines()|length > 1 or '"""' in project_description or '*/' in project_description %}
-    Keep the description to one line, without """ or */: it goes into docstrings and code comments.
+    {% if project_description.splitlines()|length > 1 or '"""' in project_description or '*/' in project_description or '\\' in project_description %}
+    Keep the description to one line, without """, */ or \: it goes into docstrings and code comments.
     {% endif %}
 
 stacks:
