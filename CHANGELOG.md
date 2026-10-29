@@ -10,6 +10,12 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).
+- Research and data-pipeline projects ask `data_license` for what they commit under `data/`: CC-BY-4.0 by default for research, CC0-1.0 for a pipeline. Until now data took the code license.
+- [docs/usage.md](docs/usage.md#licenses) says which code license to pick.
+
 ### Changed
 
 - A web app's privacy and accessibility statements are rewritten in plain language. The privacy page opens with what is stored and whether anything leaves the device, then says how to delete it, and has no legal jargon. The accessibility page drops test file names and CI details. The TODOs ask for facts in the user's words. `copier update` merges the new wording into pages you have already filled in, so expect conflicts there: keep your facts and take the new phrasing where it fits. [docs/web-legal.md](docs/web-legal.md) now says how to write the pages, with an example.

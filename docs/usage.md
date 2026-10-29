@@ -26,6 +26,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | Question                                        | Default                                          |
 | ----------------------------------------------- | ------------------------------------------------ |
 | `license`, `copyright_year`                     | MIT if `public`, otherwise none; this year       |
+| `data_license`                                  | CC-BY-4.0 for `research`, CC0-1.0 for `data-pipeline`; none without a license ([Licenses](#licenses)) |
 | `python_dir`, `ts_dir`, `rust_dir`, `go_dir`    | `.`: each package at the repo root               |
 | `python_layout`                                 | `src`: the package in `src/<module>`, or `flat` ([adopting](#adopting-the-template-in-an-existing-python-package)) |
 | `dependency_bot`                                | Dependabot                                       |
@@ -87,6 +88,32 @@ Before you switch a private repo to public, check:
    the first render, so edit the sentence by hand.
 
 Then run `copier update --data public=true`, as above.
+
+## Licenses
+
+Pick the code license by what you want others to be able to do with the code:
+
+- **MIT**, the default: anyone can reuse it, with credit.
+- **Apache-2.0**: the same, plus an explicit patent grant. Take it when the code derives from
+  Apache-2.0 code, or when a company or university contributor wants the patent terms written down.
+- **BSD-3-Clause**: like MIT, but no one may use your name to promote their version. Take it
+  when the ecosystem you build on uses it.
+- **GPL-3.0-or-later**: changes and derived works must stay open under the GPL.
+- **AGPL-3.0-or-later**: the GPL, plus anyone who runs a changed version as a web service must
+  publish it. Take it for a hosted platform.
+
+Research and data-pipeline projects also ask `data_license`, for the files you make and commit
+under `data/`, because a software license fits data badly. CC-BY-4.0 asks for credit and is the
+default for research data. CC0-1.0 asks for nothing and is the default for a pipeline, which
+commits only its fetch log. A pipeline's outputs are not covered: they carry each source's terms
+in `datapackage.json`.
+
+Every project with a license follows the [REUSE spec](https://reuse.software). `REUSE.toml`
+says who holds the copyright on each file and under which license, `LICENSES/` holds each
+license text, and the `reuse` git hook fails while a file is not covered. `LICENSE` stays at the
+root for GitHub and the package metadata. A file you copy in from elsewhere keeps its own license:
+add `SPDX-FileCopyrightText` and `SPDX-License-Identifier` lines to its header, or an annotation
+to `REUSE.toml`, and add the text with `reuse download <SPDX id>`.
 
 ## Protecting main
 
@@ -161,8 +188,8 @@ The `stacks` question is a multi-select. Pick any combination:
 | `docker` | A `Dockerfile` for the Python or TypeScript package, and a root `compose.yaml` |
 
 Each stack also gets its own CI workflow in `.github/workflows/` and its own recipes in
-`just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`
-(unless `license=none`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS
+`just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `LICENSE`, `REUSE.toml`
+and `LICENSES/` (unless `license=none`), `.gitignore`, `.editorconfig`, a dependency bot, git hooks and VS
 Code recommendations. Unless `public=false`, it also gets the community files in `.github/`:
 `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and a pull request template. A Python project also picks a [kind](python-kinds.md).
 

@@ -45,6 +45,8 @@ A `data-pipeline` project gets:
   table of sources and terms for `ATTRIBUTION.md`.
 - `ATTRIBUTION.md`, which states what the repository reuses and on what terms. The
   code license doesn't cover those.
+- `data/fetches.jsonl` under `data_license`, CC0-1.0 by default, set in `REUSE.toml`
+  ([Licenses](usage.md#licenses)).
 - Tests that run the whole pipeline against a local file, with no network. sourceledger
   tests the stages; these test the project's own parser and entry point.
 - A CI workflow that runs the pipeline for real on the manifest's URLs. It uploads only

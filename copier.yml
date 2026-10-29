@@ -282,6 +282,20 @@ copyright_year:
   help: Copyright year in the license
   default: "{{ '%Y' | strftime }}"
 
+# The files under data/ that the project makes itself. A data pipeline commits only
+# data/fetches.jsonl, a fetch log, so it defaults to CC0; its outputs are gitignored
+# and carry each source's terms in datapackage.json instead.
+data_license:
+  type: str
+  when: "{{ license != 'none' and 'python' in stacks and kind in ('research', 'data-pipeline') }}"
+  ask: "{{ customise }}"
+  help: License for the data you make and commit under data/ (code and data are licensed apart)
+  choices:
+    CC-BY-4.0 (reuse with credit, the usual choice for research data): CC-BY-4.0
+    CC0-1.0 (public domain, no conditions; suits metadata): CC0-1.0
+    None (the code license covers data/ too): none
+  default: "{{ 'none' if license == 'none' or 'python' not in stacks else {'research': 'CC-BY-4.0', 'data-pipeline': 'CC0-1.0'}.get(kind, 'none') }}"
+
 # `.` is a single-package repo. Any other value nests only the package. Workflows,
 # hooks, justfile and answers file stay at the root. includes/dir.jinja holds the
 # path check all four *_dir questions share.
