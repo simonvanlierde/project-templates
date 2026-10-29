@@ -214,6 +214,8 @@ refuses 'to give one when the project name does not make one' --data 'stacks=[py
 # The name goes into the README and the web app's Markdown pages unescaped.
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my*app'
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my<app>'
+refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=a _b_'
+refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my~app'
 refuses 'at least one stack' --data 'stacks=[]'
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 refuses 'The flat layout' --data 'stacks=[python,docker]' --data 'docker_stacks=[python]' \

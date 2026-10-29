@@ -21,6 +21,7 @@ changes are marked **Breaking**.
 - A project description with a `\` is refused. It went into the package docstring, where an escape such as `\x` is a syntax error, so the package did not import.
 - A project description with `{{` no longer breaks the justfile. just read it as a variable, so no recipe ran.
 - A project name ending in `.`, `-` or `_` no longer leaves it on the package, image and Pages names: `app.` made `app-`, and `https://app-.pages.dev` is not a valid address.
+- A project name with `~`, or with `_` at the start or end of a word (`a _b_`), is refused: Markdown read it as strikethrough or emphasis. `_` inside a word, as in `my_app`, is still fine.
 
 ### Security
 
