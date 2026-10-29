@@ -63,6 +63,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # The tarball takes its version from package.json, not the tag: refuse a mismatch.
+      - run: test "$(node -p 'require("./package.json").version')" = "${GITHUB_REF_NAME#v}"
+
       # Every release needs this tag's CHANGELOG.md section: no section, no publish.
       - run: '"$GITHUB_WORKSPACE/.github/scripts/release-notes.sh" "$GITHUB_REF_NAME" "$GITHUB_WORKSPACE/CHANGELOG.md" >/dev/null'
 

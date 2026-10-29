@@ -782,6 +782,11 @@ test ! -e c/.github/workflows/release.yml
 test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
 grep -qx "    needs: publish" c/.github/workflows/python-release.yml
+# The build refuses a tag that does not match the manifest version it publishes.
+# shellcheck disable=SC2016 # literal workflow text
+grep -qF 'test "$(uv version --short)" = "${GITHUB_REF_NAME#v}"' c/.github/workflows/python-release.yml
+# shellcheck disable=SC2016 # literal workflow text
+grep -qF '= "${GITHUB_REF_NAME#v}"' c/.github/workflows/ts-release.yml
 grep -q -- '--draft --verify-tag' c/.github/workflows/python-release.yml
 grep -q -- '--draft=false' c/.github/workflows/python-release.yml
 # shellcheck disable=SC2016 # literal workflow expression
