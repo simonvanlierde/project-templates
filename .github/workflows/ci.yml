@@ -22,19 +22,19 @@ env:
   # The identity answers copier.yml leaves blank, for every render below.
   COPIER_SETTINGS_PATH: ${{ github.workspace }}/.github/ci-copier-settings.yml
   # renovate: datasource=github-releases depName=j178/prek
-  PREK_VERSION: 0.5.5
+  PREK_VERSION: 0.5.7
   # renovate: datasource=pypi depName=copier
   COPIER_VERSION: 9.19.1
   # renovate: datasource=pypi depName=zizmor
   ZIZMOR_VERSION: 1.31.1
   # renovate: datasource=github-releases depName=jdx/jactionlint
-  JACTIONLINT_VERSION: 2.2.0
+  JACTIONLINT_VERSION: 2.3.0
   # renovate: datasource=pypi depName=check-jsonschema
   CHECK_JSONSCHEMA_VERSION: 0.38.2
   # renovate: datasource=pypi depName=rust-just
   JUST_VERSION: 1.59.0
   # renovate: datasource=npm depName=renovate
-  RENOVATEBOT_VERSION: 44.167.5
+  RENOVATEBOT_VERSION: 44.178.1
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

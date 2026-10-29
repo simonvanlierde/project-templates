@@ -17,7 +17,7 @@ license-files = ["LICENSE"]
 {%- endif %}
 {%- if kind == 'web-service' %}
 dependencies = [
-  "fastapi>=0.146.0",
+  "fastapi>=0.160.0",
   "opentelemetry-distro>=0.65b0",
   "opentelemetry-exporter-otlp-proto-http>=1.45.1",
   "opentelemetry-instrumentation-fastapi>=0.65b0",
@@ -59,15 +59,15 @@ dev = [
 {%- endif %}
   "pytest-cov>=7.1.0",
   "ruff>=0.17.1",
-  "ty>=0.0.89",
+  "ty>=0.0.90",
 {%- if kind == 'research' %}
   "jupyterlab>=4.6.4",
 {%- endif %}
 {%- if kind == 'web-service' %}
-  "httpx2>=2.14.0", # fastapi.testclient
+  "httpx2>=2.16.0", # fastapi.testclient
 {%- endif %}
 {%- if kind == 'library' and 'property' in test_extras %}
-  "hypothesis>=6.170.2",
+  "hypothesis>=6.170.5",
 {%- endif %}
 {%- if kind == 'library' and 'mutation' in test_extras %}
   "mutmut>=3.8.0",
