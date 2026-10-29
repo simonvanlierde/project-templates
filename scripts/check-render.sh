@@ -112,13 +112,13 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
 
 # m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
-# only BSD-3-Clause render, and the only one not experimental.
+# only BSD-3-Clause render, the only one not experimental, and the only npm-only publisher.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause --data status=maintenance . "$out/m"
+  --data license=BSD-3-Clause --data status=maintenance --data publish_to_npm=true . "$out/m"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -397,7 +397,8 @@ grep -qx '## Releasing' a/README.md
 grep -q 'Before the first release' c/README.md
 # A publishing build takes its version from the manifest, not from the tag.
 (! grep -q 'Set the version in' a/README.md)
-grep -q 'Set the version in .pyproject.toml. and .package.json. to X.Y.Z first' c/README.md
+grep -q 'Set the version in .api/pyproject.toml. and .apps/web/package.json. to X.Y.Z first' c/README.md
+grep -q 'Set the version in .web/package.json. to X.Y.Z first' m/README.md
 test -x a/.github/scripts/release-notes.sh
 cat >"$out/sample-changelog.md" <<'MD'
 # Changelog
