@@ -10,9 +10,9 @@ A Python project also asks for a `kind`:
 | `data-pipeline` | You rebuild a dataset from public sources, traceable to each download | A source manifest, fetch, build and validate steps, citation files |
 | `web-service`   | You run an HTTP service in a container (needs the `docker` stack)  | A FastAPI app with a `/health` endpoint          |
 
-The citation files are `CITATION.cff`, `.zenodo.json` and `codemeta.json`, rendered from
-the same answers. After that, edit `CITATION.cff` only and run `just citation` to write
-the other two from it; a git hook fails while they disagree. A library also asks for
+The citation files are `CITATION.cff` and `codemeta.json`, rendered from the same
+answers when the project has a license. After that, edit `CITATION.cff` only and run
+`just citation` to bring `codemeta.json` in line; a git hook fails while they or `pyproject.toml` disagree. A library also asks for
 `python_min`, the oldest Python it supports: `requires-python` starts there and CI tests
 every version up to `python_version`.
 

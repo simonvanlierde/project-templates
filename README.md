@@ -35,7 +35,7 @@ example-co2,https://raw.githubusercontent.com/datasets/co2-ppm/8c4097238570147ad
 CI runs the whole pipeline against the live URLs. A weekly run comments on an issue when
 a publisher serves new bytes for a source, and fails when a value the tests pinned
 changed. The raw and processed data stay out of git, so the repository never
-redistributes a source. `CITATION.cff`, `.zenodo.json` and `codemeta.json` come from the
+redistributes a source. `CITATION.cff` and `codemeta.json` come from the
 same answers, ready for a Zenodo DOI.
 
 The same template also starts Python libraries, apps, research projects and web

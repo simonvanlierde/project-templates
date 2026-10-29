@@ -26,5 +26,7 @@
 {%- if license != 'none' %}
   "license": "https://spdx.org/licenses/{{ license }}",
 {%- endif %}
-  "programmingLanguage": "Python"
+{%- set languages = {'python': 'Python', 'ts': 'TypeScript', 'rust': 'Rust', 'go': 'Go'} %}
+{%- set used = [] %}{%- for stack in stacks if stack in languages %}{%- set _ = used.append(languages[stack]) %}{%- endfor %}
+  "programmingLanguage": {{ (used[0] if used | length == 1 else used) | to_json }}
 }

@@ -1,8 +1,7 @@
 {%- set name = (author_name | trim).split(none, 1) -%}
-# GitHub reads this for its "Cite this repository" button. Zenodo reads
-# .zenodo.json instead when it archives a release, and software indexes read
-# codemeta.json. Edit this file only, then run `just citation` to write the other
-# two from it; a git hook fails while they disagree. Check the name split below:
+# GitHub reads this for its "Cite this repository" button, and Zenodo when it
+# archives a release. Software indexes read codemeta.json. Edit this file only, then
+# run `just citation` to bring codemeta.json in line; the citesync git hook fails while they or the package manifests disagree. Check the name split below:
 # the first word becomes the given name.
 cff-version: 1.2.0
 message: If you use this software, please cite it as below.

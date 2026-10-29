@@ -47,9 +47,11 @@ fmt:
 hooks:
     {% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run -a
 {% if citable %}
-# Write .zenodo.json and codemeta.json from CITATION.cff. `just citation --check` writes nothing and fails while they disagree, as the git hook does.
-citation *args:
-    uv run --script .github/scripts/citation.py {% raw %}{{ args }}{% endraw %}
+# Rewrite codemeta.json to agree with CITATION.cff, then check. The writer
+# exits 1 whenever it changes a file, so the check that follows decides the result.
+citation:
+    -{% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run citesync-write --hook-stage manual --all-files
+    {% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run citesync --all-files
 {% endif %}
 # Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on private vulnerability reporting{% endif %}. Safe to rerun.
 repo-settings:

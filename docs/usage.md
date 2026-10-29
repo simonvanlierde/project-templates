@@ -15,7 +15,7 @@ details only you know, then one switch for everything else. They come in this or
 | `user_data`           | `ts_kind=web-app`                  | What the privacy page says, and whether there is a terms page ([legal pages](#legal-pages)) |
 | `public`              | always                             | Yes adds the community files in `.github/`, and sets the license default |
 | `github_user`, `author_name`, `author_email` | always      | Repo URLs and badges, the license, package metadata; a web app with `user_data=accounts` refuses `code@duinlab.nl` |
-| `author_orcid`        | a `library`, `research` or `data-pipeline` Python kind | The citation files                    |
+| `author_orcid`        | a `library` kind of any stack, or a `research` or `data-pipeline` Python kind | The citation files |
 | `customise`           | always                             | Yes asks the advanced questions below; no takes their defaults     |
 | `docker_stacks`       | the `docker` stack                 | Which packages get a Dockerfile and a compose service              |
 
@@ -376,7 +376,7 @@ need two packages in the same language, switch to that language's workspace tool
 this template. The same command lets you change your answers: add a stack or turn on a
 publish option, and Copier writes the new files.
 
-`README.md`, `CHANGELOG.md`, the citation files (`CITATION.cff`, `.zenodo.json`,
+`README.md`, `CHANGELOG.md`, the citation files (`CITATION.cff`,
 `codemeta.json`), `docs/decisions/README.md`, the silver-badge documents, a `web-app`'s starter files, a published
 TypeScript library's `<package>.api.md` and Go's `go.mod` are written once
 and then belong to your project: an update never touches them, so your release tool or
