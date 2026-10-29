@@ -62,7 +62,7 @@ repo-settings:
         exit 1
     }
     # Merge-method switches live on the repo itself; the ruleset also limits the PR button.
-    gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false >/dev/null 2>"$err" || fail
+    gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false{% if openssf_badge == 'silver' %} -F web_commit_signoff_required=true{% endif %} >/dev/null 2>"$err" || fail
     # Each file's "name" matches its file name, so the recipe needs no jq to read it.
     for name in main{% if public %} main-checks{% endif %} tags; do
         file=.github/rulesets/$name.json

@@ -13,8 +13,6 @@ This is a short view of what is planned for the template over the next year, to 
   sourceledger has a release step.
 - Add a release path for Rust: a `publish_to_crates` answer, crates.io trusted publishing,
   binaries that `cargo binstall` can find, attestations, and a `cargo-semver-checks` step.
-- Turn off Biome's Markdown and YAML formatters in the rendered `biome.json` when the
-  template moves to Biome 2.6, which turns them on by default.
 - Register one generated project for the OpenSSF Best Practices badge before the README
   says a fresh render meets it.
 

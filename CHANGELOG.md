@@ -13,11 +13,12 @@ changes are marked **Breaking**.
 Upgrade steps:
 
 - With `openssf_badge=silver`: from this update on, sign off your own commits too (`git commit -s`, or `git rebase --signoff origin/main` for a branch you already have). Run `prek install` again so the new commit-msg hook is active.
+- If your README.md has the three-dot fair-software.eu badge and `fair.yml` scores under five of five, delete the badge line by hand. `copier update` never changes README.md.
 
 ### Changed
 
-- New citable public projects no longer get a fair-software.eu badge at three of five dots. Add it once `fair.yml` scores five of five: set `FAIR_MIN: 5` and paste the snippet howfairis prints in the job summary. `copier update` removes the three-dot badge from a README that still has it unchanged.
-- **Breaking** for `openssf_badge=silver`: the `dco` check runs on every pull request, the maintainers' branches included, as the silver badge's DCO criterion asks of every developer. A commit-msg hook refuses an unsigned commit before the push. Commits Dependabot or Renovate write in their own pull requests are exempt. Below silver, only pull requests from forks are checked, as before.
+- New citable public projects no longer get a fair-software.eu badge at three of five dots. Add it once `fair.yml` scores five of five: set `FAIR_MIN: 5` and paste the snippet howfairis prints in the job summary.
+- **Breaking** for `openssf_badge=silver`: the `dco` check runs on every pull request, the maintainers' branches included, as the silver badge's DCO criterion asks of every developer. A commit-msg hook refuses an unsigned commit before the push. Commits Dependabot or Renovate write in their own pull requests are exempt; a human commit on a bot's branch is still checked. The commit-msg hook accepts only a full `Signed-off-by: Name <email>` line, as the check does. `just repo-settings` also turns on GitHub's "require contributors to sign off on web-based commits", so a commit made in the web UI, such as "Commit suggestion", passes the check. Below silver, only pull requests from forks are checked, as before.
 - The copier-update workflow signs off its commit.
 - Pull requests restore the CI caches main saved and save none of their own, in every workflow that caches: uv, Rust, the pnpm store, Go, the git hook environments and trivy's database. GitHub lets only the pull request read a cache it saves, and a repo holds 10 GB of caches before it evicts the oldest, so those caches pushed out main's and new pull requests built cold. The `pr title` workflow, which runs on pull requests only, no longer caches uv.
 - `codemeta.json` declares CodeMeta 3.0 instead of 4.0, because Software Heritage's indexer reads only 2.0 and 3.0 and skipped the file. The fields are the same in both.
