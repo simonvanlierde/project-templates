@@ -10,6 +10,8 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-29
+
 Upgrade steps:
 
 - **Breaking:** in a `library`, `research` or `data-pipeline` project, run `just citation` after the update and commit what it writes. Until you do, the new `citation` hook fails, in CI too. Add `email:` to the authors in `CITATION.cff` first, or `codemeta.json` loses the email it has.
@@ -708,7 +710,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/simonvanlierde/project-templates/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/simonvanlierde/project-templates/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/simonvanlierde/project-templates/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/simonvanlierde/project-templates/compare/v0.9.0...v0.9.1
