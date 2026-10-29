@@ -850,6 +850,24 @@ for lic in a/LICENSE d/LICENSE m/LICENSE e/LICENSE; do
   end=$(tail -c 2 "$lic" | od -An -tx1 | tr -d ' \n')
   [[ $end == ??0a && $end != 0a0a ]]
 done
+# REUSE: LICENSES/ holds the code license beside LICENSE, and data/ gets its own
+# license in the research (a) and data-pipeline (d, nested) kinds only. e renders the
+# last commit, without uncommitted edits, so it is not linted.
+cmp a/LICENSE a/LICENSES/MIT.txt
+grep -qx 'path = "data/\*\*"' a/REUSE.toml
+test -f a/LICENSES/CC-BY-4.0.txt
+grep -qx 'path = "pipe/data/\*\*"' d/REUSE.toml
+grep -qx 'SPDX-License-Identifier = "CC0-1.0"' d/REUSE.toml
+test -f d/LICENSES/CC0-1.0.txt
+test -f k/LICENSES/GPL-3.0-or-later.txt
+(! grep -q 'data/' k/REUSE.toml m/REUSE.toml)
+test ! -e b/REUSE.toml
+test ! -e b/LICENSES
+(! grep -q reuse-tool b/.pre-commit-config.yaml)
+reuse_version=$(sed -n '/fsfe\/reuse-tool/{n;s/.*frozen: v//p;}' "$repo/template/.pre-commit-config.yaml.jinja")
+for r in a d k m; do
+  uvx "reuse@$reuse_version" --root "$r" lint --quiet
+done
 test ! -e d/pipe/notebooks
 grep -qx 'pipe/data/raw/\*' d/.gitignore
 grep -q 'path: pipe/data/raw/\*.fetch.json' d/.github/workflows/python.yml
