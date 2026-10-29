@@ -1,10 +1,9 @@
-{#- A private repo's GitHub links would 404 for visitors, so they name the files instead. -#}
-{%- set blob = 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/blob/main/' ~ ('' if ts_dir == '.' else ts_dir ~ '/') -%}
-{%- macro file(path) -%}
-{%- if public %}[{{ path }}]({{ blob }}{{ path }}){% else %}`{{ path }}`{% endif -%}
-{%- endmacro -%}
+{#- A private repo's GitHub links would 404 for visitors, so it names the folder instead. -#}
+{%- set tests = 'tests/e2e' -%}
+{%- set tests_url = 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/tree/main/' ~ ('' if ts_dir == '.' else ts_dir ~ '/') ~ tests -%}
 <!--
-Keep this page true. The app serves it at /accessibility, without this note.
+Keep this page true, and write it for the person using the app: what they can do first, short
+sentences, everyday words. The app serves it at /accessibility, without this note.
 https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md
 says how to fill it in, and how the template builds and tests it.
 Say "partially conformant" only once docs/accessibility-assessment.md has a result for every
@@ -12,80 +11,74 @@ criterion, and link it from the status sentence.
 -->
 
 # Accessibility statement
+{#- The per-app facts: who runs it, what you can do, the known problems and what was tested. #}
 
-This statement covers {{ project_name }} at [{{ site_url | regex_replace('^https://', '') }}]({{ site_url }}).
-{{ author_name }} builds and maintains it, and is responsible for this statement.
+This page covers {{ project_name }} at [{{ site_url | regex_replace('^https://', '') }}]({{ site_url }}).
+{{ author_name }} builds {{ project_name }} and is responsible for this page.
 
 ## Using {{ project_name }}
 
-You should be able to:
+You can:
 
-- use it on a screen 320 px wide, or zoomed in to 400%, without scrolling sideways;
-- use a dark theme, which follows your system setting.
+- use {{ project_name }} on a screen 320 px wide without scrolling sideways, which is the same as
+  zooming in to 400% on a laptop;
+- use a dark theme, which follows your device's setting.
 
-TODO: add what else you have checked, such as using every feature with the keyboard alone or
-with a screen reader. List only what a test or a recorded hand check backs.
+TODO: add what else people can do, in their words, such as "use every feature with only a
+keyboard". List only what a test or a hand check you wrote down backs.
 
 ## How accessible {{ project_name }} is
 
-{{ project_name }} aims to meet [WCAG 2.2](https://www.w3.org/TR/WCAG22/) at level AA.
+{{ project_name }} aims to meet [WCAG 2.2](https://www.w3.org/TR/WCAG22/) at level AA, the usual
+standard for accessible websites.
 
-Its conformance is **not assessed**. Nobody has checked it against every WCAG 2.2 criterion yet,
-and no outside auditor has tested it: the developer checks it. How we check, below, says what is
-checked and how. The criterion-by-criterion check goes in
-{{ file('docs/accessibility-assessment.md') }}, and the status links it once every criterion
-has a result.
+Its conformance is **not assessed**: nobody has checked {{ project_name }} against every WCAG 2.2
+rule yet. {{ author_name }} runs the checks below. No outside expert has tested it.
 
 ## Known problems
 
-TODO: list each problem you know of, most harmful first. For each, say what the reader will
-notice, why (one clause), what to do instead, and a fix date or "No fix planned". Put the WCAG
-criterion in brackets at the end, such as [1.1.1 Non-text Content]. With none known, write
-"We don't know of any problems yet."
+TODO: list each problem you know of, worst first: what people will notice, what to do instead,
+and a fix date or "No fix planned". End each with the WCAG criterion in brackets, such as
+[1.1.1 Non-text Content]. With none known, write "None that we know of yet."
+{#- The same in every app from here on, apart from the hand tests under Tested with. #}
 
 ## Tell us about a problem
 
-If something in {{ project_name }} is hard or impossible for you to use, email
-[{{ author_email }}](mailto:{{ author_email }}).
-{%- if public %} You can also
-[open an issue on GitHub](https://github.com/{{ github_user }}/{{ slug }}/issues/new), but you don't
-need a GitHub account to tell us.
+If any part of {{ project_name }} is hard or impossible for you to use, email
+[{{ author_email }}](mailto:{{ author_email }}). Tell us what you tried to do, what happened, and
+which browser and assistive technology you use, if any.
+{%- if public %} If you have a GitHub account, you can also
+[open an issue](https://github.com/{{ github_user }}/{{ slug }}/issues/new).
 {%- endif %}
 
-Say what you were trying to do, what happened, and which browser and assistive technology you use,
-if any. We'll reply within 10 working days. If you need anything from {{ project_name }} in another
+We'll reply within 10 working days. If you need something from {{ project_name }} in another
 format, ask and we'll send it.
 
 ## How we check
 
-- **Automated scan.** The end-to-end tests run [axe-core](https://github.com/dequelabs/axe-core)
-  with the WCAG 2.0, 2.1 and 2.2 level A and AA rules and axe's best practices, on every page,
-  in the light and the dark theme. See
-  {{ file('tests/e2e/a11y.spec.ts') }}.
-- **Reflow.** The tests load every page 320 px wide and fail if it scrolls sideways. See
-  {{ file('tests/e2e/reflow.spec.ts') }}.
-- **Lint.** [Biome's accessibility rules](https://biomejs.dev/linter/javascript/rules/#a11y) check
-  every change for missing alt text, invalid ARIA, click handlers without a keyboard equivalent and
-  other mistakes in the code.
-- **This statement.**
-  {{ file('tests/e2e/accessibility-statement.spec.ts') }}
-  fails when this page loses a section, claims a status it has not earned, loses its email contact,
-  or goes more than 400 days without a review.
+These automatic checks run on every proposed change to {{ project_name }}:
 
-All of this runs on every pull request. Automated tools catch only part of the problems people run
-into, so a passing run doesn't mean there are none.
+- [axe-core](https://github.com/dequelabs/axe-core) scans every page, in the light and the dark
+  theme, for WCAG 2.0, 2.1 and 2.2 level A and AA problems and axe's best practices.
+- Every page loads 320 px wide, and the test fails if it scrolls sideways.
+- [Biome's accessibility rules](https://biomejs.dev/linter/javascript/rules/#a11y) check the code
+  for mistakes such as missing alt text, invalid ARIA, or click handlers that don't work with a
+  keyboard.
+- A test fails if this page loses a section or its email contact, claims a status it hasn't
+  earned, or goes more than 400 days without a review.
 
-Not checked yet: nobody has tried {{ project_name }} by hand with only a keyboard, or with a screen
-reader.
+Automatic tools find only some problems, so passing them doesn't mean there are none. The tests
+are in {% if public %}[{{ tests }}]({{ tests_url }}){% else %}`{{ tests }}`{% endif %}.
 
 ## Tested with
 
-- Chromium, in Playwright's desktop Chrome profile, with axe-core, on every pull request.
+- Chromium, with axe-core, on every proposed change.
 
-TODO: add the browser and assistive-technology pairs you tried by hand, with the date, such as
-"Firefox with NVDA on 30 October 2026".
+TODO: if you tried {{ project_name }} by hand, add each browser and assistive technology with the
+date, such as "Firefox with NVDA on 30 October 2026", and drop the next sentence.
 
-{{ project_name }} relies on HTML, CSS and JavaScript.
+Nobody has tested {{ project_name }} by hand yet, with only a keyboard or with a screen reader.
+{{ project_name }} needs HTML, CSS and JavaScript to work.
 
 ## About this statement
 
@@ -95,5 +88,4 @@ Last reviewed: {{ legal_date }}
 
 Next review: within 12 months of the last review, or at the next major release if that comes first.
 
-Method: the developer's own checks, listed under How we check. No outside auditor has tested
-it.
+Method: self-assessment, using the checks under How we check.

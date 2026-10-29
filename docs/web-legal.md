@@ -17,6 +17,59 @@ date. The rest is marked TODO, and `just ts-e2e` fails until none is left: a pag
 worse than no page. Write only what you can check. When code makes a page untrue, change the page
 in the same pull request.
 
+## Write for the person using the app
+
+Someone opens the privacy page to learn whether their data leaves their device, and the
+accessibility page to learn whether they can use the app and whom to tell when they can't. Answer
+that first, in the words they would use. The GDPR asks for this too: article 12(1) wants the
+information "in a concise, transparent, intelligible and easily accessible form, using clear and
+plain language".
+
+- **Facts first.** Open the privacy page with what is stored, where, and whether anything leaves
+  the device. Then how to delete it, then who to contact.
+- **Name things as users see them:** "the days you log", not "user-generated records"; "Settings,
+  then **Delete all data**", not "the delete option".
+- **Leave out what the reader can't use:** test file names, CI profiles, the history of how a
+  check came about. One link to the tests is enough.
+- **Keep the legal points, in plain words.** "Cloudflare may log these to keep the site running
+  and safe, which the law counts as a legitimate interest" names the purpose and the legal basis.
+  "On the basis of a legitimate interest" and "the data controller" make the reader stop.
+- **Short sentences, one point each.** If a sentence needs a comma and a colon, split it.
+- **Read it once as a user,** start to end, before you commit. Cut every sentence that would not
+  change what they do.
+
+Keep what the tests check: the page titles, an email link, the accessibility statement's
+headings, its status sentence ("Its conformance is …"), a reply time in working days, and the
+"Last reviewed" date. The page-specific facts come first on each page; the
+hosting, cookie, rights and contact text after them is the same in every app.
+
+A privacy page for an app that keeps a reading list in the browser:
+
+```markdown
+# Privacy statement
+
+shelf keeps your reading list on your device. It isn't sent to us or to anyone else. shelf has
+no accounts, no cookies and no analytics.
+
+This page covers shelf at [shelf.example.org](https://shelf.example.org). Ada Lovelace runs shelf
+and is responsible for it. "We" on this page means Ada Lovelace.
+
+## What shelf stores on your device
+
+shelf saves your work in your browser's local storage. Nothing is saved until you add a book. It
+stores:
+
+- the books on your list, and the page you have reached in each;
+- your settings: theme and language.
+
+## How to delete it
+
+- In shelf, open Settings and choose **Delete all data**.
+- Or clear this site's data in your browser's settings.
+```
+
+The hosting, cookie, rights and contact sections follow as the template writes them.
+
 ## Who is responsible
 
 - **A personal project:** you are the data controller, the one who decides what happens to the
@@ -68,7 +121,9 @@ in the same pull request.
   The statement test refuses "fully conformant": that needs a full external audit, so change the
   test only once you have one.
 - Review it at least once a year. The test fails when "Last reviewed" is more than 400 days old.
-- Give each known problem a way around it, and a fix date or "No fix planned".
+- Give each known problem a way around it, and a fix date or "No fix planned". Write the
+  problem as the user meets it ("the chart has no text version"), and put the WCAG criterion in
+  brackets at the end.
 
 ## Privacy statement
 
@@ -85,6 +140,10 @@ in the same pull request.
   "constitutes a legitimate interest of the data controller concerned". A statement that relies
   on 6(1)(f) must also name the interest it pursues (13(1)(d)), such as keeping the site
   running and safe.
+- These articles say what to tell people, not which words to use. Give each point in a plain
+  sentence, as in [Write for the person using the app](#write-for-the-person-using-the-app):
+  "your email address, to sign you in, which we need to give you an account" covers the purpose
+  and the contract basis.
 - Change "Last updated" with every edit to the page.
 - Keep Cloudflare Web Analytics off for the Pages project. When it is on, "Cloudflare will
   automatically add the JavaScript snippet to your Pages site on the next deployment"
