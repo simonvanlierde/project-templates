@@ -3,7 +3,7 @@
 # The release workflow refuses a tag GitHub cannot verify, so a tag pushed any other
 # way publishes nothing.
 #
-#   scripts/tag-release.sh 0.11.0
+#   scripts/tag-release.sh 0.12.0
 set -euo pipefail
 
 version=${1:?usage: scripts/tag-release.sh X.Y.Z}
