@@ -37,7 +37,7 @@ repos:
     hooks:
       - id: dco-signoff
         name: commit message has a Signed-off-by line (git commit -s)
-        entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || grep -q "^Signed-off-by:" "$1"' --
+        entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || grep -qE "^Signed-off-by:[ ].+ <[^>]+>[[:space:]]*$" "$1"' --
         language: system
         stages: [commit-msg]
 

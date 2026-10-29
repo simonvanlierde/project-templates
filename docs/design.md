@@ -142,7 +142,7 @@ scanning are repository settings a render can't make; the project sets them.
 
 ### Security assessment
 
-Reviewed 2026-10-27 for release 0.11.0. The most likely and most harmful problems, and
+Reviewed 2026-10-29 for release 0.12.0. The most likely and most harmful problems, and
 what limits each one:
 
 | Threat | Impact | What limits it |
@@ -150,6 +150,6 @@ what limits each one:
 | A pull request title, branch name or other event data runs as shell in a rendered workflow | Code runs with the workflow's token | No `run:` step expands event data directly, and CI runs zizmor and jactionlint on every rendered workflow |
 | Code in a release job takes the publishing token | A malicious package or image is published under the project's name | The OIDC token is only in the upload job, which runs no project code; the release environments should be limited to `v*` tags |
 | Copier or one of its dependencies alters the weekly update job | It pushes to the project with the job's token | Copier runs in a read-only job; a fresh job applies the patch and alone holds the push token (fixed in 0.11.0) |
-| A compromised action or package version | Its code runs in CI or in the project | Actions are pinned to commit SHAs. Generated projects commit their lockfiles, and Renovate, uv and pnpm skip versions younger than a week |
+| A compromised action or package version | Its code runs in CI or in the project | Actions are pinned to commit SHAs. Generated projects commit their lockfiles, and Renovate, uv and pnpm skip versions younger than a week. Two are not covered: howfairis, which the weekly `fair.yml` fetches by git tag, and jsonvet, whose hook installs a pinned PyPI version rather than code pinned by the rev SHA |
 | A crafted copier answer breaks out of a generated file | A broken or unsafe render | The 22 validators in `copier.yml` check the answers that become names, paths, versions and identities, and the description, before rendering |
 | A secret is committed to this repository | The secret leaks | betterleaks runs as a hook, and GitHub secret scanning with push protection is on |

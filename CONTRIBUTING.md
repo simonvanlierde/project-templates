@@ -101,10 +101,11 @@ the CI `update` job does.
 Every commit in a pull request carries a `Signed-off-by:` line, which says you wrote the
 change or have the right to submit it under the MIT license: the
 [Developer Certificate of Origin 1.1](https://developercertificate.org/). `git commit -s`
-adds it, and the commit-msg hook refuses a commit without it. To add it to commits you already made, run `git rebase --signoff upstream/main`
-(the branch you started from) and force-push the branch. The `dco` workflow fails any pull
-request with a commit that lacks it, the maintainer's and Renovate's included. Renovate
-adds the line itself.
+adds it, and the commit-msg hook refuses a commit without it. To add it to commits you
+already made, run `git rebase --signoff upstream/main` (the branch you started from) and
+force-push the branch. The `dco` workflow fails any pull request with a commit that lacks
+it, the maintainer's included. Commits a bot writes in its own pull request are skipped,
+since Renovate adds the line itself. A human commit on a bot's branch is still checked.
 
 ## How pull requests merge
 

@@ -1128,6 +1128,8 @@ chmod +x "$fake/gh"
   for flag in allow_squash_merge=true allow_merge_commit=false allow_rebase_merge=false; do
     [[ "$patch " == *" -F $flag "* ]]
   done
+  # Below silver the sign-off setting stays untouched.
+  [[ "$patch " != *web_commit_signoff_required* ]]
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
   for f in main main-checks tags; do
@@ -1156,6 +1158,15 @@ chmod +x "$fake/gh"
   jq -e '.target == "tag" and .conditions.ref_name.include == ["refs/tags/v*"]' .github/rulesets/tags.json >/dev/null
 )
 (cd b && ! grep -q 'DCO sign-off' .github/rulesets/main.json)
+# Silver: the DCO check needs commits made in GitHub's web UI to carry a sign-off.
+: >"$fake/log"
+(
+  cd h
+  # shellcheck disable=SC2031 # the PATH set for this one command, as above
+  FAKE_LOG="$fake/log" FAKE_DIR="$fake" PATH="$fake:$PATH" just repo-settings >/dev/null
+  patch=$(grep -- '^api -X PATCH repos/{owner}/{repo} ' "$fake/log" | head -1)
+  [[ "$patch " == *" -F web_commit_signoff_required=true "* ]]
+)
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
 jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null

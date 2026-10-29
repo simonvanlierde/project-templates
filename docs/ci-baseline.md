@@ -8,7 +8,7 @@ say what each piece is, why it's there, and what I left out on purpose.
 | Piece | Where | Why |
 | --- | --- | --- |
 | Actions pinned to a commit digest, version in a trailing comment | every workflow | A tag can move; a digest can't. Dependabot bumps both. |
-| Hook revs pinned to a commit SHA, tag in a `# frozen:` comment | `.pre-commit-config.yaml` | The same reason: hooks run in CI and on every contributor's machine. Dependabot bumps both. |
+| Hook revs pinned to a commit SHA, tag in a `# frozen:` comment | `.pre-commit-config.yaml` | The same reason: hooks run in CI and on every contributor's machine. Dependabot bumps both. The exception is jsonvet: its rev pins a PyPI version, not its code. |
 | `permissions: contents: read` at the top, wider grants per job only | every workflow | The token can do only what the job needs. |
 | `concurrency` group with `cancel-in-progress` | every workflow except the release ones, which must not stop halfway, `mutation.yml` and `copier-update.yml`, which never cancel, and the weekly `advisories.yml`, which has no group. `python.yml`, `docker.yml` and `benchmarks.yml` cancel only on pull requests, so a push to main never stops a scheduled run, an image push or a benchmark baseline. `scorecard.yml` lets a push cancel the weekly run, because both do the same scan. Their groups include the event, because GitHub replaces a pending run whenever a newer one queues in its group | A new push cancels the stale run. |
 | `timeout-minutes` on every job | every workflow | A hung job stops in minutes, not six hours. |
