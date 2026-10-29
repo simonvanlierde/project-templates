@@ -208,6 +208,8 @@ refuses 'Keep the description to one line' --data $'project_description=Two\nlin
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
+# A digit-leading name makes no module name, and the question is hidden behind customise.
+refuses 'to give one when the project name does not make one' --data 'stacks=[python]' --data project_name=1abc
 # The name goes into the README and the web app's Markdown pages unescaped.
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my*app'
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my<app>'
