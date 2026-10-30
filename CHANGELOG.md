@@ -16,6 +16,7 @@ changes are marked **Breaking**.
 - Research and data-pipeline projects ask `data_license` for what they commit under `data/`: CC-BY-4.0 by default for research, CC0-1.0 for a pipeline. Until now data took the code license.
 - [docs/usage.md](docs/usage.md#licenses) says which code license to pick.
 - TypeScript, Rust and Go libraries get the citation files too, as Python libraries already did. `codemeta.json`'s `programmingLanguage` names your stacks instead of always saying Python.
+- A `profiling` option for the Python and Rust stacks, off by default. Python gets `just py-profile` (pyinstrument). Rust gets a `[profile.profiling]` build with frame pointers, `just rs-profile` (samply) and `just rs-counters` (`perf stat`). See [Profiling](docs/usage.md#profiling).
 
 ### Changed
 

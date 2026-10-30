@@ -31,6 +31,23 @@ rs-test *args:
 rs-mutation:
     cargo mutants{{ '' if rust_dir == '.' else ' --dir ' ~ rust_dir }}
 {%- endif %}
+{%- if profiling %}
+
+# Build the profiling profile with frame pointers, so profilers get whole call stacks.
+rs-profiling-build:
+    RUSTFLAGS="-C force-frame-pointers=yes" cargo build{{ mp }} --profile profiling --all-targets
+
+# Record a command with samply and open the profile in Firefox Profiler, e.g.
+# `just rs-profile target/profiling/<binary> <args>`. Needs samply and perf events
+# (`perf_event_paranoid` 1 or lower).
+rs-profile *cmd: rs-profiling-build
+    samply record {% raw %}{{ cmd }}{% endraw %}
+
+# Count instructions, cycles and branch misses for a command, five runs. Instruction counts
+# barely move between runs, so compare those across changes rather than wall time.
+rs-counters *cmd: rs-profiling-build
+    perf stat -r 5 -e instructions,cycles,branches,branch-misses {% raw %}{{ cmd }}{% endraw %}
+{%- endif %}
 {%- if rust_kind == 'library' and 'property' in test_extras %}
 
 # The tests with proptest at 10,000 cases a property instead of 256. CI runs it

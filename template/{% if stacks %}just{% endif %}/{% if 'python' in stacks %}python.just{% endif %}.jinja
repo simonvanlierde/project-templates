@@ -33,6 +33,13 @@ py-test *args:
 py-mutation:
     {{ uv }} run mutmut run
 {%- endif %}
+{%- if profiling %}
+
+# Profile a script or module with pyinstrument and print the call tree, e.g.
+# `just py-profile -m mypackage.cli <args>`. Needs no perf events, so it runs on any host.
+py-profile *args:
+    {{ uv }} run --with pyinstrument pyinstrument {% raw %}{{ args }}{% endraw %}
+{%- endif %}
 {%- if kind == 'library' and 'property' in test_extras %}
 
 # The tests under Hypothesis's "long" profile (tests/conftest.py): 10,000 examples a

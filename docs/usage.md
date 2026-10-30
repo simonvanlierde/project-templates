@@ -32,6 +32,7 @@ With `customise` left at no, the advanced questions take these defaults:
 | `dependency_bot`                                | Dependabot                                       |
 | `codecov`                                       | off                                              |
 | `codspeed`                                      | off ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
+| `profiling`                                     | off ([Profiling](#profiling))                    |
 | `openssf_badge`                                 | none ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `status`                                        | experimental: the README's status sentence (`stable`, `maintenance` or `archived`) |
 | `module_name`, `go_module`                      | made from the project name and GitHub user       |
@@ -549,6 +550,22 @@ existing project, run `copier update --data codspeed=true`. Then two steps no fi
    with 401 "Repository not found".
 2. In the repository's settings on codspeed.io, set Pull Request comments to "On Change".
    `codspeed.yml` has no option for it.
+
+## Profiling
+
+`profiling` (off by default, Python and Rust stacks) adds recipes for finding where time goes.
+CodSpeed tells you that a change got slower; these tell you why.
+
+- Python: `just py-profile <script or -m module> <args>` runs pyinstrument through
+  `uv run --with`, so it adds no dependency, and prints the call tree.
+- Rust: a `[profile.profiling]` in `Cargo.toml` (release code plus line tables), built with
+  frame pointers by `just rs-profiling-build`. `just rs-profile <command>` records it with
+  [samply](https://github.com/mstange/samply), and `just rs-counters <command>` runs
+  `perf stat` five times for instructions, cycles and branch misses. Both need perf events
+  (`perf_event_paranoid` 1 or lower), which many VMs and CI runners block. Install samply
+  yourself; perf comes with the kernel tools.
+
+In an existing project, run `copier update --data profiling=true`.
 
 ## OpenSSF Best Practices badge
 
