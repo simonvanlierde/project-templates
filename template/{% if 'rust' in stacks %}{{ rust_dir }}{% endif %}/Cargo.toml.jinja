@@ -30,6 +30,14 @@ proptest = "{{ proptest_version }}"
 name = "codspeed"
 harness = false
 {%- endif %}
+{%- if profiling %}
+
+# Release code with line tables, for `just rs-profile` and `just rs-counters`. The release
+# build itself stays without debug info.
+[profile.profiling]
+inherits = "release"
+debug = "line-tables-only"
+{%- endif %}
 
 # Clippy has no user-wide config: lint levels take effect only from this table.
 [lints.rust]

@@ -360,6 +360,13 @@ codspeed:
   help: Benchmark pull requests on CodSpeed (needs the repository imported on codspeed.io)
   default: false
 
+profiling:
+  type: bool
+  when: "{{ 'python' in stacks or 'rust' in stacks }}"
+  ask: "{{ customise }}"
+  help: Profiling recipes (a sampling profiler on Python; a frame-pointer build, samply and perf stat on Rust)
+  default: false
+
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
 # projects. These documents are starting points for the project to complete.
 openssf_badge:

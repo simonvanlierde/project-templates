@@ -24,7 +24,7 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data project_name=render-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data kind=research --data ts_kind=app \
   --data 'author_name= Ada Lovelace' \
-  --data codspeed=true \
+  --data codspeed=true --data profiling=true \
   --data 'docker_stacks=[python]' . "$out/a"
 
 # b: public=false, so no SECURITY.md and a license that defaults to none, and a name, description and author name with punctuation that `slug`
@@ -60,7 +60,7 @@ done
   --data rust_dir=crates/cli --data rust_kind=binary \
   --data go_dir=services/tool --data go_kind=binary \
   --data publish_to_pypi=true --data publish_to_npm=true --data codecov=true \
-  --data codspeed=true \
+  --data codspeed=true --data profiling=true \
   --data 'test_extras=[mutation]' \
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
@@ -616,6 +616,14 @@ done
 test -f a/tests/test_benchmarks.py
 test -f c/api/tests/test_benchmarks.py
 test -f a/benches/codspeed.rs
+# profiling: a and c have it, nested in c, so the manifest path reaches the build; b and d do not.
+grep -qx '\[profile.profiling\]' a/Cargo.toml
+grep -qx '\[profile.profiling\]' c/crates/cli/Cargo.toml
+grep -qF 'cargo build --profile profiling' a/just/rust.just
+grep -qF 'cargo build --manifest-path crates/cli/Cargo.toml --profile profiling' c/just/rust.just
+grep -qx 'py-profile \*args:' a/just/python.just
+grep -qx 'py-profile \*args:' c/just/python.just
+(! grep -rq 'py-profile' b/just d/just)
 test -f c/crates/cli/benches/codspeed.rs
 grep -q 'use render_me::add;' a/benches/codspeed.rs
 grep -q 'fn stand_in' c/crates/cli/benches/codspeed.rs
