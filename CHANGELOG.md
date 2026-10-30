@@ -12,17 +12,11 @@ changes are marked **Breaking**.
 
 ### Added
 
-- A `profiling` option for the Python and Rust stacks, off by default. Python gets
-  `just py-profile` (pyinstrument). Rust gets a `[profile.profiling]` build with frame pointers,
-  `just rs-profile` (samply) and `just rs-counters` (`perf stat`). See
-  [Profiling](docs/usage.md#profiling).
-
-### Added
-
 - Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. The Code of Conduct keeps the Contributor Covenant's CC-BY-SA-4.0. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).
 - Research and data-pipeline projects ask `data_license` for what they commit under `data/`: CC-BY-4.0 by default for research, CC0-1.0 for a pipeline. Until now data took the code license.
 - [docs/usage.md](docs/usage.md#licenses) says which code license to pick.
 - TypeScript, Rust and Go libraries get the citation files too, as Python libraries already did. `codemeta.json`'s `programmingLanguage` names your stacks instead of always saying Python.
+- A `profiling` option for the Python and Rust stacks, off by default. Python gets `just py-profile` (pyinstrument). Rust gets a `[profile.profiling]` build with frame pointers, `just rs-profile` (samply) and `just rs-counters` (`perf stat`). See [Profiling](docs/usage.md#profiling).
 
 ### Changed
 
