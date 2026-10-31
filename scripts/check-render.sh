@@ -154,6 +154,10 @@ grep -qx 'source = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/k/LICENSE"
 grep -qx 'license = "GPL-3.0-or-later"' "$out/k/pyproject.toml"
 grep -q '"license": "https://spdx.org/licenses/GPL-3.0-or-later"' "$out/k/codemeta.json"
+grep -q 'Programming Language :: Python :: 3' "$out/k/pyproject.toml"
+grep -qx 'keywords = \[\] # citesync compares this list to keywords in CITATION.cff' "$out/k/pyproject.toml"
+grep -q 'Changelog = "https://github.com/[^/]*/adopt-me/blob/main/CHANGELOG.md"' "$out/k/pyproject.toml"
+(! grep -q 'Private :: Do Not Upload' "$out/k/pyproject.toml")
 # A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
 grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
 # Per hook, never top-level: the secret scan and the large-file check still cover data/.
@@ -483,6 +487,9 @@ if cold k >/dev/null 2>"$out/k-cold.log"; then
 fi
 grep -qF 'or delete .github/workflows/cold-install.yml' "$out/k-cold.log"
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
+(! grep -q 'Development Status' a/pyproject.toml)
+(! grep -q 'keywords =' a/pyproject.toml)
+(! grep -q 'Changelog =' a/pyproject.toml)
 grep -q '"private": true' a/package.json
 # The one-week release age, in both resolvers.
 grep -qx 'exclude-newer = "1 week"' a/pyproject.toml
@@ -594,6 +601,13 @@ grep -qx '  "programmingLanguage": \["Python", "TypeScript", "Rust", "Go"\]' a/c
 # kinds pin python_version and run once.
 min=$(sed -n 's/^python_min: *//p' c/.copier-answers.yml | tr -d "\"'")
 grep -qx "requires-python = \">=$min\"" c/api/pyproject.toml
+grep -q 'Development Status :: 3 - Alpha' c/api/pyproject.toml
+grep -q 'Programming Language :: Python :: 3' c/api/pyproject.toml
+grep -q "Programming Language :: Python :: $min" c/api/pyproject.toml
+grep -q 'Typing :: Typed' c/api/pyproject.toml
+grep -qx 'keywords = \[\] # citesync compares this list to keywords in CITATION.cff' c/api/pyproject.toml
+grep -q 'Changelog = "https://github.com/[^/]*/mono-me/blob/main/CHANGELOG.md"' c/api/pyproject.toml
+(! grep -q 'Private :: Do Not Upload' c/api/pyproject.toml)
 grep -q "python: \[\"$min\"" c/.github/workflows/python.yml
 (! grep -q 'matrix' a/.github/workflows/python.yml)
 # Codecov (c only): one upload per stack, from the nested paths, with a flag each,
