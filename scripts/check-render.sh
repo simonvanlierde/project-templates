@@ -782,6 +782,10 @@ grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/s
 # Another stack's secrets stay out of an image's build context.
 grep -qx '\*\*/.env' c/apps/web/.dockerignore
 grep -qx '\*\*/.env' c/api/.dockerignore
+# A local .env stays out of git, and compose publishes each port on loopback only.
+grep -qxF '.env' c/.gitignore
+test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 2
+(! grep -qE '^ +- "[0-9]+:' c/compose.yaml)
 # Both package workflows exist; Python creates the GitHub release after PyPI.
 test ! -e c/.github/workflows/release.yml
 test -f c/.github/workflows/python-release.yml
