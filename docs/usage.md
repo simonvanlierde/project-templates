@@ -34,7 +34,6 @@ With `customise` left at no, the advanced questions take these defaults:
 | `codspeed`                                      | off ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
 | `profiling`                                     | off ([Profiling](#profiling))                    |
 | `openssf_badge`                                 | none ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
-| `status`                                        | experimental: the README's status sentence (`stable`, `maintenance` or `archived`) |
 | `module_name`, `go_module`                      | made from the project name and GitHub user       |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | the current releases; `python_min` two minors below `python_version` |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | off ([Publishing](#publishing))           |

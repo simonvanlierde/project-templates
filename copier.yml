@@ -50,6 +50,10 @@ _message_after_copy: |
     just check
   Then commit, lockfiles included: CI installs exactly what they list.
   After the first push, run `just repo-settings` to protect main.
+  {%- for reg, on in [('PyPI', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('ghcr', publish_to_ghcr | default(false))] if on %}
+  Before the first {{ reg }} release, set up the trusted publisher and the protected environment:
+  https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing
+  {%- endfor %}
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
@@ -379,19 +383,6 @@ openssf_badge:
     Passing (CONTRIBUTING.md gains a test policy and the coding standards): passing
     Silver (passing, plus GOVERNANCE.md, docs/roadmap.md and docs/assurance-case.md to fill in): silver
   default: none
-
-# One sentence under the README's badges. The README is the project's after the first
-# render, so later answers don't reach it: edit the sentence by hand.
-status:
-  type: str
-  ask: "{{ customise }}"
-  help: How far along the project is, for the status sentence in the README
-  choices:
-    Experimental (may change without notice): experimental
-    Stable (breaking changes are rare and announced): stable
-    Maintenance (fixes only, no new features): maintenance
-    Archived (no longer maintained): archived
-  default: experimental
 
 # --- python -------------------------------------------------------------------
 
