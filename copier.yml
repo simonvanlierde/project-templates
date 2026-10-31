@@ -50,6 +50,10 @@ _message_after_copy: |
     just check
   Then commit, lockfiles included: CI installs exactly what they list.
   After the first push, run `just repo-settings` to protect main.
+  {%- for reg, on in [('PyPI', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('ghcr', publish_to_ghcr | default(false))] if on %}
+  Before the first {{ reg }} release, set up the trusted publisher and the protected environment:
+  https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing
+  {%- endfor %}
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
