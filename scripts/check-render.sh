@@ -534,7 +534,8 @@ grep -qF 'https://codecov.io/gh/' d/README.md
 # The weekly audit: one job per stack, on a Monday schedule. python.yml keeps its own
 # schedule for the data pipeline (d) and has none elsewhere.
 for r in a b c d; do grep -q 'cron: "23 5 \* \* 1"' "$r/.github/workflows/advisories.yml"; done
-for j in python ts rust go; do grep -q "^  $j:" a/.github/workflows/advisories.yml; done
+for j in actions python ts rust go; do grep -q "^  $j:" a/.github/workflows/advisories.yml; done
+grep -q 'extra-args: zizmor --all-files' a/.github/workflows/advisories.yml
 grep -q 'cargo deny check advisories' a/.github/workflows/advisories.yml
 grep -q 'go tool govulncheck' a/.github/workflows/advisories.yml
 grep -q 'uv audit --locked' a/.github/workflows/advisories.yml
@@ -1221,6 +1222,8 @@ chmod +x "$fake/gh"
   [[ "$patch " != *web_commit_signoff_required* ]]
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
+  # Dependabot alerts let Renovate open security PRs.
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/vulnerability-alerts' "$FAKE_LOG"
   for f in main main-checks tags; do
     cmp "$fake/posted.$f.json" ".github/rulesets/$f.json"
     cmp "$fake/put.$f.json" ".github/rulesets/$f.json"
