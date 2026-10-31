@@ -1555,4 +1555,16 @@ for r in a c; do
   fi
 done
 
+# Rendering over a repo with docs/adr leaves ADRs beside docs/decisions, and usage docs guide migration:
+adr_dir=$(mktemp -d)
+mkdir -p "$adr_dir/docs/adr"
+echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=adr-check --data 'stacks=[python]' \
+  --data kind=library "$repo" "$adr_dir"
+test -f "$adr_dir/docs/adr/0001-x.md"
+test -f "$adr_dir/docs/decisions/README.md"
+grep -q 'docs/adr' "$repo/docs/usage.md"
+rm -rf "$adr_dir"
+
 echo "all render checks passed"
