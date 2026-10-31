@@ -119,13 +119,13 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
 
 # m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
-# only BSD-3-Clause render, the only one not experimental, and the only npm-only publisher.
+# only BSD-3-Clause render, and the only npm-only publisher.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause --data status=maintenance --data publish_to_npm=true . "$out/m"
+  --data license=BSD-3-Clause --data publish_to_npm=true . "$out/m"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
@@ -1319,9 +1319,8 @@ for r in c d; do
 done
 test ! -e a/docs/accessibility.md
 grep -qx '# Accessibility statement' d/web/docs/accessibility.md
-# The README's status sentence follows the answer; only a public repo points to CONTRIBUTING.md.
+# The README says experimental; only a public repo points to CONTRIBUTING.md.
 grep -qx 'Status: experimental. It may change in ways that break your code, without notice.' a/README.md
-grep -qx 'Status: maintenance. Bugs and security issues get fixed; new features are unlikely.' m/README.md
 grep -qxF 'Questions and bugs: see [CONTRIBUTING.md](.github/CONTRIBUTING.md).' a/README.md
 (! grep -q 'Questions and bugs' b/README.md)
 grep -qx 'blank_issues_enabled: false' a/.github/ISSUE_TEMPLATE/config.yml

@@ -10,12 +10,7 @@
 {% endif %}{% if public %}[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/{{ github_user }}/{{ slug }}/badge)](https://scorecard.dev/viewer/?uri=github.com/{{ github_user }}/{{ slug }})
 {% endif %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license | replace('-', '--') }}-blue.svg)](LICENSE)
 {% endif %}
-{{ {
-  'experimental': 'Status: experimental. It may change in ways that break your code, without notice.',
-  'stable': 'Status: stable. Breaking changes are rare, and the changelog marks each one.',
-  'maintenance': 'Status: maintenance. Bugs and security issues get fixed; new features are unlikely.',
-  'archived': 'Status: archived. It is no longer maintained, and issues and pull requests go unread.',
-}[status] }}
+Status: experimental. It may change in ways that break your code, without notice.
 {% if public %}
 Questions and bugs: see [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 {% endif %}{% if project_description %}
