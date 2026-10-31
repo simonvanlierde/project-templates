@@ -145,7 +145,9 @@ ruleset with no approval and no bypass.
 It applies `.github/rulesets/tags.json` to tags starting with `v`, because pushing one
 publishes a release: only a repo admin can create, move or delete them. It also turns off
 merge commits and rebase merges in the repo settings. In a public repo it turns on private
-vulnerability reporting, where `SECURITY.md` sends reports. Run it once per repo, after the
+vulnerability reporting, where `SECURITY.md` sends reports. It also turns on Dependabot
+alerts (`gh api -X PUT repos/OWNER/REPO/vulnerability-alerts`) so Renovate reads advisories
+to open security PRs and the dependency graph is enabled. Run it once per repo, after the
 first push, and again after you edit a file or a `copier update` changes one: it updates
 the rulesets named `main`, `main-checks` and `tags` if they exist, and creates the rest.
 Needs admin rights, and a paid GitHub plan on a private repo.
