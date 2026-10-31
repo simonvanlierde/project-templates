@@ -33,7 +33,21 @@ dependencies = [
 {%- else %}
 dependencies = []
 {%- endif %}
-{%- if not publish_to_pypi %}
+{%- if publish_to_pypi %}
+{%- set py_min = (python_min if python_min is defined and python_min else python_version).split('.')[1] | int %}
+{%- set py_max = (python_version if python_version is defined and python_version else '3.14').split('.')[1] | int %}
+keywords = [] # citesync compares this list to keywords in CITATION.cff
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+{%- for m in range(py_min, [py_max, py_min] | max + 1) %}
+  "Programming Language :: Python :: 3.{{ m }}",
+{%- endfor %}
+{%- if kind == 'library' %}
+  "Typing :: Typed",
+{%- endif %}
+]
+{%- else %}
 # PyPI rejects unknown classifiers, so this one blocks an accidental upload.
 # Delete it (and set publish_to_pypi) to publish.
 classifiers = ["Private :: Do Not Upload"]
@@ -50,6 +64,9 @@ classifiers = ["Private :: Do Not Upload"]
 [project.urls]
 Homepage = "https://github.com/{{ github_user }}/{{ slug }}"
 Issues = "https://github.com/{{ github_user }}/{{ slug }}/issues"
+{%- if publish_to_pypi %}
+Changelog = "https://github.com/{{ github_user }}/{{ slug }}/blob/main/CHANGELOG.md"
+{%- endif %}
 {% endif %}
 [dependency-groups]
 dev = [
