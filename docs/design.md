@@ -91,7 +91,7 @@ scanning are repository settings a render can't make; the project sets them.
 | The copier user's machine | The template, fetched by Copier, and the user's answers | No Copier tasks or migrations in [`copier.yml`](../copier.yml), so a render runs nothing; validators check the answers ([Render](#render)) |
 | This repository's CI | Pull request code and titles | Only `pull_request` triggers; `contents: read` in [`ci.yml`](../.github/workflows/ci.yml), [`dco.yml`](../.github/workflows/dco.yml) and [`pr-title.yml`](../.github/workflows/pr-title.yml); `ci ok` is the required check on main |
 | This repository's release | A pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, refuses a tag GitHub can't verify as signed, and runs only the release-notes script and `gh release create` |
-| The generated project's CI | Pull request code and titles | Each workflow under `template/.github/workflows/` sets `contents: read` or `permissions: {}`; none runs on `pull_request_target` or `workflow_run`; `persist-credentials: false` on all 37 checkouts |
+| The generated project's CI | Pull request code and titles | Each workflow under `template/.github/workflows/` sets `contents: read` or `permissions: {}`; none runs on `pull_request_target` or `workflow_run`; `persist-credentials: false` on every checkout |
 | Release jobs with an OIDC token | Built packages and images | The token is only in the upload job, which runs no project code ([Workflows that can publish](#workflows-that-can-publish)); the rendered `tags` ruleset lets only admins create `v*` tags |
 | The weekly `copier update` workflow | A new template release and its dependencies | `copier-update.yml` runs Copier in a read-only `update` job and passes a patch to a fresh `push` job that alone holds the push token ([Update](#update)) |
 | The dependency bot | New versions of actions, packages and lockfiles | A pull request only, through the same required checks; Renovate and Dependabot wait 7 days before a version update, and uv and pnpm do the same at install |
@@ -133,7 +133,7 @@ scanning are repository settings a render can't make; the project sets them.
 - **Unvalidated answers.** The 22 validators in [`copier.yml`](../copier.yml) check the
   answers that become names, paths, versions, URLs, ports and identities, and the
   description, which lands unescaped in a docstring and in code comments: it must be one
-  line without `"""`, `*/` or `\`. `check-render.sh` asserts that 27 crafted answers are refused
+  line without `"""`, `*/` or `\`. `check-render.sh` asserts that crafted answers are refused
   with the validator's own message. Free text reaches JSON, YAML and TOML through `to_json`,
   which render b tests with quotes. The copyright year and the Node and Go versions have no
   validator: the copier user is their only author, so a bad one breaks only their own render.

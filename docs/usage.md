@@ -15,8 +15,8 @@ details only you know, then one switch for everything else. They come in this or
 | `user_data`           | `ts_kind=web-app`                  | What the privacy page says, and whether there is a terms page ([legal pages](#legal-pages)) |
 | `public`              | always                             | Yes adds the community files in `.github/`, and sets the license default |
 | `github_user`, `author_name`, `author_email` | always      | Repo URLs and badges, the license, package metadata; a web app with `user_data=accounts` refuses `code@duinlab.nl` |
-| `author_orcid`        | a `library` kind of any stack, or a `research` or `data-pipeline` Python kind | The citation files |
 | `customise`           | always                             | Yes asks the advanced questions below; no takes their defaults     |
+| `author_orcid`        | a `library` kind of any stack, or a `research` or `data-pipeline` Python kind, when there is a license | The citation files |
 | `docker_stacks`       | the `docker` stack                 | Which packages get a Dockerfile and a compose service              |
 
 The identity answers have no defaults. The README says how to save them once.
