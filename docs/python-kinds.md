@@ -87,3 +87,34 @@ A `web-service` project gets:
 - Tests for `/health`, with telemetry off, and with telemetry on. The telemetry-on test
   uses console exporters in a child process and expects one span and one duration
   point per request.
+
+## Telemetry scope across kinds
+
+Only the Python `web-service` kind includes OpenTelemetry today. Other kinds omit
+telemetry intentionally:
+
+- **`library`**: API only. A shared library provides functions and classes for other
+  packages to call. It must not configure an OpenTelemetry SDK, global exporters or
+  batch span processors; the application or service importing the library configures
+  telemetry if desired.
+- **`app` (CLI)**: Short-lived commands. CLI tools start, run to completion and exit.
+  Adding background network exporters introduces startup latency and delays exit
+  while flushing spans.
+- **`research`**: Exploratory data analysis in notebooks. Tracing adds dependencies
+  and overhead with no production operational value.
+- **`data-pipeline`**: Scheduled batch jobs. Failures, run durations and heartbeat
+  monitoring belong in a dead-man ping (such as an alert sent on job start, success or
+  failure) rather than distributed tracing spans.
+- **`web-app` (TypeScript)**: Static client-side frontend. Browser telemetry is out
+  of scope for the static hosting baseline.
+
+### Future service kinds
+
+No telemetry stubs are rendered for TypeScript, Go or Rust until a dedicated service
+kind is added for those stacks. When service kinds are introduced, the recipes are:
+
+- **TypeScript / Node**: `@opentelemetry/sdk-node` or Node's `--import`
+  auto-instrumentation flag exporting spans over OTLP/HTTP.
+- **Go**: `go.opentelemetry.io/contrib/instrumentation/...` and `go.opentelemetry.io/otel/sdk`.
+  Go's `autoexport` package defaults to OTLP when `OTEL_TRACES_EXPORTER` is unset.
+- **Rust**: `tracing` instrumented via `tracing-opentelemetry` and `opentelemetry-otlp`.
