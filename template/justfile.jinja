@@ -100,3 +100,6 @@ repo-about:
 {%- endif %}
 {%- for t in [('python' in stacks, 'python'), ('ts' in stacks, 'typescript'), ('rust' in stacks, 'rust'), ('go' in stacks, 'go'), ('docker' in stacks, 'docker')] if t[0] %} --add-topic {{ t[1] }}
 {%- endfor %}
+
+# A repo's own recipes that copier updates never touch:
+import? 'just/local.just'

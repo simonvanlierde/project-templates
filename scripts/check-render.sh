@@ -156,9 +156,9 @@ grep -qx 'license = "GPL-3.0-or-later"' "$out/k/pyproject.toml"
 grep -q '"license": "https://spdx.org/licenses/GPL-3.0-or-later"' "$out/k/codemeta.json"
 # A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
 grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
-# Per hook, never top-level: the secret scan and the large-file check still cover data/.
-test "$(grep -cx ' *exclude: \^data/' "$out/k/.pre-commit-config.yaml")" = 4
-(! grep -qx 'exclude: \^data/' "$out/k/.pre-commit-config.yaml")
+# Per hook, never top-level: the secret scan and the large-file check still cover them.
+test "$(grep -cx ' *exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")" = 4
+(! grep -qx 'exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")
 grep -qx 'source_paths = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'check --search \. --format github adopt_me' "$out/k/.github/workflows/python.yml"
 # yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
@@ -1042,6 +1042,12 @@ LOCK
 git -C a-hooks add ui/pnpm-lock.yaml
 (cd a-hooks && "${prek[@]}" yamlfmt >/dev/null)
 git -C a-hooks diff --quiet ui/pnpm-lock.yaml
+# end-of-file-fixer leaves tests/fixtures/ untouched
+mkdir -p a-hooks/tests/fixtures
+printf 'fixture content' >a-hooks/tests/fixtures/fixture.txt
+git -C a-hooks add tests/fixtures/fixture.txt
+(cd a-hooks && "${prek[@]}" end-of-file-fixer >/dev/null)
+test "$(cat a-hooks/tests/fixtures/fixture.txt)" = 'fixture content'
 rm -rf a-hooks b-hooks d-hooks
 for r in a b; do
   grep -qx '      - id: typos' "$r/.pre-commit-config.yaml"
@@ -1173,6 +1179,14 @@ test "$(grep -c -- '-test`' a/AGENTS.md)" = 4
 # shellcheck disable=SC2016
 grep -qF 'are in `web/docs/`' d/AGENTS.md
 (! grep -q CONTRIBUTING b/AGENTS.md)
+# A repo's own recipes in just/local.just appear in just --list:
+cat >a/just/local.just <<'JUST'
+# Run a custom local task.
+local-custom:
+    @echo local-custom
+JUST
+(cd a && just --list | grep -q 'local-custom')
+rm -f a/just/local.just
 
 # The generated workflows are linted, never run: a typo in a run line fails only
 # in the new project.
