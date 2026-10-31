@@ -521,11 +521,10 @@ registry needs to trust your repository first. To turn publishing on:
    or [npmjs.com](https://docs.npmjs.com/trusted-publishers/).
 2. For a new npm package, publish the first version by hand. npm can't create a
    package through trusted publishing.
-3. In the repository's Settings > Environments, create the environment the workflow
-   names (`pypi`, `npm` or `ghcr`). Limit it to tags matching `v*` (`ghcr` also to
-   `main`), and add yourself as a required reviewer. Without this, GitHub creates the
-   environment unprotected on the first run, and anyone who can push a branch can
-   publish from it.
+3. Run `just repo-settings` to create the environment the workflow names (`pypi`, `npm` or
+   `ghcr`) with yourself as required reviewer and a `v*` tag policy (`ghcr` also on `main`).
+   Without this, GitHub creates the environment unprotected on the first run, and anyone
+   who can push a branch can publish from it.
 4. Run `copier update --data publish_to_pypi=true` (or the npm or ghcr option).
 
 ## Coverage on Codecov

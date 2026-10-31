@@ -1194,12 +1194,12 @@ grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows
 (! grep -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 
 # repo-settings: a fake gh keeps a list of rulesets and applies the recipe's real --jq
-# filter to it, so the first run POSTs each ruleset file and the second PUTs it by its id.
+# filter to it. An existing ruleset with a legacy name (protect-main) is adopted in place.
 test -f a/.github/rulesets/main.json
 test -f a/.github/rulesets/main-checks.json
 test -f a/.github/rulesets/tags.json
 fake=$(mktemp -d)
-echo '[{"name": "other", "id": 7}]' >"$fake/rulesets.json"
+echo '[{"name": "protect-main", "target": "branch", "id": 42}, {"name": "other", "id": 7}]' >"$fake/rulesets.json"
 cat >"$fake/gh" <<'FAKE'
 #!/usr/bin/env bash
 echo "$*" >>"$FAKE_LOG"
@@ -1211,12 +1211,37 @@ while [ $# -gt 0 ]; do
 done
 list=$FAKE_DIR/rulesets.json
 case $call in
+  *"api user"*) echo "90462640" ;;
+  *"code-scanning/default-setup"*) echo '{"state":"configured"}' ;;
   *"-X POST repos/{owner}/{repo}/rulesets --input"*)
-    jq --slurpfile b "$input" '. + [{name: $b[0].name, id: (length + 41)}]' "$list" >"$list.new"
-    mv "$list.new" "$list"
+    jq --slurpfile b "$input" '. + [{name: $b[0].name, target: $b[0].target, id: (length + 41)}]' "$list" >"$list.new" && mv "$list.new" "$list"
     cp "$input" "$FAKE_DIR/posted.$(basename "$input")" ;;
-  *"-X PUT repos/{owner}/{repo}/rulesets/"*) cp "$input" "$FAKE_DIR/put.$(basename "$input")" ;;
-  *"/rulesets?includes_parents=false --jq"*) jq -r "$filter" "$list" ;;
+  *"-X PUT repos/{owner}/{repo}/rulesets/"*)
+    id=${call#*rulesets/}
+    id=${id%% *}
+    jq --slurpfile b "$input" --argjson id "$id" 'map(if .id == $id then .name = $b[0].name | .target = $b[0].target else . end)' "$list" >"$list.new" && mv "$list.new" "$list"
+    cp "$input" "$FAKE_DIR/put.$(basename "$input")" ;;
+  *"/rulesets?includes_parents=false"*) jq -r "$filter" "$list" ;;
+  *"-X POST repos/{owner}/{repo}/environments/"*"/deployment-branch-policies"*)
+    env=${call#*environments/}
+    env=${env%%/*}
+    pol=$FAKE_DIR/policies-$env.json
+    [ -f "$pol" ] || echo '{"branch_policies":[]}' >"$pol"
+    name=''
+    for arg in $call; do
+      case $arg in name=*) name=${arg#name=} ;; esac
+    done
+    jq --arg n "$name" '.branch_policies += [{"name": $n}]' "$pol" >"$pol.new"
+    mv "$pol.new" "$pol"
+    echo '{}' ;;
+  *"/deployment-branch-policies"*)
+    env=${call#*environments/}
+    env=${env%%/*}
+    pol=$FAKE_DIR/policies-$env.json
+    [ -f "$pol" ] || echo '{"branch_policies":[]}' >"$pol"
+    jq -r "$filter" "$pol" ;;
+  *"-X PUT repos/{owner}/{repo}/environments/"*) echo '{}' ;;
+  *"repos/{owner}/{repo}"*"--jq .full_name"*) echo "simonvanlierde/project-templates" ;;
 esac
 FAKE
 chmod +x "$fake/gh"
@@ -1226,10 +1251,14 @@ chmod +x "$fake/gh"
   export FAKE_LOG="$fake/log" FAKE_DIR="$fake" PATH="$fake:$PATH"
   just repo-settings >/dev/null
   just repo-settings >/dev/null
-  test "$(grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG")" = 3
+  # main adopted protect-main, so only main-checks and tags were posted.
+  test "$(grep -c -- '-X POST repos/{owner}/{repo}/rulesets' "$FAKE_LOG")" = 2
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/43 --input .github/rulesets/main-checks.json' "$FAKE_LOG"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/44 --input .github/rulesets/tags.json' "$FAKE_LOG"
+  # protect-main was updated in place to main: no duplicate ruleset on the default branch.
+  test "$(jq -r '.[] | select(.id == 42) | .name' "$fake/rulesets.json")" = "main"
+  (! jq -e '.[] | select(.name == "protect-main")' "$fake/rulesets.json" >/dev/null)
   patch=$(grep -- '^api -X PATCH repos/{owner}/{repo} ' "$FAKE_LOG" | head -1)
   for flag in allow_squash_merge=true allow_merge_commit=false allow_rebase_merge=false delete_branch_on_merge=true; do
     [[ "$patch " == *" -F $flag "* ]]
@@ -1238,10 +1267,14 @@ chmod +x "$fake/gh"
   [[ "$patch " != *web_commit_signoff_required* ]]
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
+  # CodeQL default setup scans every PR and push on public repos.
+  grep -qxF -- 'api -X PATCH repos/{owner}/{repo}/code-scanning/default-setup -f state=configured' "$FAKE_LOG"
   # Dependabot alerts let Renovate open security PRs.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/vulnerability-alerts' "$FAKE_LOG"
-  for f in main main-checks tags; do
+  for f in main-checks tags; do
     cmp "$fake/posted.$f.json" ".github/rulesets/$f.json"
+  done
+  for f in main main-checks tags; do
     cmp "$fake/put.$f.json" ".github/rulesets/$f.json"
   done
   # The required checks are the always-on jobs, by the names the workflows give them.
@@ -1275,6 +1308,23 @@ chmod +x "$fake/gh"
   patch=$(grep -- '^api -X PATCH repos/{owner}/{repo} ' "$fake/log" | head -1)
   [[ "$patch " == *" -F web_commit_signoff_required=true "* ]]
 )
+# Release environments and publishing links: c has PyPI, npm and GHCR.
+(
+  cd c
+  # shellcheck disable=SC2030,SC2031 # the about test and the copier-update run below set their own PATH
+  export FAKE_LOG="$fake/log-c" FAKE_DIR="$fake" PATH="$fake:$PATH"
+  just repo-settings >"$fake/out-c"
+  just repo-settings >/dev/null
+  for env in pypi npm ghcr; do
+    grep -q "api -X PUT repos/{owner}/{repo}/environments/$env " "$fake/log-c"
+    grep -q "api -X POST repos/{owner}/{repo}/environments/$env/deployment-branch-policies -f name=v\* -f type=tag" "$fake/log-c"
+  done
+  grep -q "api -X POST repos/{owner}/{repo}/environments/ghcr/deployment-branch-policies -f name=main -f type=branch" "$fake/log-c"
+  test "$(grep -c 'deployment-branch-policies -f name=v\*' "$fake/log-c")" = 3
+  test "$(grep -c 'deployment-branch-policies -f name=main' "$fake/log-c")" = 1
+  grep -q 'https://pypi.org/manage/account/publishing/?provider=github&project_name=mono-me&owner=simonvanlierde&repository=project-templates&workflow_filename=python-release.yml&environment=pypi' "$fake/out-c"
+  grep -q 'https://zenodo.org/account/settings/github/' "$fake/out-c"
+)
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
 jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null
@@ -1301,6 +1351,7 @@ jq -e '(.rules[] | select(.type == "pull_request").parameters
     | .required_approving_review_count == 0 and (.dismiss_stale_reviews_on_push | not) and (.require_last_push_approval | not))
   and (.rules | any(.type == "required_status_checks")) and (has("bypass_actors") | not)' b/.github/rulesets/main.json >/dev/null
 (! grep -q private-vulnerability-reporting b/justfile)
+(! grep -q code-scanning b/justfile)
 # repo-about: the About box comes from the answers. No description answer leaves the description alone;
 # a quote in it survives the shell and braces survive just; topics only get added.
 for r in a b d; do

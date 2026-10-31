@@ -53,7 +53,7 @@ citation:
     -{% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run citesync-write --hook-stage manual --all-files
     {% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek{% else %}prek{% endif %} run citesync --all-files
 {% endif %}
-# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on private vulnerability reporting{% endif %} and Dependabot alerts. Safe to rerun.
+# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}. Safe to rerun.
 repo-settings:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -69,10 +69,15 @@ repo-settings:
     }
     # Merge-method switches live on the repo itself; the ruleset also limits the PR button.
     gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true{% if public and license != 'none' and openssf_badge == 'silver' %} -F web_commit_signoff_required=true{% endif %} >/dev/null 2>"$err" || fail
-    # Each file's "name" matches its file name, so the recipe needs no jq to read it.
+    # Adopt existing rulesets by target instead of rigid names, updating them in place.
     for name in main{% if public %} main-checks{% endif %} tags; do
         file=.github/rulesets/$name.json
-        id=$(gh api "repos/{owner}/{repo}/rulesets?includes_parents=false" --jq ".[] | select(.name == \"$name\") | .id" 2>"$err") || fail
+        case "$name" in
+            main) filter='first(.[] | select(.name == "main") | .id) // first(.[] | select(.name == "protect-main") | .id) // first(.[] | select(.target == "branch" and (.name | test("checks?") | not)) | .id) // empty' ;;
+            main-checks) filter='first(.[] | select(.name == "main-checks") | .id) // first(.[] | select(.name == "protect-main-checks") | .id) // first(.[] | select(.target == "branch" and (.name | test("checks?"))) | .id) // empty' ;;
+            tags) filter='first(.[] | select(.name == "tags") | .id) // first(.[] | select(.name == "protect-tags") | .id) // first(.[] | select(.target == "tag") | .id) // empty' ;;
+        esac
+        id=$(gh api "repos/{owner}/{repo}/rulesets?includes_parents=false" --jq "$filter" 2>"$err") || fail
         if [ -n "$id" ]; then
             gh api -X PUT "repos/{owner}/{repo}/rulesets/$id" --input "$file" >"$err" 2>&1 || fail
             echo "Updated ruleset '$name' ($id)."
@@ -86,10 +91,42 @@ repo-settings:
     # SECURITY.md sends reports to a private security advisory, which this turns on.
     gh api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting >/dev/null 2>"$err" || fail
     echo "Turned on private vulnerability reporting."
+    # CodeQL default setup scans every PR and push to main.
+    gh api -X PATCH repos/{owner}/{repo}/code-scanning/default-setup -f state=configured >/dev/null 2>"$err" || fail
+    echo "Turned on CodeQL default setup."
 {%- endif %}
     # Dependabot alerts let Renovate open security PRs and turn on the dependency graph.
     gh api -X PUT repos/{owner}/{repo}/vulnerability-alerts >/dev/null 2>"$err" || fail
     echo "Turned on Dependabot alerts."
+{%- set release_envs = [('pypi', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('ghcr', publish_to_ghcr | default(false))] | selectattr('1') | map(attribute='0') | list %}
+{%- if release_envs %}
+    # Environments limit publishing to version tags and require review before release.
+    user_id=$(gh api user --jq .id 2>"$err") || fail
+    for env in {{ release_envs | join(' ') }}; do
+        gh api -X PUT "repos/{owner}/{repo}/environments/$env" \
+            -F "reviewers[][type]=User" \
+            -F "reviewers[][id]=$user_id" \
+            -F "deployment_branch_policy[protected_branches]=false" \
+            -F "deployment_branch_policy[custom_branch_policies]=true" >/dev/null 2>"$err" || fail
+        policies=$(gh api "repos/{owner}/{repo}/environments/$env/deployment-branch-policies" --jq '.branch_policies[].name' 2>/dev/null || true)
+        if ! echo "$policies" | grep -qx 'v\*'; then
+            gh api -X POST "repos/{owner}/{repo}/environments/$env/deployment-branch-policies" -f name="v*" -f type="tag" >/dev/null 2>"$err" || fail
+        fi
+        if [ "$env" = "ghcr" ] && ! echo "$policies" | grep -qx 'main'; then
+            gh api -X POST "repos/{owner}/{repo}/environments/$env/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
+        fi
+        echo "Configured environment '$env'."
+    done
+{%- endif %}
+{%- if publish_to_pypi %}
+    repo_full_name=$(gh api repos/{owner}/{repo} --jq .full_name 2>"$err") || fail
+    owner=${repo_full_name%%/*}
+    repo=${repo_full_name##*/}
+    echo "PyPI pending publisher: https://pypi.org/manage/account/publishing/?provider=github&project_name={{ slug }}&owner=$owner&repository=$repo&workflow_filename=python-release.yml&environment=pypi"
+{%- endif %}
+{%- if public and citable %}
+    echo "Zenodo: https://zenodo.org/account/settings/github/"
+{%- endif %}
 
 # Set the GitHub About box from your answers: description{% if 'ts' in stacks and ts_kind == 'web-app' %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
 repo-about:
