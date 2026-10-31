@@ -1026,6 +1026,18 @@ git -C a-hooks add docs/typo.md docs/dead.md
 grep -qx 'This is definitely wrong.' a-hooks/docs/typo.md
 (cd a-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
 grep -q 'docs/missing.md.*File not found' a-hooks/lychee.log
+# yamlfmt ignores a nested pnpm-lock.yaml passed by prek
+mkdir -p a-hooks/ui
+cat >a-hooks/ui/pnpm-lock.yaml <<'LOCK'
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+LOCK
+git -C a-hooks add ui/pnpm-lock.yaml
+(cd a-hooks && "${prek[@]}" yamlfmt >/dev/null)
+git -C a-hooks diff --quiet ui/pnpm-lock.yaml
 rm -rf a-hooks b-hooks d-hooks
 for r in a b; do
   grep -qx '      - id: typos' "$r/.pre-commit-config.yaml"
