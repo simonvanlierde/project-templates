@@ -537,11 +537,16 @@ jobs:
           pnpm exec playwright install chromium
           just ts-e2e --grep-invert TODO
           PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/todo.json" just ts-e2e --grep TODO --retries 0 --reporter=json >/dev/null || true
-          if ! jq -e '[.. | objects | select(has("specs")) | .specs[].tests[]] as $t
-              | ($t | length) > 0 and (.errors | length) == 0
-              and all($t[]; .status == "expected" or (.status == "unexpected" and all(.results[];
-                [.errors[].message] | length == 1 and (.[0] | contains("\nReceived string: ")))))
-              and any($t[]; .status == "unexpected")' \
+          if ! jq -e --arg user_data "${{ matrix.answers.user_data }}" '
+              [.. | objects | select(has("specs")) | .specs[]] as $specs
+              | ($specs | length) > 0 and (.errors | length) == 0
+              and all($specs[];
+                .title as $title
+                | all(.tests[];
+                  (.status == "expected" and $user_data == "nothing" and ($title | contains("/privacy")))
+                  or (.status == "unexpected" and all(.results[];
+                    [.errors[].message] | length == 1 and (.[0] | contains("\nReceived string: "))))))
+              and any($specs[]; any(.tests[]; .status == "unexpected"))' \
               "$RUNNER_TEMP/todo.json" >/dev/null; then
             echo "::error::each TODO test must fail on its TODO assertion; see $RUNNER_TEMP/todo.json" >&2
             jq -r '.errors[].message, (.. | objects | select(has("specs")) | .specs[] | .title)' "$RUNNER_TEMP/todo.json" >&2 || true
