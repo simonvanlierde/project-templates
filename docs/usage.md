@@ -392,6 +392,10 @@ To move a package to another directory, run `copier update` with the new directo
 Then delete the old directory by hand. Copier removes files that left the template,
 but not files that moved because an answer changed.
 
+If your project was started before v0.12.0 with an existing `docs/adr/`, move its
+records into `docs/decisions/` after updating and delete `docs/adr/`. The template
+writes a fresh `docs/decisions/` directory and index beside the old folder.
+
 After any `copier update`, refresh the lockfiles for your stacks and commit them with
 the update: `uv lock`, `pnpm install`, `just go-sync`. A template change can add or bump a
 dependency, and CI installs with `--locked` and `--frozen-lockfile`, so a stale lockfile
