@@ -1,218 +1,89 @@
 # Legal pages: tips
 
-A rendered web app serves three pages from its `docs/` folder: `accessibility.md` at
-`/accessibility`, `privacy.md` at `/privacy`, and, for an app with accounts or uploads,
-`terms.md` at `/terms`. Every page links them from its footer. This page lives in the
-[project-templates](https://github.com/simonvanlierde/project-templates) repository, not in your project.
-[Legal pages](usage.md#legal-pages) in the usage guide says how the app builds the pages and
-which tests check them.
+A rendered web app serves three pages from its `docs/` folder: `accessibility.md` at `/accessibility`, `privacy.md` at `/privacy`, and, for apps with accounts or uploads, `terms.md` at `/terms`. Every page links to these from its footer.
+[Legal pages](usage.md#legal-pages) in the usage guide explains how the app compiles the pages and which tests verify them.
 
-These are tips for keeping the pages true, not legal advice. When the stakes are real, ask a
-lawyer or your organisation's privacy officer.
+These tips help keep your pages accurate, but they are not formal legal advice. For high-stakes applications, consult a qualified lawyer or privacy officer.
 
 ## Fill in every TODO
 
-Each page starts with what the template knows: the name, the address, your email and today's
-date. The rest is marked TODO, and `just ts-e2e` fails until none is left: a page that guesses is
-worse than no page. Write only what you can check. When code makes a page untrue, change the page
-in the same pull request.
+The template populates initial details: app name, address, email, and generation date. Remaining sections are marked TODO. The `just ts-e2e` suite fails until all TODO markers are removed. Keep these pages updated alongside any code changes that affect their accuracy.
 
 ## Write for the person using the app
 
-Someone opens the privacy page to learn whether their data leaves their device, and the
-accessibility page to learn whether they can use the app and whom to tell when they can't. Answer
-that first, in the words they would use. The GDPR asks for this too: article 12(1) wants the
-information "in a concise, transparent, intelligible and easily accessible form, using clear and
-plain language".
+Users open privacy and accessibility pages to find clear answers: where their data goes, how to delete it, whether the app is usable with assistive technology, and who to contact. State these facts directly in plain language.
 
-- **Facts first.** Open the privacy page with what is stored, where, and whether anything leaves
-  the device. Then how to delete it, then who to contact.
-- **Name things as users see them:** "the days you log", not "user-generated records"; "Settings,
-  then **Delete all data**", not "the delete option".
-- **Leave out what the reader can't use:** test file names, CI profiles, the history of how a
-  check came about. One link to the tests is enough.
-- **Keep the legal points, in plain words.** "Cloudflare may log these to keep the site running
-  and safe, which the law counts as a legitimate interest" names the purpose and the legal basis.
-  "On the basis of a legitimate interest" and "the data controller" make the reader stop.
-- **Short sentences, one point each.** If a sentence needs a comma and a colon, split it.
-- **Read it once as a user,** start to end, before you commit. Cut every sentence that would not
-  change what they do.
+- **Lead with facts:** Start the privacy page with what data is stored, where it lives, and whether anything leaves the device.
+- **Use user-facing terms:** Say "the books on your list", not "persisted entities"; "Settings, then **Delete all data**", not "invoking the deletion handler".
+- **Omit internal implementation details:** Test file names and CI job names do not belong on public legal pages.
+- **Explain legal grounds plainly:** "We log requests to keep the service running securely (legitimate interest)" is clearer than dense regulatory jargon.
+- **Keep sentences short:** State one idea per sentence.
+- **Preserve test anchors:** Do not remove headings, email contacts, the accessibility conformance status sentence, the response timeframe, or the "Last reviewed" date.
 
-Keep what the tests check: the page titles, an email link, the accessibility statement's
-headings, its status sentence ("Its conformance is …"), a reply time in working days, and the
-"Last reviewed" date. The page-specific facts come first on each page; the
-hosting, cookie, rights and contact text after them is the same in every app.
-
-A privacy page for an app that keeps a reading list in the browser:
+Example privacy statement for an app storing data locally:
 
 ```markdown
 # Privacy statement
 
-shelf keeps your reading list on your device. It isn't sent to us or to anyone else. shelf has
-no accounts, no cookies and no analytics.
+shelf keeps your reading list on your device. It is never sent to us or anyone else. shelf has no accounts, cookies, or analytics.
 
-This page covers shelf at [shelf.example.org](https://shelf.example.org). Ada Lovelace runs shelf
-and is responsible for it. "We" on this page means Ada Lovelace.
+This page covers shelf at [shelf.example.org](https://shelf.example.org). Ada Lovelace runs shelf and is responsible for it. "We" on this page means Ada Lovelace.
 
 ## What shelf stores on your device
 
-shelf saves your work in your browser's local storage. Nothing is saved until you add a book. It
-stores:
+shelf saves data in browser local storage only after you add an item:
 
-- the books on your list, and the page you have reached in each;
-- your settings: theme and language.
+- The books on your list and your current page numbers.
+- Your preferences: theme and language.
 
 ## How to delete it
 
-- In shelf, open Settings and choose **Delete all data**.
-- Or clear this site's data in your browser's settings.
+- In shelf, open Settings and select **Delete all data**.
+- Or clear this site's storage in your browser settings.
 ```
-
-The hosting, cookie, rights and contact sections follow as the template writes them.
 
 ## Who is responsible
 
-- **A personal project:** you are the data controller, the one who decides what happens to the
-  data. Your name and email go on the privacy statement.
-- **An app run for an organisation** (a university, a company, a public body): the organisation is
-  the controller, not you. Name it on the privacy statement, have its privacy officer review the
-  text before launch, and link the organisation's own privacy statement from yours.
-- **A public-sector site in the EU** falls under the Web Accessibility Directive, (EU) 2016/2102,
-  and must publish its country's model accessibility statement, which builds on the EU model in
-  [Implementing Decision (EU) 2018/1523](https://eur-lex.europa.eu/eli/dec_impl/2018/1523/oj).
-  Its mandatory sections differ from this page:
-  - **Compliance status:** "fully compliant", "partially compliant" or "not compliant" with a
-    named standard, or with the national law. There is no "not assessed". The standard is
-    usually EN 301 549, which the Commission named as the harmonised standard under article 6
-    of the Directive
-    ([Implementing Decision (EU) 2018/2048](https://eur-lex.europa.eu/eli/dec_impl/2018/2048/oj),
-    as amended), and whose web requirements build on WCAG.
-  - **Non-accessible content:** split by reason: non-compliance with the national law, a
-    "disproportionate burden" exemption (article 5 of the Directive), or content outside the
-    law's scope, with accessible alternatives where there are any. This page has one "Known
-    problems" list.
-  - **Preparation of this accessibility statement:** the date it was prepared, the method
-    (an evaluation such as a self-assessment or an assessment by a third party, article 3(1) of
-    the Decision) and
-    the date of the last review. This page's "About this statement" holds the same facts.
-  - **Feedback and contact information:** a feedback mechanism for reporting problems and for
-    asking for content the Directive leaves out, and who handles it. "Tell us about a problem"
-    covers the first part only.
-  - **Enforcement procedure:** a description of, and a link to, where people can turn when
-    the reply to their feedback is not good enough, with the enforcement body's contact
-    details. This page has no such section.
+- **Personal projects:** You are the data controller. Put your name and email on the privacy statement.
+- **Organizational apps:** The organization is the controller. Name the entity, link to its primary privacy policy, and have its privacy officer review the text before launch.
+- **EU public-sector sites:** Under the EU Web Accessibility Directive ((EU) 2016/2102), public bodies must publish a formal accessibility statement based on EN 301 549 (aligned with WCAG). Required sections include:
+  - Compliance status: "fully compliant", "partially compliant", or "not compliant".
+  - Non-accessible content: listed by cause (non-compliance, disproportionate burden, or excluded scope) with accessible alternatives.
+  - Preparation details: evaluation method and last review date.
+  - Feedback mechanism: contact details for reporting accessibility barriers.
+  - Enforcement procedure: link to the relevant national enforcement body.
 
-  In the Netherlands the statement is the one the Bdto (Besluit digitale toegankelijkheid
-  overheid) requires, made with the wizard on
-  [toegankelijkheidsverklaring.nl](https://www.toegankelijkheidsverklaring.nl/) and listed in its
-  register. Link it from "About this statement" and keep this page as the readable
-  version.
+  In the Netherlands, public bodies use the government wizard at [toegankelijkheidsverklaring.nl](https://www.toegankelijkheidsverklaring.nl/). Link to that entry from "About this statement".
 
 ## Accessibility statement
 
-- Every claim must be checkable in the repository: the tests in `tests/e2e/`, the lint rules in
-  `biome.json`, the styles in `src/app.css`. When you fix a known problem, move its bullet from
-  "Known problems" to "How we check" in the same pull request as the fix.
-- The status says "not assessed" until someone has checked every WCAG 2.2 criterion. That
-  check goes in `docs/accessibility-assessment.md`, which the app does not serve: one row for
-  each of the 55 level A and AA criteria, with a result and the evidence for it. Say
-  "partially conformant" only once every row has a result, link the assessment from the status
-  sentence, and name the criteria that fail under "Known problems".
-  The statement test refuses "fully conformant": that needs a full external audit, so change the
-  test only once you have one.
-- Review it at least once a year. The test fails when "Last reviewed" is more than 400 days old.
-- Give each known problem a way around it, and a fix date or "No fix planned". Write the
-  problem as the user meets it ("the chart has no text version"), and put the WCAG criterion in
-  brackets at the end.
+- Keep claims verifiable against repository code: tests in `tests/e2e/`, rules in `biome.json`, and CSS styles. Move resolved issues from "Known problems" to "How we check" within the same PR.
+- Conformance status remains "not assessed" until every WCAG 2.2 Level A and AA criterion is evaluated in `docs/accessibility-assessment.md`. Mark status as "partially conformant" only after all 55 criteria are recorded, and list failing criteria under "Known problems".
+- The test suite rejects "fully conformant" without a verified third-party audit.
+- Review statements annually; tests fail if "Last reviewed" exceeds 400 days.
+- Each known problem must list a user workaround and a target fix date or "No fix planned", referencing the WCAG criterion code.
 
 ## Privacy statement
 
-- Say what is kept, where, for how long, and who else gets it. IP addresses in server logs can
-  count as personal data, so the hosting section stays even for an app that keeps nothing.
-- For each kind of data, server logs and accounts alike, give its purpose, its legal basis and
-  how long it is kept. Article 13 of the GDPR lists what a privacy statement must tell people,
-  among them "the purposes of the processing … as well as the legal basis for the processing"
-  (13(1)(c)) and "the period for which the personal data will be stored, or if that is not
-  possible, the criteria used to determine that period" (13(2)(a)). Article 6(1) lists the legal
-  bases. An account is usually "necessary for the performance of a contract" with the user (b).
-  For server logs, recital 49 gives network and information security as an example of a
-  legitimate interest (f): processing "strictly necessary and proportionate" for it
-  "constitutes a legitimate interest of the data controller concerned". A statement that relies
-  on 6(1)(f) must also name the interest it pursues (13(1)(d)), such as keeping the site
-  running and safe.
-- These articles say what to tell people, not which words to use. Give each point in a plain
-  sentence, as in [Write for the person using the app](#write-for-the-person-using-the-app):
-  "your email address, to sign you in, which we need to give you an account" covers the purpose
-  and the contract basis.
-- Change "Last updated" with every edit to the page.
-- Keep Cloudflare Web Analytics off for the Pages project. When it is on, "Cloudflare will
-  automatically add the JavaScript snippet to your Pages site on the next deployment"
-  ([Cloudflare: Enable Web Analytics](https://developers.cloudflare.com/pages/how-to/web-analytics/)),
-  and that script must be allowed in the Content-Security-Policy's `script-src`
-  ([Web Analytics FAQ](https://developers.cloudflare.com/web-analytics/faq/)). The rendered
-  `public/_headers` blocks it, and the privacy statement says the app loads only its own files.
-  The e2e tests run against a local build, so they can't see it. For visitor numbers, see
-  Analytics below.
-- After the first deploy, look in the host's dashboard for other analytics or bot-protection
-  features that set cookies or add scripts. Then check that `curl -sI <site_url> | grep -i set-cookie`
-  prints nothing.
-- Name every outside service the app calls. Loading a font, a script or an image from another site
-  sends the visitor's IP address there; a rendered app loads nothing from other sites, and
-  `tests/e2e/privacy.spec.ts` fails if a page does.
+- Document purpose, legal basis, and retention period for all stored data, including server logs and user accounts.
+- Update "Last updated" with each modification.
+- Keep Cloudflare Web Analytics disabled for Cloudflare Pages projects. The bundled script violates the template's Content-Security-Policy (`script-src 'self'`).
+- Verify post-deployment headers to ensure no unexpected cookies are set:
+
+  ```sh
+  curl -sI <site_url> | grep -i set-cookie
+  ```
+
+- Name all third-party network services. Loading external fonts, scripts, or images shares the visitor's IP address. `tests/e2e/privacy.spec.ts` fails if unlisted third-party origins are contacted.
 
 ## Cookies and other storage
 
-- **The rule covers any storage, not only cookies.** Article 11.7a of the Dutch
-  Telecommunicatiewet, the Dutch form of article 5(3) of the EU ePrivacy Directive, applies to
-  "het … opslaan van of toegang verkrijgen tot informatie in de randapparatuur van een gebruiker":
-  storing or reading any information on the user's device. The European Data Protection Board
-  reads article 5(3) the same way: storage counts whatever the medium, the technique or how long
-  it lasts ([Guidelines 2/2023](https://www.edpb.europa.eu/system/files/2024-10/edpb_guidelines_202302_technical_scope_art_53_eprivacydirective_v2_en_0.pdf),
-  paragraphs 35 to 38). So `localStorage`, `sessionStorage` and IndexedDB fall under the same rule
-  as cookies. The Board adds (paragraph 44) that an app using information that stays on the device,
-  such as local storage, is not "gaining access" to it, but article 5(3) applies once that
-  information, or anything derived from it, leaves the device.
-- **What needs no consent.** Article 5(3) of the ePrivacy Directive exempts two cases: storage or
-  access "for the sole purpose of carrying out the transmission of a communication…", and storage
-  or access "strictly necessary in order for the provider of an information society service
-  explicitly requested by the subscriber or user to provide the service" (the wording the
-  Article 29 Working Party quotes as its criteria A and B in
-  [Opinion 04/2012 on the cookie consent exemption](https://ec.europa.eu/justice/article-29/documentation/opinion-recommendation/files/2012/wp194_en.pdf)).
-  [Article 11.7a, third paragraph](https://wetten.overheid.nl/jci1.3:c:BWBR0009950&hoofdstuk=11&artikel=11.7a)
-  carries both over and adds a third, which is Dutch only: storage or access "om informatie te
-  verkrijgen over de kwaliteit of effectiviteit van een geleverde dienst…", to learn about the
-  quality or effectiveness of the service, provided it has "geen of geringe gevolgen" (no or
-  minor consequences) for the user's privacy. Outside the Netherlands, check your own country's
-  law before relying on that third case.
-- **Keeping the user's own work is strictly necessary.** The Working Party counts "user-input"
-  storage, such as a form filled in over several pages or a shopping cart, as needed for a
-  service the user explicitly asked for, and adds that "the user may explicitly ask the service
-  to remember some information from one session to another" (Opinion 04/2012, sections 2.3 and
-  3.1). So an app that saves the user's work in local storage because they asked it to, and for
-  nothing else, needs no banner. Say in the privacy statement what it keeps.
-- **Limited analytics, in Dutch practice.** The Autoriteit Persoonsgegevens calls the third case
-  "limited analytics cookies", such as counting visitors and the most visited pages: they need no
-  consent when their impact on privacy is small, but still need a legal basis if they process
-  personal data, and must be listed in the privacy statement
-  ([AP: Cookies](https://www.autoriteitpersoonsgegevens.nl/en/themes/internet-and-smart-devices/cookies),
-  last edited 6 May 2025). Functional cookies need no consent either, but must be mentioned too.
-  The AP pages talk about cookies only; they do not mention local storage.
-- **No banner by default.** A rendered app sets no cookies and stores nothing before the user acts,
-  and the privacy test proves it on first load. With nothing to consent to, a banner only adds
-  noise. The AP notes the same: an organisation that stops collecting personal data no longer needs
-  consent and can remove its banner
-  ([AP: Cookies and your organisation](https://www.autoriteitpersoonsgegevens.nl/en/themes/internet-and-smart-devices/cookies/cookies-and-your-organisation-make-sure-you-have-a-good-cookie-policy-in-place)).
-- **Analytics.** If you want visitor numbers, pick a counter that does not follow visitors across
-  sites; the AP names Matomo, Plausible Analytics, Apache Superset and OpenPanel, "provided they are
-  configured correctly". Describe it in the privacy statement. Served from the app's own origin, it
-  needs no change to the tests or the Content-Security-Policy. On another origin, add that origin to
-  `OTHER_ORIGINS` in `tests/e2e/privacy.spec.ts` and to `script-src` and `connect-src` in
-  `public/_headers`. Anything that tracks people across sites, such as advertising, needs consent
-  first, and refusing must be as easy as accepting.
+- **Scope:** Regulations cover all client-side storage mechanisms (`localStorage`, `sessionStorage`, IndexedDB, and cookies) once data is transmitted off the device.
+- **Consent exemptions:** Storage strictly necessary to deliver a feature explicitly requested by the user—such as form state, shopping carts, or local preferences—does not require consent.
+- **No consent banner by default:** Rendered apps set no cookies and write no client storage before user action. The `privacy.spec.ts` test enforces this on initial load.
+- **Analytics:** Privacy-focused first-party analytics (such as self-hosted Plausible or Matomo) that do not track across sites require no consent banner if configured without cookies, but must be documented in the privacy statement.
+- **Third-party origins:** If you integrate external services or analytics, add their domains to `OTHER_ORIGINS` in `tests/e2e/privacy.spec.ts` and update `script-src` and `connect-src` in `public/_headers`. Cross-site tracking or advertising scripts require a consent banner before loading.
 
 ## Terms of use
 
-Only an app with accounts or uploads needs terms. Keep them short, and match them to the
-privacy statement. They say who owns uploaded content, the licence it is
-shared under, what users promise, and how to remove it. A free tool with no accounts is covered by
-its licence and the no-warranty line at the end of the privacy statement.
+Only apps with user accounts, content uploads, or paid services require terms of use. Keep terms concise and aligned with the privacy statement: clarify content ownership, license grants, user obligations, and account termination procedures. Free tools without accounts rely on the software license and standard disclaimer in the privacy statement.
