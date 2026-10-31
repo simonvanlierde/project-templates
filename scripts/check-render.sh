@@ -1569,4 +1569,29 @@ for r in a c; do
   fi
 done
 
+# Sample code is not recreated on copier update:
+sample_up=$(mktemp -d)
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=sample-me --data 'stacks=[python]' \
+  --data kind=library "$repo" "$sample_up"
+test -f "$sample_up/src/sample_me/__init__.py"
+test -f "$sample_up/tests/test_add.py"
+grep -q 'def add(' "$sample_up/src/sample_me/__init__.py"
+cat >"$sample_up/src/sample_me/__init__.py" <<'PY'
+"""sample-me package."""
+PY
+rm "$sample_up/tests/test_add.py"
+head_sha=$(git -C "$repo" rev-parse HEAD)
+# Point _src_path back to the local checkout so copier update does not try to fetch remote gh:
+sed -i.bak -e "s|^_src_path:.*|_src_path: $repo|" -e "s/^_commit:.*/_commit: $head_sha/" "$sample_up/.copier-answers.yml"
+rm "$sample_up/.copier-answers.yml.bak"
+git -C "$sample_up" init -q
+git -C "$sample_up" -c user.name=t -c user.email=t@example.org add -A
+git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "customize package"
+# shellcheck disable=SC2031 # COPIER_VERSION is set at file top
+uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >/dev/null 2>&1
+(! grep -q 'def add(' "$sample_up/src/sample_me/__init__.py")
+test ! -e "$sample_up/tests/test_add.py"
+rm -rf "$sample_up"
+
 echo "all render checks passed"

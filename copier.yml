@@ -23,6 +23,7 @@ _skip_if_exists:
   - /docs/accessibility.md
   - /CITATION.cff
   - /codemeta.json
+  - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.tsx"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.test.tsx"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/main.tsx"
@@ -36,6 +37,18 @@ _skip_if_exists:
   - "/{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
+
+# Defaults, plus the sample test file when updating.
+_exclude:
+  - "copier.yaml"
+  - "copier.yml"
+  - "~*"
+  - "*.py[co]"
+  - "__pycache__"
+  - ".git"
+  - ".DS_Store"
+  - ".svn"
+  - "{% if _copier_operation == 'update' %}/{{ '' if python_dir == '.' else python_dir ~ '/' }}tests/test_add.py{% endif %}"
 
 # Shown on `copier copy` only; `--quiet` hides both.
 _message_before_copy: |
