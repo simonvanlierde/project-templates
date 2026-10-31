@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Removed
+
+- The `status` question is gone. New READMEs say "Status: experimental"; edit the line by hand when the project moves on. Existing READMEs are unaffected.
+
 ### Added
 
 - Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. The Code of Conduct keeps the Contributor Covenant's CC-BY-SA-4.0. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).

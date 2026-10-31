@@ -27,8 +27,7 @@ the template.
 `copier update` renders the version in `.copier-answers.yml` and the newest release with
 the same answers, and applies the difference to the project as a three-way merge. Where the
 project changed the same lines, it leaves conflict markers to resolve by hand. Files listed
-in `_skip_if_exists` (the changelog, README, citation files, legal pages, API report and starter code) are never touched
-again. A plain `copier update` asks the questions again, with the stored answers as
+in `_skip_if_exists` are never touched again; [docs/usage.md](usage.md) has the list. A plain `copier update` asks the questions again, with the stored answers as
 defaults, and asks a new question like any other. With `--defaults`, as the weekly
 workflow runs it, a new answer takes its default, or stops the update if it has none,
 unless `--data` passes it.

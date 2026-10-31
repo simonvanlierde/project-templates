@@ -119,13 +119,13 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
 
 # m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
-# only BSD-3-Clause render, the only one not experimental, and the only npm-only publisher.
+# only BSD-3-Clause render, and the only npm-only publisher.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause --data status=maintenance --data publish_to_npm=true . "$out/m"
+  --data license=BSD-3-Clause --data publish_to_npm=true . "$out/m"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
@@ -534,7 +534,8 @@ grep -qF 'https://codecov.io/gh/' d/README.md
 # The weekly audit: one job per stack, on a Monday schedule. python.yml keeps its own
 # schedule for the data pipeline (d) and has none elsewhere.
 for r in a b c d; do grep -q 'cron: "23 5 \* \* 1"' "$r/.github/workflows/advisories.yml"; done
-for j in python ts rust go; do grep -q "^  $j:" a/.github/workflows/advisories.yml; done
+for j in actions python ts rust go; do grep -q "^  $j:" a/.github/workflows/advisories.yml; done
+grep -q 'extra-args: zizmor --all-files' a/.github/workflows/advisories.yml
 grep -q 'cargo deny check advisories' a/.github/workflows/advisories.yml
 grep -q 'go tool govulncheck' a/.github/workflows/advisories.yml
 grep -q 'uv audit --locked' a/.github/workflows/advisories.yml
@@ -1025,6 +1026,18 @@ git -C a-hooks add docs/typo.md docs/dead.md
 grep -qx 'This is definitely wrong.' a-hooks/docs/typo.md
 (cd a-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
 grep -q 'docs/missing.md.*File not found' a-hooks/lychee.log
+# yamlfmt ignores a nested pnpm-lock.yaml passed by prek
+mkdir -p a-hooks/ui
+cat >a-hooks/ui/pnpm-lock.yaml <<'LOCK'
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+LOCK
+git -C a-hooks add ui/pnpm-lock.yaml
+(cd a-hooks && "${prek[@]}" yamlfmt >/dev/null)
+git -C a-hooks diff --quiet ui/pnpm-lock.yaml
 rm -rf a-hooks b-hooks d-hooks
 for r in a b; do
   grep -qx '      - id: typos' "$r/.pre-commit-config.yaml"
@@ -1221,6 +1234,8 @@ chmod +x "$fake/gh"
   [[ "$patch " != *web_commit_signoff_required* ]]
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
+  # Dependabot alerts let Renovate open security PRs.
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/vulnerability-alerts' "$FAKE_LOG"
   for f in main main-checks tags; do
     cmp "$fake/posted.$f.json" ".github/rulesets/$f.json"
     cmp "$fake/put.$f.json" ".github/rulesets/$f.json"
@@ -1319,9 +1334,8 @@ for r in c d; do
 done
 test ! -e a/docs/accessibility.md
 grep -qx '# Accessibility statement' d/web/docs/accessibility.md
-# The README's status sentence follows the answer; only a public repo points to CONTRIBUTING.md.
+# The README says experimental; only a public repo points to CONTRIBUTING.md.
 grep -qx 'Status: experimental. It may change in ways that break your code, without notice.' a/README.md
-grep -qx 'Status: maintenance. Bugs and security issues get fixed; new features are unlikely.' m/README.md
 grep -qxF 'Questions and bugs: see [CONTRIBUTING.md](.github/CONTRIBUTING.md).' a/README.md
 (! grep -q 'Questions and bugs' b/README.md)
 grep -qx 'blank_issues_enabled: false' a/.github/ISSUE_TEMPLATE/config.yml
@@ -1566,5 +1580,30 @@ test -f "$adr_dir/docs/adr/0001-x.md"
 test -f "$adr_dir/docs/decisions/README.md"
 grep -q 'docs/adr' "$repo/docs/usage.md"
 rm -rf "$adr_dir"
+
+# Sample code is not recreated on copier update:
+sample_up=$(mktemp -d)
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=sample-me --data 'stacks=[python]' \
+  --data kind=library "$repo" "$sample_up"
+test -f "$sample_up/src/sample_me/__init__.py"
+test -f "$sample_up/tests/test_add.py"
+grep -q 'def add(' "$sample_up/src/sample_me/__init__.py"
+cat >"$sample_up/src/sample_me/__init__.py" <<'PY'
+"""sample-me package."""
+PY
+rm "$sample_up/tests/test_add.py"
+head_sha=$(git -C "$repo" rev-parse HEAD)
+# Point _src_path back to the local checkout so copier update does not try to fetch remote gh:
+sed -i.bak -e "s|^_src_path:.*|_src_path: $repo|" -e "s/^_commit:.*/_commit: $head_sha/" "$sample_up/.copier-answers.yml"
+rm "$sample_up/.copier-answers.yml.bak"
+git -C "$sample_up" init -q
+git -C "$sample_up" -c user.name=t -c user.email=t@example.org add -A
+git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "customize package"
+# shellcheck disable=SC2031 # COPIER_VERSION is set at file top
+uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >/dev/null 2>&1
+(! grep -q 'def add(' "$sample_up/src/sample_me/__init__.py")
+test ! -e "$sample_up/tests/test_add.py"
+rm -rf "$sample_up"
 
 echo "all render checks passed"
