@@ -15,7 +15,9 @@ tag="v$version"
 
 git fetch --quiet origin main
 sha=$(git rev-parse origin/main)
-git show "$sha:CHANGELOG.md" | grep -q "^## \[$version\] - " || {
+# Not grep -q: it stops reading early, and under pipefail git show's SIGPIPE then fails
+# the check on a changelog bigger than the pipe buffer.
+git show "$sha:CHANGELOG.md" | grep "^## \[$version\] - " >/dev/null || {
   echo "CHANGELOG.md on origin/main has no $version section" >&2
   exit 1
 }
