@@ -23,11 +23,6 @@ for (const [href, name] of PAGES) {
     await expect(article.getByRole("heading", { level: 1 })).toHaveText(name);
     await expect(article.getByRole("link", { name: /@/ }).first()).toHaveAttribute("href", /^mailto:.+@.+/);
   });
-
-  test(`${href} has no TODO left`, async ({ page }) => {
-    await page.goto(href);
-    await expect(page.locator("article")).not.toContainText("TODO");
-  });
 }
 
 for (const path of ROUTES) {

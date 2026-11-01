@@ -64,6 +64,7 @@ done
   --data publish_to_pypi=true --data publish_to_npm=true --data codecov=true \
   --data codspeed=true --data profiling=true \
   --data 'test_extras=[mutation]' \
+  --data cold_install=true \
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
@@ -74,7 +75,7 @@ d_args=(
   --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
-  --data dependency_bot=renovate --data codecov=true
+  --data dependency_bot=renovate --data codecov=true --data cold_install=true
   --data 'docker_stacks=[python]'
 )
 "${copier[@]}" --vcs-ref=HEAD \
@@ -102,9 +103,6 @@ grep -q 'project edit' "$out/d/web/docs/accessibility-assessment.md"
   --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
-# The decisions index belongs to the project too; the record template does not.
-echo '- project record' >>"$out/h/docs/decisions/README.md"
-echo 'project edit' >>"$out/h/docs/decisions/0000-template.md"
 # The badge documents are filled in by the project. Rendered first, then kept.
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test -f "$out/h/$f"
@@ -116,8 +114,6 @@ for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   grep -q 'project edit' "$out/h/$f"
 done
 grep -q 'project edit' "$out/h/go.mod"
-grep -q 'project record' "$out/h/docs/decisions/README.md"
-(! grep -q 'project edit' "$out/h/docs/decisions/0000-template.md")
 
 # m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
@@ -127,7 +123,7 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause --data publish_to_npm=true . "$out/m"
+  --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true . "$out/m"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
@@ -144,7 +140,7 @@ echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=adopt-me --data customise=true --data python_layout=flat \
   --data license=GPL-3.0-or-later --data codspeed=true --data 'test_extras=[mutation]' \
-  --data publish_to_pypi=true . "$out/k"
+  --data publish_to_pypi=true --data cold_install=true . "$out/k"
 grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
 grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
@@ -488,6 +484,9 @@ if cold k >/dev/null 2>"$out/k-cold.log"; then
   exit 1
 fi
 grep -qF 'or delete .github/workflows/cold-install.yml' "$out/k-cold.log"
+test ! -e "$out/a/.github/workflows/cold-install.yml"
+test ! -e "$out/b/.github/workflows/cold-install.yml"
+test -f "$out/d/.github/workflows/cold-install.yml"
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 (! grep -q 'Development Status' a/pyproject.toml)
 (! grep -q 'keywords =' a/pyproject.toml)
@@ -559,10 +558,9 @@ grep -q 'cron: "0 6 \* \* 1"' d/.github/workflows/python.yml
 test -f h/.github/workflows/advisories.yml
 (! grep -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
-# Every render gets the decisions folder.
+# Decision records are not scaffolded by default; create docs/decisions/ when choices are made.
 for r in a b c d h i; do
-  test -f "$r/docs/decisions/README.md"
-  test -f "$r/docs/decisions/0000-template.md"
+  test ! -e "$r/docs/decisions"
 done
 (! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.
@@ -1178,6 +1176,10 @@ for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' 
 done
 recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
+# Whitespace control around the fmt recipe's last line must not glue the next comment onto it.
+for r in a h t; do
+  grep -qx '# Run every git hook over the whole repo, not just staged files.' "$r/justfile"
+done
 
 # AGENTS.md names the check and test recipes, so each must be one the justfile has.
 # h is go alone and d a nested web app, beside every stack in a and c.
@@ -1654,7 +1656,7 @@ for r in a c; do
   fi
 done
 
-# Rendering over a repo with docs/adr leaves ADRs beside docs/decisions, and usage docs guide migration:
+# Rendering over a repo with docs/adr leaves ADRs intact, and usage docs guide migration:
 adr_dir=$(mktemp -d)
 mkdir -p "$adr_dir/docs/adr"
 echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
@@ -1662,7 +1664,7 @@ echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
   --data project_name=adr-check --data 'stacks=[python]' \
   --data kind=library "$repo" "$adr_dir"
 test -f "$adr_dir/docs/adr/0001-x.md"
-test -f "$adr_dir/docs/decisions/README.md"
+test ! -e "$adr_dir/docs/decisions"
 grep -q 'docs/adr' "$repo/docs/usage.md"
 rm -rf "$adr_dir"
 

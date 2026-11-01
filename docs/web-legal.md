@@ -7,7 +7,7 @@ These tips help keep your pages accurate, but they are not formal legal advice. 
 
 ## Fill in every TODO
 
-The template populates initial details: app name, address, email, and generation date. Remaining sections are marked TODO. The `just ts-e2e` suite fails until all TODO markers are removed. Keep these pages updated alongside any code changes that affect their accuracy.
+The template populates initial details: app name, address, email, and generation date. Remaining sections are marked TODO. Fill in all TODO markers before deploying publicly. Keep these pages updated alongside any code changes that affect their accuracy.
 
 ## Write for the person using the app
 
@@ -18,7 +18,7 @@ Users open privacy and accessibility pages to find clear answers: where their da
 - **Omit internal implementation details:** Test file names and CI job names do not belong on public legal pages.
 - **Explain legal grounds plainly:** "We log requests to keep the service running securely (legitimate interest)" is clearer than dense regulatory jargon.
 - **Keep sentences short:** State one idea per sentence.
-- **Preserve test anchors:** Do not remove headings, email contacts, the accessibility conformance status sentence, the response timeframe, or the "Last reviewed" date.
+- **Preserve test anchors:** Do not remove headings, email contacts, the accessibility conformance status sentence, or the response timeframe.
 
 Example privacy statement for an app storing data locally:
 
@@ -60,7 +60,7 @@ shelf saves data in browser local storage only after you add an item:
 - Keep claims verifiable against repository code: tests in `tests/e2e/`, rules in `biome.json`, and CSS styles. Move resolved issues from "Known problems" to "How we check" within the same PR.
 - Conformance status remains "not assessed" until every WCAG 2.2 Level A and AA criterion is evaluated in `docs/accessibility-assessment.md`. Mark status as "partially conformant" only after all 55 criteria are recorded, and list failing criteria under "Known problems".
 - The test suite rejects "fully conformant" without a verified third-party audit.
-- Review statements annually; tests fail if "Last reviewed" exceeds 400 days.
+- Review statements once a year and set "Last reviewed" to the date. No test checks the date.
 - Each known problem must list a user workaround and a target fix date or "No fix planned", referencing the WCAG criterion code.
 
 ## Privacy statement

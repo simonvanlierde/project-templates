@@ -34,14 +34,14 @@ Checks included in repositories generated from this template, their purposes, an
 | Automated accessibility tests (axe) | `tests/e2e/a11y.spec.ts` (`web-app` kind) | Tests routes in light and dark modes against WCAG 2.0–2.2 Levels A and AA |
 | Content-Security-Policy enforcement | `public/_headers`, `tests/e2e/csp.spec.ts` | Validates strict CSP (`script-src 'self'`), HSTS, and frame protection without inline scripts |
 | Viewport reflow validation | `tests/e2e/reflow.spec.ts` (`web-app` kind) | Verifies responsive layout at 320 px viewport width without horizontal scrollbars (WCAG 1.4.10) |
-| Accessibility statement checks | `tests/e2e/accessibility-statement.spec.ts` | Validates statement sections, contact details, valid status, and review currency (< 400 days) |
-| Legal page tests | `tests/e2e/legal-pages.spec.ts` (`web-app` kind) | Ensures all legal pages render without TODO markers and link from route footers |
+| Accessibility statement checks | `tests/e2e/accessibility-statement.spec.ts` | Validates statement sections, contact details, and valid status |
+| Legal page tests | `tests/e2e/legal-pages.spec.ts` (`web-app` kind) | Ensures all legal pages render properly and link from route footers |
 | Clean state on initial load | `tests/e2e/privacy.spec.ts` (`web-app` kind) | Verifies routes set no cookies, create no storage, and contact only declared origins on load |
 | Bundle size budget enforcement | `scripts/checkBundleBudget.mjs` (`web-app` kind) | Fails builds if gzipped JavaScript bundles exceed declared size limits |
 | Publication provenance | Release workflows | Generates Sigstore attestations and provenance bundles for PyPI, npm, and GHCR artifacts |
 | Container security scans | `docker.yml` (`docker` stack) | Trivy scans images for HIGH/CRITICAL vulnerabilities; weekly scheduled rebuilds check base updates |
 | Public API break detection | `python.yml` (griffe), `ts.yml` (API Extractor) | Compares public APIs against prior releases to detect breaking changes before publication |
-| Cold-install setup verification | `cold-install.yml` | Executes README development instructions in a minimal Debian container to catch missing prerequisites |
+| Cold-install setup verification | `cold-install.yml` (when `cold_install`) | Executes README development instructions in a minimal Debian container to catch missing prerequisites |
 | Scheduled dependency audits | `advisories.yml` | Runs weekly scans (`uv audit`, `pnpm audit`, `cargo deny`, `govulncheck`, `zizmor`) without commits |
 | Scheduled link validation | `links.yml` | Validates internal and external links weekly via lychee and reports broken URLs |
 | OpenSSF Scorecard | `scorecard.yml` (when `public`) | Evaluates supply-chain security practices and generates README status badges |

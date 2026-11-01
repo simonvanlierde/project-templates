@@ -136,7 +136,7 @@ Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<
 
 CLI binaries (Rust, Go, or Python `data-pipeline`) include `docs/accessibility.md`, documenting terminal output standards (`NO_COLOR` support, plain output redirection, error formats). Review and edit these claims to reflect your application.
 
-Decision records reside in `docs/decisions/`. Copy `0000-template.md` to record architectural choices and list new records in `README.md`.
+When projects record architectural choices, store them in `docs/decisions/`.
 
 ## TypeScript kinds
 
@@ -170,7 +170,7 @@ Legal documents reside in `docs/` and compile to HTML at build time:
 | `docs/privacy.md` | `/privacy` | Always (includes storage disclosure) |
 | `docs/terms.md` | `/terms` | `user_data=accounts` |
 
-`user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render without TODO markers, contain required contact information, and introduce no undeclared storage or network requests.
+`user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render properly, contain required contact information, and introduce no undeclared storage or network requests.
 See [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) for compliance guidance.
 
 ### Adopting the template in an existing web app
@@ -233,7 +233,7 @@ Workflows and configuration files remain at the repository root. Two packages ma
 
 `copier update` performs a three-way merge against the latest template release.
 
-User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, citation files (`CITATION.cff`, `codemeta.json`), `docs/decisions/README.md`, silver-badge governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
+User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, citation files (`CITATION.cff`, `codemeta.json`), silver-badge governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
 
 To relocate a package directory, execute `copier update` with the new path and delete the old directory manually.
 
