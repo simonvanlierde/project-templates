@@ -42,7 +42,7 @@ A `web-service` project includes:
   - `OTEL_EXPORTER_OTLP_ENDPOINT`: the collector's URL, such as `http://otel-collector:4318` or `https://monitoring.example.org:4318`.
   - `OTEL_EXPORTER_OTLP_HEADERS`: authentication headers, if the collector needs them (`Authorization=Bearer ...`).
   - `OTEL_EXPORTER_OTLP_PROTOCOL`: the export protocol. The entrypoint defaults it to `http/protobuf`.
-  - `OTEL_RESOURCE_ATTRIBUTES`: comma-separated attributes on every span. `compose.yaml` defaults it to `service.namespace=<slug>,deployment.environment.name=dev`, so a shared collector can tell projects and environments apart. Set it to `deployment.environment.name=production` or similar where you deploy.
+  - `OTEL_RESOURCE_ATTRIBUTES`: comma-separated attributes on every span. `compose.yaml` defaults it to `project=<slug>,env=dev`, the two keys a monitoring hub uses to tell projects and environments apart. Set `env` to `production` or similar where you deploy.
   When `OTEL_EXPORTER_OTLP_ENDPOINT` is unset, telemetry modules are not imported.
 - `just serve` and a `<slug>` console script to run outside Docker.
 - Tests for `/health` with telemetry enabled and disabled.

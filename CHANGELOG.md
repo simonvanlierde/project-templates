@@ -22,7 +22,7 @@ changes are marked **Breaking**.
 - TypeScript, Rust and Go libraries get the citation files too, as Python libraries already did. `codemeta.json`'s `programmingLanguage` names your stacks instead of always saying Python.
 - A `profiling` option for the Python and Rust stacks, off by default. Python gets `just py-profile` (pyinstrument). Rust gets a `[profile.profiling]` build with frame pointers, `just rs-profile` (samply) and `just rs-counters` (`perf stat`). See [Profiling](docs/usage.md#profiling).
 - With publishing options enabled (PyPI, npm, GHCR), `just repo-settings` creates their GitHub environments with required reviewer and `v*` tag deployment policies (GHCR also on `main`). On public repos, it turns on CodeQL default setup and prints the PyPI pending-publisher and Zenodo URLs.
-- A Python web service's `compose.yaml` sets `OTEL_RESOURCE_ATTRIBUTES` to `service.namespace=<slug>,deployment.environment.name=dev` unless you set it, so a shared collector can tell projects and environments apart. See [Python kinds](docs/python-kinds.md#web-service).
+- A Python web service's `compose.yaml` sets `OTEL_RESOURCE_ATTRIBUTES` to `project=<slug>,env=dev` unless you set it, so a monitoring hub can tell projects and environments apart. See [Python kinds](docs/python-kinds.md#web-service).
 
 ### Changed
 
