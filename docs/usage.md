@@ -170,7 +170,7 @@ Legal documents reside in `docs/` and compile to HTML at build time:
 | `docs/privacy.md` | `/privacy` | Always (includes storage disclosure) |
 | `docs/terms.md` | `/terms` | `user_data=accounts` |
 
-`user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render without TODO markers, contain required contact information, and introduce no undeclared storage or network requests.
+`user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render properly, contain required contact information, and introduce no undeclared storage or network requests.
 See [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) for compliance guidance.
 
 ### Adopting the template in an existing web app

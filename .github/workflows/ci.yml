@@ -519,14 +519,7 @@ jobs:
         run: just ts-mutation ts-property ts-check
 
       # The accessibility, CSP and privacy specs. Chromium installs on the runner here;
-      # the generated ts.yml runs the same specs in the Playwright container. A new
-      # project's legal pages hold TODOs only its author can fill, so the "no TODO
-      # left" tests must fail here, and every other spec must pass. A missing page or a
-      # build that fails would fail them too, so the JSON report must show each one
-      # failing on its TODO assertion with the page found: only then does Playwright
-      # print the text it received. The one exception is a page with nothing to fill in
-      # (the privacy statement when user_data is "nothing"): its test may pass, and the
-      # first run above has already shown that the page loads.
+      # the generated ts.yml runs the same specs in the Playwright container.
       # No --with-deps: ubuntu-latest already has Chromium's libraries and a Latin font,
       # and apt would only add CJK, Thai and bitmap fonts, from a mirror that has taken 14
       # minutes for them.
@@ -535,23 +528,7 @@ jobs:
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.ts_dir }}
         run: |
           pnpm exec playwright install chromium
-          just ts-e2e --grep-invert TODO
-          PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/todo.json" just ts-e2e --grep TODO --retries 0 --reporter=json >/dev/null || true
-          if ! jq -e --arg user_data "${{ matrix.answers.user_data }}" '
-              [.. | objects | select(has("specs")) | .specs[]] as $specs
-              | ($specs | length) > 0 and (.errors | length) == 0
-              and all($specs[];
-                .title as $title
-                | all(.tests[];
-                  (.status == "expected" and $user_data == "nothing" and ($title | contains("/privacy")))
-                  or (.status == "unexpected" and all(.results[];
-                    [.errors[].message] | length == 1 and (.[0] | contains("\nReceived string: "))))))
-              and any($specs[]; any(.tests[]; .status == "unexpected"))' \
-              "$RUNNER_TEMP/todo.json" >/dev/null; then
-            echo "::error::each TODO test must fail on its TODO assertion; see $RUNNER_TEMP/todo.json" >&2
-            jq -r '.errors[].message, (.. | objects | select(has("specs")) | .specs[] | .title)' "$RUNNER_TEMP/todo.json" >&2 || true
-            exit 1
-          fi
+          just ts-e2e
           # The pages' authoring notes are HTML comments, which the build drops. This
           # phrase opens the note at the top of docs/privacy.md.
           if grep -rq 'Keep this page true' dist/; then
