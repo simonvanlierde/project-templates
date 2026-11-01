@@ -292,7 +292,7 @@ Publishing controls:
 Setting up trusted publishing (OIDC):
 
 1. Configure trusted publishers on [pypi.org](https://pypi.org/manage/account/publishing/) or [npmjs.com](https://docs.npmjs.com/trusted-publishers/). For npm, manually publish version 0.1.0 before enabling trusted publishing.
-2. In repository Settings > Environments, create required environments (`pypi`, `npm`, `ghcr`). Restrict deployment to tags matching `v*` and require manual review.
+2. Run `just repo-settings` to create required environments (`pypi`, `npm`, `ghcr`) with yourself as required reviewer and a `v*` tag policy (`ghcr` also on `main`).
 3. Enable publishing via Copier:
 
    ```sh
