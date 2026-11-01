@@ -13,6 +13,7 @@ changes are marked **Breaking**.
 ### Removed
 
 - The `status` question is gone. New READMEs say "Status: experimental"; edit the line by hand when the project moves on. Existing READMEs are unaffected.
+- A web app's end-to-end tests no longer fail while its legal pages hold TODOs, or once the accessibility statement's "Last reviewed" date is over 400 days old, so a new web app passes CI as rendered. Fill in the TODOs before the first public deploy and review the statement yearly: see [docs/web-legal.md](docs/web-legal.md).
 
 ### Added
 
@@ -25,7 +26,8 @@ changes are marked **Breaking**.
 
 ### Changed
 
-- **Breaking:** `docs/decisions/` is no longer scaffolded by default. Projects add `docs/decisions/` when architectural choices need formal records. Existing decision records are preserved on update.
+- **Breaking:** new projects no longer get `docs/decisions/`. Add the folder when a choice needs a record. `copier update` deletes `docs/decisions/README.md` and `0000-template.md`, even an index you edited; your numbered records stay. To keep the index, run `git checkout HEAD -- docs/decisions/README.md` before you commit the update.
+- **Breaking:** `cold-install.yml`, which runs the README's setup steps in a clean container, is now opt-in through the `cold_install` question under `customise`, off by default. `copier update` removes it; to keep it, run `copier update --data cold_install=true`. See [CI baseline](docs/ci-baseline.md).
 - `just repo-settings` adopts existing rulesets by target instead of rigid names, updating older rulesets (`protect-main`, `protect-main-checks`) in place without creating duplicates. If you renamed any check jobs, rerun `just repo-settings` after `copier update` to sync required status checks.
 - **Breaking:** [citesync](https://github.com/simonvanlierde/citesync) replaces `.github/scripts/citation.py`. Its git hook also checks the package manifests against `CITATION.cff`, and `just citation` runs its writer, so `just citation --check` is gone: the hook does the check. After `copier update`, delete `.github/scripts/citation.py` if it is still there, and run `prek run citesync --all-files` to see what disagrees. A nested package gets a `citesync.toml` that lists its manifests.
 - **Breaking:** no more `.zenodo.json`. Zenodo reads `CITATION.cff` when a repo has none, and the rendered one held nothing more. After `copier update`, delete your `.zenodo.json` unless you added contributors who aren't authors, links to related records, communities or grants: Zenodo reads only `.zenodo.json` when one exists, so keep it complete. A project with `license` set to `none` gets no citation files, since a Zenodo record needs a license.

@@ -64,8 +64,8 @@ These automatic checks run on every proposed change to {{ project_name }}:
 - [Biome's accessibility rules](https://biomejs.dev/linter/javascript/rules/#a11y) check the code
   for mistakes such as missing alt text, invalid ARIA, or click handlers that don't work with a
   keyboard.
-- A test fails if this page loses a section or its email contact, claims a status it hasn't
-  earned, or goes more than 400 days without a review.
+- A test fails if this page loses a section or its email contact, or claims a status it hasn't
+  earned.
 
 Automatic tools find only some problems, so passing them doesn't mean there are none. The tests
 are in {% if public %}[{{ tests }}]({{ tests_url }}){% else %}`{{ tests }}`{% endif %}. They run in Chromium.

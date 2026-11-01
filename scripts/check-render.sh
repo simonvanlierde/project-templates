@@ -1176,6 +1176,10 @@ for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' 
 done
 recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
+# Whitespace control around the fmt recipe's last line must not glue the next comment onto it.
+for r in a h t; do
+  grep -qx '# Run every git hook over the whole repo, not just staged files.' "$r/justfile"
+done
 
 # AGENTS.md names the check and test recipes, so each must be one the justfile has.
 # h is go alone and d a nested web app, beside every stack in a and c.

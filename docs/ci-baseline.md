@@ -34,7 +34,7 @@ Checks included in repositories generated from this template, their purposes, an
 | Automated accessibility tests (axe) | `tests/e2e/a11y.spec.ts` (`web-app` kind) | Tests routes in light and dark modes against WCAG 2.0–2.2 Levels A and AA |
 | Content-Security-Policy enforcement | `public/_headers`, `tests/e2e/csp.spec.ts` | Validates strict CSP (`script-src 'self'`), HSTS, and frame protection without inline scripts |
 | Viewport reflow validation | `tests/e2e/reflow.spec.ts` (`web-app` kind) | Verifies responsive layout at 320 px viewport width without horizontal scrollbars (WCAG 1.4.10) |
-| Accessibility statement checks | `tests/e2e/accessibility-statement.spec.ts` | Validates statement sections, contact details, valid status, and review currency (< 400 days) |
+| Accessibility statement checks | `tests/e2e/accessibility-statement.spec.ts` | Validates statement sections, contact details, and valid status |
 | Legal page tests | `tests/e2e/legal-pages.spec.ts` (`web-app` kind) | Ensures all legal pages render properly and link from route footers |
 | Clean state on initial load | `tests/e2e/privacy.spec.ts` (`web-app` kind) | Verifies routes set no cookies, create no storage, and contact only declared origins on load |
 | Bundle size budget enforcement | `scripts/checkBundleBudget.mjs` (`web-app` kind) | Fails builds if gzipped JavaScript bundles exceed declared size limits |
