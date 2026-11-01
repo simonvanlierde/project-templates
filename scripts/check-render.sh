@@ -884,8 +884,10 @@ grep -q 'packages: write' c/.github/workflows/docker.yml
 # root context (a, b).
 grep -qF 'paths: ["api/**", "apps/web/**", ".github/workflows/docker.yml"]' c/.github/workflows/docker.yml
 (! grep -q 'paths:' a/.github/workflows/docker.yml b/.github/workflows/docker.yml)
-# The push job also runs on main, so the README must not limit `ghcr` to tags alone.
-grep -q 'ghcr. also to .main' c/README.md
+# The push job also runs on main, so repo-settings must not limit `ghcr` to tags alone.
+# shellcheck disable=SC2016 # literal $env in the recipe
+grep -qF '"$env" = "ghcr"' c/justfile
+grep -qF -- '-f name="main" -f type="branch"' c/justfile
 # The publish job has no checkout; the wheels land in the root dist/.
 grep -qx '          path: dist/' c/.github/workflows/python-release.yml
 # A release made with GITHUB_TOKEN starts no workflow, so npm publishing
