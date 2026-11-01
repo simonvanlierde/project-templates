@@ -21,7 +21,7 @@ Who acts on a project made from this template, what each actor can change, and w
 
 `copier update` performs a three-way merge between the recorded commit in `.copier-answers.yml`, the latest template release, and the local project tree. Conflicting changes leave standard git conflict markers. Files listed in `_skip_if_exists` are never modified by updates ([usage.md](usage.md)). Running with `--defaults` accepts default values for newly added questions.
 
-The weekly CI update workflow runs Copier in a read-only job, generates a binary patch, and applies it in a fresh job that holds the push token. This push job runs no template code or git hooks.
+The weekly CI update workflow runs Copier in a read-only job, generates a binary patch, and applies it in a fresh job that holds the push token. This push job runs no template code or git hooks. The split has to be across jobs, not steps: steps in one job share the runner's state, `GITHUB_PATH` included, so a template step could change what a later step runs. Only the patch crosses between the jobs, never configuration or scripts.
 
 ## Workflows that can publish
 
