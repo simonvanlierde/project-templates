@@ -1431,6 +1431,15 @@ grep -qx 'blank_issues_enabled: false' a/.github/ISSUE_TEMPLATE/config.yml
 grep -qx '    url: https://github.com/example-org/render-me/blob/main/.github/CONTRIBUTING.md' \
   a/.github/ISSUE_TEMPLATE/config.yml
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
+# The bug form: a render with a web app (d) asks for a page URL and a browser and does not
+# force shell formatting; the others keep the command-line form. Both pass GitHub's schema.
+grep -qx '    id: url' d/.github/ISSUE_TEMPLATE/bug.yml
+grep -qx '    id: browser' d/.github/ISSUE_TEMPLATE/bug.yml
+(! grep -q 'render: shell' d/.github/ISSUE_TEMPLATE/bug.yml)
+grep -qx '      render: shell' a/.github/ISSUE_TEMPLATE/bug.yml
+(! grep -qE 'id: (url|browser)$' a/.github/ISSUE_TEMPLATE/bug.yml)
+uvx check-jsonschema --builtin-schema vendor.github-issue-forms \
+  a/.github/ISSUE_TEMPLATE/bug.yml d/.github/ISSUE_TEMPLATE/bug.yml
 # OpenSSF badge: passing (m) adds the test policy and a coding-standards line per stack;
 # silver (h) also adds the governance, roadmap and assurance-case skeletons. a is public
 # with the default none, so it gets neither.
