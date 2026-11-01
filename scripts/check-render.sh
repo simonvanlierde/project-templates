@@ -767,19 +767,22 @@ for f in python rust go; do grep -q 'git merge-base' "m/just/$f.just"; done
 (! grep -q 'mutation-diff' m/just/ts.just)
 grep -q '^just py-mutation-diff ' m/README.md
 (! grep -q 'ts-mutation-diff' m/README.md)
-# mutation_diff.py names only the changed method, and skips a module outside only_mutate.
+# mutation_diff.py names only the changed methods, matches only_mutate and do_not_mutate as
+# globs the way mutmut does, and skips a function mutmut leaves alone for its decorator.
 mutdiff="$out/mutdiff"
 mkdir -p "$mutdiff/src/pkg" && cp m/just/mutation_diff.py "$mutdiff/"
 (
   cd "$mutdiff"
-  printf '[tool.mutmut]\nsource_paths = ["src/pkg"]\nonly_mutate = ["src/pkg/a.py"]\n' >pyproject.toml
-  printf 'def f():\n    return 1\n\n\nclass C:\n    def m(self):\n        return 1\n\n    def n(self):\n        return 1\n' >src/pkg/a.py
+  printf '[tool.mutmut]\nsource_paths = ["src/pkg"]\nonly_mutate = ["src/pkg/*"]\ndo_not_mutate = ["*/b.py"]\n' >pyproject.toml
+  printf 'def f():\n    return 1\n\n\nclass C:\n    def m(self):\n        return 1\n\n    def n(self):\n        return 1\n\n    @staticmethod\n    def s():\n        return 1\n\n\n@cache\ndef g():\n    return 1\n' >src/pkg/a.py
   cp src/pkg/a.py src/pkg/b.py
   git init -q && git add -A && git -c user.name=t -c user.email=t@t.test commit -qm base --no-verify
   sed -i 's/return 1/return 2/' src/pkg/b.py
-  sed -i '7s/1/2/' src/pkg/a.py
-  test "$(python3 -I mutation_diff.py HEAD)" = 'pkg.a.xǁCǁm__mutmut_*'
+  sed -i -e '7s/1/2/' -e '14s/1/2/' -e '19s/1/2/' src/pkg/a.py
+  test "$(python3 -I mutation_diff.py HEAD)" = "$(printf 'pkg.a.xǁCǁm__mutmut_*\npkg.a.xǁCǁs__mutmut_*')"
 )
+# go-mutation-diff reads the diff relative to go_dir, or gremlins finds no changed lines there.
+grep -qF 'GIT_CONFIG_KEY_0=diff.relative' m/just/go.just
 # property.yml: the same shape, running each stack's property or fuzz recipe.
 test -f m/.github/workflows/property.yml
 test ! -e a/.github/workflows/property.yml
@@ -1080,6 +1083,8 @@ grep -qx '  preview:' d/.github/workflows/ts.yml
 grep -qx '          name: preview-dist' d/.github/workflows/ts.yml
 test "$(grep -cx '          path: web/dist' d/.github/workflows/ts.yml)" = 2
 grep -qx '      name: preview' d/.github/workflows/ts.yml
+# The gate step runs before checkout, so it must not cd into web/.
+grep -A2 -x '      - id: gate' d/.github/workflows/ts.yml | grep -qx '        working-directory: .'
 grep -qF "pnpm dlx wrangler@$wrangler_pin versions upload --config wrangler.preview.jsonc --preview-alias" d/.github/workflows/ts.yml
 grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
 (! grep -q '^  X-Robots-Tag' d/web/public/_headers)

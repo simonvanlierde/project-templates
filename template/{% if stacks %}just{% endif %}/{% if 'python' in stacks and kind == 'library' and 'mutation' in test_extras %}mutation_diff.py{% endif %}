@@ -8,6 +8,7 @@ and a method `<module>.xǁ<Class>ǁ<name>__mutmut_<n>`.
 """
 
 import ast
+import fnmatch
 import re
 import subprocess
 import sys
@@ -33,7 +34,10 @@ def changed_lines(path: str, base: str) -> set[int]:
 
 
 def functions(tree: ast.Module, module: str) -> list[tuple[range, str]]:
-    """Line range and mutmut pattern of each top-level function and method."""
+    """Line range and mutmut pattern of each top-level function and method.
+
+    mutmut leaves a function alone when it has any decorator but staticmethod or classmethod.
+    """
     found: list[tuple[range, str]] = []
     funcs = (ast.FunctionDef, ast.AsyncFunctionDef)
     for node in tree.body:
@@ -41,6 +45,9 @@ def functions(tree: ast.Module, module: str) -> list[tuple[range, str]]:
         if isinstance(node, ast.ClassDef):
             members = [(node.name, m) for m in node.body if isinstance(m, funcs)]
         for owner, func in members:
+            decorators = {ast.unparse(d) for d in func.decorator_list}
+            if decorators - {"staticmethod", "classmethod"}:
+                continue
             first = min([func.lineno, *(d.lineno for d in func.decorator_list)])
             name = f"xǁ{owner}ǁ{func.name}" if owner else f"x_{func.name}"
             found.append((range(first, (func.end_lineno or func.lineno) + 1), f"{module}.{name}__mutmut_*"))
@@ -52,6 +59,7 @@ def main(base: str) -> None:
     config = tomllib.loads(Path("pyproject.toml").read_text()).get("tool", {}).get("mutmut", {})
     roots = config.get("source_paths") or ["src", "lib"]
     only = config.get("only_mutate")
+    skip = config.get("do_not_mutate", [])
     names = subprocess.run(
         ["git", "diff", "--relative", "--name-only", base, "--", "*.py"],
         check=True,
@@ -62,7 +70,10 @@ def main(base: str) -> None:
         path = Path(name)
         if not path.exists() or not any(path.is_relative_to(r) for r in roots):
             continue
-        if only and name not in only:
+        # mutmut matches both lists as globs on the path.
+        if only and not any(fnmatch.fnmatch(name, p) for p in only):
+            continue
+        if any(fnmatch.fnmatch(name, p) for p in skip):
             continue
         # src/pkg/mod.py is module pkg.mod; so is pkg/mod.py with source_paths = ["pkg"].
         parts = path.with_suffix("").parts
