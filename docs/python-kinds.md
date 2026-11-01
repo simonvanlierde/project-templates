@@ -52,4 +52,8 @@ Only the Python `web-service` kind includes OpenTelemetry. Other kinds omit it i
 - **`data-pipeline`**: batch runs use heartbeat monitoring or dead-man alerts on failure rather than distributed tracing spans.
 - **`web-app` (TypeScript)**: client-side tracing is out of scope for the static hosting baseline.
 
-Service kinds for TypeScript, Go, and Rust are not yet implemented. When added, they will follow this zero-code OTLP/HTTP pattern.
+Service kinds for TypeScript, Go, and Rust are not yet scaffolded as template kinds. When implementing services or adding telemetry manually in those ecosystems, follow the same zero-code or zero-configuration OTLP/HTTP pattern:
+
+- **Go**: Use `go.opentelemetry.io/contrib/exporters/autoexport`. It inspects standard `OTEL_*` environment variables and defaults to standard OTLP over HTTP or gRPC when `OTEL_TRACES_EXPORTER` is unset. Pair with `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to wrap handlers.
+- **TypeScript / Node**: Use `@opentelemetry/auto-instrumentations-node` with `@opentelemetry/exporter-trace-otlp-http`, enabled via `NODE_OPTIONS="--require @opentelemetry/auto-instrumentations-node/register"`. Guard exporter initialization on `OTEL_EXPORTER_OTLP_ENDPOINT` so the service runs silently when no collector is configured.
+- **Rust**: Use `opentelemetry-otlp` with `tracing-opentelemetry` and `tracing-subscriber`. Check whether `OTEL_EXPORTER_OTLP_ENDPOINT` is present before installing the OTLP tracer provider; when unset, keep only standard log output active.
