@@ -16,7 +16,6 @@ _min_copier_version: "9.19.0"
 _skip_if_exists:
   - /README.md
   - /CHANGELOG.md
-  - /docs/decisions/README.md
   - /GOVERNANCE.md
   - /docs/roadmap.md
   - /docs/assurance-case.md

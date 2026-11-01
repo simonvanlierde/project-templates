@@ -102,9 +102,6 @@ grep -q 'project edit' "$out/d/web/docs/accessibility-assessment.md"
   --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
-# The decisions index belongs to the project too; the record template does not.
-echo '- project record' >>"$out/h/docs/decisions/README.md"
-echo 'project edit' >>"$out/h/docs/decisions/0000-template.md"
 # The badge documents are filled in by the project. Rendered first, then kept.
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test -f "$out/h/$f"
@@ -116,8 +113,6 @@ for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   grep -q 'project edit' "$out/h/$f"
 done
 grep -q 'project edit' "$out/h/go.mod"
-grep -q 'project record' "$out/h/docs/decisions/README.md"
-(! grep -q 'project edit' "$out/h/docs/decisions/0000-template.md")
 
 # m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
@@ -559,10 +554,9 @@ grep -q 'cron: "0 6 \* \* 1"' d/.github/workflows/python.yml
 test -f h/.github/workflows/advisories.yml
 (! grep -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
-# Every render gets the decisions folder.
+# Decision records are not scaffolded by default; create docs/decisions/ when choices are made.
 for r in a b c d h i; do
-  test -f "$r/docs/decisions/README.md"
-  test -f "$r/docs/decisions/0000-template.md"
+  test ! -e "$r/docs/decisions"
 done
 (! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.
@@ -1654,7 +1648,7 @@ for r in a c; do
   fi
 done
 
-# Rendering over a repo with docs/adr leaves ADRs beside docs/decisions, and usage docs guide migration:
+# Rendering over a repo with docs/adr leaves ADRs intact, and usage docs guide migration:
 adr_dir=$(mktemp -d)
 mkdir -p "$adr_dir/docs/adr"
 echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
@@ -1662,7 +1656,7 @@ echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
   --data project_name=adr-check --data 'stacks=[python]' \
   --data kind=library "$repo" "$adr_dir"
 test -f "$adr_dir/docs/adr/0001-x.md"
-test -f "$adr_dir/docs/decisions/README.md"
+test ! -e "$adr_dir/docs/decisions"
 grep -q 'docs/adr' "$repo/docs/usage.md"
 rm -rf "$adr_dir"
 

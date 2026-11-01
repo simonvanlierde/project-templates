@@ -136,7 +136,7 @@ Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<
 
 CLI binaries (Rust, Go, or Python `data-pipeline`) include `docs/accessibility.md`, documenting terminal output standards (`NO_COLOR` support, plain output redirection, error formats). Review and edit these claims to reflect your application.
 
-Decision records reside in `docs/decisions/`. Copy `0000-template.md` to record architectural choices and list new records in `README.md`.
+When projects record architectural choices, store them in `docs/decisions/`.
 
 ## TypeScript kinds
 
@@ -233,7 +233,7 @@ Workflows and configuration files remain at the repository root. Two packages ma
 
 `copier update` performs a three-way merge against the latest template release.
 
-User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, citation files (`CITATION.cff`, `codemeta.json`), `docs/decisions/README.md`, silver-badge governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
+User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, citation files (`CITATION.cff`, `codemeta.json`), silver-badge governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
 
 To relocate a package directory, execute `copier update` with the new path and delete the old directory manually.
 
