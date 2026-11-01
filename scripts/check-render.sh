@@ -1438,6 +1438,9 @@ grep -qx '    id: browser' d/.github/ISSUE_TEMPLATE/bug.yml
 (! grep -q 'render: shell' d/.github/ISSUE_TEMPLATE/bug.yml)
 grep -qx '      render: shell' a/.github/ISSUE_TEMPLATE/bug.yml
 (! grep -qE 'id: (url|browser)$' a/.github/ISSUE_TEMPLATE/bug.yml)
+# The browser field covers the environment question on the web form.
+(! grep -q 'id: environment' d/.github/ISSUE_TEMPLATE/bug.yml)
+grep -qx '    id: environment' a/.github/ISSUE_TEMPLATE/bug.yml
 uvx check-jsonschema --builtin-schema vendor.github-issue-forms \
   a/.github/ISSUE_TEMPLATE/bug.yml d/.github/ISSUE_TEMPLATE/bug.yml
 # OpenSSF badge: passing (m) adds the test policy and a coding-standards line per stack;
