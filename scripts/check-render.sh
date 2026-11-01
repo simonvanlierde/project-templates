@@ -415,14 +415,20 @@ test ! -e a/.github/workflows/ts-release.yml
 # The release body is the CHANGELOG section of the tag. The last version before the
 # link references is the edge case: its section must not swallow them.
 test -f a/.github/workflows/release.yml
-# Every project's README says how to release; only publishing ones add the environment setup.
-grep -qx '## Releasing' a/README.md
-(! grep -q 'Before the first release' a/README.md)
-grep -q 'Before the first release' c/README.md
-# A publishing build takes its version from the manifest, not from the tag.
-(! grep -q 'Set the version in' a/README.md)
-grep -q 'Set the version in .api/pyproject.toml. and .apps/web/package.json. to X.Y.Z first' c/README.md
-grep -q 'Set the version in .web/package.json. to X.Y.Z first' m/README.md
+# Release steps are for the maintainer: the README has none, and the public CONTRIBUTING
+# points to the template docs for them.
+for r in a c m; do (! grep -q 'Releasing' "$r/README.md"); done
+# shellcheck disable=SC2016 # literal backticks in the rendered text
+grep -q '`just release X.Y.Z`' c/.github/CONTRIBUTING.md
+# PyPI and npm render the README as the package page, so its links must not be relative.
+# A link may start with http, # or {; anything else is a repo path that is dead there.
+for f in c/README.md c/api/README.md k/README.md m/README.md t/README.md; do
+  (! grep -E '\]\([^h#]' "$f")
+done
+grep -qF '](https://github.com/example-org/mono-me/blob/main/README.md)' c/api/README.md
+grep -qF '](https://github.com/example-org/mono-me/tree/main/.github/workflows/)' c/README.md
+# Without publishing, the README keeps its relative links.
+grep -qF '](LICENSE)' d/README.md
 test -x a/.github/scripts/release-notes.sh
 cat >"$out/sample-changelog.md" <<'MD'
 # Changelog
@@ -451,6 +457,47 @@ test "$("$notes" v1.1.0 "$out/sample-changelog.md" | grep -c .)" = 2
 test "$("$notes" 1.0.0 "$out/sample-changelog.md")" = $'\n- first release'
 (! "$notes" 2.0.0 "$out/sample-changelog.md" 2>/dev/null)
 (! "$notes" 1.0 "$out/sample-changelog.md" 2>/dev/null)
+# just release: the first run cuts the changelog, the second signs and pushes the tag.
+# The key is made here and the remote is a local bare repo; the host's git config and
+# keys are not read.
+rel=$out/rel
+mkdir "$rel"
+ssh-keygen -q -t ed25519 -N '' -f "$rel/key"
+git init -q --bare -b main "$rel/origin.git"
+cp -R k "$rel/w"
+(
+  # shellcheck disable=SC2030 # only this subshell reads it
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+  cd "$rel/w"
+  git init -q -b main
+  git remote add origin "$rel/origin.git"
+  git config user.name 'Marie Curie'
+  git config user.email curie@example.org
+  git config gpg.format ssh
+  git config user.signingkey "$rel/key.pub"
+  git config gpg.ssh.allowedSignersFile "$rel/signers"
+  echo "curie@example.org $(cat "$rel/key.pub")" >"$rel/signers"
+  git add -A
+  git commit -q -s -m 'chore: init'
+  git push -q origin main
+  # An empty [Unreleased] and a manifest at another version both refuse, changing nothing.
+  (! just release 0.1.0 >/dev/null 2>&1)
+  (! just release 0.2.0 >/dev/null 2>&1)
+  git diff --quiet
+  sed -i 's/^## \[Unreleased\]$/&\n\n- first thing/' CHANGELOG.md
+  git commit -q -s -am 'docs: add entry'
+  just release 0.1.0 >/dev/null
+  grep -qx '## \[0.1.0\] - [0-9-]*' CHANGELOG.md
+  grep -qx '\[Unreleased\]: https://github.com/example-org/adopt-me/compare/v0.1.0...HEAD' CHANGELOG.md
+  (! git rev-parse --verify -q v0.1.0 >/dev/null)
+  git push -q origin main
+  just release 0.1.0 >/dev/null
+  test "$(git cat-file -t v0.1.0)" = tag
+  git verify-tag v0.1.0 >/dev/null 2>&1
+  test "$(git -C "$rel/origin.git" rev-parse 'v0.1.0^{commit}')" = "$(git rev-parse HEAD)"
+  .github/scripts/release-notes.sh v0.1.0 CHANGELOG.md >/dev/null
+)
+
 # cold-install.yml runs the README's Development blocks. Run its step with `bash -ex`
 # swapped for `cat`, and without the chown, to see which commands it picks: d's README
 # has the install lines and `just check`, and the Docker, pipeline and e2e recipes are
@@ -489,6 +536,23 @@ grep -qF 'or delete .github/workflows/cold-install.yml' "$out/k-cold.log"
 test ! -e "$out/a/.github/workflows/cold-install.yml"
 test ! -e "$out/b/.github/workflows/cold-install.yml"
 test -f "$out/d/.github/workflows/cold-install.yml"
+# A change to the lockfile or the interpreter pin can break the first setup.
+for p in '"**/pyproject.toml"' '"**/uv.lock"' '"**/.python-version"'; do
+  grep -qF -- "$p" "$out/d/.github/workflows/cold-install.yml"
+done
+# py-matrix is a library recipe over the versions python.yml tests, and cold-install skips it.
+# shellcheck disable=SC2016 # the recipe's literal "$v"
+grep -qF 'for v in 3.12 3.13 3.14; do uv --directory api run --isolated --locked --python "$v" pytest' c/just/python.just
+grep -qF 'python: ["3.12", "3.13", "3.14"]' c/.github/workflows/python.yml
+grep -qF 'just py-matrix ' c/README.md
+(! grep -q 'py-matrix' a/just/python.just d/just/python.just)
+(! grep -q 'py-matrix' c/.github/workflows/python.yml)
+cold c >"$out/c-matrix.sh"
+(! grep -q 'py-matrix' "$out/c-matrix.sh")
+# The README installs the prek that checks.yml runs, and justfile explains the SKIP gap.
+prek_ci=$(sed -n 's/^ *PREK_VERSION: *//p' c/.github/workflows/checks.yml)
+grep -qF "uv tool install prek==$prek_ci " a/README.md
+grep -qF 'checks workflow skips' c/justfile
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 (! grep -q 'Development Status' a/pyproject.toml)
 (! grep -q 'keywords =' a/pyproject.toml)
@@ -681,6 +745,41 @@ steps = wf["jobs"]["rust"]["steps"]
 assert any("test ! -s crates/lib/mutants.out/missed.txt" in s.get("run", "") for s in steps), steps
 assert any(s.get("with", {}).get("path") == "crates/lib/mutants.out/" for s in steps), steps
 PY
+# The python gate: a baseline file, a clean start, byte-order sorting, a failure both ways.
+test -f m/py/tests/mutation-baseline.txt
+test ! -e a/tests/mutation-baseline.txt
+grep -qxF '    rm -rf mutants' m/just/python.just
+grep -qxF '    export LC_ALL=C' m/just/python.just
+# shellcheck disable=SC2016 # a literal recipe line
+grep -qxF '    [ -z "$new$gone" ]' m/just/python.just
+# The per-change recipes: python maps the diff to functions with a script, rust and go use
+# the tool's own diff mode, ts has no mutation-diff recipe (Stryker has no diff mode).
+test -f m/just/mutation_diff.py
+test ! -e a/just/mutation_diff.py
+grep -q '^py-mutation-diff base=' m/just/python.just
+grep -q 'cd py$' m/just/python.just
+grep -q -e '--in-diff' m/just/rust.just
+grep -q -e '--relative=crates/lib' m/just/rust.just
+grep -q -e 'unleash --diff' m/just/go.just
+# Each diffs against where the branch split off, not main's tip, so a branch behind
+# main does not mutate functions only main changed.
+for f in python rust go; do grep -q 'git merge-base' "m/just/$f.just"; done
+(! grep -q 'mutation-diff' m/just/ts.just)
+grep -q '^just py-mutation-diff ' m/README.md
+(! grep -q 'ts-mutation-diff' m/README.md)
+# mutation_diff.py names only the changed method, and skips a module outside only_mutate.
+mutdiff="$out/mutdiff"
+mkdir -p "$mutdiff/src/pkg" && cp m/just/mutation_diff.py "$mutdiff/"
+(
+  cd "$mutdiff"
+  printf '[tool.mutmut]\nsource_paths = ["src/pkg"]\nonly_mutate = ["src/pkg/a.py"]\n' >pyproject.toml
+  printf 'def f():\n    return 1\n\n\nclass C:\n    def m(self):\n        return 1\n\n    def n(self):\n        return 1\n' >src/pkg/a.py
+  cp src/pkg/a.py src/pkg/b.py
+  git init -q && git add -A && git -c user.name=t -c user.email=t@t.test commit -qm base --no-verify
+  sed -i 's/return 1/return 2/' src/pkg/b.py
+  sed -i '7s/1/2/' src/pkg/a.py
+  test "$(python3 -I mutation_diff.py HEAD)" = 'pkg.a.xǁCǁm__mutmut_*'
+)
 # property.yml: the same shape, running each stack's property or fuzz recipe.
 test -f m/.github/workflows/property.yml
 test ! -e a/.github/workflows/property.yml
@@ -837,8 +936,10 @@ grep -q 'packages: write' c/.github/workflows/docker.yml
 # root context (a, b).
 grep -qF 'paths: ["api/**", "apps/web/**", ".github/workflows/docker.yml"]' c/.github/workflows/docker.yml
 (! grep -q 'paths:' a/.github/workflows/docker.yml b/.github/workflows/docker.yml)
-# The push job also runs on main, so the README must not limit `ghcr` to tags alone.
-grep -q 'ghcr. also to .main' c/README.md
+# The push job also runs on main, so repo-settings must not limit `ghcr` to tags alone.
+# shellcheck disable=SC2016 # literal $env in the recipe
+grep -qF '"$env" = "ghcr"' c/justfile
+grep -qF -- '-f name="main" -f type="branch"' c/justfile
 # The publish job has no checkout; the wheels land in the root dist/.
 grep -qx '          path: dist/' c/.github/workflows/python-release.yml
 # A release made with GITHUB_TOKEN starts no workflow, so npm publishing
@@ -851,7 +952,6 @@ for w in python ts; do
   grep -q 'release-notes.sh" "$GITHUB_REF_NAME' "c/.github/workflows/$w-release.yml"
 done
 # Up-paths at both depths.
-grep -qF '](../README.md)' c/api/README.md
 grep -qF '"root": "../.."' c/apps/web/biome.json
 # data-pipeline: manifest and data dirs in the package, the rest at the root.
 test -f d/pipe/sources.toml
@@ -861,9 +961,10 @@ test -f d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/README.md
 # The week-old-release escape hatch names each nested lockfile owner, and only those.
-grep -qF 'uv and pnpm lock only' d/README.md
-grep -q 'in .pipe/pyproject\.toml. or .minimumReleaseAgeExclude. in .web/pnpm-workspace\.yaml.' d/README.md
-(! grep -q 'exclude-newer' h/README.md)
+(! grep -q 'exclude-newer' d/README.md)
+grep -qF 'uv and pnpm lock only' d/.github/CONTRIBUTING.md
+grep -q 'in .pipe/pyproject\.toml. or .minimumReleaseAgeExclude. in .web/pnpm-workspace\.yaml.' d/.github/CONTRIBUTING.md
+(! grep -q 'exclude-newer' h/.github/CONTRIBUTING.md)
 grep -q 'Apache License' d/LICENSE
 grep -qx 'BSD 3-Clause License' m/LICENSE
 grep -q '^Copyright (c) [0-9]\{4\}, ' m/LICENSE
@@ -966,6 +1067,37 @@ grep -qF 'image: mcr.microsoft.com/playwright:v' d/.github/workflows/ts.yml
 grep -qF 'needs.check.outputs.playwright }}-noble' d/.github/workflows/ts.yml
 grep -q 'fonts-dejavu-core' d/.github/workflows/ts.yml
 grep -qx '          path: web/playwright-report/' d/.github/workflows/ts.yml
+# Pull request previews: web-app renders get the preview Worker config, the preview job
+# and preview-retire.yml, with wrangler at the pinned version and nested paths for d.
+# Production headers never carry noindex.
+wrangler_pin=$(sed -n '/^wrangler_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+test -n "$wrangler_pin"
+grep -qF '"name": "pipe-me-preview",' d/web/wrangler.preview.jsonc
+grep -qF '"directory": "./dist",' d/web/wrangler.preview.jsonc
+grep -qF '"preview_urls": true,' d/web/wrangler.preview.jsonc
+grep -qF '"name": "app-preview",' s/wrangler.preview.jsonc
+grep -qx '  preview:' d/.github/workflows/ts.yml
+grep -qx '          name: preview-dist' d/.github/workflows/ts.yml
+test "$(grep -cx '          path: web/dist' d/.github/workflows/ts.yml)" = 2
+grep -qx '      name: preview' d/.github/workflows/ts.yml
+grep -qF "pnpm dlx wrangler@$wrangler_pin versions upload --config wrangler.preview.jsonc --preview-alias" d/.github/workflows/ts.yml
+grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
+(! grep -q '^  X-Robots-Tag' d/web/public/_headers)
+test -f d/.github/workflows/preview-retire.yml
+grep -qF "pnpm dlx wrangler@$wrangler_pin versions upload --config wrangler.preview.jsonc --assets retired" d/.github/workflows/preview-retire.yml
+grep -qx '    environment: preview' d/.github/workflows/preview-retire.yml
+grep -qx '        working-directory: web' d/.github/workflows/preview-retire.yml
+grep -qx '          package_json_file: web/package.json' d/.github/workflows/preview-retire.yml
+grep -qF 'href="https://pipe-me.pages.dev"' d/.github/workflows/preview-retire.yml
+# A web app at the repo root builds in place.
+test -f s/wrangler.preview.jsonc
+test -f s/.github/workflows/preview-retire.yml
+grep -qx '          path: dist' s/.github/workflows/ts.yml
+(! grep -q 'working-directory' s/.github/workflows/preview-retire.yml)
+# Other kinds get none of it.
+test ! -e a/wrangler.preview.jsonc
+test ! -e a/.github/workflows/preview-retire.yml
+(! grep -q 'preview' a/.github/workflows/ts.yml)
 grep -q 'stages: \[pre-push\]' d/.pre-commit-config.yaml
 grep -qx 'default_install_hook_types: \[pre-commit, commit-msg, pre-push\]' d/.pre-commit-config.yaml
 (! grep -q 'pre-push' a/.pre-commit-config.yaml)
@@ -1180,7 +1312,7 @@ recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
 # Whitespace control around the fmt recipe's last line must not glue the next comment onto it.
 for r in a h t; do
-  grep -qx '# Run every git hook over the whole repo, not just staged files.' "$r/justfile"
+  grep -qx '# Run every git hook over the whole repo, not just staged files. The checks workflow skips' "$r/justfile"
 done
 
 # AGENTS.md names the check and test recipes, so each must be one the justfile has.
@@ -1232,7 +1364,8 @@ grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows
 test -f a/.github/rulesets/main.json
 test -f a/.github/rulesets/main-checks.json
 test -f a/.github/rulesets/tags.json
-fake=$(mktemp -d)
+fake=$out/fake-gh
+mkdir -p "$fake"
 echo '[{"name": "protect-main", "target": "branch", "id": 42}, {"name": "other", "id": 7}]' >"$fake/rulesets.json"
 cat >"$fake/gh" <<'FAKE'
 #!/usr/bin/env bash
@@ -1297,8 +1430,8 @@ chmod +x "$fake/gh"
   for flag in allow_squash_merge=true allow_merge_commit=false allow_rebase_merge=false delete_branch_on_merge=true; do
     [[ "$patch " == *" -F $flag "* ]]
   done
-  # Below silver the sign-off setting stays untouched.
-  [[ "$patch " != *web_commit_signoff_required* ]]
+  # Every public render has the DCO check, so web commits need a sign-off from silver down.
+  [[ "$patch " == *" -F web_commit_signoff_required=true "* ]]
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
   # CodeQL default setup scans every PR and push on public repos.
@@ -1356,15 +1489,29 @@ chmod +x "$fake/gh"
   grep -q "api -X POST repos/{owner}/{repo}/environments/ghcr/deployment-branch-policies -f name=main -f type=branch" "$fake/log-c"
   test "$(grep -c 'deployment-branch-policies -f name=v\*' "$fake/log-c")" = 3
   test "$(grep -c 'deployment-branch-policies -f name=main' "$fake/log-c")" = 1
+  # Only a web app has the preview environment.
+  (! grep -q 'environments/preview' "$fake/log-c")
   grep -q 'https://pypi.org/manage/account/publishing/?provider=github&project_name=mono-me&owner=simonvanlierde&repository=project-templates&workflow_filename=python-release.yml&environment=pypi' "$fake/out-c"
   grep -q 'https://zenodo.org/account/settings/github/' "$fake/out-c"
+)
+# The web app (d) gets the preview environment, with no reviewer or branch limit.
+(
+  cd d
+  # shellcheck disable=SC2030,SC2031 # as above
+  export FAKE_LOG="$fake/log-d" FAKE_DIR="$fake" PATH="$fake:$PATH"
+  just repo-settings >"$fake/out-d"
+  just repo-settings >/dev/null
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/preview' "$FAKE_LOG"
+  (! grep -q 'environments/preview/' "$FAKE_LOG")
+  grep -q "Configured environment 'preview'" "$fake/out-d"
 )
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
 jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null
 # Before the Renovate app is on the repo, GitHub refuses it as a bypass actor. gh prints
 # the reason on stdout, as this fake does, and the recipe says to install the app.
-nobot=$(mktemp -d)
+nobot=$out/nobot-gh
+mkdir -p "$nobot"
 cat >"$nobot/gh" <<'FAKE'
 #!/usr/bin/env bash
 case $* in
@@ -1431,6 +1578,18 @@ grep -qx 'blank_issues_enabled: false' a/.github/ISSUE_TEMPLATE/config.yml
 grep -qx '    url: https://github.com/example-org/render-me/blob/main/.github/CONTRIBUTING.md' \
   a/.github/ISSUE_TEMPLATE/config.yml
 (! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
+# The bug form: a render with a web app (d) asks for a page URL and a browser and does not
+# force shell formatting; the others keep the command-line form. Both pass GitHub's schema.
+grep -qx '    id: url' d/.github/ISSUE_TEMPLATE/bug.yml
+grep -qx '    id: browser' d/.github/ISSUE_TEMPLATE/bug.yml
+(! grep -q 'render: shell' d/.github/ISSUE_TEMPLATE/bug.yml)
+grep -qx '      render: shell' a/.github/ISSUE_TEMPLATE/bug.yml
+(! grep -qE 'id: (url|browser)$' a/.github/ISSUE_TEMPLATE/bug.yml)
+# The browser field covers the environment question on the web form.
+(! grep -q 'id: environment' d/.github/ISSUE_TEMPLATE/bug.yml)
+grep -qx '    id: environment' a/.github/ISSUE_TEMPLATE/bug.yml
+uvx check-jsonschema --builtin-schema vendor.github-issue-forms \
+  a/.github/ISSUE_TEMPLATE/bug.yml d/.github/ISSUE_TEMPLATE/bug.yml
 # OpenSSF badge: passing (m) adds the test policy and a coding-standards line per stack;
 # silver (h) also adds the governance, roadmap and assurance-case skeletons. a is public
 # with the default none, so it gets neither.
@@ -1457,13 +1616,21 @@ grep -qx '    if: github.event.pull_request.head.repo.full_name != github.reposi
   a/.github/workflows/dco.yml
 (! grep -q '^    if: ' h/.github/workflows/dco.yml)
 grep -q 'id: dco-signoff' h/.pre-commit-config.yaml
-(! grep -q 'id: dco-signoff' a/.pre-commit-config.yaml)
-# The silver hook and sign-off setting need the silver dco.yml, so they follow its
-# condition: b answers silver privately, i publicly without a license.
-grep -q 'web_commit_signoff_required=true' h/justfile
-for r in b i; do
-  (! grep -q 'id: dco-signoff' "$r/.pre-commit-config.yaml")
-  (! grep -q 'web_commit_signoff_required' "$r/justfile")
+# The hook and sign-off setting follow dco.yml, which every public render has, with or
+# without a license; b is private and has none of the three.
+for r in a h i; do
+  grep -q 'id: dco-signoff' "$r/.pre-commit-config.yaml"
+  grep -q 'web_commit_signoff_required=true' "$r/justfile"
+done
+test ! -e b/.github/workflows/dco.yml
+(! grep -q 'id: dco-signoff' b/.pre-commit-config.yaml)
+(! grep -q 'web_commit_signoff_required' b/justfile)
+# A fresh clone has only origin, and a pushed branch needs a lease, not a bare force-push.
+for f in "$repo/CONTRIBUTING.md" a/.github/CONTRIBUTING.md h/.github/CONTRIBUTING.md \
+  a/.github/workflows/dco.yml; do
+  grep -qF 'git rebase --signoff origin/main' "$f"
+  grep -qF -- '--force-with-lease' "$f"
+  (! grep -q 'upstream/main\|force-push' "$f")
 done
 grep -qx '    if: github.event.pull_request.head.repo.full_name != github.repository' \
   i/.github/workflows/dco.yml
@@ -1476,7 +1643,7 @@ dco_filter=$(uv run --no-project --with pyyaml python -c '
 import re, sys, yaml
 run = yaml.safe_load(open(sys.argv[1]))["jobs"]["sign-off"]["steps"][0]["run"]
 print(re.search(r"--jq \x27(.*?)\x27\)", run, re.S).group(1))' "$repo/.github/workflows/dco.yml")
-commits=$(mktemp)
+commits=$out/dco-commits.json
 cat >"$commits" <<'JSON'
 [
   {"sha": "aaaaaaa1", "parents": [{}], "commit": {"message": "feat: signed\n\nSigned-off-by: Ada Lovelace <ada@example.com>"}},
@@ -1506,7 +1673,8 @@ assert jobs["push"]["needs"] == "update"
 assert any(s.get("uses", "").startswith("actions/download-artifact@") for s in jobs["push"]["steps"])
 assert not any("uvx" in s.get("run", "") for s in jobs["push"]["steps"])
 PYTEST
-cuh=$(mktemp -d)
+cuh=$out/copier-update
+mkdir -p "$cuh"
 awk -v d="$cuh" '/^      - /{n++} n{print >(d "/step" n)}' "$cu"
 grep -l 'copier@' "$cuh"/step* | grep -q .
 (! grep -l 'copier@' "$cuh"/step* | xargs grep -q COPIER_UPDATE_TOKEN)
@@ -1542,6 +1710,7 @@ chmod +x "$cuh/gh" "$cuh/uvx"
 (
   # A subshell drops the ERR trap; set -E would fire it in every (! ...) below.
   trap 'echo "check-render: failed at line $LINENO" >&2' ERR
+  # shellcheck disable=SC2031 # a separate subshell sets its own
   export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_ALLOW_PROTOCOL=file \
     GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.org GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.org
   git init -q -b main "$cuh/tpl"
@@ -1659,7 +1828,7 @@ for r in a c; do
 done
 
 # Rendering over a repo with docs/adr leaves ADRs intact, and usage docs guide migration:
-adr_dir=$(mktemp -d)
+adr_dir=$out/adr-check
 mkdir -p "$adr_dir/docs/adr"
 echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
 "${copier[@]}" --vcs-ref=HEAD \
@@ -1668,13 +1837,22 @@ echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
 test -f "$adr_dir/docs/adr/0001-x.md"
 test ! -e "$adr_dir/docs/decisions"
 grep -q 'docs/adr' "$repo/docs/usage.md"
-rm -rf "$adr_dir"
 
-# Sample code is not recreated on copier update:
-sample_up=$(mktemp -d)
+# Sample code is not recreated on copier update. The update must cross a template commit
+# that changes the sample files: from an unchanged template, copier keeps a project's own
+# deletions and edits even without the skip and exclude rules. A throwaway template repo
+# holds the working tree, so uncommitted edits are tested too.
+sample_tpl=$out/sample-tpl
+sample_up=$out/sample-up
+mkdir -p "$sample_tpl"
+cp -R "$repo/copier.yml" "$repo/includes" "$repo/template" "$sample_tpl/"
+git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
+"${git_t[@]}" init -q
+"${git_t[@]}" add -A
+"${git_t[@]}" commit -q -m base
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=sample-me --data 'stacks=[python]' \
-  --data kind=library "$repo" "$sample_up"
+  --data kind=library "$sample_tpl" "$sample_up" >/dev/null
 test -f "$sample_up/src/sample_me/__init__.py"
 test -f "$sample_up/tests/test_add.py"
 grep -q 'def add(' "$sample_up/src/sample_me/__init__.py"
@@ -1682,17 +1860,17 @@ cat >"$sample_up/src/sample_me/__init__.py" <<'PY'
 """sample-me package."""
 PY
 rm "$sample_up/tests/test_add.py"
-head_sha=$(git -C "$repo" rev-parse HEAD)
-# Point _src_path back to the local checkout so copier update does not try to fetch remote gh:
-sed -i.bak -e "s|^_src_path:.*|_src_path: $repo|" -e "s/^_commit:.*/_commit: $head_sha/" "$sample_up/.copier-answers.yml"
-rm "$sample_up/.copier-answers.yml.bak"
 git -C "$sample_up" init -q
-git -C "$sample_up" -c user.name=t -c user.email=t@example.org add -A
+git -C "$sample_up" add -A
 git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "customize package"
+for f in "$sample_tpl"/template/*/tests/*test_add.py*.jinja "$sample_tpl"/template/*/*/*/__init__.py.jinja; do
+  echo '# changed upstream' >>"$f"
+done
+"${git_t[@]}" commit -q -am "change the samples"
 # shellcheck disable=SC2031 # COPIER_VERSION is set at file top
-uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >/dev/null 2>&1
+uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >"$out/sample-up.log" 2>&1
+grep -q 'Updating to template version' "$out/sample-up.log"
 (! grep -q 'def add(' "$sample_up/src/sample_me/__init__.py")
 test ! -e "$sample_up/tests/test_add.py"
-rm -rf "$sample_up"
 
 echo "all render checks passed"

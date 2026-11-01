@@ -17,6 +17,10 @@ changes are marked **Breaking**.
 
 ### Added
 
+- A web app's bug form asks for the page URL and the browser, with the commit optional, and no longer formats the steps as shell. Other projects keep the command-line form; one with a web app and other stacks gets the web form.
+- `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch split off `origin/main`, for a check on each change. TypeScript has none: Stryker has no diff mode. See [Test extras](docs/usage.md#test-extras).
+- Web apps get pull request previews on a Cloudflare Worker, and Pages' own previews are no longer needed. To switch on, run `just repo-settings` to create the `preview` GitHub environment, add the secrets `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to it, and set the Pages project's Preview branch to None (Settings > Builds > Branch control). A `preview` job in `ts.yml` uploads each non-draft pull request's build, `preview-retire.yml` closes the preview with the pull request, and `wrangler.preview.jsonc` configures the Worker. Production stays on Pages. See [Pull request previews](docs/usage.md#pull-request-previews).
+- `just release X.Y.Z` cuts `[Unreleased]` in `CHANGELOG.md` into the new version with compare links, checks the manifest version when you publish, and then signs, verifies and pushes the annotated tag `vX.Y.Z` on `origin/main`. A tag with no changelog section no longer fails at `release-notes.sh`. See [Publishing](docs/usage.md#publishing).
 - Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. The Code of Conduct keeps the Contributor Covenant's CC-BY-SA-4.0. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).
 - Research and data-pipeline projects ask `data_license` for what they commit under `data/`: CC-BY-4.0 by default for research, CC0-1.0 for a pipeline. Until now data took the code license.
 - [docs/usage.md](docs/usage.md#licenses) says which code license to pick.
@@ -24,9 +28,14 @@ changes are marked **Breaking**.
 - A `profiling` option for the Python and Rust stacks, off by default. Python gets `just py-profile` (pyinstrument). Rust gets a `[profile.profiling]` build with frame pointers, `just rs-profile` (samply) and `just rs-counters` (`perf stat`). See [Profiling](docs/usage.md#profiling).
 - With publishing options enabled (PyPI, npm, GHCR), `just repo-settings` creates their GitHub environments with required reviewer and `v*` tag deployment policies (GHCR also on `main`). On public repos, it turns on CodeQL default setup and prints the PyPI pending-publisher and Zenodo URLs.
 - A Python web service's `compose.yaml` sets `OTEL_RESOURCE_ATTRIBUTES` to `project=<slug>,env=dev` unless you set it, so a monitoring hub can tell projects and environments apart. See [Python kinds](docs/python-kinds.md#web-service).
+- Python libraries get `just py-matrix`, which runs the tests on every Python version `python.yml` covers, and a README line for it.
+- The README installs the `prek` version the checks workflow runs, and the justfile says why `just hooks` can fail where CI passes.
 
 ### Changed
 
+- **Breaking:** `just py-mutation` now fails on a surviving mutant that is not listed in `tests/mutation-baseline.txt`, and on a listed one that no longer survives, so the weekly `mutation.yml` python job can fail. Upgrade: after `copier update`, run `just py-mutation` and list each survivor you accept in the new `tests/mutation-baseline.txt`, one per line with the reason. See [Test extras](docs/usage.md#test-extras).
+- A README of a project that publishes to PyPI or npm links to repository files by full GitHub URL, so the links work on the package page.
+- The README no longer has a "Releasing" section or the note on holding back the week-old-release rule. Public projects get both in `CONTRIBUTING.md`, the release steps in [Publishing](docs/usage.md#publishing). After `copier update`, delete those sections from the README if you don't want them twice.
 - **Breaking:** new projects no longer get `docs/decisions/`. Add the folder when a choice needs a record. `copier update` deletes `docs/decisions/README.md` and `0000-template.md`, even an index you edited; your numbered records stay. To keep the index, run `git checkout HEAD -- docs/decisions/README.md` before you commit the update.
 - **Breaking:** `cold-install.yml`, which runs the README's setup steps in a clean container, is now opt-in through the `cold_install` question under `customise`, off by default. `copier update` removes it; to keep it, run `copier update --data cold_install=true`. See [CI baseline](docs/ci-baseline.md).
 - `just repo-settings` adopts existing rulesets by target instead of rigid names, updating older rulesets (`protect-main`, `protect-main-checks`) in place without creating duplicates. If you renamed any check jobs, rerun `just repo-settings` after `copier update` to sync required status checks.
@@ -34,6 +43,8 @@ changes are marked **Breaking**.
 - **Breaking:** no more `.zenodo.json`. Zenodo reads `CITATION.cff` when a repo has none, and the rendered one held nothing more. After `copier update`, delete your `.zenodo.json` unless you added contributors who aren't authors, links to related records, communities or grants: Zenodo reads only `.zenodo.json` when one exists, so keep it complete. A project with `license` set to `none` gets no citation files, since a Zenodo record needs a license.
 - A web app's privacy and accessibility statements are rewritten in plain language. The privacy page opens with what is stored and whether anything leaves the device, then says how to delete it, and has no legal jargon. The accessibility page drops test file names and CI details. The TODOs ask for facts in the user's words. `copier update` merges the new wording into pages you have already filled in, so expect conflicts there: keep your facts and take the new phrasing where it fits. [docs/web-legal.md](docs/web-legal.md) now says how to write the pages, with an example.
 - The accessibility statement has no "Tested with" section any more: it only repeated the Chromium line from "How we check", where the browser and any hand tests now go. Its test checks for one heading fewer, so move your hand tests under "How we check" and delete the heading, or the test fails.
+- The `dco-signoff` commit-msg hook and the web sign-off setting in `just repo-settings` now come with every public render, as the `dco` workflow does, not only with `openssf_badge=silver` ([CI baseline](docs/ci-baseline.md)).
+- `cold-install.yml` also runs when `pyproject.toml`, `uv.lock` or `.python-version` change, so a lockfile that breaks first setup fails on the pull request.
 
 ### Fixed
 
@@ -48,6 +59,7 @@ changes are marked **Breaking**.
 - A package directory with `//`, such as `apps//web`, is refused. It counted as one level too many, so `biome.json` pointed above the repo.
 - A private or unlicensed project given `openssf_badge=silver` no longer gets the sign-off hook, the `web_commit_signoff_required` setting or the silver DCO wording, the same as it gets no silver documents. A private project had the hook with no `dco` workflow behind it, and the next update removed it.
 - The image labels in a Dockerfile show the description and name as written. They were JSON strings, which a Dockerfile reads differently: `Café` showed as `Caf\u00e9`, and `$USD` expanded to nothing.
+- The sign-off instructions in CONTRIBUTING and the `dco` failure message give `origin/main` as the base, which a fresh clone has, and tell you to use `git push --force-with-lease` on a branch you already pushed, not a plain force-push.
 
 ### Security
 

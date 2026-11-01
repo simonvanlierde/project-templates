@@ -1,0 +1,19 @@
+// PR previews only: CI's preview job uploads each pull request's build as a version
+// of this Worker, at a stable pr-<number> address. Production stays on Cloudflare
+// Pages (wrangler.jsonc), and Pages ignores this file. See "Pull request previews"
+// in docs/usage.md of the template for the one-time setup.
+//
+// To rename, rename the Worker in the Cloudflare dashboard first: a preview under a
+// new name creates a new Worker, which then blocks the rename.
+{
+  "name": "{{ slug | replace('.', '-') | replace('_', '-') }}-preview",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // A single-page app answers every path with index.html, as Pages does.
+    "not_found_handling": "single-page-application"
+  },
+  // Preview URLs need both.
+  "preview_urls": true,
+  "workers_dev": true
+}

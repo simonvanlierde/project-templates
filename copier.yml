@@ -66,6 +66,9 @@ _message_after_copy: |
   Before the first {{ reg }} release, set up the trusted publisher and the protected environment:
   https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing
   {%- endfor %}
+  To release, run `just release X.Y.Z` (it cuts the CHANGELOG, then signs and pushes the tag).
+  It needs a git signing key GitHub trusts. Set the version in the package manifest first
+  when you publish to PyPI or npm.
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
@@ -593,6 +596,14 @@ golangci_lint_version:
   when: false
   default: v2.15.0
 
+# Computed, never asked: the prek the README installs. Keep it equal to PREK_VERSION in
+# checks.yml (scripts/check-render.sh asserts that). Renovate bumps it from its `# renovate:` line.
+# renovate: datasource=github-releases depName=j178/prek
+prek_version:
+  type: str
+  when: false
+  default: 0.5.7
+
 # The govulncheck a new go.mod requires as a tool. Dependabot bumps it in the
 # project after that.
 # renovate: datasource=go depName=golang.org/x/vuln
@@ -662,6 +673,14 @@ copier_version:
   type: str
   when: false
   default: 9.19.1
+
+# Computed, never asked: the wrangler that a web app's preview jobs run with pnpm dlx.
+# Pinned to an exact version, since it holds a Cloudflare token. Renovate bumps it here.
+# renovate: datasource=npm depName=wrangler
+wrangler_version:
+  type: str
+  when: false
+  default: 4.150.0
 
 # A GitHub commit, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
 # badge URL (fair-software/howfairis#383). A commit, not the tag, because a tag can be

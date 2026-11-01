@@ -12,6 +12,34 @@ body:
       description: What you did, what you expected, and what happened instead.
     validations:
       required: true
+{% if 'ts' in stacks and ts_kind == 'web-app' %}
+  - type: input
+    id: url
+    attributes:
+      label: Page URL
+      description: The page where it happens, for example https://example.org/settings.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: What you clicked or typed, one step per line. If the bug is in a command or code, give that instead.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: Name and version, for example Firefox 130 on Windows 11.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit
+      description: If you run the app locally, the commit you used.
+{%- else %}
   - type: textarea
     id: reproduce
     attributes:
@@ -32,3 +60,4 @@ body:
     attributes:
       label: Environment
       description: Operating system and the versions of the tools involved.
+{%- endif %}

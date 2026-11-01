@@ -1,4 +1,7 @@
 {#- Trailing punctuation in a heading trips rumdl (MD026). -#}
+{#- PyPI and npm show this file as the package page, where a relative link is dead. -#}
+{%- set blob = 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/blob/main/' if publish_to_pypi or publish_to_npm else '' -%}
+{%- set tree = blob | replace('/blob/', '/tree/') -%}
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
 {% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}[![{{ s }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml)
@@ -8,11 +11,11 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/{{ slug }})](https://pypi.org/project/{{ slug }}/)
 {% endif %}{% if publish_to_npm %}[![npm](https://img.shields.io/npm/v/{{ slug }})](https://www.npmjs.com/package/{{ slug }})
 {% endif %}{% if public %}[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/{{ github_user }}/{{ slug }}/badge)](https://scorecard.dev/viewer/?uri=github.com/{{ github_user }}/{{ slug }})
-{% endif %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license | replace('-', '--') }}-blue.svg)](LICENSE)
+{% endif %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license | replace('-', '--') }}-blue.svg)]({{ blob }}LICENSE)
 {% endif %}
 Status: experimental. It may change in ways that break your code, without notice.
 {% if public %}
-Questions and bugs: see [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+Questions and bugs: see [CONTRIBUTING.md]({{ blob }}.github/CONTRIBUTING.md).
 {% endif %}{% if project_description %}
 {{ project_description }}
 {% endif %}
@@ -28,10 +31,6 @@ Questions and bugs: see [CONTRIBUTING.md](.github/CONTRIBUTING.md).
   ('[Go](https://go.dev/dl/)', 'go' in stacks),
   ('Docker', 'docker' in stacks),
 ] | selectattr('1') | map(attribute='0') | list -%}
-{% set hatches = [
-  ('`exclude-newer-package` under `[tool.uv]` in `' ~ ('' if python_dir == '.' else python_dir ~ '/') ~ 'pyproject.toml`', 'python' in stacks),
-  ('`minimumReleaseAgeExclude` in `' ~ ('' if ts_dir == '.' else ts_dir ~ '/') ~ 'pnpm-workspace.yaml`', 'ts' in stacks),
-] | selectattr('1') | map(attribute='0') | list -%}
 You need {{ tools[:-1] | join(', ') }} and {{ tools[-1] }}.
 
 ```sh
@@ -42,53 +41,34 @@ You need {{ tools[:-1] | join(', ') }} and {{ tools[-1] }}.
 {% endif %}{% if 'go' in stacks %}go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{ golangci_lint_version }}   # once per machine, checked against sum.golang.org
 just go-sync     # writes go.sum, which govulncheck needs: commit it
 {% endif %}{% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek install     # git hooks
-{% else %}uv tool install prek   # once per machine
+{% else %}uv tool install prek=={{ prek_version }}   # once per machine, the version CI uses
 prek install     # git hooks
 {% endif %}```
 {% if 'docker' in stacks %}
 The hadolint hook runs from its Docker image, so the git hooks need Docker running.
 {% endif %}
-`just` lists the tasks. They mirror what [.github/workflows/](.github/workflows/) runs.
+`just` lists the tasks. They mirror what [.github/workflows/]({{ tree }}.github/workflows/) runs.
 
 ```sh
 just check       # lint, types and tests for every stack here{% if 'docker' in stacks %} (it doesn't build the image: `just up` and the docker workflow do){% endif %}
 just fmt         # apply each stack's fixes and formatting
-just hooks       # the git hooks, as the checks workflow runs them{% if 'mutation' in test_extras %}{% for prefix, on in [('py', 'python' in stacks and kind == 'library'), ('ts', 'ts' in stacks and ts_kind == 'library'), ('rs', 'rust' in stacks and rust_kind == 'library'), ('go', 'go' in stacks and go_kind == 'library')] if on %}
-just {{ prefix }}-mutation   # do the tests catch planted bugs? Slow: CI runs it weekly (mutation.yml){% endfor %}{% endif %}{% if 'property' in test_extras %}{% for prefix, on in [('py', 'python' in stacks and kind == 'library'), ('ts', 'ts' in stacks and ts_kind == 'library'), ('rs', 'rust' in stacks and rust_kind == 'library'), ('go', 'go' in stacks and go_kind == 'library')] if on %}
+just hooks       # the git hooks, as the checks workflow runs them{% if 'python' in stacks and kind == 'library' %}
+just py-matrix   # the tests on every Python version CI covers ({{ python_min }} to {{ python_version }}){% endif %}{% if 'mutation' in test_extras %}{% for prefix, on in [('py', 'python' in stacks and kind == 'library'), ('ts', 'ts' in stacks and ts_kind == 'library'), ('rs', 'rust' in stacks and rust_kind == 'library'), ('go', 'go' in stacks and go_kind == 'library')] if on %}
+just {{ prefix }}-mutation   # do the tests catch planted bugs? Slow: CI runs it weekly (mutation.yml){% if prefix != 'ts' %}
+just {{ prefix }}-mutation-diff   # the same for the code you changed since origin/main{% endif %}{% endfor %}{% endif %}{% if 'property' in test_extras %}{% for prefix, on in [('py', 'python' in stacks and kind == 'library'), ('ts', 'ts' in stacks and ts_kind == 'library'), ('rs', 'rust' in stacks and rust_kind == 'library'), ('go', 'go' in stacks and go_kind == 'library')] if on %}
 just {{ prefix }}-property   # the property tests on far more inputs. CI runs it weekly (property.yml){% endfor %}{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}
 just ts-e2e      # accessibility, CSP and privacy checks in Chromium, against the production build{% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}
 just pipeline    # fetch, build and validate every source in sources.toml{% endif %}{% if 'docker' in stacks %}
 just up          # run each service in its container, rebuilt on source changes{% endif %}
 ```
-{% if hatches %}
-{{ 'uv and pnpm lock' if hatches | length == 2 else 'uv locks' if 'python' in stacks else 'pnpm locks' }} only releases at least a week old. If `just check` fails on
-a security fix newer than that, add the package to {{ hatches | join(' or ') }},
-and remove it a week later ([how](https://github.com/simonvanlierde/project-templates/blob/main/docs/tooling.md#dependencies)).
-{% endif %}
-## Releasing
-
-To release, add a `## [X.Y.Z]` section to `CHANGELOG.md`, then push the tag `vX.Y.Z`.
-{% if publish_to_pypi or publish_to_npm %}{% set py = '`' ~ ('' if python_dir == '.' else python_dir ~ '/') ~ 'pyproject.toml`' %}{% set pj = '`' ~ ('' if ts_dir == '.' else ts_dir ~ '/') ~ 'package.json`' %}Set the version in {{ py ~ ' and ' ~ pj if publish_to_pypi and publish_to_npm else py if publish_to_pypi else pj }} to X.Y.Z first: the build takes the version from there, and refuses a tag that differs.
-{% endif %}{% if publish_to_pypi %}`python-release.yml` publishes to PyPI, then creates the GitHub release with the distributions and their provenance bundle.
-Approve the `pypi` environment when prompted. Do not create the GitHub release by hand.
-If the release job fails after PyPI succeeds, delete any leftover draft with `gh release delete vX.Y.Z`.
-Re-run only the `release` job. A published immutable release needs a new patch version to fix its files.
-{% else %}`release.yml` makes the GitHub release from that section.
-{% endif -%}
-{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}
-Before the first release, run `just repo-settings` to set up the publishing environment
-({% for name, on in [('pypi', publish_to_pypi), ('npm', publish_to_npm), ('ghcr', publish_to_ghcr)] if on %}`{{ name }}`{% if not loop.last %}, {% endif %}{% endfor %})
-with yourself as required reviewer and a `v*` tag deployment policy{% if publish_to_ghcr %} (`ghcr` also to `main`,
-where the image is pushed too){% endif %}.
-The release workflows explain the rest in their header comments.
-{% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}{% set d = '' if python_dir == '.' else python_dir ~ '/' %}
+{% if 'python' in stacks and kind == 'data-pipeline' %}{% set d = '' if python_dir == '.' else python_dir ~ '/' %}
 ## Pipeline
 
-[`{{ d }}sources.toml`]({{ d }}sources.toml) declares every input: its URL, its reuse
+[`{{ d }}sources.toml`]({{ blob }}{{ d }}sources.toml) declares every input: its URL, its reuse
 terms, and whether the pipeline reads it yet (`status`). `just fetch` downloads each
 implemented source to `{{ d }}data/raw/` with a fetch record. `just build` writes
 `{{ d }}data/processed/`. `just validate` checks the published output against the fetch
-records. Neither directory goes into git. [ATTRIBUTION.md](ATTRIBUTION.md) lists what
+records. Neither directory goes into git. [ATTRIBUTION.md]({{ blob }}ATTRIBUTION.md) lists what
 this repository reuses, and on what terms.
 
 Commit `{{ d }}data/fetches.jsonl` after a fetch that changes it: it holds checksums, not
@@ -100,21 +80,35 @@ Issues turned on for this repository.
 
 `pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} dev` serves the app with live reload. Cloudflare Pages deploys it through its Git
 integration: create a Pages project from this repository, with build command
-`pnpm build`{% if ts_dir != '.' %}, root directory `{{ ts_dir }}`{% endif %} and output directory `dist`. Every push to `main` deploys, and
-every pull request gets a preview URL. [`{{ d }}public/_headers`]({{ d }}public/_headers) sets the
+`pnpm build`{% if ts_dir != '.' %}, root directory `{{ ts_dir }}`{% endif %} and output directory `dist`. Every push to `main` deploys. Every
+pull request that is not a draft gets a preview URL (see below). [`{{ d }}public/_headers`]({{ blob }}{{ d }}public/_headers) sets the
 response headers, including the Content-Security-Policy that the e2e tests run under.
 
 {% if user_data == 'accounts' -%}
-The footer links the [accessibility statement]({{ d }}docs/accessibility.md), the
-[privacy statement]({{ d }}docs/privacy.md) and the [terms of use]({{ d }}docs/terms.md), which the
+The footer links the [accessibility statement]({{ blob }}{{ d }}docs/accessibility.md), the
+[privacy statement]({{ blob }}{{ d }}docs/privacy.md) and the [terms of use]({{ blob }}{{ d }}docs/terms.md), which the
 build serves at `/accessibility`, `/privacy` and `/terms`.
 {%- else -%}
-The footer links the [accessibility statement]({{ d }}docs/accessibility.md) and the
-[privacy statement]({{ d }}docs/privacy.md), which the build serves at `/accessibility` and `/privacy`.
+The footer links the [accessibility statement]({{ blob }}{{ d }}docs/accessibility.md) and the
+[privacy statement]({{ blob }}{{ d }}docs/privacy.md), which the build serves at `/accessibility` and `/privacy`.
 {%- endif %}
 Fill in their TODOs before the first public deploy.
 [Tips for filling them in](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md).
+
+### Pull request previews
+
+Previews run on a separate Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-preview`, configured in
+[`{{ d }}wrangler.preview.jsonc`]({{ d }}wrangler.preview.jsonc). The `preview` job in `ts.yml` uploads each pull
+request's build to it at a `pr-<number>` address, shown in the job summary. Previews are public and
+send `X-Robots-Tag: noindex`. `preview-retire.yml` points the address at a "preview closed" page when
+the pull request closes or turns draft. One-time setup:
+
+1. Run `just repo-settings` to create the `preview` environment, or create it under Settings > Environments.
+2. Add the secrets `CLOUDFLARE_API_TOKEN` (a token with Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to that environment.
+3. In the Pages project, set Settings > Builds > Branch control > Preview branch to None.
+
+Without the token, the job skips with a notice.
 {% endif %}
 ## License
 
-{% if license == 'none' %}Not licensed for redistribution.{% else %}See [LICENSE](LICENSE) for the license terms.{% endif %}
+{% if license == 'none' %}Not licensed for redistribution.{% else %}See [LICENSE]({{ blob }}LICENSE) for the license terms.{% endif %}

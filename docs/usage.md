@@ -137,7 +137,7 @@ The amount of documentation depends on the project's audience, not the size of i
 
 ### Documentation rules
 
-- **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`).
+- **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`). A render with `publish_to_pypi` or `publish_to_npm` writes its README links this way.
 - **Stable links to documentation on `main`:** When documentation or CLI error messages link to rules or guides, point to `main`. Rule identifiers are permanent; if a rule is deprecated or removed, keep a stub heading so historical links continue to resolve.
 - **Single source of truth:** The README holds the overview and quickstart; code comments and docstrings define API contracts; `docs/` holds extended guides and references.
 
@@ -175,9 +175,24 @@ When projects record architectural choices, store them in `docs/decisions/`.
 - Playwright end-to-end tests in `tests/e2e/`: axe accessibility scans in light/dark modes and Content-Security-Policy enforcement.
 - Mandatory legal pages linked from the footer.
 - Cloudflare Pages configuration: `public/_headers` (security headers) and `wrangler.jsonc`.
+- Pull request previews: `wrangler.preview.jsonc`, a `preview` job in `.github/workflows/ts.yml` and `.github/workflows/preview-retire.yml`.
 - Bundle size budget in `scripts/checkBundleBudget.mjs`.
 
 Cloudflare Pages deploys via Git integration: configure build command `pnpm build`, output directory `dist`, and set the root directory to `ts_dir` for nested apps.
+
+### Pull request previews
+
+Production stays on Cloudflare Pages. Previews run on a separate Worker named `<slug>-preview`, so Pages needs no preview builds. Each pull request that is not a draft uploads its build as a version of that Worker, at a `pr-<number>` address. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. The job adds that header to the uploaded copy of the build only, so `public/_headers` and production never carry it.
+
+When a pull request closes or turns draft, `preview-retire.yml` points its address at a short "preview closed" page, because wrangler cannot delete an alias. To retire older previews, run that workflow by hand with a list of pull request numbers.
+
+Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` skip the job with a notice. One-time setup:
+
+1. Run `just repo-settings`. It creates the `preview` environment in GitHub (or create it under Settings > Environments).
+2. Create a Cloudflare API token from the "Edit Cloudflare Workers" template (Workers Scripts: Edit). Add it to the `preview` environment as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
+3. In the Pages project, open Settings > Builds > Branch control and set Preview branch to None, so Pages stops building previews of its own.
+
+The first upload creates the Worker with a placeholder page. The wrangler version is pinned in `ts.yml` and `preview-retire.yml`, and `copier update` brings new versions.
 
 Copier updates do not overwrite user-owned starter files: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`, `tests/e2e/routes.ts`, and markdown files in `docs/`.
 
@@ -282,7 +297,20 @@ Library kinds configure `test_extras` under `customise`:
 
 Property tests run fast suites locally and in CI. Weekly scheduled jobs (`.github/workflows/property.yml`) execute extended runs (10,000 cases or 10 minutes of fuzzing).
 
-Mutation testing runs weekly via `.github/workflows/mutation.yml` and on demand via `just <stack>-mutation`. Surviving mutants fail the Rust job; other stacks report survivors in the job summary.
+Mutation testing runs weekly via `.github/workflows/mutation.yml` and on demand via `just <stack>-mutation`. The Python and Rust jobs fail on a surviving mutant. The TypeScript and Go tools exit 0 when a mutant survives, so those jobs only print survivors.
+
+Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change. Mutant numbers shift when their function changes, so recheck the lines then. `copier update` adds the file with no entries; run the recipe once and list what it reports.
+
+A full run takes minutes to hours, so check each change with the diff recipe instead and keep the full run for the weekly job and before a release:
+
+| Stack | Per-change recipe | What it runs |
+| --- | --- | --- |
+| Python | `just py-mutation-diff` | the mutants of functions and methods changed since `origin/main`, in the mutated modules (`just/mutation_diff.py` finds them) |
+| Rust | `just rs-mutation-diff` | `cargo mutants --in-diff` on the changes since `origin/main` |
+| Go | `just go-mutation-diff` | `gremlins unleash --diff origin/main` |
+| TypeScript | none | Stryker has no diff mode. Its `--incremental` reuses the results file of an earlier run, which needs a stored file between runs, so the template adds no recipe |
+
+Each takes another git ref, e.g. `just py-mutation-diff main`.
 
 To add extras to an existing project:
 
@@ -294,9 +322,11 @@ copier update --data 'test_extras=[property]'
 
 To publish a release:
 
-1. Add a `## [X.Y.Z]` heading with notes to `CHANGELOG.md`.
-2. Update versions in `pyproject.toml` and `package.json` to match `X.Y.Z`.
-3. Commit and push tag `vX.Y.Z`.
+1. Set the version in `pyproject.toml` and `package.json` to `X.Y.Z` (only the one you publish).
+2. Run `just release X.Y.Z`. It checks that version, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits.
+3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it with `git verify-tag` and pushes it. The release workflow refuses a tag GitHub cannot verify, so set `user.signingkey` first (an ssh key works with `gpg.format ssh`).
+
+A render has no "Releasing" section in its README: the maintainer is the only reader, so the steps live here and in the rendered CONTRIBUTING.
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
 
