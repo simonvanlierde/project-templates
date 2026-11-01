@@ -593,6 +593,14 @@ golangci_lint_version:
   when: false
   default: v2.15.0
 
+# Computed, never asked: the prek the README installs. Keep it equal to PREK_VERSION in
+# checks.yml (scripts/check-render.sh asserts that). Renovate bumps it from its `# renovate:` line.
+# renovate: datasource=github-releases depName=j178/prek
+prek_version:
+  type: str
+  when: false
+  default: 0.5.7
+
 # The govulncheck a new go.mod requires as a tool. Dependabot bumps it in the
 # project after that.
 # renovate: datasource=go depName=golang.org/x/vuln

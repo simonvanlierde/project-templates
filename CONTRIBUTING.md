@@ -102,8 +102,10 @@ Every commit in a pull request carries a `Signed-off-by:` line, which says you w
 change or have the right to submit it under the MIT license: the
 [Developer Certificate of Origin 1.1](https://developercertificate.org/). `git commit -s`
 adds it, and the commit-msg hook refuses a commit without it. To add it to commits you
-already made, run `git rebase --signoff upstream/main` (the branch you started from) and
-force-push the branch. The `dco` workflow fails any pull request with a commit that lacks
+already made, run `git fetch origin`, then `git rebase --signoff origin/main`. That works in
+a clone of this repository, where `origin` is the only remote. If you work from a fork, use the
+remote that points at this repository (often `upstream`) in place of `origin`. If you pushed the
+branch already, update it with `git push --force-with-lease`, not a plain `--force`. The `dco` workflow fails any pull request with a commit that lacks
 it, the maintainer's included. Commits a bot writes in its own pull request are skipped,
 since Renovate adds the line itself. A human commit on a bot's branch is still checked.
 

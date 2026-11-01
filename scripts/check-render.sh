@@ -489,6 +489,23 @@ grep -qF 'or delete .github/workflows/cold-install.yml' "$out/k-cold.log"
 test ! -e "$out/a/.github/workflows/cold-install.yml"
 test ! -e "$out/b/.github/workflows/cold-install.yml"
 test -f "$out/d/.github/workflows/cold-install.yml"
+# A change to the lockfile or the interpreter pin can break the first setup.
+for p in '"**/pyproject.toml"' '"**/uv.lock"' '"**/.python-version"'; do
+  grep -qF -- "$p" "$out/d/.github/workflows/cold-install.yml"
+done
+# py-matrix is a library recipe over the versions python.yml tests, and cold-install skips it.
+# shellcheck disable=SC2016 # the recipe's literal "$v"
+grep -qF 'for v in 3.12 3.13 3.14; do uv --directory api run --isolated --locked --python "$v" pytest' c/just/python.just
+grep -qF 'python: ["3.12", "3.13", "3.14"]' c/.github/workflows/python.yml
+grep -qF 'just py-matrix ' c/README.md
+(! grep -q 'py-matrix' a/just/python.just d/just/python.just)
+(! grep -q 'py-matrix' c/.github/workflows/python.yml)
+cold c >"$out/c-matrix.sh"
+(! grep -q 'py-matrix' "$out/c-matrix.sh")
+# The README installs the prek that checks.yml runs, and justfile explains the SKIP gap.
+prek_ci=$(sed -n 's/^ *PREK_VERSION: *//p' c/.github/workflows/checks.yml)
+grep -qF "uv tool install prek==$prek_ci " a/README.md
+grep -qF 'checks workflow skips' c/justfile
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 (! grep -q 'Development Status' a/pyproject.toml)
 (! grep -q 'keywords =' a/pyproject.toml)
@@ -1180,7 +1197,7 @@ recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
 # Whitespace control around the fmt recipe's last line must not glue the next comment onto it.
 for r in a h t; do
-  grep -qx '# Run every git hook over the whole repo, not just staged files.' "$r/justfile"
+  grep -qx '# Run every git hook over the whole repo, not just staged files. The checks workflow skips' "$r/justfile"
 done
 
 # AGENTS.md names the check and test recipes, so each must be one the justfile has.
@@ -1297,8 +1314,8 @@ chmod +x "$fake/gh"
   for flag in allow_squash_merge=true allow_merge_commit=false allow_rebase_merge=false delete_branch_on_merge=true; do
     [[ "$patch " == *" -F $flag "* ]]
   done
-  # Below silver the sign-off setting stays untouched.
-  [[ "$patch " != *web_commit_signoff_required* ]]
+  # Every public render has the DCO check, so web commits need a sign-off from silver down.
+  [[ "$patch " == *" -F web_commit_signoff_required=true "* ]]
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
   # CodeQL default setup scans every PR and push on public repos.
@@ -1457,13 +1474,21 @@ grep -qx '    if: github.event.pull_request.head.repo.full_name != github.reposi
   a/.github/workflows/dco.yml
 (! grep -q '^    if: ' h/.github/workflows/dco.yml)
 grep -q 'id: dco-signoff' h/.pre-commit-config.yaml
-(! grep -q 'id: dco-signoff' a/.pre-commit-config.yaml)
-# The silver hook and sign-off setting need the silver dco.yml, so they follow its
-# condition: b answers silver privately, i publicly without a license.
-grep -q 'web_commit_signoff_required=true' h/justfile
-for r in b i; do
-  (! grep -q 'id: dco-signoff' "$r/.pre-commit-config.yaml")
-  (! grep -q 'web_commit_signoff_required' "$r/justfile")
+# The hook and sign-off setting follow dco.yml, which every public render has, with or
+# without a license; b is private and has none of the three.
+for r in a h i; do
+  grep -q 'id: dco-signoff' "$r/.pre-commit-config.yaml"
+  grep -q 'web_commit_signoff_required=true' "$r/justfile"
+done
+test ! -e b/.github/workflows/dco.yml
+(! grep -q 'id: dco-signoff' b/.pre-commit-config.yaml)
+(! grep -q 'web_commit_signoff_required' b/justfile)
+# A fresh clone has only origin, and a pushed branch needs a lease, not a bare force-push.
+for f in "$repo/CONTRIBUTING.md" a/.github/CONTRIBUTING.md h/.github/CONTRIBUTING.md \
+  a/.github/workflows/dco.yml; do
+  grep -qF 'git rebase --signoff origin/main' "$f"
+  grep -qF -- '--force-with-lease' "$f"
+  (! grep -q 'upstream/main\|force-push' "$f")
 done
 grep -qx '    if: github.event.pull_request.head.repo.full_name != github.repository' \
   i/.github/workflows/dco.yml

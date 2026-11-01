@@ -26,6 +26,12 @@ py-cov:
 # Tests only; extra arguments reach pytest (`just py-test -k name`).
 py-test *args:
     {{ uv }} run pytest {% raw %}{{ args }}{% endraw %}
+{%- if kind == 'library' %}
+
+# The tests on every Python version python.yml tests, each in a throwaway environment.
+py-matrix:
+    for v in {% for m in range(python_min.split('.')[1] | int, python_version.split('.')[1] | int + 1) %}3.{{ m }}{% if not loop.last %} {% endif %}{% endfor %}; do {{ uv }} run --isolated --locked --python "$v" pytest || exit 1; done
+{%- endif %}
 {%- if kind == 'library' and 'mutation' in test_extras %}
 
 # Plant small bugs in the package and report each one the tests miss. Slow: CI runs it

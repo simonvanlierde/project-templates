@@ -24,6 +24,8 @@ changes are marked **Breaking**.
 - A `profiling` option for the Python and Rust stacks, off by default. Python gets `just py-profile` (pyinstrument). Rust gets a `[profile.profiling]` build with frame pointers, `just rs-profile` (samply) and `just rs-counters` (`perf stat`). See [Profiling](docs/usage.md#profiling).
 - With publishing options enabled (PyPI, npm, GHCR), `just repo-settings` creates their GitHub environments with required reviewer and `v*` tag deployment policies (GHCR also on `main`). On public repos, it turns on CodeQL default setup and prints the PyPI pending-publisher and Zenodo URLs.
 - A Python web service's `compose.yaml` sets `OTEL_RESOURCE_ATTRIBUTES` to `project=<slug>,env=dev` unless you set it, so a monitoring hub can tell projects and environments apart. See [Python kinds](docs/python-kinds.md#web-service).
+- Python libraries get `just py-matrix`, which runs the tests on every Python version `python.yml` covers, and a README line for it.
+- The README installs the `prek` version the checks workflow runs, and the justfile says why `just hooks` can fail where CI passes.
 
 ### Changed
 
@@ -34,6 +36,8 @@ changes are marked **Breaking**.
 - **Breaking:** no more `.zenodo.json`. Zenodo reads `CITATION.cff` when a repo has none, and the rendered one held nothing more. After `copier update`, delete your `.zenodo.json` unless you added contributors who aren't authors, links to related records, communities or grants: Zenodo reads only `.zenodo.json` when one exists, so keep it complete. A project with `license` set to `none` gets no citation files, since a Zenodo record needs a license.
 - A web app's privacy and accessibility statements are rewritten in plain language. The privacy page opens with what is stored and whether anything leaves the device, then says how to delete it, and has no legal jargon. The accessibility page drops test file names and CI details. The TODOs ask for facts in the user's words. `copier update` merges the new wording into pages you have already filled in, so expect conflicts there: keep your facts and take the new phrasing where it fits. [docs/web-legal.md](docs/web-legal.md) now says how to write the pages, with an example.
 - The accessibility statement has no "Tested with" section any more: it only repeated the Chromium line from "How we check", where the browser and any hand tests now go. Its test checks for one heading fewer, so move your hand tests under "How we check" and delete the heading, or the test fails.
+- The `dco-signoff` commit-msg hook and the web sign-off setting in `just repo-settings` now come with every public render, as the `dco` workflow does, not only with `openssf_badge=silver` ([CI baseline](docs/ci-baseline.md)).
+- `cold-install.yml` also runs when `pyproject.toml`, `uv.lock` or `.python-version` change, so a lockfile that breaks first setup fails on the pull request.
 
 ### Fixed
 
@@ -48,6 +52,7 @@ changes are marked **Breaking**.
 - A package directory with `//`, such as `apps//web`, is refused. It counted as one level too many, so `biome.json` pointed above the repo.
 - A private or unlicensed project given `openssf_badge=silver` no longer gets the sign-off hook, the `web_commit_signoff_required` setting or the silver DCO wording, the same as it gets no silver documents. A private project had the hook with no `dco` workflow behind it, and the next update removed it.
 - The image labels in a Dockerfile show the description and name as written. They were JSON strings, which a Dockerfile reads differently: `Café` showed as `Caf\u00e9`, and `$USD` expanded to nothing.
+- The sign-off instructions in CONTRIBUTING and the `dco` failure message give `origin/main` as the base, which a fresh clone has, and tell you to use `git push --force-with-lease` on a branch you already pushed, not a plain force-push.
 
 ### Security
 
