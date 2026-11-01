@@ -1,7 +1,8 @@
 // Cloudflare Pages builds and deploys this app through its Git integration:
 // create the project in the dashboard from this repository, with build command
 // `pnpm build`{% if ts_dir != '.' %}, root directory `{{ ts_dir }}`{% endif %} and output directory `dist`. No workflow deploys it.
-// public/_headers sets the response headers.
+// public/_headers sets the response headers. Pull request previews run on a Worker
+// instead: see wrangler.preview.jsonc and .github/workflows/ts.yml.
 {
   "name": "{{ slug | replace('.', '-') | replace('_', '-') }}",
   "compatibility_date": "2026-10-01",

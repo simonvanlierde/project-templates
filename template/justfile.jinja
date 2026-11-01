@@ -56,7 +56,7 @@ citation:
     -{{ prek }} run citesync-write --hook-stage manual --all-files
     {{ prek }} run citesync --all-files
 {% endif %}
-# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}. Safe to rerun.
+# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}. Create the `preview` environment for pull request previews{% endif %}. Safe to rerun.
 repo-settings:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -120,6 +120,12 @@ repo-settings:
         fi
         echo "Configured environment '$env'."
     done
+{%- endif %}
+{%- if 'ts' in stacks and ts_kind == 'web-app' %}
+    # The preview job reads the Cloudflare secrets from this environment. It takes no reviewer
+    # or branch limit: previews run on pull request refs and must start unattended.
+    gh api -X PUT "repos/{owner}/{repo}/environments/preview" >/dev/null 2>"$err" || fail
+    echo "Configured environment 'preview'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to it: see the Deploy section of the README."
 {%- endif %}
 {%- if publish_to_pypi %}
     repo_full_name=$(gh api repos/{owner}/{repo} --jq .full_name 2>"$err") || fail

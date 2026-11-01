@@ -1,4 +1,6 @@
 # Response headers for Cloudflare Pages, which reads this file from the build output.
+# These apply to production. The preview job in ts.yml appends X-Robots-Tag: noindex to
+# its own copy of the build, so previews stay out of search results and this site does not.
 # The page loads nothing but its own files, so the policy allows this origin only.
 # script-src 'self' blocks inline scripts: put code that must run before first paint
 # in a file under public/ and load it with <script src>. tests/e2e/csp.spec.ts runs

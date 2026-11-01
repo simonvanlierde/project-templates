@@ -102,8 +102,8 @@ Issues turned on for this repository.
 
 `pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} dev` serves the app with live reload. Cloudflare Pages deploys it through its Git
 integration: create a Pages project from this repository, with build command
-`pnpm build`{% if ts_dir != '.' %}, root directory `{{ ts_dir }}`{% endif %} and output directory `dist`. Every push to `main` deploys, and
-every pull request gets a preview URL. [`{{ d }}public/_headers`]({{ d }}public/_headers) sets the
+`pnpm build`{% if ts_dir != '.' %}, root directory `{{ ts_dir }}`{% endif %} and output directory `dist`. Every push to `main` deploys. Every
+pull request that is not a draft gets a preview URL (see below). [`{{ d }}public/_headers`]({{ d }}public/_headers) sets the
 response headers, including the Content-Security-Policy that the e2e tests run under.
 
 {% if user_data == 'accounts' -%}
@@ -116,6 +116,20 @@ The footer links the [accessibility statement]({{ d }}docs/accessibility.md) and
 {%- endif %}
 Fill in their TODOs before the first public deploy.
 [Tips for filling them in](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md).
+
+### Pull request previews
+
+Previews run on a separate Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-preview`, configured in
+[`{{ d }}wrangler.preview.jsonc`]({{ d }}wrangler.preview.jsonc). The `preview` job in `ts.yml` uploads each pull
+request's build to it at a `pr-<number>` address, shown in the job summary. Previews are public and
+send `X-Robots-Tag: noindex`. `preview-retire.yml` points the address at a "preview closed" page when
+the pull request closes or turns draft. One-time setup:
+
+1. Run `just repo-settings` to create the `preview` environment, or create it under Settings > Environments.
+2. Add the secrets `CLOUDFLARE_API_TOKEN` (a token with Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to that environment.
+3. In the Pages project, set Settings > Builds > Branch control > Preview branch to None.
+
+Without the token, the job skips with a notice.
 {% endif %}
 ## License
 

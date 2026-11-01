@@ -671,6 +671,14 @@ copier_version:
   when: false
   default: 9.19.1
 
+# Computed, never asked: the wrangler that a web app's preview jobs run with pnpm dlx.
+# Pinned to an exact version, since it holds a Cloudflare token. Renovate bumps it here.
+# renovate: datasource=npm depName=wrangler
+wrangler_version:
+  type: str
+  when: false
+  default: 4.150.0
+
 # A GitHub commit, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
 # badge URL (fair-software/howfairis#383). A commit, not the tag, because a tag can be
 # moved. Renovate updates the commit and the tag in the comment together.
