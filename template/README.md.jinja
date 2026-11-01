@@ -1,7 +1,7 @@
 {#- Trailing punctuation in a heading trips rumdl (MD026). -#}
 {#- PyPI and npm show this file as the package page, where a relative link is dead. -#}
-{% set blob = 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/blob/main/' if publish_to_pypi or publish_to_npm else '' %}
-{% set tree = blob | replace('/blob/', '/tree/') %}
+{%- set blob = 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/blob/main/' if publish_to_pypi or publish_to_npm else '' -%}
+{%- set tree = blob | replace('/blob/', '/tree/') -%}
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
 {% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}[![{{ s }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ s }}.yml)
