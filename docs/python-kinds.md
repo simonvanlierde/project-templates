@@ -38,11 +38,11 @@ A `web-service` project includes:
 - A FastAPI app with `GET /health` returning `{"status": "ok"}`, probed by the Docker `HEALTHCHECK`.
 - An entrypoint that reads `HOST` and `PORT`. Listens on `127.0.0.1` by default. The Docker image sets `HOST=0.0.0.0`, and `compose.yaml` maps the port to `127.0.0.1`.
 - Interactive docs (`/docs`, `/redoc`, `/openapi.json`) disabled by default; set `API_DOCS=1` to enable them.
-- OpenTelemetry: zero-code instrumentation activates when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, exporting request spans and duration histograms via OTLP/HTTP. `compose.yaml` defaults `OTEL_RESOURCE_ATTRIBUTES` to `project=<slug>,env=dev` so collectors track project and deployment environment metadata. Connecting to an OTLP hub uses standard OpenTelemetry environment variables:
-  - `OTEL_EXPORTER_OTLP_ENDPOINT`: Collector endpoint URL (e.g. `http://otel-collector:4318` or `https://monitoring.example.org:4318`).
-  - `OTEL_EXPORTER_OTLP_HEADERS`: Authentication headers if required by the hub (`Authorization=Bearer ...`).
-  - `OTEL_EXPORTER_OTLP_PROTOCOL`: Export protocol (defaults to `http/protobuf`).
-  - `OTEL_RESOURCE_ATTRIBUTES`: Comma-separated resource attributes (`project=<slug>,env=dev`).
+- OpenTelemetry: zero-code instrumentation activates when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, exporting request spans and duration histograms via OTLP/HTTP. To send to a collector, set the standard OpenTelemetry variables:
+  - `OTEL_EXPORTER_OTLP_ENDPOINT`: the collector's URL, such as `http://otel-collector:4318` or `https://monitoring.example.org:4318`.
+  - `OTEL_EXPORTER_OTLP_HEADERS`: authentication headers, if the collector needs them (`Authorization=Bearer ...`).
+  - `OTEL_EXPORTER_OTLP_PROTOCOL`: the export protocol. The entrypoint defaults it to `http/protobuf`.
+  - `OTEL_RESOURCE_ATTRIBUTES`: comma-separated attributes on every span. `compose.yaml` defaults it to `service.namespace=<slug>,deployment.environment.name=dev`, so a shared collector can tell projects and environments apart. Set it to `deployment.environment.name=production` or similar where you deploy.
   When `OTEL_EXPORTER_OTLP_ENDPOINT` is unset, telemetry modules are not imported.
 - `just serve` and a `<slug>` console script to run outside Docker.
 - Tests for `/health` with telemetry enabled and disabled.
@@ -57,8 +57,8 @@ Only the Python `web-service` kind includes OpenTelemetry. Other kinds omit it i
 - **`data-pipeline`**: batch runs use heartbeat monitoring or dead-man alerts on failure rather than distributed tracing spans.
 - **`web-app` (TypeScript)**: client-side tracing is out of scope for the static hosting baseline.
 
-Service kinds for TypeScript, Go, and Rust are not yet scaffolded as template kinds. When implementing services or adding telemetry manually in those ecosystems, follow the same zero-code or zero-configuration OTLP/HTTP pattern:
+Service kinds for TypeScript, Go, and Rust are not scaffolded yet. A service you write in one of them follows the same pattern: telemetry starts only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, and everything else comes from the standard `OTEL_*` variables. Each SDK exports to `localhost` by default when started, so check the variable before starting it:
 
-- **Go**: Use `go.opentelemetry.io/contrib/exporters/autoexport`. It inspects standard `OTEL_*` environment variables and defaults to standard OTLP over HTTP or gRPC when `OTEL_TRACES_EXPORTER` is unset. Pair with `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to wrap handlers.
-- **TypeScript / Node**: Use `@opentelemetry/auto-instrumentations-node` with `@opentelemetry/exporter-trace-otlp-http`, enabled via `NODE_OPTIONS="--require @opentelemetry/auto-instrumentations-node/register"`. Guard exporter initialization on `OTEL_EXPORTER_OTLP_ENDPOINT` so the service runs silently when no collector is configured.
-- **Rust**: Use `opentelemetry-otlp` with `tracing-opentelemetry` and `tracing-subscriber`. Check whether `OTEL_EXPORTER_OTLP_ENDPOINT` is present before installing the OTLP tracer provider; when unset, keep only standard log output active.
+- **Go**: `go.opentelemetry.io/contrib/exporters/autoexport` picks the exporter from the `OTEL_*` variables, OTLP by default. Wrap handlers with `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+- **TypeScript / Node**: `@opentelemetry/auto-instrumentations-node` starts from `NODE_OPTIONS="--require @opentelemetry/auto-instrumentations-node/register"`. The register hook always starts the SDK, so add that option only where the endpoint is set, for example in the container entrypoint.
+- **Rust**: `opentelemetry-otlp` with `tracing-opentelemetry` and `tracing-subscriber`. Install the OTLP layer only when the endpoint is set; otherwise keep plain log output.

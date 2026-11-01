@@ -33,7 +33,7 @@ services:
       # http://otel-collector:4318 on a shared Docker network. Empty means unset.
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: {{ slug }}
-      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project={{ slug }},env=dev}
+      OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-service.namespace={{ slug }},deployment.environment.name=dev}
 {%- endif %}
     restart: unless-stopped
 {%- if loop.first %}

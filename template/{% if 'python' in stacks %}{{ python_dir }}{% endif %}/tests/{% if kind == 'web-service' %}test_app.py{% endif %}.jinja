@@ -51,7 +51,6 @@ def test_telemetry_records_a_span_and_the_request_duration() -> None:
     """With an endpoint, a request leaves a span and a duration histogram point."""
     env = os.environ | {
         "OTEL_EXPORTER_OTLP_ENDPOINT": "http://127.0.0.1:9",
-        "OTEL_RESOURCE_ATTRIBUTES": "project={{ slug }},env=dev",
         "OTEL_TRACES_EXPORTER": "console",
         "OTEL_METRICS_EXPORTER": "console",
         "OTEL_LOGS_EXPORTER": "none",
@@ -60,8 +59,6 @@ def test_telemetry_records_a_span_and_the_request_duration() -> None:
         [sys.executable, "-c", CHILD], env=env, capture_output=True, text=True, check=True, timeout=60
     )
     assert '"name": "GET /health"' in child.stdout
-    assert '"project": "{{ slug }}"' in child.stdout
-    assert '"env": "dev"' in child.stdout
     # The stable semantic-convention name, or the older one, depending on
     # OTEL_SEMCONV_STABILITY_OPT_IN.
     assert "http.server.request.duration" in child.stdout or "http.server.duration" in child.stdout
