@@ -60,7 +60,7 @@ classifiers = ["Private :: Do Not Upload"]
 # `{{ slug }}` serves on HOST:PORT, as `python -m {{ module_name }}` does in the image.
 [project.scripts]
 {{ slug | to_json }} = "{{ module_name }}.__main__:main"
-{% endif %}{% if kind == 'library' %}
+{% endif %}{% if kind == 'library' or publish_to_pypi %}
 [project.urls]
 Homepage = "https://github.com/{{ github_user }}/{{ slug }}"
 Issues = "https://github.com/{{ github_user }}/{{ slug }}/issues"
