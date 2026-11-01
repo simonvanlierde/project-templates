@@ -137,7 +137,7 @@ The amount of documentation depends on the project's audience, not the size of i
 
 ### Documentation rules
 
-- **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`).
+- **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`). A render with `publish_to_pypi` or `publish_to_npm` writes its README links this way.
 - **Stable links to documentation on `main`:** When documentation or CLI error messages link to rules or guides, point to `main`. Rule identifiers are permanent; if a rule is deprecated or removed, keep a stub heading so historical links continue to resolve.
 - **Single source of truth:** The README holds the overview and quickstart; code comments and docstrings define API contracts; `docs/` holds extended guides and references.
 
@@ -322,9 +322,11 @@ copier update --data 'test_extras=[property]'
 
 To publish a release:
 
-1. Add a `## [X.Y.Z]` heading with notes to `CHANGELOG.md`.
-2. Update versions in `pyproject.toml` and `package.json` to match `X.Y.Z`.
-3. Commit and push tag `vX.Y.Z`.
+1. Set the version in `pyproject.toml` and `package.json` to `X.Y.Z` (only the one you publish).
+2. Run `just release X.Y.Z`. It checks that version, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits.
+3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it with `git verify-tag` and pushes it. The release workflow refuses a tag GitHub cannot verify, so set `user.signingkey` first (an ssh key works with `gpg.format ssh`).
+
+A render has no "Releasing" section in its README: the maintainer is the only reader, so the steps live here and in the rendered CONTRIBUTING.
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
 

@@ -415,14 +415,20 @@ test ! -e a/.github/workflows/ts-release.yml
 # The release body is the CHANGELOG section of the tag. The last version before the
 # link references is the edge case: its section must not swallow them.
 test -f a/.github/workflows/release.yml
-# Every project's README says how to release; only publishing ones add the environment setup.
-grep -qx '## Releasing' a/README.md
-(! grep -q 'Before the first release' a/README.md)
-grep -q 'Before the first release' c/README.md
-# A publishing build takes its version from the manifest, not from the tag.
-(! grep -q 'Set the version in' a/README.md)
-grep -q 'Set the version in .api/pyproject.toml. and .apps/web/package.json. to X.Y.Z first' c/README.md
-grep -q 'Set the version in .web/package.json. to X.Y.Z first' m/README.md
+# Release steps are for the maintainer: the README has none, and the public CONTRIBUTING
+# points to the template docs for them.
+for r in a c m; do (! grep -q 'Releasing' "$r/README.md"); done
+# shellcheck disable=SC2016 # literal backticks in the rendered text
+grep -q '`just release X.Y.Z`' c/.github/CONTRIBUTING.md
+# PyPI and npm render the README as the package page, so its links must not be relative.
+# A link may start with http, # or {; anything else is a repo path that is dead there.
+for f in c/README.md c/api/README.md k/README.md m/README.md t/README.md; do
+  (! grep -E '\]\([^h#]' "$f")
+done
+grep -qF '](https://github.com/example-org/mono-me/blob/main/README.md)' c/api/README.md
+grep -qF '](https://github.com/example-org/mono-me/tree/main/.github/workflows/)' c/README.md
+# Without publishing, the README keeps its relative links.
+grep -qF '](LICENSE)' d/README.md
 test -x a/.github/scripts/release-notes.sh
 cat >"$out/sample-changelog.md" <<'MD'
 # Changelog
@@ -451,6 +457,47 @@ test "$("$notes" v1.1.0 "$out/sample-changelog.md" | grep -c .)" = 2
 test "$("$notes" 1.0.0 "$out/sample-changelog.md")" = $'\n- first release'
 (! "$notes" 2.0.0 "$out/sample-changelog.md" 2>/dev/null)
 (! "$notes" 1.0 "$out/sample-changelog.md" 2>/dev/null)
+# just release: the first run cuts the changelog, the second signs and pushes the tag.
+# The key is made here and the remote is a local bare repo; the host's git config and
+# keys are not read.
+rel=$out/rel
+mkdir "$rel"
+ssh-keygen -q -t ed25519 -N '' -f "$rel/key"
+git init -q --bare -b main "$rel/origin.git"
+cp -R k "$rel/w"
+(
+  # shellcheck disable=SC2030 # only this subshell reads it
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+  cd "$rel/w"
+  git init -q -b main
+  git remote add origin "$rel/origin.git"
+  git config user.name 'Marie Curie'
+  git config user.email curie@example.org
+  git config gpg.format ssh
+  git config user.signingkey "$rel/key.pub"
+  git config gpg.ssh.allowedSignersFile "$rel/signers"
+  echo "curie@example.org $(cat "$rel/key.pub")" >"$rel/signers"
+  git add -A
+  git commit -q -s -m 'chore: init'
+  git push -q origin main
+  # An empty [Unreleased] and a manifest at another version both refuse, changing nothing.
+  (! just release 0.1.0 >/dev/null 2>&1)
+  (! just release 0.2.0 >/dev/null 2>&1)
+  git diff --quiet
+  sed -i 's/^## \[Unreleased\]$/&\n\n- first thing/' CHANGELOG.md
+  git commit -q -s -am 'docs: add entry'
+  just release 0.1.0 >/dev/null
+  grep -qx '## \[0.1.0\] - [0-9-]*' CHANGELOG.md
+  grep -qx '\[Unreleased\]: https://github.com/example-org/adopt-me/compare/v0.1.0...HEAD' CHANGELOG.md
+  (! git rev-parse --verify -q v0.1.0 >/dev/null)
+  git push -q origin main
+  just release 0.1.0 >/dev/null
+  test "$(git cat-file -t v0.1.0)" = tag
+  git verify-tag v0.1.0 >/dev/null 2>&1
+  test "$(git -C "$rel/origin.git" rev-parse 'v0.1.0^{commit}')" = "$(git rev-parse HEAD)"
+  .github/scripts/release-notes.sh v0.1.0 CHANGELOG.md >/dev/null
+)
+
 # cold-install.yml runs the README's Development blocks. Run its step with `bash -ex`
 # swapped for `cat`, and without the chown, to see which commands it picks: d's README
 # has the install lines and `just check`, and the Docker, pipeline and e2e recipes are
@@ -889,8 +936,10 @@ grep -q 'packages: write' c/.github/workflows/docker.yml
 # root context (a, b).
 grep -qF 'paths: ["api/**", "apps/web/**", ".github/workflows/docker.yml"]' c/.github/workflows/docker.yml
 (! grep -q 'paths:' a/.github/workflows/docker.yml b/.github/workflows/docker.yml)
-# The push job also runs on main, so the README must not limit `ghcr` to tags alone.
-grep -q 'ghcr. also to .main' c/README.md
+# The push job also runs on main, so repo-settings must not limit `ghcr` to tags alone.
+# shellcheck disable=SC2016 # literal $env in the recipe
+grep -qF '"$env" = "ghcr"' c/justfile
+grep -qF -- '-f name="main" -f type="branch"' c/justfile
 # The publish job has no checkout; the wheels land in the root dist/.
 grep -qx '          path: dist/' c/.github/workflows/python-release.yml
 # A release made with GITHUB_TOKEN starts no workflow, so npm publishing
@@ -903,7 +952,6 @@ for w in python ts; do
   grep -q 'release-notes.sh" "$GITHUB_REF_NAME' "c/.github/workflows/$w-release.yml"
 done
 # Up-paths at both depths.
-grep -qF '](../README.md)' c/api/README.md
 grep -qF '"root": "../.."' c/apps/web/biome.json
 # data-pipeline: manifest and data dirs in the package, the rest at the root.
 test -f d/pipe/sources.toml
@@ -913,9 +961,10 @@ test -f d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/README.md
 # The week-old-release escape hatch names each nested lockfile owner, and only those.
-grep -qF 'uv and pnpm lock only' d/README.md
-grep -q 'in .pipe/pyproject\.toml. or .minimumReleaseAgeExclude. in .web/pnpm-workspace\.yaml.' d/README.md
-(! grep -q 'exclude-newer' h/README.md)
+(! grep -q 'exclude-newer' d/README.md)
+grep -qF 'uv and pnpm lock only' d/.github/CONTRIBUTING.md
+grep -q 'in .pipe/pyproject\.toml. or .minimumReleaseAgeExclude. in .web/pnpm-workspace\.yaml.' d/.github/CONTRIBUTING.md
+(! grep -q 'exclude-newer' h/.github/CONTRIBUTING.md)
 grep -q 'Apache License' d/LICENSE
 grep -qx 'BSD 3-Clause License' m/LICENSE
 grep -q '^Copyright (c) [0-9]\{4\}, ' m/LICENSE
@@ -1661,6 +1710,7 @@ chmod +x "$cuh/gh" "$cuh/uvx"
 (
   # A subshell drops the ERR trap; set -E would fire it in every (! ...) below.
   trap 'echo "check-render: failed at line $LINENO" >&2' ERR
+  # shellcheck disable=SC2031 # a separate subshell sets its own
   export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_ALLOW_PROTOCOL=file \
     GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.org GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.org
   git init -q -b main "$cuh/tpl"

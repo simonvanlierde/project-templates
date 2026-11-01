@@ -66,6 +66,9 @@ _message_after_copy: |
   Before the first {{ reg }} release, set up the trusted publisher and the protected environment:
   https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing
   {%- endfor %}
+  To release, run `just release X.Y.Z` (it cuts the CHANGELOG, then signs and pushes the tag).
+  It needs a git signing key GitHub trusts. Set the version in the package manifest first
+  when you publish to PyPI or npm.
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
