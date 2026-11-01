@@ -25,7 +25,15 @@ request outside what the project sets out to do is closed with a link to this se
 [Development](../README.md#development) in the README installs the tools, the dependencies
 and the git hooks. `just check` runs the checks CI runs, and `just fmt` fixes and
 formats.
-
+{% set hatches = [
+  ('`exclude-newer-package` under `[tool.uv]` in `' ~ ('' if python_dir == '.' else python_dir ~ '/') ~ 'pyproject.toml`', 'python' in stacks),
+  ('`minimumReleaseAgeExclude` in `' ~ ('' if ts_dir == '.' else ts_dir ~ '/') ~ 'pnpm-workspace.yaml`', 'ts' in stacks),
+] | selectattr('1') | map(attribute='0') | list -%}
+{% if hatches %}
+{{ 'uv and pnpm lock' if hatches | length == 2 else 'uv locks' if 'python' in stacks else 'pnpm locks' }} only releases at least a week old. If `just check` fails on
+a security fix newer than that, add the package to {{ hatches | join(' or ') }},
+and remove it a week later ([how](https://github.com/simonvanlierde/project-templates/blob/main/docs/tooling.md#dependencies)).
+{% endif %}
 ## Write commits and pull requests
 
 - **Commits** follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/):
@@ -45,6 +53,10 @@ formats.
   the people who use the project, not as a commit subject. Mark breaking changes
   **Breaking**, and put upgrade steps first under the version.
 - **The release notes** are that version's changelog section.
+
+## Make a release
+
+The maintainer runs `just release X.Y.Z`. [Publishing](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing) has the steps and the one-time setup.
 
 {% if license != 'none' and openssf_badge != 'none' -%}
 ## Tests and code style

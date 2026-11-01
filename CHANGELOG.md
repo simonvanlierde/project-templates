@@ -17,6 +17,7 @@ changes are marked **Breaking**.
 
 ### Added
 
+- `just release X.Y.Z` cuts `[Unreleased]` in `CHANGELOG.md` into the new version with compare links, checks the manifest version when you publish, and then signs, verifies and pushes the annotated tag `vX.Y.Z` on `origin/main`. A tag with no changelog section no longer fails at `release-notes.sh`. See [Publishing](docs/usage.md#publishing).
 - Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. The Code of Conduct keeps the Contributor Covenant's CC-BY-SA-4.0. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).
 - Research and data-pipeline projects ask `data_license` for what they commit under `data/`: CC-BY-4.0 by default for research, CC0-1.0 for a pipeline. Until now data took the code license.
 - [docs/usage.md](docs/usage.md#licenses) says which code license to pick.
@@ -27,6 +28,8 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- A README of a project that publishes to PyPI or npm links to repository files by full GitHub URL, so the links work on the package page.
+- The README no longer has a "Releasing" section or the note on holding back the week-old-release rule. Public projects get both in `CONTRIBUTING.md`, the release steps in [Publishing](docs/usage.md#publishing). After `copier update`, delete those sections from the README if you don't want them twice.
 - **Breaking:** new projects no longer get `docs/decisions/`. Add the folder when a choice needs a record. `copier update` deletes `docs/decisions/README.md` and `0000-template.md`, even an index you edited; your numbered records stay. To keep the index, run `git checkout HEAD -- docs/decisions/README.md` before you commit the update.
 - **Breaking:** `cold-install.yml`, which runs the README's setup steps in a clean container, is now opt-in through the `cold_install` question under `customise`, off by default. `copier update` removes it; to keep it, run `copier update --data cold_install=true`. See [CI baseline](docs/ci-baseline.md).
 - `just repo-settings` adopts existing rulesets by target instead of rigid names, updating older rulesets (`protect-main`, `protect-main-checks`) in place without creating duplicates. If you renamed any check jobs, rerun `just repo-settings` after `copier update` to sync required status checks.
