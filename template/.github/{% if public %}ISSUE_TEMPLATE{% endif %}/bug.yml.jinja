@@ -39,7 +39,7 @@ body:
     attributes:
       label: Commit
       description: If you run the app locally, the commit you used.
-{% else %}
+{%- else %}
   - type: textarea
     id: reproduce
     attributes:
@@ -60,4 +60,4 @@ body:
     attributes:
       label: Environment
       description: Operating system and the versions of the tools involved.
-{% endif %}
+{%- endif %}
