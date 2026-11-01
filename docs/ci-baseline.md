@@ -23,7 +23,7 @@ Checks included in repositories generated from this template, their purposes, an
 | `SECURITY.md` | `.github/` (when `public`) | Documents private vulnerability disclosure procedures, SLAs (14 days), and remediation policies |
 | `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, PR template | `.github/` (when `public`) | Provides contributor setup instructions, sign-off guidelines, and Contributor Covenant 3.0 |
 | Issue forms | `.github/ISSUE_TEMPLATE/` (when `public`) | Structured templates for bugs and feature requests, validated against GitHub schemas |
-| DCO sign-off check | `dco.yml` (when `public`) | Verifies `Signed-off-by:` lines on fork commits; enforced on all branches with `openssf_badge=silver` |
+| DCO sign-off check | `dco.yml` (when `public`) | Verifies `Signed-off-by:` lines on fork commits; enforced on all branches with `openssf_badge=silver`. The `dco-signoff` commit-msg hook refuses an unsigned commit locally in every public render |
 | `CITATION.cff`, `codemeta.json` | `library` kinds, plus Python `research` and `data-pipeline` | Maintained for Zenodo, Software Heritage, and GitHub citation. `citesync` verifies consistency |
 | Multi-version Python testing | `python.yml` (`library` kind) | Tests packages across all supported minor versions from `python_min` to `python_version` |
 | Code coverage reporting | `python.yml`, `ts.yml`, `codecov.yml` (`codecov` option) | Uploads coverage to Codecov; flags PR regressions exceeding 2 percentage points |
@@ -41,7 +41,7 @@ Checks included in repositories generated from this template, their purposes, an
 | Publication provenance | Release workflows | Generates Sigstore attestations and provenance bundles for PyPI, npm, and GHCR artifacts |
 | Container security scans | `docker.yml` (`docker` stack) | Trivy scans images for HIGH/CRITICAL vulnerabilities; weekly scheduled rebuilds check base updates |
 | Public API break detection | `python.yml` (griffe), `ts.yml` (API Extractor) | Compares public APIs against prior releases to detect breaking changes before publication |
-| Cold-install setup verification | `cold-install.yml` (when `cold_install`) | Executes README development instructions in a minimal Debian container to catch missing prerequisites |
+| Cold-install setup verification | `cold-install.yml` (when `cold_install`) | Executes README development instructions in a minimal Debian container to catch missing prerequisites. Also runs when `pyproject.toml`, `uv.lock` or `.python-version` change |
 | Scheduled dependency audits | `advisories.yml` | Runs weekly scans (`uv audit`, `pnpm audit`, `cargo deny`, `govulncheck`, `zizmor`) without commits |
 | Scheduled link validation | `links.yml` | Validates internal and external links weekly via lychee and reports broken URLs |
 | OpenSSF Scorecard | `scorecard.yml` (when `public`) | Evaluates supply-chain security practices and generates README status badges |

@@ -44,7 +44,9 @@ fmt:
 {%- endif %}
 {%- set prek = ('pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir) ~ ' exec prek' if ('ts' in stacks and 'python' not in stacks) else 'prek' %}
 
-# Run every git hook over the whole repo, not just staged files.
+# Run every git hook over the whole repo, not just staged files. The checks workflow skips
+# the hooks in its SKIP list, which the stack workflows run instead. Here they all run, so
+# this can fail where the checks workflow passes.
 hooks:
     {{ prek }} run -a
 {% if citable %}
@@ -69,7 +71,7 @@ repo-settings:
         exit 1
     }
     # Merge-method switches live on the repo itself; the ruleset also limits the PR button.
-    gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true{% if public and license != 'none' and openssf_badge == 'silver' %} -F web_commit_signoff_required=true{% endif %} >/dev/null 2>"$err" || fail
+    gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true{% if public %} -F web_commit_signoff_required=true{% endif %} >/dev/null 2>"$err" || fail
     # Adopt existing rulesets by target instead of rigid names, updating them in place.
     for name in main{% if public %} main-checks{% endif %} tags; do
         file=.github/rulesets/$name.json
