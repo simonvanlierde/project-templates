@@ -1232,7 +1232,8 @@ grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows
 test -f a/.github/rulesets/main.json
 test -f a/.github/rulesets/main-checks.json
 test -f a/.github/rulesets/tags.json
-fake=$(mktemp -d)
+fake=$out/fake-gh
+mkdir -p "$fake"
 echo '[{"name": "protect-main", "target": "branch", "id": 42}, {"name": "other", "id": 7}]' >"$fake/rulesets.json"
 cat >"$fake/gh" <<'FAKE'
 #!/usr/bin/env bash
@@ -1364,7 +1365,8 @@ jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_m
 jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null
 # Before the Renovate app is on the repo, GitHub refuses it as a bypass actor. gh prints
 # the reason on stdout, as this fake does, and the recipe says to install the app.
-nobot=$(mktemp -d)
+nobot=$out/nobot-gh
+mkdir -p "$nobot"
 cat >"$nobot/gh" <<'FAKE'
 #!/usr/bin/env bash
 case $* in
@@ -1476,7 +1478,7 @@ dco_filter=$(uv run --no-project --with pyyaml python -c '
 import re, sys, yaml
 run = yaml.safe_load(open(sys.argv[1]))["jobs"]["sign-off"]["steps"][0]["run"]
 print(re.search(r"--jq \x27(.*?)\x27\)", run, re.S).group(1))' "$repo/.github/workflows/dco.yml")
-commits=$(mktemp)
+commits=$out/dco-commits.json
 cat >"$commits" <<'JSON'
 [
   {"sha": "aaaaaaa1", "parents": [{}], "commit": {"message": "feat: signed\n\nSigned-off-by: Ada Lovelace <ada@example.com>"}},
@@ -1506,7 +1508,8 @@ assert jobs["push"]["needs"] == "update"
 assert any(s.get("uses", "").startswith("actions/download-artifact@") for s in jobs["push"]["steps"])
 assert not any("uvx" in s.get("run", "") for s in jobs["push"]["steps"])
 PYTEST
-cuh=$(mktemp -d)
+cuh=$out/copier-update
+mkdir -p "$cuh"
 awk -v d="$cuh" '/^      - /{n++} n{print >(d "/step" n)}' "$cu"
 grep -l 'copier@' "$cuh"/step* | grep -q .
 (! grep -l 'copier@' "$cuh"/step* | xargs grep -q COPIER_UPDATE_TOKEN)
@@ -1659,7 +1662,7 @@ for r in a c; do
 done
 
 # Rendering over a repo with docs/adr leaves ADRs intact, and usage docs guide migration:
-adr_dir=$(mktemp -d)
+adr_dir=$out/adr-check
 mkdir -p "$adr_dir/docs/adr"
 echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
 "${copier[@]}" --vcs-ref=HEAD \
@@ -1668,13 +1671,22 @@ echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
 test -f "$adr_dir/docs/adr/0001-x.md"
 test ! -e "$adr_dir/docs/decisions"
 grep -q 'docs/adr' "$repo/docs/usage.md"
-rm -rf "$adr_dir"
 
-# Sample code is not recreated on copier update:
-sample_up=$(mktemp -d)
+# Sample code is not recreated on copier update. The update must cross a template commit
+# that changes the sample files: from an unchanged template, copier keeps a project's own
+# deletions and edits even without the skip and exclude rules. A throwaway template repo
+# holds the working tree, so uncommitted edits are tested too.
+sample_tpl=$out/sample-tpl
+sample_up=$out/sample-up
+mkdir -p "$sample_tpl"
+cp -R "$repo/copier.yml" "$repo/includes" "$repo/template" "$sample_tpl/"
+git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
+"${git_t[@]}" init -q
+"${git_t[@]}" add -A
+"${git_t[@]}" commit -q -m base
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=sample-me --data 'stacks=[python]' \
-  --data kind=library "$repo" "$sample_up"
+  --data kind=library "$sample_tpl" "$sample_up" >/dev/null
 test -f "$sample_up/src/sample_me/__init__.py"
 test -f "$sample_up/tests/test_add.py"
 grep -q 'def add(' "$sample_up/src/sample_me/__init__.py"
@@ -1682,17 +1694,17 @@ cat >"$sample_up/src/sample_me/__init__.py" <<'PY'
 """sample-me package."""
 PY
 rm "$sample_up/tests/test_add.py"
-head_sha=$(git -C "$repo" rev-parse HEAD)
-# Point _src_path back to the local checkout so copier update does not try to fetch remote gh:
-sed -i.bak -e "s|^_src_path:.*|_src_path: $repo|" -e "s/^_commit:.*/_commit: $head_sha/" "$sample_up/.copier-answers.yml"
-rm "$sample_up/.copier-answers.yml.bak"
 git -C "$sample_up" init -q
-git -C "$sample_up" -c user.name=t -c user.email=t@example.org add -A
+git -C "$sample_up" add -A
 git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "customize package"
+for f in "$sample_tpl"/template/*/tests/*test_add.py*.jinja "$sample_tpl"/template/*/*/*/__init__.py.jinja; do
+  echo '# changed upstream' >>"$f"
+done
+"${git_t[@]}" commit -q -am "change the samples"
 # shellcheck disable=SC2031 # COPIER_VERSION is set at file top
-uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >/dev/null 2>&1
+uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >"$out/sample-up.log" 2>&1
+grep -q 'Updating to template version' "$out/sample-up.log"
 (! grep -q 'def add(' "$sample_up/src/sample_me/__init__.py")
 test ! -e "$sample_up/tests/test_add.py"
-rm -rf "$sample_up"
 
 echo "all render checks passed"
