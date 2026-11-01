@@ -27,6 +27,7 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- **Breaking:** `just py-mutation` now fails on a surviving mutant that is not listed in `tests/mutation-baseline.txt`, and on a listed one that no longer survives, so the weekly `mutation.yml` python job can fail. Upgrade: after `copier update`, run `just py-mutation` and list each survivor you accept in the new `tests/mutation-baseline.txt`, one per line with the reason. See [Test extras](docs/usage.md#test-extras).
 - **Breaking:** new projects no longer get `docs/decisions/`. Add the folder when a choice needs a record. `copier update` deletes `docs/decisions/README.md` and `0000-template.md`, even an index you edited; your numbered records stay. To keep the index, run `git checkout HEAD -- docs/decisions/README.md` before you commit the update.
 - **Breaking:** `cold-install.yml`, which runs the README's setup steps in a clean container, is now opt-in through the `cold_install` question under `customise`, off by default. `copier update` removes it; to keep it, run `copier update --data cold_install=true`. See [CI baseline](docs/ci-baseline.md).
 - `just repo-settings` adopts existing rulesets by target instead of rigid names, updating older rulesets (`protect-main`, `protect-main-checks`) in place without creating duplicates. If you renamed any check jobs, rerun `just repo-settings` after `copier update` to sync required status checks.

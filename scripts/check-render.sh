@@ -681,6 +681,13 @@ steps = wf["jobs"]["rust"]["steps"]
 assert any("test ! -s crates/lib/mutants.out/missed.txt" in s.get("run", "") for s in steps), steps
 assert any(s.get("with", {}).get("path") == "crates/lib/mutants.out/" for s in steps), steps
 PY
+# The python gate: a baseline file, a clean start, byte-order sorting, a failure both ways.
+test -f m/py/tests/mutation-baseline.txt
+test ! -e a/tests/mutation-baseline.txt
+grep -qxF '    rm -rf mutants' m/just/python.just
+grep -qxF '    export LC_ALL=C' m/just/python.just
+# shellcheck disable=SC2016 # a literal recipe line
+grep -qxF '    [ -z "$new$gone" ]' m/just/python.just
 # property.yml: the same shape, running each stack's property or fuzz recipe.
 test -f m/.github/workflows/property.yml
 test ! -e a/.github/workflows/property.yml

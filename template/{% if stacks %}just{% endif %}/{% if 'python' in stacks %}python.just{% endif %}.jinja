@@ -27,11 +27,30 @@ py-cov:
 py-test *args:
     {{ uv }} run pytest {% raw %}{{ args }}{% endraw %}
 {%- if kind == 'library' and 'mutation' in test_extras %}
+{%- set cd = '' if python_dir == '.' else 'cd ' ~ python_dir ~ '\n    ' %}
 
-# Plant small bugs in the package and report each one the tests miss. Slow: CI runs it
-# weekly (mutation.yml); run it by hand after writing tests. `mutmut browse` shows survivors.
+# Plant small bugs in the package. Fails on a mutant the tests miss (or that no test
+# reaches) unless tests/mutation-baseline.txt lists it, and on a listed one that no longer
+# survives. Slow: CI runs it weekly (mutation.yml); run it by hand after writing tests.
+# `mutmut browse` shows survivors.
 py-mutation:
-    {{ uv }} run mutmut run
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ cd }}# Byte order, so sort and comm agree on the ǁ in class method mutant names.
+    export LC_ALL=C
+    # mutmut reuses results from mutants/ even after the tests change, so start clean.
+    rm -rf mutants
+    uv run mutmut run >/dev/null
+    survivors=$(uv run mutmut results | sed -nE 's/^ *(.*): (survived|no tests)$/\1/p' | sort)
+    listed=$(grep -vE '^(#|$)' tests/mutation-baseline.txt | awk '{ print $1 }' | sort || true)
+    new=$(comm -23 <(echo "$survivors" | sed '/^$/d') <(echo "$listed" | sed '/^$/d'))
+    gone=$(comm -13 <(echo "$survivors") <(echo "$listed" | sed '/^$/d'))
+    echo "$(echo "$survivors" | grep -c . || true) survivors; not in tests/mutation-baseline.txt:"
+    echo "${new:-none}"
+    echo "listed but no longer surviving (drop them):"
+    echo "${gone:-none}"
+    [ -z "$new$gone" ]
+
 {%- endif %}
 {%- if profiling %}
 

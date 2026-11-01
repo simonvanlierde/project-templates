@@ -1,0 +1,4 @@
+# Mutants that `just py-mutation` allows to survive, one per line, then the reason.
+# Add one only for a change no test could see. Mutant numbers shift when their function
+# changes: rerun and recheck each line then. Example line:
+# mypkg.core.x_parse__mutmut_3  the default is the same value as the fallback
