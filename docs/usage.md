@@ -305,9 +305,9 @@ A full run takes minutes to hours, so check each change with the diff recipe ins
 
 | Stack | Per-change recipe | What it runs |
 | --- | --- | --- |
-| Python | `just py-mutation-diff` | the mutants of functions and methods changed since `origin/main`, in the mutated modules (`just/mutation_diff.py` finds them) |
-| Rust | `just rs-mutation-diff` | `cargo mutants --in-diff` on the changes since `origin/main` |
-| Go | `just go-mutation-diff` | `gremlins unleash --diff origin/main` |
+| Python | `just py-mutation-diff` | the mutants of functions and methods the branch changed since it split off `origin/main`, in the mutated modules (`just/mutation_diff.py` finds them) |
+| Rust | `just rs-mutation-diff` | `cargo mutants --in-diff` on the branch's changes since it split off `origin/main` |
+| Go | `just go-mutation-diff` | `gremlins unleash --diff` against the commit where the branch split off `origin/main` |
 | TypeScript | none | Stryker has no diff mode. Its `--incremental` reuses the results file of an earlier run, which needs a stored file between runs, so the template adds no recipe |
 
 Each takes another git ref, e.g. `just py-mutation-diff main`.

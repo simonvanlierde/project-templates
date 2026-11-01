@@ -98,7 +98,7 @@ Fill in their TODOs before the first public deploy.
 ### Pull request previews
 
 Previews run on a separate Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-preview`, configured in
-[`{{ d }}wrangler.preview.jsonc`]({{ d }}wrangler.preview.jsonc). The `preview` job in `ts.yml` uploads each pull
+[`{{ d }}wrangler.preview.jsonc`]({{ blob }}{{ d }}wrangler.preview.jsonc). The `preview` job in `ts.yml` uploads each pull
 request's build to it at a `pr-<number>` address, shown in the job summary. Previews are public and
 send `X-Robots-Tag: noindex`. `preview-retire.yml` points the address at a "preview closed" page when
 the pull request closes or turns draft. One-time setup:

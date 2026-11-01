@@ -35,7 +35,9 @@
 {{ wd }}go-mutation-diff base='origin/main':
     #!/usr/bin/env bash
     set -euo pipefail
-    go run github.com/go-gremlins/gremlins/cmd/gremlins@{{ gremlins_version }} unleash --diff "$(git merge-base {% raw %}{{ base }}{% endraw %} HEAD)"
+    # gremlins reads `git diff` paths from the repo root; diff.relative makes them relative to here.
+    GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=diff.relative GIT_CONFIG_VALUE_0=true \
+      go run github.com/go-gremlins/gremlins/cmd/gremlins@{{ gremlins_version }} unleash --diff "$(git merge-base {% raw %}{{ base }}{% endraw %} HEAD)"
 {%- endif %}
 {%- if go_kind == 'library' and 'property' in test_extras %}
 

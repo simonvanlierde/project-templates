@@ -195,6 +195,10 @@ jobs:
 {%- endif %}
     steps:
       - id: gate
+{%- if ts_dir != '.' %}
+        # Runs before checkout, when {{ ts_dir }}/ does not exist yet.
+        working-directory: .
+{%- endif %}
         env:
           TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           FORK: {% raw %}${{ github.event.pull_request.head.repo.full_name != github.repository }}{% endraw %}
