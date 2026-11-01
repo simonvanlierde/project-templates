@@ -966,6 +966,37 @@ grep -qF 'image: mcr.microsoft.com/playwright:v' d/.github/workflows/ts.yml
 grep -qF 'needs.check.outputs.playwright }}-noble' d/.github/workflows/ts.yml
 grep -q 'fonts-dejavu-core' d/.github/workflows/ts.yml
 grep -qx '          path: web/playwright-report/' d/.github/workflows/ts.yml
+# Pull request previews: web-app renders get the preview Worker config, the preview job
+# and preview-retire.yml, with wrangler at the pinned version and nested paths for d.
+# Production headers never carry noindex.
+wrangler_pin=$(sed -n '/^wrangler_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+test -n "$wrangler_pin"
+grep -qF '"name": "pipe-me-preview",' d/web/wrangler.preview.jsonc
+grep -qF '"directory": "./dist",' d/web/wrangler.preview.jsonc
+grep -qF '"preview_urls": true,' d/web/wrangler.preview.jsonc
+grep -qF '"name": "app-preview",' s/wrangler.preview.jsonc
+grep -qx '  preview:' d/.github/workflows/ts.yml
+grep -qx '          name: preview-dist' d/.github/workflows/ts.yml
+test "$(grep -cx '          path: web/dist' d/.github/workflows/ts.yml)" = 2
+grep -qx '      name: preview' d/.github/workflows/ts.yml
+grep -qF "pnpm dlx wrangler@$wrangler_pin versions upload --config wrangler.preview.jsonc --preview-alias" d/.github/workflows/ts.yml
+grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
+(! grep -q '^  X-Robots-Tag' d/web/public/_headers)
+test -f d/.github/workflows/preview-retire.yml
+grep -qF "pnpm dlx wrangler@$wrangler_pin versions upload --config wrangler.preview.jsonc --assets retired" d/.github/workflows/preview-retire.yml
+grep -qx '    environment: preview' d/.github/workflows/preview-retire.yml
+grep -qx '        working-directory: web' d/.github/workflows/preview-retire.yml
+grep -qx '          package_json_file: web/package.json' d/.github/workflows/preview-retire.yml
+grep -qF 'href="https://pipe-me.pages.dev"' d/.github/workflows/preview-retire.yml
+# A web app at the repo root builds in place.
+test -f s/wrangler.preview.jsonc
+test -f s/.github/workflows/preview-retire.yml
+grep -qx '          path: dist' s/.github/workflows/ts.yml
+(! grep -q 'working-directory' s/.github/workflows/preview-retire.yml)
+# Other kinds get none of it.
+test ! -e a/wrangler.preview.jsonc
+test ! -e a/.github/workflows/preview-retire.yml
+(! grep -q 'preview' a/.github/workflows/ts.yml)
 grep -q 'stages: \[pre-push\]' d/.pre-commit-config.yaml
 grep -qx 'default_install_hook_types: \[pre-commit, commit-msg, pre-push\]' d/.pre-commit-config.yaml
 (! grep -q 'pre-push' a/.pre-commit-config.yaml)
@@ -1356,8 +1387,21 @@ chmod +x "$fake/gh"
   grep -q "api -X POST repos/{owner}/{repo}/environments/ghcr/deployment-branch-policies -f name=main -f type=branch" "$fake/log-c"
   test "$(grep -c 'deployment-branch-policies -f name=v\*' "$fake/log-c")" = 3
   test "$(grep -c 'deployment-branch-policies -f name=main' "$fake/log-c")" = 1
+  # Only a web app has the preview environment.
+  (! grep -q 'environments/preview' "$fake/log-c")
   grep -q 'https://pypi.org/manage/account/publishing/?provider=github&project_name=mono-me&owner=simonvanlierde&repository=project-templates&workflow_filename=python-release.yml&environment=pypi' "$fake/out-c"
   grep -q 'https://zenodo.org/account/settings/github/' "$fake/out-c"
+)
+# The web app (d) gets the preview environment, with no reviewer or branch limit.
+(
+  cd d
+  # shellcheck disable=SC2030,SC2031 # as above
+  export FAKE_LOG="$fake/log-d" FAKE_DIR="$fake" PATH="$fake:$PATH"
+  just repo-settings >"$fake/out-d"
+  just repo-settings >/dev/null
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/preview' "$FAKE_LOG"
+  (! grep -q 'environments/preview/' "$FAKE_LOG")
+  grep -q "Configured environment 'preview'" "$fake/out-d"
 )
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null

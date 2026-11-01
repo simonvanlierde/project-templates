@@ -17,6 +17,7 @@ changes are marked **Breaking**.
 
 ### Added
 
+- Web apps get pull request previews on a Cloudflare Worker, and Pages' own previews are no longer needed. To switch on, run `just repo-settings` to create the `preview` GitHub environment, add the secrets `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to it, and set the Pages project's Preview branch to None (Settings > Builds > Branch control). A `preview` job in `ts.yml` uploads each non-draft pull request's build, `preview-retire.yml` closes the preview with the pull request, and `wrangler.preview.jsonc` configures the Worker. Production stays on Pages. See [Pull request previews](docs/usage.md#pull-request-previews).
 - Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. The Code of Conduct keeps the Contributor Covenant's CC-BY-SA-4.0. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).
 - Research and data-pipeline projects ask `data_license` for what they commit under `data/`: CC-BY-4.0 by default for research, CC0-1.0 for a pipeline. Until now data took the code license.
 - [docs/usage.md](docs/usage.md#licenses) says which code license to pick.
