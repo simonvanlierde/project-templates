@@ -64,6 +64,7 @@ done
   --data publish_to_pypi=true --data publish_to_npm=true --data codecov=true \
   --data codspeed=true --data profiling=true \
   --data 'test_extras=[mutation]' \
+  --data cold_install=true \
   --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
@@ -74,7 +75,7 @@ d_args=(
   --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
-  --data dependency_bot=renovate --data codecov=true
+  --data dependency_bot=renovate --data codecov=true --data cold_install=true
   --data 'docker_stacks=[python]'
 )
 "${copier[@]}" --vcs-ref=HEAD \
@@ -127,7 +128,7 @@ grep -q 'project record' "$out/h/docs/decisions/README.md"
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause --data publish_to_npm=true . "$out/m"
+  --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true . "$out/m"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
@@ -144,7 +145,7 @@ echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=adopt-me --data customise=true --data python_layout=flat \
   --data license=GPL-3.0-or-later --data codspeed=true --data 'test_extras=[mutation]' \
-  --data publish_to_pypi=true . "$out/k"
+  --data publish_to_pypi=true --data cold_install=true . "$out/k"
 grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
 grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
@@ -488,6 +489,9 @@ if cold k >/dev/null 2>"$out/k-cold.log"; then
   exit 1
 fi
 grep -qF 'or delete .github/workflows/cold-install.yml' "$out/k-cold.log"
+test ! -e "$out/a/.github/workflows/cold-install.yml"
+test ! -e "$out/b/.github/workflows/cold-install.yml"
+test -f "$out/d/.github/workflows/cold-install.yml"
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 (! grep -q 'Development Status' a/pyproject.toml)
 (! grep -q 'keywords =' a/pyproject.toml)

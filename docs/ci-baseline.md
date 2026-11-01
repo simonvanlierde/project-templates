@@ -41,7 +41,7 @@ Checks included in repositories generated from this template, their purposes, an
 | Publication provenance | Release workflows | Generates Sigstore attestations and provenance bundles for PyPI, npm, and GHCR artifacts |
 | Container security scans | `docker.yml` (`docker` stack) | Trivy scans images for HIGH/CRITICAL vulnerabilities; weekly scheduled rebuilds check base updates |
 | Public API break detection | `python.yml` (griffe), `ts.yml` (API Extractor) | Compares public APIs against prior releases to detect breaking changes before publication |
-| Cold-install setup verification | `cold-install.yml` | Executes README development instructions in a minimal Debian container to catch missing prerequisites |
+| Cold-install setup verification | `cold-install.yml` (when `cold_install`) | Executes README development instructions in a minimal Debian container to catch missing prerequisites |
 | Scheduled dependency audits | `advisories.yml` | Runs weekly scans (`uv audit`, `pnpm audit`, `cargo deny`, `govulncheck`, `zizmor`) without commits |
 | Scheduled link validation | `links.yml` | Validates internal and external links weekly via lychee and reports broken URLs |
 | OpenSSF Scorecard | `scorecard.yml` (when `public`) | Evaluates supply-chain security practices and generates README status badges |

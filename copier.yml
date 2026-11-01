@@ -384,6 +384,13 @@ profiling:
   help: Profiling recipes (a sampling profiler on Python; a frame-pointer build, samply and perf stat on Rust)
   default: false
 
+cold_install:
+  type: bool
+  when: "{{ stacks }}"
+  ask: "{{ customise }}"
+  help: Verify README setup instructions in a fresh Debian container on setup changes
+  default: false
+
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
 # projects. These documents are starting points for the project to complete.
 openssf_badge:
