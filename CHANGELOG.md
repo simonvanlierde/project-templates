@@ -17,6 +17,7 @@ changes are marked **Breaking**.
 
 ### Added
 
+- The pull request template asks for `How I know it works:` (the command and its output, or a test that fails without the change) and `What to check:`. Existing projects get them with `copier update`.
 - A web app's bug form asks for the page URL and the browser, with the commit optional, and no longer formats the steps as shell. Other projects keep the command-line form; one with a web app and other stacks gets the web form.
 - `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch split off `origin/main`, for a check on each change. TypeScript has none: Stryker has no diff mode. See [Test extras](docs/usage.md#test-extras).
 - Web apps get pull request previews on a Cloudflare Worker, and Pages' own previews are no longer needed. To switch on, run `just repo-settings` to create the `preview` GitHub environment, add the secrets `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to it, and set the Pages project's Preview branch to None (Settings > Builds > Branch control). A `preview` job in `ts.yml` uploads each non-draft pull request's build, `preview-retire.yml` closes the preview with the pull request, and `wrangler.preview.jsonc` configures the Worker. Production stays on Pages. See [Pull request previews](docs/usage.md#pull-request-previews).

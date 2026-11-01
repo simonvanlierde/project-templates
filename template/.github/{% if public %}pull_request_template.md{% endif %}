@@ -7,3 +7,7 @@ What this fixes or adds, and why, in a sentence or two.
 - Three or four bullets are enough.
 
 Tests: what you ran, or why no test applies.
+
+How I know it works: the command and its output, or the test that fails when the change is reverted.
+
+What to check: the design choice, public API, numerics or security path that only a person can judge.
