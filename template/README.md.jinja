@@ -16,6 +16,11 @@ Questions and bugs: see [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 {% endif %}{% if project_description %}
 {{ project_description }}
 {% endif %}
+{%- if publish_to_pypi or publish_to_npm %}
+## Quickstart
+
+Add a concise usage walkthrough here (under about 1,000 words) showing installation and common tasks. Detailed guides and API references belong in [`docs/`](https://github.com/{{ github_user }}/{{ slug }}/tree/main/docs).
+{% endif %}
 ## Development
 
 {# uv runs Python and installs prek; a TS-only project gets prek through pnpm. -#}

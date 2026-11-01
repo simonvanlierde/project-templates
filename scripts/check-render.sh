@@ -537,6 +537,9 @@ grep -qF 'https://app.codspeed.io/' c/README.md
 grep -qF 'img.shields.io/pypi/v/mono-me' c/README.md
 grep -qF 'img.shields.io/pypi/pyversions/mono-me' c/README.md
 grep -qF 'img.shields.io/npm/v/mono-me' c/README.md
+grep -qx '## Quickstart' c/README.md
+grep -qF 'https://github.com/example-org/mono-me/tree/main/docs' c/README.md
+(! grep -q '## Quickstart' a/README.md)
 grep -qF 'https://codecov.io/gh/' d/README.md
 (! grep -q -e codspeed -e img.shields.io/pypi -e img.shields.io/npm d/README.md)
 (! grep -q -e codecov -e codspeed -e img.shields.io/pypi -e img.shields.io/npm b/README.md)
