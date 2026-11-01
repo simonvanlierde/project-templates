@@ -50,6 +50,8 @@ for f in svc/Dockerfile Dockerfile; do
   # shellcheck disable=SC1003,SC2016 # the line's literal \$ and trailing \
   grep -qxF '      org.opencontainers.image.description="A \"quoted\" {{ one }}, naïve \$USD" \' "$out/b/$f"
 done
+# shellcheck disable=SC2016 # literal ${...} in docker compose default value
+grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name--co,env=dev}' "$out/b/compose.yaml"
 
 # c: the only render with nested paths, at two depths to catch hardcoded
 # up-paths. The rust crate and go module are the binary kind. Render a has the
