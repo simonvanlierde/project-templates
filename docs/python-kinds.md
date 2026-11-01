@@ -38,7 +38,12 @@ A `web-service` project includes:
 - A FastAPI app with `GET /health` returning `{"status": "ok"}`, probed by the Docker `HEALTHCHECK`.
 - An entrypoint that reads `HOST` and `PORT`. Listens on `127.0.0.1` by default. The Docker image sets `HOST=0.0.0.0`, and `compose.yaml` maps the port to `127.0.0.1`.
 - Interactive docs (`/docs`, `/redoc`, `/openapi.json`) disabled by default; set `API_DOCS=1` to enable them.
-- OpenTelemetry: zero-code instrumentation activates when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, exporting request spans and duration histograms via OTLP/HTTP. The SDK reads all other `OTEL_*` variables. When unset, telemetry modules are not imported.
+- OpenTelemetry: zero-code instrumentation activates when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, exporting request spans and duration histograms via OTLP/HTTP. `compose.yaml` defaults `OTEL_RESOURCE_ATTRIBUTES` to `project=<slug>,env=dev` so collectors track project and deployment environment metadata. Connecting to an OTLP hub uses standard OpenTelemetry environment variables:
+  - `OTEL_EXPORTER_OTLP_ENDPOINT`: Collector endpoint URL (e.g. `http://otel-collector:4318` or `https://monitoring.example.org:4318`).
+  - `OTEL_EXPORTER_OTLP_HEADERS`: Authentication headers if required by the hub (`Authorization=Bearer ...`).
+  - `OTEL_EXPORTER_OTLP_PROTOCOL`: Export protocol (defaults to `http/protobuf`).
+  - `OTEL_RESOURCE_ATTRIBUTES`: Comma-separated resource attributes (`project=<slug>,env=dev`).
+  When `OTEL_EXPORTER_OTLP_ENDPOINT` is unset, telemetry modules are not imported.
 - `just serve` and a `<slug>` console script to run outside Docker.
 - Tests for `/health` with telemetry enabled and disabled.
 
