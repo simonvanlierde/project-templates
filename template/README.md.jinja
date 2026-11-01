@@ -76,10 +76,10 @@ Re-run only the `release` job. A published immutable release needs a new patch v
 {% else %}`release.yml` makes the GitHub release from that section.
 {% endif -%}
 {% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}
-Before the first release, set up the publishing environment
+Before the first release, run `just repo-settings` to set up the publishing environment
 ({% for name, on in [('pypi', publish_to_pypi), ('npm', publish_to_npm), ('ghcr', publish_to_ghcr)] if on %}`{{ name }}`{% if not loop.last %}, {% endif %}{% endfor %})
-in Settings > Environments: limit it to tags matching `v*`{% if publish_to_ghcr %} (`ghcr` also to `main`,
-where the image is pushed too){% endif %}, and add a required reviewer.
+with yourself as required reviewer and a `v*` tag deployment policy{% if publish_to_ghcr %} (`ghcr` also to `main`,
+where the image is pushed too){% endif %}.
 The release workflows explain the rest in their header comments.
 {% endif %}{% if 'python' in stacks and kind == 'data-pipeline' %}{% set d = '' if python_dir == '.' else python_dir ~ '/' %}
 ## Pipeline
