@@ -8,6 +8,8 @@ set -euo pipefail
 # A bare test or grep below fails silently under set -e; say which line tripped.
 trap 'echo "check-render: failed at line $LINENO" >&2' ERR
 
+bash scripts/check-release-fixtures.sh
+
 out=${1:?usage: scripts/check-render.sh OUT_DIR}
 # The identity answers have no defaults. CI's settings file fills them, and
 # replaces your own copier settings for this run.

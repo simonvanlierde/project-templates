@@ -31,6 +31,8 @@ changes are marked **Breaking**.
 
 ### Fixed
 
+- Release notes keep named Markdown link definitions, including definitions at the end of a section. See [Publishing](docs/usage.md#publishing).
+- The Copier update workflow selects stable template tags and skips prereleases. See [Dependency updates](docs/usage.md#dependency-updates).
 - `just repo-settings` turns on GitHub's "Automatically delete head branches", so a merged PR's branch goes away.
 - A web app's markdown plugin now strips HTML comments until none are left. One pass over `<!<!---->---->` left a comment behind. CodeQL flagged the single pass as incomplete sanitization (`js/incomplete-multi-character-sanitization`, high) in every rendered web app.
 - A project description with a `\` is refused. It went into the package docstring, where an escape such as `\x` is a syntax error, so the package did not import.
