@@ -109,10 +109,10 @@ repo-settings:
             -F "deployment_branch_policy[protected_branches]=false" \
             -F "deployment_branch_policy[custom_branch_policies]=true" >/dev/null 2>"$err" || fail
         policies=$(gh api "repos/{owner}/{repo}/environments/$env/deployment-branch-policies" --jq '.branch_policies[].name' 2>/dev/null || true)
-        if ! echo "$policies" | grep -qx 'v\*'; then
+        if ! echo "$policies" | grep -qxF 'v*'; then
             gh api -X POST "repos/{owner}/{repo}/environments/$env/deployment-branch-policies" -f name="v*" -f type="tag" >/dev/null 2>"$err" || fail
         fi
-        if [ "$env" = "ghcr" ] && ! echo "$policies" | grep -qx 'main'; then
+        if [ "$env" = "ghcr" ] && ! echo "$policies" | grep -qxF 'main'; then
             gh api -X POST "repos/{owner}/{repo}/environments/$env/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
         fi
         echo "Configured environment '$env'."
