@@ -120,6 +120,27 @@ Two git hooks validate prose:
 
 - `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links.
 
+## How much documentation
+
+The amount of documentation depends on the project's audience, not the size of its codebase:
+
+| Tier | Audience | What it has |
+| --- | --- | --- |
+| 0: README only | Apps, tools, and experiments with no outside users | What the project is, its status line, and how to run or develop it. |
+| 1: README plus `docs/` | Anything others install: published packages, libraries, or CLIs | A README under about 1,000 words serving as the front page (overview, install, quickstart, and links into `docs/`). `docs/` in Markdown, split following [Diátaxis](https://diataxis.fr/) (tutorials, how-to guides, reference, and explanation). The reference (CLI flags, configuration, schema) is generated or tested against the code. |
+| 2: A documentation site | A tier-1 repository with extensive reference material | A search-indexed site built from the same Markdown files in `docs/`, never maintained as separate copy. |
+
+### Moving up a tier
+
+- **0 to 1:** The first release to a package registry (such as PyPI, npm, or crates.io), or when someone other than the author begins using the project.
+- **1 to 2:** The reference is too large to browse comfortably as repository files; outside users need search or versioned documentation; or outside users file issues requesting documentation improvements. Automatic API documentation on docs.rs does not count toward this trigger.
+
+### Documentation rules
+
+- **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`).
+- **Stable links to documentation on `main`:** When documentation or CLI error messages link to rules or guides, point to `main`. Rule identifiers are permanent; if a rule is deprecated or removed, keep a stub heading so historical links continue to resolve.
+- **Single source of truth:** The README holds the overview and quickstart; code comments and docstrings define API contracts; `docs/` holds extended guides and references.
+
 ## Choosing your stacks
 
 Select any combination of stacks:
