@@ -70,7 +70,9 @@ release version:
     [ "$(node -p "require('./{{ ts_dir }}/package.json').version")" = "$version" ] || { echo "{{ ts_dir ~ '/' if ts_dir != '.' else '' }}package.json is not at $version" >&2; exit 1; }
 {%- endif %}
     git fetch --quiet origin main
-    if git show origin/main:CHANGELOG.md | grep -q "^## \[$version\] - "; then
+    # Not grep -q: it stops reading early, and under pipefail git show then fails on a
+    # changelog bigger than the pipe buffer.
+    if git show origin/main:CHANGELOG.md | grep "^## \[$version\] - " >/dev/null; then
         sha=$(git rev-parse origin/main)
         [ "$(git rev-parse HEAD)" = "$sha" ] || { echo "HEAD is not origin/main: check out and pull main first" >&2; exit 1; }
         # A tag left by an earlier run is reused only if it marks the same commit.
