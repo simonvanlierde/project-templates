@@ -156,11 +156,15 @@ grep -qx 'source = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/k/LICENSE"
 grep -qx 'license = "GPL-3.0-or-later"' "$out/k/pyproject.toml"
 grep -q '"license": "https://spdx.org/licenses/GPL-3.0-or-later"' "$out/k/codemeta.json"
+grep -q 'Programming Language :: Python :: 3' "$out/k/pyproject.toml"
+grep -qx 'keywords = \[\] # citesync compares this list to keywords in CITATION.cff' "$out/k/pyproject.toml"
+grep -q 'Changelog = "https://github.com/[^/]*/adopt-me/blob/main/CHANGELOG.md"' "$out/k/pyproject.toml"
+(! grep -q 'Private :: Do Not Upload' "$out/k/pyproject.toml")
 # A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
 grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
-# Per hook, never top-level: the secret scan and the large-file check still cover data/.
-test "$(grep -cx ' *exclude: \^data/' "$out/k/.pre-commit-config.yaml")" = 4
-(! grep -qx 'exclude: \^data/' "$out/k/.pre-commit-config.yaml")
+# Per hook, never top-level: the secret scan and the large-file check still cover them.
+test "$(grep -cx ' *exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")" = 4
+(! grep -qx 'exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")
 grep -qx 'source_paths = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'check --search \. --format github adopt_me' "$out/k/.github/workflows/python.yml"
 # yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
@@ -485,6 +489,9 @@ if cold k >/dev/null 2>"$out/k-cold.log"; then
 fi
 grep -qF 'or delete .github/workflows/cold-install.yml' "$out/k-cold.log"
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
+(! grep -q 'Development Status' a/pyproject.toml)
+(! grep -q 'keywords =' a/pyproject.toml)
+(! grep -q 'Changelog =' a/pyproject.toml)
 grep -q '"private": true' a/package.json
 # The one-week release age, in both resolvers.
 grep -qx 'exclude-newer = "1 week"' a/pyproject.toml
@@ -596,6 +603,13 @@ grep -qx '  "programmingLanguage": \["Python", "TypeScript", "Rust", "Go"\]' a/c
 # kinds pin python_version and run once.
 min=$(sed -n 's/^python_min: *//p' c/.copier-answers.yml | tr -d "\"'")
 grep -qx "requires-python = \">=$min\"" c/api/pyproject.toml
+grep -q 'Development Status :: 3 - Alpha' c/api/pyproject.toml
+grep -q 'Programming Language :: Python :: 3' c/api/pyproject.toml
+grep -q "Programming Language :: Python :: $min" c/api/pyproject.toml
+grep -q 'Typing :: Typed' c/api/pyproject.toml
+grep -qx 'keywords = \[\] # citesync compares this list to keywords in CITATION.cff' c/api/pyproject.toml
+grep -q 'Changelog = "https://github.com/[^/]*/mono-me/blob/main/CHANGELOG.md"' c/api/pyproject.toml
+(! grep -q 'Private :: Do Not Upload' c/api/pyproject.toml)
 grep -q "python: \[\"$min\"" c/.github/workflows/python.yml
 (! grep -q 'matrix' a/.github/workflows/python.yml)
 # Codecov (c only): one upload per stack, from the nested paths, with a flag each,
@@ -1044,6 +1058,12 @@ LOCK
 git -C a-hooks add ui/pnpm-lock.yaml
 (cd a-hooks && "${prek[@]}" yamlfmt >/dev/null)
 git -C a-hooks diff --quiet ui/pnpm-lock.yaml
+# end-of-file-fixer leaves tests/fixtures/ untouched
+mkdir -p a-hooks/tests/fixtures
+printf 'fixture content' >a-hooks/tests/fixtures/fixture.txt
+git -C a-hooks add tests/fixtures/fixture.txt
+(cd a-hooks && "${prek[@]}" end-of-file-fixer >/dev/null)
+test "$(cat a-hooks/tests/fixtures/fixture.txt)" = 'fixture content'
 rm -rf a-hooks b-hooks d-hooks
 for r in a b; do
   grep -qx '      - id: typos' "$r/.pre-commit-config.yaml"
@@ -1175,6 +1195,14 @@ test "$(grep -c -- '-test`' a/AGENTS.md)" = 4
 # shellcheck disable=SC2016
 grep -qF 'are in `web/docs/`' d/AGENTS.md
 (! grep -q CONTRIBUTING b/AGENTS.md)
+# A repo's own recipes in just/local.just appear in just --list:
+cat >a/just/local.just <<'JUST'
+# Run a custom local task.
+local-custom:
+    @echo local-custom
+JUST
+(cd a && just --list | grep -q 'local-custom')
+rm -f a/just/local.just
 
 # The generated workflows are linted, never run: a typo in a run line fails only
 # in the new project.

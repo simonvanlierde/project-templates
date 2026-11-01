@@ -21,9 +21,10 @@
 default_install_hook_types: [pre-commit, commit-msg{% if 'ts' in stacks and ts_kind == 'web-app' %}, pre-push{% endif %}]
 {%- if 'python' in stacks %}
 
-# data/ holds inputs: the whitespace, end-of-file and notebook hooks must not rewrite them.
-# Excluded per hook, so the secret scan and the large-file check still cover data/.
-{%- set data_exclude = '^' ~ ('' if python_dir == '.' else python_dir ~ '/') ~ 'data/' %}
+# data/ and tests/fixtures/ hold inputs and test cases: the whitespace, end-of-file
+# and notebook hooks must not rewrite them. Excluded per hook, so the secret scan
+# and the large-file check still cover them.
+{%- set data_exclude = '^' ~ ('' if python_dir == '.' else python_dir ~ '/') ~ '(data|tests/fixtures)/' %}
 {%- endif %}
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -188,7 +189,8 @@ repos:
 {%- if 'python' in stacks %}
       # Runs from the project's venv, not the ruff-pre-commit mirror, so it uses the
       # same ruff as CI. --force-exclude keeps ruff's excludes when the hook passes
-      # explicit filenames.
+      # explicit filenames. A local hook running from the project's venv (`uv run ...`)
+      # must join the SKIP list in .github/workflows/checks.yml, whose hooks job has no uv.
       - id: ruff-check
         name: ruff check
         entry: {{ uv_project }} ruff check --fix --force-exclude

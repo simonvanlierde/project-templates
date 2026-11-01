@@ -1,154 +1,98 @@
-# Design: actors, render and update
+# Design: actors, render, and update
 
-Who acts on a project made from this template, what each one can change, and which
-workflows hold a token that can publish.
+Who acts on a project made from this template, what each actor can change, and which workflows hold publishing tokens.
 
 ## Actors
 
-| Actor | What it does | What it can change |
+| Actor | Actions | Scope |
 | --- | --- | --- |
-| The copier user | Answers the questions and runs `copier copy` or `copier update` on their own machine | Every file in their project, through their own git push |
-| This repository's CI | Renders answer combinations and runs each generated project's checks | Nothing outside its own runner; it publishes only this template's releases |
-| The generated project's CI | Runs the stack workflows on pull requests, on pushes to main and weekly | Read-only by default: each workflow sets `contents: read` or no permissions at all, and a job asks for more only where it needs it |
-| The dependency bot (Renovate or Dependabot) | Opens pull requests that bump dependencies, lockfiles and pinned actions | A branch and a pull request. Renovate merges its own minor and patch updates, and the weekly relock, once the required checks pass: the `main` ruleset lets its app skip the review, and `main-checks` lets only an admin skip the checks. Dependabot merges nothing |
-| The `copier update` workflow (Dependabot projects) | Weekly, renders the newest template release and opens a pull request | Its token can push to any branch without protection; the script pushes only `chore/copier-update` and opens that pull request, or, when it can't push a workflow change, opens an issue and closes that pull request |
-| The maintainer | Reviews and merges pull requests, pushes `vX.Y.Z` tags | `main`, and what a tag publishes |
+| Copier user | Runs `copier copy` or `copier update` locally | All files in their project via git push |
+| Template repo CI | Tests answer combinations and executes generated project checks | Runner container only; publishes only template releases |
+| Generated project CI | Runs stack workflows on pull requests, pushes to `main`, and scheduled jobs | Read-only by default (`contents: read` or `{}`); elevated privileges scoped to specific jobs |
+| Dependency bot (Renovate or Dependabot) | Opens PRs for dependencies, lockfiles, and GitHub Actions | Branch and PR. Renovate auto-merges minor and patch updates when required checks pass. Dependabot never auto-merges |
+| `copier update` workflow | Renders latest template release weekly and opens an update PR | Pushes only to `chore/copier-update`. Opens an issue if workflow updates require manual approval |
+| Maintainer | Reviews and merges PRs, tags releases (`vX.Y.Z`) | Project `main` branch and published releases |
 
 ## Render
 
-`copier copy` reads `copier.yml` from the newest tagged release, asks the questions, and
-writes the files in `template/` with the answers filled in. It runs no commands: the
-template has no copier tasks or migrations. The answers go to `.copier-answers.yml`,
-together with the template version. Nothing reaches the network apart from copier fetching
-the template.
+`copier copy` reads `copier.yml` from the newest tagged release, collects answers, and writes the files in `template/`. It executes no commands or migration scripts. Answers and the template commit are saved to `.copier-answers.yml`. Copier only touches the network to fetch the template.
 
 ## Update
 
-`copier update` renders the version in `.copier-answers.yml` and the newest release with
-the same answers, and applies the difference to the project as a three-way merge. Where the
-project changed the same lines, it leaves conflict markers to resolve by hand. Files listed
-in `_skip_if_exists` are never touched again; [docs/usage.md](usage.md) has the list. A plain `copier update` asks the questions again, with the stored answers as
-defaults, and asks a new question like any other. With `--defaults`, as the weekly
-workflow runs it, a new answer takes its default, or stops the update if it has none,
-unless `--data` passes it.
+`copier update` performs a three-way merge between the recorded commit in `.copier-answers.yml`, the latest template release, and the local project tree. Conflicting changes leave standard git conflict markers. Files listed in `_skip_if_exists` are never modified by updates ([usage.md](usage.md)). Running with `--defaults` accepts default values for newly added questions.
 
-The weekly workflow runs Copier in a read-only job. It passes a binary patch and PR
-text to a fresh job, which applies the patch and opens the update PR. That job never
-runs files from the update or imports its Git configuration or hooks. The push token
-is available only there, away from Copier and its dependencies.
+The weekly CI update workflow runs Copier in a read-only job, generates a binary patch, and applies it in a fresh job that holds the push token. This push job runs no template code or git hooks.
 
 ## Workflows that can publish
 
-These rendered workflows ask for `id-token: write`, an OpenID Connect token that an outside
-service trusts in place of a stored secret. The risk is code that runs in the same job and
-takes the token.
+These rendered workflows request `id-token: write` to exchange OpenID Connect tokens with external registries without long-lived secrets:
 
-| Workflow | Renders with | Runs on | What the token can do | What limits it |
+| Workflow | Condition | Trigger | Token scope | Protections |
 | --- | --- | --- | --- | --- |
-| `python-release.yml` | `publish_to_pypi` | a pushed `vX.Y.Z` tag | Upload to PyPI (trusted publishing), sign attestations, then publish a GitHub release with distributions and provenance | The OIDC token is only in `publish`; a separate `release` job has only `contents: write`. Neither runs project code; the `pypi` environment should be limited to `v*` tags |
-| `ts-release.yml` | `publish_to_npm` | a pushed `vX.Y.Z` tag | Publish to npm | The same split: `publish` only uploads the tarball `build` made; the `npm` environment should be limited to `v*` tags |
-| `docker.yml`, `push` job | `publish_to_ghcr` | pushes to main and tags, and manual runs | Sign the image's provenance, with `packages: write` to push to GHCR | Pull requests run only the `build` job, which has no write scope; the `ghcr` environment should be limited and need a reviewer |
-| `benchmarks.yml` | `codspeed` | pull requests, pushes to main and manual runs | Upload benchmark results to CodSpeed | GitHub gives pull requests from forks no OIDC token. A branch in the repo itself can still upload false results, which affects the benchmark report only |
-| `scorecard.yml` | `public` | pushes to main, weekly and branch protection changes | Publish the Scorecard result | Runs only approved actions on main; no pull request reaches it |
+| `python-release.yml` | `publish_to_pypi` | Pushed `vX.Y.Z` tag | PyPI trusted publishing, attestation signing, GitHub release | OIDC token scoped to `publish` job; `release` job has only `contents: write`. Neither runs project code. Limit `pypi` environment to `v*` tags |
+| `ts-release.yml` | `publish_to_npm` | Pushed `vX.Y.Z` tag | Publish to npm | `publish` job uploads the tarball generated by `build`. Limit `npm` environment to `v*` tags |
+| `docker.yml` (`push` job) | `publish_to_ghcr` | Pushes to `main`, tags, manual dispatch | Sign image provenance; `packages: write` to push to GHCR | Pull requests run only the unprivileged `build` job. Require review on `ghcr` environment |
+| `benchmarks.yml` | `codspeed` | PRs, pushes to `main`, manual dispatch | Upload benchmark results to CodSpeed | Fork PRs receive no OIDC token. Only in-repo branches can upload results |
+| `scorecard.yml` | `public` | Pushes to `main`, weekly, branch rule changes | Publish OpenSSF Scorecard results | Runs approved actions on `main`; never triggered by pull requests |
 
-None of these run on `pull_request_target` or `workflow_run`, so no workflow runs code from
-a fork with write access. Actions are pinned to full commit SHAs, and checkouts don't keep
-the token (`persist-credentials: false`).
+None of these workflows use `pull_request_target` or `workflow_run`, preventing untrusted fork code from running with write permissions. Actions pin full commit SHAs, and checkouts set `persist-credentials: false`.
 
-The environment rules in the table are repository settings a render can't create. The
-comment at the top of each release workflow says what to set.
+Configure the GitHub environment protections listed above in repository settings.
 
 ## Assurance case
 
-Why this template, and a project made from it, meet their security requirements. The
-requirements: a render runs no code and writes only inside the project; a token that can
-push or publish reaches only the job that needs it, never code from a pull request or a
-dependency; and a crafted answer can't turn a render into a broken or unsafe project. Each
-claim below names the file or check that backs it. How to report a problem is in
-[SECURITY.md](../SECURITY.md).
+Security claims and controls for this template and generated projects. Vulnerability disclosures follow [SECURITY.md](../SECURITY.md).
 
 ### Threat model
 
-We defend against:
+Defended threats:
 
-- someone who opens a pull request, and so picks its title, branch name and code, on this
-  repository or on a generated project;
-- a compromised action, package or tool release, Copier included, that runs in CI or on
-  the copier user's machine;
-- code in a release job that tries to take the publishing token;
-- a copier answer that breaks out of the file it is written into;
-- a secret committed by mistake.
+- Malicious code, branch names, or titles submitted via pull requests.
+- Compromised third-party actions, packages, or tools (including Copier).
+- Unauthorized attempts to acquire publishing tokens within CI jobs.
+- Crafted Copier answers designed to break out of templated files.
+- Accidental secret commits.
 
-We don't defend against a maintainer account that is taken over, a project that edits
-its rendered workflows to weaken them, or GitHub itself. Environment rules and secret
-scanning are repository settings a render can't make; the project sets them.
+Out of scope: maintainer account compromise, deliberate weakening of workflows by maintainers, and infrastructure compromise of GitHub itself.
 
 ### Trust boundaries
 
-| Boundary | What crosses it | Controls |
+| Boundary | Cross-boundary inputs | Controls |
 | --- | --- | --- |
-| The copier user's machine | The template, fetched by Copier, and the user's answers | No Copier tasks or migrations in [`copier.yml`](../copier.yml), so a render runs nothing; validators check the answers ([Render](#render)) |
-| This repository's CI | Pull request code and titles | Only `pull_request` triggers; `contents: read` in [`ci.yml`](../.github/workflows/ci.yml), [`dco.yml`](../.github/workflows/dco.yml) and [`pr-title.yml`](../.github/workflows/pr-title.yml); `ci ok` is the required check on main |
-| This repository's release | A pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, refuses a tag GitHub can't verify as signed, and runs only the release-notes script and `gh release create` |
-| The generated project's CI | Pull request code and titles | Each workflow under `template/.github/workflows/` sets `contents: read` or `permissions: {}`; none runs on `pull_request_target` or `workflow_run`; `persist-credentials: false` on every checkout |
-| Release jobs with an OIDC token | Built packages and images | The token is only in the upload job, which runs no project code ([Workflows that can publish](#workflows-that-can-publish)); the rendered `tags` ruleset lets only admins create `v*` tags |
-| The weekly `copier update` workflow | A new template release and its dependencies | `copier-update.yml` runs Copier in a read-only `update` job and passes a patch to a fresh `push` job that alone holds the push token ([Update](#update)) |
-| The dependency bot | New versions of actions, packages and lockfiles | A pull request only, through the same required checks; Renovate and Dependabot wait 7 days before a version update, and uv and pnpm do the same at install |
+| User machine | Remote template and user answers | No Copier tasks or migrations in [`copier.yml`](../copier.yml); validator rules check answers ([Render](#render)) |
+| Template repo CI | PR code and metadata | `pull_request` trigger only; `contents: read` in [`ci.yml`](../.github/workflows/ci.yml), [`dco.yml`](../.github/workflows/dco.yml), and [`pr-title.yml`](../.github/workflows/pr-title.yml); `ci ok` required check |
+| Template releases | Pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, requires signed tags, runs only release script and `gh release create` |
+| Generated project CI | PR code and metadata | Workflows use `contents: read` or `{}`; no `pull_request_target` or `workflow_run`; `persist-credentials: false` on checkouts |
+| Release jobs with OIDC | Built artifacts | OIDC tokens isolated to upload jobs without project code execution ([Workflows that can publish](#workflows-that-can-publish)); ruleset limits `v*` tags to admins |
+| Weekly update workflow | New template releases | `copier-update.yml` runs Copier read-only and applies patches in a separate job holding push credentials ([Update](#update)) |
+| Dependency updates | New package and action versions | Renovate and Dependabot enforce a 7-day cooldown on new releases; package managers respect the cooldown on install |
 
 ### Secure design principles
 
-- **Least privilege.** Every workflow, here and rendered, starts at `contents: read` or
-  `permissions: {}`, and a job asks for more only where it needs it. `check-render.sh`
-  asserts it for the release and update jobs.
-- **Separation of privilege.** Building and publishing are separate jobs in
-  `python-release.yml`, `ts-release.yml` and `docker.yml`. `copier-update.yml` renders in
-  one job and pushes in another.
-- **Fail-safe defaults.** Every `publish_to_*` answer and `codspeed` default to false, so a
-  workflow with an OIDC token renders only when asked for. `user_data` has no default, so
-  `--defaults` stops rather than claim a web app keeps nothing. Without a token that can
-  push workflow changes, `copier-update.yml` opens an issue instead of a partial update.
-- **Complete mediation.** Every change to a generated project's main goes through a pull
-  request and its required checks: the `main` ruleset in
-  `template/.github/rulesets/main.json.jinja`, and in a public repo also `main-checks`,
-  which `just repo-settings` applies. An admin can bypass either from the merge box.
-- **Economy of mechanism.** A render runs no commands, and the update workflow applies a
-  plain `git apply` patch: no hooks, no Git configuration from the update.
-- **Open design.** The template, its checks and this case are public. Nothing rests on a
-  secret but the tokens.
+- **Least privilege:** Workflows default to `contents: read` or `permissions: {}`. Jobs request write permissions only where required.
+- **Separation of privilege:** Build and publish steps run in separate jobs. The update workflow isolates Copier rendering from the git push job.
+- **Fail-safe defaults:** `publish_to_*` and `codspeed` default to disabled. `user_data` has no default, preventing unintentional data collection claims.
+- **Complete mediation:** Changes to `main` require PRs and passing checks via branch rulesets (`main.json` and `main-checks.json`).
+- **Economy of mechanism:** Renders run no executable tasks. Updates apply plain `git apply` patches without executing hooks.
+- **Open design:** Templates, workflows, and assurance cases are public and auditable.
 
 ### Countering common weaknesses
 
-- **Shell injection in workflows.** No `run:` step expands event data directly; it goes
-  through `env:`. CI runs zizmor and jactionlint (shellcheck on every `run:`) over renders
-  a to d and m, which together cover every rendered workflow
-  ([`ci.yml`](../.github/workflows/ci.yml)). Generated projects run both as git hooks.
-- **Token theft.** OIDC and push tokens stay in jobs that run no project or dependency
-  code (above). Checkouts drop the token. `check-render.sh` feeds the update job a patch
-  to `.git/config` and a symlinked artifact, and both must be refused.
-- **Dependency compromise.** Actions are pinned to full commit SHAs. Generated projects
-  commit their lockfiles, and CI installs exactly what they list. The 7-day
-  wait gives a hijacked release time to be caught. This repository's Renovate config
-  extends `config:best-practices`, which keeps digests pinned.
-- **Unvalidated answers.** The 22 validators in [`copier.yml`](../copier.yml) check the
-  answers that become names, paths, versions, URLs, ports and identities, and the
-  description, which lands unescaped in a docstring and in code comments: it must be one
-  line without `"""`, `*/` or `\`. `check-render.sh` asserts that crafted answers are refused
-  with the validator's own message. Free text reaches JSON, YAML and TOML through `to_json`,
-  which render b tests with quotes. The copyright year and the Node and Go versions have no
-  validator: the copier user is their only author, so a bad one breaks only their own render.
-- **Untested template files.** `check-render.sh` fails when a file in `template/` lands
-  in no render, so every file is rendered and checked at least once.
+- **Workflow injection:** No `run:` step expands event expressions inline; expressions pass via `env:` variables. CI validates workflows with zizmor and jactionlint.
+- **Token theft:** Publishing tokens are restricted to dedicated jobs that run no repository code. Checkouts disable credential persistence.
+- **Dependency compromise:** Actions pin full commit SHAs. Generated projects commit lockfiles, and CI installs with strict lockfile flags. A 7-day cooldown delays non-urgent updates.
+- **Answer injection:** 22 validators in [`copier.yml`](../copier.yml) constrain identifiers, URLs, versions, and descriptions. Descriptions are restricted to single lines without quotes or backslashes. Values pass into structured data via `to_json`.
+- **Untested templates:** `check-render.sh` ensures every file in `template/` is rendered and validated across test combinations.
 
 ### Security assessment
 
-Reviewed 2026-10-29 for release 0.12.0. The most likely and most harmful problems, and
-what limits each one:
+Reviewed 2026-10-29 for release 0.12.0:
 
-| Threat | Impact | What limits it |
+| Threat | Impact | Controls |
 | --- | --- | --- |
-| A pull request title, branch name or other event data runs as shell in a rendered workflow | Code runs with the workflow's token | No `run:` step expands event data directly, and CI runs zizmor and jactionlint on every rendered workflow |
-| Code in a release job takes the publishing token | A malicious package or image is published under the project's name | The OIDC token is only in the upload job, which runs no project code; the release environments should be limited to `v*` tags |
-| Copier or one of its dependencies alters the weekly update job | It pushes to the project with the job's token | Copier runs in a read-only job; a fresh job applies the patch and alone holds the push token (fixed in 0.11.0) |
-| A compromised action or package version | Its code runs in CI or in the project | Actions are pinned to commit SHAs. Generated projects commit their lockfiles, and Renovate, uv and pnpm skip versions younger than a week. One is not covered: jsonvet, whose hook installs a pinned PyPI version rather than code pinned by the rev SHA |
-| A crafted copier answer breaks out of a generated file | A broken or unsafe render | The 22 validators in `copier.yml` check the answers that become names, paths, versions and identities, and the description, before rendering |
-| A secret is committed to this repository | The secret leaks | betterleaks runs as a hook, and GitHub secret scanning with push protection is on |
+| Event metadata injected into shell steps | Arbitrary command execution with workflow token | Event fields pass through `env:` instead of inline expansion; zizmor and jactionlint audit workflows |
+| Release job attempts token theft | Malicious package or container published | OIDC tokens scoped strictly to upload jobs without project code; registries restrict uploads to `v*` tags |
+| Copier compromises update workflow | Unauthorized commit pushed to repository | Copier runs read-only; patch applied in separate push job without hook execution |
+| Compromised package or action release | Malicious code in CI or runtime | Pinned action SHAs, committed lockfiles, and 7-day update cooldown |
+| Crafted answer escapes template syntax | Malformed or insecure project structure | 22 validators in `copier.yml` validate types, formats, and escape sequences |
+| Accidental secret commit | Leaked credentials | betterleaks hook blocks local commits; GitHub secret scanning with push protection covers remotes |
