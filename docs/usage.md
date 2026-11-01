@@ -282,7 +282,20 @@ Library kinds configure `test_extras` under `customise`:
 
 Property tests run fast suites locally and in CI. Weekly scheduled jobs (`.github/workflows/property.yml`) execute extended runs (10,000 cases or 10 minutes of fuzzing).
 
-Mutation testing runs weekly via `.github/workflows/mutation.yml` and on demand via `just <stack>-mutation`. Surviving mutants fail the Rust job; other stacks report survivors in the job summary.
+Mutation testing runs weekly via `.github/workflows/mutation.yml` and on demand via `just <stack>-mutation`. The Python and Rust jobs fail on a surviving mutant. The TypeScript and Go tools exit 0 when a mutant survives, so those jobs only print survivors.
+
+Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change. Mutant numbers shift when their function changes, so recheck the lines then. `copier update` adds the file with no entries; run the recipe once and list what it reports.
+
+A full run takes minutes to hours, so check each change with the diff recipe instead and keep the full run for the weekly job and before a release:
+
+| Stack | Per-change recipe | What it runs |
+| --- | --- | --- |
+| Python | `just py-mutation-diff` | the mutants of functions and methods changed since `origin/main`, in the mutated modules (`just/mutation_diff.py` finds them) |
+| Rust | `just rs-mutation-diff` | `cargo mutants --in-diff` on the changes since `origin/main` |
+| Go | `just go-mutation-diff` | `gremlins unleash --diff origin/main` |
+| TypeScript | none | Stryker has no diff mode. Its `--incremental` reuses the results file of an earlier run, which needs a stored file between runs, so the template adds no recipe |
+
+Each takes another git ref, e.g. `just py-mutation-diff main`.
 
 To add extras to an existing project:
 

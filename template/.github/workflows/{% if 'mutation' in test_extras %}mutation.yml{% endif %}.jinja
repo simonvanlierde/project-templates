@@ -7,12 +7,16 @@ name: mutation
 # Mutation testing once a week, with the same `just <stack>-mutation` recipes you run by
 # hand. Never on a pull request: a run takes minutes to hours. Run it from the Actions
 # tab with "Run workflow" after you change the tests.
+{%- if py %}
+# The Python job fails on a surviving mutant that is not in tests/mutation-baseline.txt,
+# and on a listed one that no longer survives.
+{%- endif %}
 {%- if rs %}
-# The Rust job fails when a mutant survives. List a mutant that changes nothing a test
-# could see in .cargo/mutants.toml (`exclude_re`). The other jobs print survivors and
-# pass: their tools exit 0 when a mutant survives.
-{%- else %}
-# The jobs print the surviving mutants and pass: their tools exit 0 when a mutant survives.
+# The Rust job fails when a mutant survives. List one that changes nothing a test could
+# see in .cargo/mutants.toml (`exclude_re`).
+{%- endif %}
+{%- if ts or go %}
+# The {{ 'ts and go jobs print' if ts and go else ('ts job prints' if ts else 'go job prints') }} survivors and pass: {{ 'their tools exit' if ts and go else 'its tool exits' }} 0 when a mutant survives.
 {%- endif %}
 on:
   schedule:
@@ -54,8 +58,6 @@ jobs:
 
       - run: uv sync --locked
       - run: just py-mutation
-      # The survivors, one per line.
-      - run: uv run mutmut results
 {%- endif %}
 {%- if ts %}
   ts:

@@ -33,11 +33,50 @@ py-matrix:
     for v in {% for m in range(python_min.split('.')[1] | int, python_version.split('.')[1] | int + 1) %}3.{{ m }}{% if not loop.last %} {% endif %}{% endfor %}; do {{ uv }} run --isolated --locked --python "$v" pytest || exit 1; done
 {%- endif %}
 {%- if kind == 'library' and 'mutation' in test_extras %}
+{%- set cd = '' if python_dir == '.' else 'cd ' ~ python_dir ~ '\n    ' %}
 
-# Plant small bugs in the package and report each one the tests miss. Slow: CI runs it
-# weekly (mutation.yml); run it by hand after writing tests. `mutmut browse` shows survivors.
+# Plant small bugs in the package. Fails on a mutant the tests miss (or that no test
+# reaches) unless tests/mutation-baseline.txt lists it, and on a listed one that no longer
+# survives. Slow: CI runs it weekly (mutation.yml); run it by hand after writing tests.
+# `mutmut browse` shows survivors.
 py-mutation:
-    {{ uv }} run mutmut run
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ cd }}# Byte order, so sort and comm agree on the ǁ in class method mutant names.
+    export LC_ALL=C
+    # mutmut reuses results from mutants/ even after the tests change, so start clean.
+    rm -rf mutants
+    uv run mutmut run >/dev/null
+    survivors=$(uv run mutmut results | sed -nE 's/^ *(.*): (survived|no tests)$/\1/p' | sort)
+    listed=$(grep -vE '^(#|$)' tests/mutation-baseline.txt | awk '{ print $1 }' | sort || true)
+    new=$(comm -23 <(echo "$survivors" | sed '/^$/d') <(echo "$listed" | sed '/^$/d'))
+    gone=$(comm -13 <(echo "$survivors") <(echo "$listed" | sed '/^$/d'))
+    echo "$(echo "$survivors" | grep -c . || true) survivors; not in tests/mutation-baseline.txt:"
+    echo "${new:-none}"
+    echo "listed but no longer surviving (drop them):"
+    echo "${gone:-none}"
+    [ -z "$new$gone" ]
+
+# The same check for the functions this branch changed since it split off a git ref
+# (origin/main unless you give one): fast enough to run on each change. Fails on a
+# survivor not in the baseline.
+# Run `just py-mutation` before a release, since it also finds the listed ones to drop.
+py-mutation-diff base='origin/main':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ cd }}export LC_ALL=C
+    rm -rf mutants
+    patterns=$(uv run python {% raw %}{{ justfile_directory() }}{% endraw %}/just/mutation_diff.py "$(git merge-base {% raw %}{{ base }}{% endraw %} HEAD)")
+    if [ -z "$patterns" ]; then echo "no changed function in a mutated module"; exit 0; fi
+    # The patterns hold *, so keep the shell from expanding them as file names.
+    set -f
+    uv run mutmut run $patterns >/dev/null
+    survivors=$(uv run mutmut results | sed -nE 's/^ *(.*): (survived|no tests)$/\1/p' | sort)
+    listed=$(grep -vE '^(#|$)' tests/mutation-baseline.txt | awk '{ print $1 }' | sort || true)
+    new=$(comm -23 <(echo "$survivors" | sed '/^$/d') <(echo "$listed" | sed '/^$/d'))
+    echo "survivors not in tests/mutation-baseline.txt:"
+    echo "${new:-none}"
+    [ -z "$new" ]
 {%- endif %}
 {%- if profiling %}
 

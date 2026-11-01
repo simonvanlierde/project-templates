@@ -698,6 +698,41 @@ steps = wf["jobs"]["rust"]["steps"]
 assert any("test ! -s crates/lib/mutants.out/missed.txt" in s.get("run", "") for s in steps), steps
 assert any(s.get("with", {}).get("path") == "crates/lib/mutants.out/" for s in steps), steps
 PY
+# The python gate: a baseline file, a clean start, byte-order sorting, a failure both ways.
+test -f m/py/tests/mutation-baseline.txt
+test ! -e a/tests/mutation-baseline.txt
+grep -qxF '    rm -rf mutants' m/just/python.just
+grep -qxF '    export LC_ALL=C' m/just/python.just
+# shellcheck disable=SC2016 # a literal recipe line
+grep -qxF '    [ -z "$new$gone" ]' m/just/python.just
+# The per-change recipes: python maps the diff to functions with a script, rust and go use
+# the tool's own diff mode, ts has no mutation-diff recipe (Stryker has no diff mode).
+test -f m/just/mutation_diff.py
+test ! -e a/just/mutation_diff.py
+grep -q '^py-mutation-diff base=' m/just/python.just
+grep -q 'cd py$' m/just/python.just
+grep -q -e '--in-diff' m/just/rust.just
+grep -q -e '--relative=crates/lib' m/just/rust.just
+grep -q -e 'unleash --diff' m/just/go.just
+# Each diffs against where the branch split off, not main's tip, so a branch behind
+# main does not mutate functions only main changed.
+for f in python rust go; do grep -q 'git merge-base' "m/just/$f.just"; done
+(! grep -q 'mutation-diff' m/just/ts.just)
+grep -q '^just py-mutation-diff ' m/README.md
+(! grep -q 'ts-mutation-diff' m/README.md)
+# mutation_diff.py names only the changed method, and skips a module outside only_mutate.
+mutdiff="$out/mutdiff"
+mkdir -p "$mutdiff/src/pkg" && cp m/just/mutation_diff.py "$mutdiff/"
+(
+  cd "$mutdiff"
+  printf '[tool.mutmut]\nsource_paths = ["src/pkg"]\nonly_mutate = ["src/pkg/a.py"]\n' >pyproject.toml
+  printf 'def f():\n    return 1\n\n\nclass C:\n    def m(self):\n        return 1\n\n    def n(self):\n        return 1\n' >src/pkg/a.py
+  cp src/pkg/a.py src/pkg/b.py
+  git init -q && git add -A && git -c user.name=t -c user.email=t@t.test commit -qm base --no-verify
+  sed -i 's/return 1/return 2/' src/pkg/b.py
+  sed -i '7s/1/2/' src/pkg/a.py
+  test "$(python3 -I mutation_diff.py HEAD)" = 'pkg.a.xǁCǁm__mutmut_*'
+)
 # property.yml: the same shape, running each stack's property or fuzz recipe.
 test -f m/.github/workflows/property.yml
 test ! -e a/.github/workflows/property.yml

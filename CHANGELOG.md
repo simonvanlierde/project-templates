@@ -18,6 +18,7 @@ changes are marked **Breaking**.
 ### Added
 
 - A web app's bug form asks for the page URL and the browser, with the commit optional, and no longer formats the steps as shell. Other projects keep the command-line form; one with a web app and other stacks gets the web form.
+- `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch split off `origin/main`, for a check on each change. TypeScript has none: Stryker has no diff mode. See [Test extras](docs/usage.md#test-extras).
 - Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. The Code of Conduct keeps the Contributor Covenant's CC-BY-SA-4.0. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).
 - Research and data-pipeline projects ask `data_license` for what they commit under `data/`: CC-BY-4.0 by default for research, CC0-1.0 for a pipeline. Until now data took the code license.
 - [docs/usage.md](docs/usage.md#licenses) says which code license to pick.
@@ -30,6 +31,7 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- **Breaking:** `just py-mutation` now fails on a surviving mutant that is not listed in `tests/mutation-baseline.txt`, and on a listed one that no longer survives, so the weekly `mutation.yml` python job can fail. Upgrade: after `copier update`, run `just py-mutation` and list each survivor you accept in the new `tests/mutation-baseline.txt`, one per line with the reason. See [Test extras](docs/usage.md#test-extras).
 - **Breaking:** new projects no longer get `docs/decisions/`. Add the folder when a choice needs a record. `copier update` deletes `docs/decisions/README.md` and `0000-template.md`, even an index you edited; your numbered records stay. To keep the index, run `git checkout HEAD -- docs/decisions/README.md` before you commit the update.
 - **Breaking:** `cold-install.yml`, which runs the README's setup steps in a clean container, is now opt-in through the `cold_install` question under `customise`, off by default. `copier update` removes it; to keep it, run `copier update --data cold_install=true`. See [CI baseline](docs/ci-baseline.md).
 - `just repo-settings` adopts existing rulesets by target instead of rigid names, updating older rulesets (`protect-main`, `protect-main-checks`) in place without creating duplicates. If you renamed any check jobs, rerun `just repo-settings` after `copier update` to sync required status checks.
