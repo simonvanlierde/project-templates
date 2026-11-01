@@ -51,6 +51,25 @@ py-mutation:
     echo "${gone:-none}"
     [ -z "$new$gone" ]
 
+# The same check for the functions that differ from a git ref (origin/main unless you
+# give one): fast enough to run on each change. Fails on a survivor not in the baseline.
+# Run `just py-mutation` before a release, since it also finds the listed ones to drop.
+py-mutation-diff base='origin/main':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ cd }}export LC_ALL=C
+    rm -rf mutants
+    patterns=$(uv run python {% raw %}{{ justfile_directory() }}{% endraw %}/just/mutation_diff.py {% raw %}{{ base }}{% endraw %})
+    if [ -z "$patterns" ]; then echo "no changed function in a mutated module"; exit 0; fi
+    # The patterns hold *, so keep the shell from expanding them as file names.
+    set -f
+    uv run mutmut run $patterns >/dev/null
+    survivors=$(uv run mutmut results | sed -nE 's/^ *(.*): (survived|no tests)$/\1/p' | sort)
+    listed=$(grep -vE '^(#|$)' tests/mutation-baseline.txt | awk '{ print $1 }' | sort || true)
+    new=$(comm -23 <(echo "$survivors" | sed '/^$/d') <(echo "$listed" | sed '/^$/d'))
+    echo "survivors not in tests/mutation-baseline.txt:"
+    echo "${new:-none}"
+    [ -z "$new" ]
 {%- endif %}
 {%- if profiling %}
 

@@ -29,6 +29,11 @@
 # gremlins out of go.mod; `copier update` moves its version.
 {{ wd }}go-mutation:
     go run github.com/go-gremlins/gremlins/cmd/gremlins@{{ gremlins_version }} unleash
+
+# The same for the code that differs from a git ref (origin/main unless you give one):
+# fast enough to run on each change.
+{{ wd }}go-mutation-diff base='origin/main':
+    go run github.com/go-gremlins/gremlins/cmd/gremlins@{{ gremlins_version }} unleash --diff {% raw %}{{ base }}{% endraw %}
 {%- endif %}
 {%- if go_kind == 'library' and 'property' in test_extras %}
 
