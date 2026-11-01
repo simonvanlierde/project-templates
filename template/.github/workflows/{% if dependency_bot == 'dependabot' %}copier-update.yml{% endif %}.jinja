@@ -50,10 +50,10 @@ jobs:
         run: |-
           src=$(sed -n "s/^_src_path: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" .copier-answers.yml)
           url=${src/#gh:/https://github.com/}
-          latest=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' | sed -n '1s|.*refs/tags/||p')
+          latest=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' | sed 's|.*refs/tags/||' | sed -n '/-/!{p;q;}')
           current=$(sed -n "s/^_commit: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" .copier-answers.yml)
           if [ -z "$latest" ]; then
-            echo "::error::no v* tag found at $url (_src_path: $src)"
+            echo "::error::no stable v* tag found at $url (_src_path: $src)"
             exit 1
           fi
           if [ "$current" = "$latest" ]; then
