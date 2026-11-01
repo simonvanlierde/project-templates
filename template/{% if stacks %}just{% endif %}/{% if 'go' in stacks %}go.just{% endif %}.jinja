@@ -30,10 +30,12 @@
 {{ wd }}go-mutation:
     go run github.com/go-gremlins/gremlins/cmd/gremlins@{{ gremlins_version }} unleash
 
-# The same for the code that differs from a git ref (origin/main unless you give one):
-# fast enough to run on each change.
+# The same for the code this branch changed since it split off a git ref (origin/main
+# unless you give one): fast enough to run on each change.
 {{ wd }}go-mutation-diff base='origin/main':
-    go run github.com/go-gremlins/gremlins/cmd/gremlins@{{ gremlins_version }} unleash --diff {% raw %}{{ base }}{% endraw %}
+    #!/usr/bin/env bash
+    set -euo pipefail
+    go run github.com/go-gremlins/gremlins/cmd/gremlins@{{ gremlins_version }} unleash --diff "$(git merge-base {% raw %}{{ base }}{% endraw %} HEAD)"
 {%- endif %}
 {%- if go_kind == 'library' and 'property' in test_extras %}
 

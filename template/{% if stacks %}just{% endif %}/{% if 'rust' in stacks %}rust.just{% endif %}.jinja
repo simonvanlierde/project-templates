@@ -31,15 +31,15 @@ rs-test *args:
 rs-mutation:
     cargo mutants{{ '' if rust_dir == '.' else ' --dir ' ~ rust_dir }}
 
-# The same for the code that differs from a git ref (origin/main unless you give one):
-# fast enough to run on each change. Fails on a missed mutant, as CI does.
+# The same for the code this branch changed since it split off a git ref (origin/main
+# unless you give one): fast enough to run on each change. Fails on a missed mutant, as CI does.
 rs-mutation-diff base='origin/main':
     #!/usr/bin/env bash
     set -euo pipefail
     diff=$(mktemp)
     trap 'rm -f "$diff"' EXIT
     # cargo mutants reads the paths in the diff relative to --dir.
-    git diff{{ '' if rust_dir == '.' else ' --relative=' ~ rust_dir }} {% raw %}{{ base }}{% endraw %} >"$diff"
+    git diff{{ '' if rust_dir == '.' else ' --relative=' ~ rust_dir }} "$(git merge-base {% raw %}{{ base }}{% endraw %} HEAD)" >"$diff"
     cargo mutants{{ '' if rust_dir == '.' else ' --dir ' ~ rust_dir }} --in-diff "$diff"
 {%- endif %}
 {%- if profiling %}

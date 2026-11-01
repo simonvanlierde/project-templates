@@ -697,6 +697,9 @@ grep -q 'cd py$' m/just/python.just
 grep -q -e '--in-diff' m/just/rust.just
 grep -q -e '--relative=crates/lib' m/just/rust.just
 grep -q -e 'unleash --diff' m/just/go.just
+# Each diffs against where the branch split off, not main's tip, so a branch behind
+# main does not mutate functions only main changed.
+for f in python rust go; do grep -q 'git merge-base' "m/just/$f.just"; done
 (! grep -q 'mutation-diff' m/just/ts.just)
 grep -q '^just py-mutation-diff ' m/README.md
 (! grep -q 'ts-mutation-diff' m/README.md)
