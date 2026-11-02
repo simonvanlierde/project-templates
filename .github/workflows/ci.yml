@@ -34,7 +34,7 @@ env:
   # renovate: datasource=pypi depName=rust-just
   JUST_VERSION: 1.59.0
   # renovate: datasource=npm depName=renovate
-  RENOVATEBOT_VERSION: 44.178.1
+  RENOVATEBOT_VERSION: 44.181.7
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
