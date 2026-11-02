@@ -72,7 +72,7 @@
 {%- if web %}
   "dependencies": {
 {%- if web_framework == 'preact' %}
-    "preact": "^11.0.1"
+    "preact": "^11.0.2"
 {%- else %}
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
@@ -83,14 +83,14 @@
 {%- if web %}
     "@axe-core/playwright": "^4.14.0",
 {%- endif %}
-    "@biomejs/biome": "^2.6.2",
+    "@biomejs/biome": "^2.6.3",
     "@j178/prek": "^0.5.7",
 {%- if publish_to_npm %}
     "@microsoft/api-extractor": "^7.59.4",
 {%- endif %}
 {%- if mutation %}
-    "@stryker-mutator/core": "^10.0.0",
-    "@stryker-mutator/vitest-runner": "^10.0.0",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
 {%- endif %}
 {%- if web %}
     "@playwright/test": "^1.64.1",
@@ -115,7 +115,7 @@
 {%- if web %}
     "jsdom": "^30.1.3",
 {%- endif %}
-    "knip": "^6.42.1",
+    "knip": "^6.43.0",
 {%- if web %}
 {#- Exact: a change in how it renders the legal pages comes in its own bump, not in a lockfile refresh. #}
     "marked": "18.1.1",

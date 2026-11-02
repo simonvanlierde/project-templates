@@ -680,7 +680,7 @@ copier_version:
 wrangler_version:
   type: str
   when: false
-  default: 4.150.0
+  default: 4.152.0
 
 # A GitHub commit, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
 # badge URL (fair-software/howfairis#383). A commit, not the tag, because a tag can be
