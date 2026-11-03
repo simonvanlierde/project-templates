@@ -171,12 +171,8 @@ jobs:
           path: {% if ts_dir != '.' %}{{ ts_dir }}/{% endif %}playwright-report/
           retention-days: 7
 
-  # Deploys a pull request's build as its own Worker, {{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>, from
-  # wrangler.preview.jsonc. Production stays on Pages.
-  # Fork pull requests never get the token, so they skip with a notice, as does a repo
-  # without the secret. The secrets live in the `preview` environment. A draft gets no
-  # preview, and preview-retire.yml takes it down when a pull request closes or turns draft.
-  # The deploy step re-reads the pull request first, in case a retire ran while this queued.
+  # The README's "Pull request previews" has the lifecycle. Fork pull requests never get
+  # the token, so they skip with a notice, as does a repo without the secret.
   preview:
     name: preview
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft
@@ -243,9 +239,7 @@ jobs:
         run: |
           printf '\n/*\n  X-Robots-Tag: noindex\n' >> dist/_headers
 
-      # One Worker per pull request, so retiring a preview deletes the Worker and
-      # every address with it. wrangler runs through dlx, so the project's own install
-      # stays without it.
+      # wrangler runs through dlx, so the project's own install stays without it.
       - if: steps.gate.outputs.run == 'true'
         id: upload
         env:
@@ -256,12 +250,12 @@ jobs:
           PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
         # pipefail: the default shell takes the pipe's status from tee, so a
         # refused deploy would otherwise pass.
-        run: |
+        run: |-
           set -o pipefail
-          # This job may have queued behind a close or a draft switch, so read the
-          # pull request again: a retire that ran first must not be undone by a deploy.
-          state=$(gh api "repos/$REPO/pulls/$PR" --jq '.state, .draft' | tr '\n' ' ')
-          if [ "$state" != "open false " ]; then
+          # This job may have queued behind a close or a draft switch: a retire that
+          # ran first must not be undone by a deploy.
+          state=$(gh api "repos/$REPO/pulls/$PR" --jq '.state + " " + (.draft|tostring)')
+          if [ "$state" != "open false" ]; then
             echo "::notice::Preview skipped: pull request $PR is no longer open and ready ($state)."
             exit 0
           fi

@@ -1080,38 +1080,93 @@ grep -qF '"directory": "./dist",' d/web/wrangler.preview.jsonc
 grep -qF '"preview_urls": false,' d/web/wrangler.preview.jsonc
 grep -qF '"workers_dev": true' d/web/wrangler.preview.jsonc
 grep -qF '"name": "app-preview",' s/wrangler.preview.jsonc
-grep -qx '  preview:' d/.github/workflows/ts.yml
-grep -qx '          name: preview-dist' d/.github/workflows/ts.yml
-test "$(grep -cx '          path: web/dist' d/.github/workflows/ts.yml)" = 2
-grep -qx '      name: preview' d/.github/workflows/ts.yml
+grep -q '^  preview:' d/.github/workflows/ts.yml
+grep -q 'name: preview-dist$' d/.github/workflows/ts.yml
+test "$(grep -c 'path: web/dist$' d/.github/workflows/ts.yml)" = 2
+grep -q '^ *name: preview$' d/.github/workflows/ts.yml
 # The gate step runs before checkout, so it must not cd into web/.
-grep -A2 -x '      - id: gate' d/.github/workflows/ts.yml | grep -qx '        working-directory: .'
+grep -A2 -- '- id: gate$' d/.github/workflows/ts.yml | grep -q 'working-directory: \.$'
 grep -qF "pnpm dlx wrangler@$wrangler_pin deploy --config wrangler.preview.jsonc --name \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
 (! grep -q 'versions upload' d/.github/workflows/ts.yml)
 grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
 (! grep -q '^  X-Robots-Tag' d/web/public/_headers)
-test -f d/.github/workflows/preview-retire.yml
+# A preview lives only while its pull request is open and ready: drafts get none, the deploy
+# re-reads the state, the retire runs on close and on a draft switch, and both share one
+# concurrency group so a retire waits for a deploy in flight.
+grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft" d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
-grep -qF 'workers/scripts/$name?force=true' d/.github/workflows/preview-retire.yml
-(! grep -q 'pnpm' d/.github/workflows/preview-retire.yml)
-grep -qx "            if grep -qx 'pipe-me-preview' <<< \"\$all\"; then names=\"pipe-me-preview\"; fi" d/.github/workflows/preview-retire.yml
-(! grep -q 'versions upload' d/.github/workflows/preview-retire.yml)
+grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostring)'\''' d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
-grep -qF 'names="$names pipe-me-pr-$pr"' d/.github/workflows/preview-retire.yml
-grep -qF "grep -E '^pipe-me-pr-[0-9]+\$'" d/.github/workflows/preview-retire.yml
-grep -qF 'required: false' d/.github/workflows/preview-retire.yml
-grep -qF 'workers/scripts' d/.github/workflows/preview-retire.yml
-grep -qx '    environment: preview' d/.github/workflows/preview-retire.yml
-(! grep -q 'working-directory\|checkout' d/.github/workflows/preview-retire.yml)
-# Lifecycle: the upload re-reads the pull request, each preview is its own Worker, the retire deletes it and
-# checks the address, and a daily run sweeps the account for missed events.
+grep -qF '[ "$state" != "open false" ]' d/.github/workflows/ts.yml
+grep -q 'pull-requests: read' d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
-grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq' d/.github/workflows/ts.yml
-grep -qx '      pull-requests: read' d/.github/workflows/ts.yml
-grep -qxF '    - cron: "17 4 * * *"' d/.github/workflows/preview-retire.yml
-grep -qx '  schedule:' d/.github/workflows/preview-retire.yml
-grep -q '^      pull-requests: read' d/.github/workflows/preview-retire.yml
-(! grep -q 'preview-closed-marker' d/.github/workflows/preview-retire.yml)
+grep -qF 'group: preview-${{ github.event.pull_request.number }}' d/.github/workflows/ts.yml
+# shellcheck disable=SC2016
+grep -qF 'group: preview-${{ github.event.pull_request.number || github.run_id }}' d/.github/workflows/preview-retire.yml
+grep -qF 'types: [closed, converted_to_draft]' d/.github/workflows/preview-retire.yml
+grep -qF 'cron: "17 4 * * *"' d/.github/workflows/preview-retire.yml
+grep -q 'pull-requests: read' d/.github/workflows/preview-retire.yml
+grep -q 'environment: preview$' d/.github/workflows/preview-retire.yml
+grep -q 'SLUG: pipe-me$' d/.github/workflows/preview-retire.yml
+grep -q 'run: \.github/scripts/preview-retire\.sh$' d/.github/workflows/preview-retire.yml
+(! grep -q 'pnpm\|working-directory' d/.github/workflows/preview-retire.yml)
+test -x d/.github/scripts/preview-retire.sh
+# preview-retire.sh against a stub curl and gh. The account holds pipe-me-pr-1 to -3 and
+# pipe-me-preview; each test sets the PR states, the DELETE answer and the address answer.
+retire_sh=$out/d/.github/scripts/preview-retire.sh
+stub=$out/fake-retire
+mkdir -p "$stub"
+cat >"$stub/curl" <<'STUB'
+#!/usr/bin/env bash
+method=GET out=/dev/null prev=''
+for a; do
+  case $prev in -X) method=$a ;; -o) out=$a ;; esac
+  prev=$a
+done
+url=$a
+case $method:$url in
+  DELETE:*) echo "${url##*/}" >>"$STUB/deleted"; echo '{}' >"$out"; printf %s "${DELETE_CODE:-200}" ;;
+  *workers/scripts) echo '{"result":[{"id":"pipe-me-pr-1"},{"id":"pipe-me-pr-2"},{"id":"pipe-me-pr-3"},{"id":"pipe-me-preview"}]}' ;;
+  *workers/subdomain) [ -z "${SUB_FAIL:-}" ] || exit 22; echo '{"result":{"subdomain":"acct"}}' ;;
+  *.workers.dev) printf %s "${PROBE_CODE:-404}"; [ "${PROBE_CODE:-404}" != 000 ] || exit 28 ;;
+esac
+STUB
+# gh answers from $STUB/pr-<n>, and fails when there is no such file.
+cat >"$stub/gh" <<'STUB'
+#!/usr/bin/env bash
+f=$STUB/pr-${2##*/}
+[ -f "$f" ] && jq -r "$4" "$f"
+STUB
+chmod +x "$stub/curl" "$stub/gh"
+retire() {
+  : >"$stub/deleted"
+  env SLUG=pipe-me REPO=o/r CLOUDFLARE_API_TOKEN=t CLOUDFLARE_ACCOUNT_ID=a PROBE_WAITS='0 0' \
+    STUB="$stub" PATH="$stub:$PATH" "$@" "$retire_sh" pipe-me-preview >"$stub/out" 2>&1
+}
+echo '{"state": "open", "draft": true}' >"$stub/pr-1"
+echo '{"state": "open", "draft": false}' >"$stub/pr-2"
+# The sweep deletes the draft's Worker and keeps the ready one's. It cannot read PR 3, so it
+# keeps that Worker too and fails.
+(! retire)
+test "$(LC_ALL=C sort "$stub/deleted")" = "$(printf 'pipe-me-pr-1?force=true\npipe-me-preview?force=true')"
+grep -q 'Could not read PR 3' "$stub/out"
+# Once PR 3 reads as closed, the sweep deletes it and passes.
+echo '{"state": "closed", "draft": false}' >"$stub/pr-3"
+retire
+test "$(grep -c 'pr-3' "$stub/deleted")" = 1
+(! grep -q 'pr-2' "$stub/deleted")
+# A Worker that does not exist answers 404, which is not an error.
+retire PRS=7 DELETE_CODE=404
+grep -qx 'pipe-me-pr-7?force=true' "$stub/deleted"
+# Without the subdomain, every delete still runs, unverified, and the run fails.
+(! retire PRS='1 2' SUB_FAIL=1)
+test "$(wc -l <"$stub/deleted")" = 2
+grep -q 'no takedown below is verified' "$stub/out"
+# Only a 404 counts as gone: a timeout or a 502 on every try fails, naming the code.
+(! retire PRS=1 PROBE_CODE=000)
+grep -qF 'answers HTTP 000 after the delete' "$stub/out"
+(! retire PRS=1 PROBE_CODE=502)
+grep -qF 'answers HTTP 502 after the delete' "$stub/out"
 # A web app at the repo root builds in place.
 test -f s/wrangler.preview.jsonc
 test -f s/.github/workflows/preview-retire.yml

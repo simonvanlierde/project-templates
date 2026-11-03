@@ -97,15 +97,11 @@ Fill in their TODOs before the first public deploy.
 
 ### Pull request previews
 
-Each pull request that is open and not a draft gets its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>`, deployed by the `preview` job in `ts.yml` from
-[`{{ d }}wrangler.preview.jsonc`]({{ blob }}{{ d }}wrangler.preview.jsonc). The address is shown in the job summary. Previews are public and
-send `X-Robots-Tag: noindex`. The job reads the pull request again just before deploying, so a pull request that closed in the meantime gets none.
-`preview-retire.yml` deletes the Worker when the pull request closes or turns draft, then fetches the address and fails unless it stops serving the build.
-A daily run deletes the Worker of any pull request that is no longer open and ready, in case an event was missed.
-An app made before this change still has the old shared `{{ slug | replace('.', '-') | replace('_', '-') }}-preview` Worker, whose version URLs stay live. Run `preview-retire.yml` by hand once with the list empty: the sweep deletes that Worker too. One-time setup:
+Each pull request that is open and not a draft gets its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>`, from [`{{ d }}wrangler.preview.jsonc`]({{ blob }}{{ d }}wrangler.preview.jsonc), deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#pull-request-previews)).
+One-time setup:
 
 1. Run `just repo-settings` to create the `preview` environment, or create it under Settings > Environments.
-2. Add the secrets `CLOUDFLARE_API_TOKEN` (a token with Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to that environment.
+2. Add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to that environment.
 3. In the Pages project, set Settings > Builds > Branch control > Preview branch to None.
 
 Without the token, the job skips with a notice.

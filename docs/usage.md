@@ -175,7 +175,7 @@ When projects record architectural choices, store them in `docs/decisions/`.
 - Playwright end-to-end tests in `tests/e2e/`: axe accessibility scans in light/dark modes and Content-Security-Policy enforcement.
 - Mandatory legal pages linked from the footer.
 - Cloudflare Pages configuration: `public/_headers` (security headers) and `wrangler.jsonc`.
-- Pull request previews: `wrangler.preview.jsonc`, a `preview` job in `.github/workflows/ts.yml` and `.github/workflows/preview-retire.yml`.
+- Pull request previews: `wrangler.preview.jsonc`, a `preview` job in `.github/workflows/ts.yml`, `.github/workflows/preview-retire.yml` and `.github/scripts/preview-retire.sh`.
 - Bundle size budget in `scripts/checkBundleBudget.mjs`.
 
 Cloudflare Pages deploys via Git integration: configure build command `pnpm build`, output directory `dist`, and set the root directory to `ts_dir` for nested apps.
@@ -184,15 +184,15 @@ Cloudflare Pages deploys via Git integration: configure build command `pnpm buil
 
 Production stays on Cloudflare Pages. Each pull request that is open and not a draft gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`, so Pages needs no preview builds. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. The job adds that header to the deployed copy of the build only, so `public/_headers` and production never carry it. The job reads the pull request again right before deploying, in case it closed while the job was queued.
 
-When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker, then fetches the address and fails unless it stops serving the build. A daily run lists the account's `<slug>-pr-<number>` Workers and deletes those whose pull request is not open and ready. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep.
+When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker through the Cloudflare API. It then fetches the address and fails unless it answers 404, which shows the Worker is gone. A daily run lists the account's `<slug>-pr-<number>` Workers and deletes those whose pull request is not open and ready, in case an event was missed. When it cannot read a pull request, it keeps that Worker and fails. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep. The workflow runs `.github/scripts/preview-retire.sh`.
 
 Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` skip the job with a notice. One-time setup:
 
 1. Run `just repo-settings`. It creates the `preview` environment in GitHub (or create it under Settings > Environments).
-2. Create a Cloudflare API token from the "Edit Cloudflare Workers" template (Workers Scripts: Edit). Add it to the `preview` environment as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
+2. Create a custom Cloudflare API token with the permission Account > Workers Scripts: Edit. Add it to the `preview` environment as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
 3. In the Pages project, open Settings > Builds > Branch control and set Preview branch to None, so Pages stops building previews of its own.
 
-The first deploy creates the Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. An app made before this change still has the old shared `<slug>-preview` Worker, whose version URLs stay live. Run `preview-retire.yml` by hand once with the list empty: the sweep deletes that Worker too. The wrangler version is pinned in `ts.yml` and `preview-retire.yml`, and `copier update` brings new versions.
+The first deploy creates the Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. The wrangler version is pinned in `ts.yml`, and `copier update` brings new versions.
 
 Copier updates do not overwrite user-owned starter files: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`, `tests/e2e/routes.ts`, and markdown files in `docs/`.
 
