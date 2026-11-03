@@ -17,6 +17,7 @@ changes are marked **Breaking**.
 
 ### Added
 
+- `just ts-shots` in web apps: full-page screenshots of every route at 390 and 1440 px, light and dark, saved to the gitignored `shots/`.
 - The pull request template asks for `How I know it works:` (the command and its output, or a test that fails without the change) and `What to check:`. Existing projects get them with `copier update`.
 - A web app's bug form asks for the page URL and the browser, with the commit optional, and no longer formats the steps as shell. Other projects keep the command-line form; one with a web app and other stacks gets the web form.
 - `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch split off `origin/main`, for a check on each change. TypeScript has none: Stryker has no diff mode. See [Test extras](docs/usage.md#test-extras).
