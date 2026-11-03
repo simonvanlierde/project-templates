@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 /**
  * Guards docs/accessibility.md as the app renders it at /accessibility. The
  * statement's value is that it claims no more than the repo can show, so these
- * fail when it overclaims, promises no reply time, or goes a year without review.
+ * fail when it overclaims or promises no reply time.
  * a11y.spec.ts runs axe over it with the other routes, and legal-pages.spec.ts
  * checks its title, email contact and the links to and from it.
  */

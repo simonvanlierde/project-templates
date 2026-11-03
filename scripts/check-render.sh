@@ -15,6 +15,7 @@ out=${1:?usage: scripts/check-render.sh OUT_DIR}
 # replaces your own copier settings for this run.
 export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
 COPIER_VERSION=${COPIER_VERSION:-$(sed -n 's/^ *COPIER_VERSION: *//p' .github/workflows/ci.yml)}
+PREK_VERSION=${PREK_VERSION:-$(sed -n 's/^ *PREK_VERSION: *//p' .github/workflows/ci.yml)}
 copier_pin=$(sed -n '/^copier_version:/,/^$/s/^  default: //p' copier.yml)
 howfairis_pin=$(sed -n '/^howfairis_version:/,/^$/s/^  default: \([^ ]*\).*/\1/p' copier.yml)
 copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwrite)
@@ -463,11 +464,19 @@ test "$("$notes" 1.0.0 "$out/sample-changelog.md")" = $'\n- first release'
 rel=$out/rel
 mkdir "$rel"
 ssh-keygen -q -t ed25519 -N '' -f "$rel/key"
+# A citable project's recipe runs the citesync hook through `prek`; CI has only uvx.
+# The shim stays on PATH for the rest of the run, at the version CI pins.
+mkdir "$rel/bin"
+printf '#!/bin/sh\nexec uvx -q prek%s "$@"\n' "${PREK_VERSION:+@$PREK_VERSION}" >"$rel/bin/prek"
+chmod +x "$rel/bin/prek"
+PATH=$rel/bin:$PATH
 git init -q --bare -b main "$rel/origin.git"
 cp -R k "$rel/w"
 (
   # shellcheck disable=SC2030 # only this subshell reads it
   export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+  # k keeps a placeholder CITATION.cff that citesync cannot read; c's case below runs it.
+  export SKIP=citesync
   cd "$rel/w"
   git init -q -b main
   git remote add origin "$rel/origin.git"
@@ -496,6 +505,22 @@ cp -R k "$rel/w"
   git verify-tag v0.1.0 >/dev/null 2>&1
   test "$(git -C "$rel/origin.git" rev-parse 'v0.1.0^{commit}')" = "$(git rev-parse HEAD)"
   .github/scripts/release-notes.sh v0.1.0 CHANGELOG.md >/dev/null
+)
+# c lists three manifests in citesync.toml. Bumping the two the recipe reads, but not
+# Cargo.toml, stops the release at citesync with CHANGELOG.md unchanged. No remote: the
+# check runs before the fetch.
+cp -R c "$rel/c"
+(
+  cd "$rel/c"
+  git init -q -b main
+  sed -i 's/^## \[Unreleased\]$/&\n\n- first thing/' CHANGELOG.md
+  sed -i 's/^version = "0.1.0"$/version = "0.2.0"/' api/pyproject.toml
+  sed -i 's/^  "version": "0.1.0",$/  "version": "0.2.0",/' apps/web/package.json
+  git add -A
+  git -c user.name=t -c user.email=t@t.test commit -qm base --no-verify
+  (! just release 0.2.0 >../c-release.log 2>&1)
+  grep -q "version-mismatch.*0.1.0" ../c-release.log
+  git diff --quiet
 )
 
 # cold-install.yml runs the README's Development blocks. Run its step with `bash -ex`
@@ -1021,7 +1046,7 @@ grep -qF 'rm -rf web/shots' d/just/ts.just
 grep -qF 'SHOTS=1 pnpm -C web exec playwright test --project shots' d/just/ts.just
 grep -qF 'web/shots/' d/README.md
 grep -qF 'ts-(e2e|shots)' d/.github/workflows/cold-install.yml
-grep -qx 'shots/' d/.gitignore
+grep -qx '/web/shots/' d/.gitignore
 (! grep -q '^ts-shots:' a/just/ts.just)
 # The legal pages: statement and privacy always, terms for accounts or uploads,
 # each a route the axe, CSP, privacy and legal-page specs visit.
@@ -1227,7 +1252,6 @@ done
 # Spelling and links: a fresh render passes both hooks, and fails them on a misspelt
 # word and on a relative link to a missing file. prek needs a git repo, so each check
 # runs in a copy. lychee runs offline in the hook; links.yml checks the web weekly.
-PREK_VERSION=${PREK_VERSION:-$(sed -n 's/^ *PREK_VERSION: *//p' "$repo/.github/workflows/ci.yml")}
 prek=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --all-files)
 for r in a b d h; do
   rm -rf "$r-hooks"
@@ -1236,6 +1260,15 @@ for r in a b d h; do
   git -C "$r-hooks" add -A
   (cd "$r-hooks" && "${prek[@]}" typos lychee jsonvet >/dev/null)
 done
+# The web apps track the shots spec and ignore only the screenshots `just ts-shots` writes.
+rm -rf s-git
+cp -R s s-git
+git -C s-git init -q
+git -C s-git add -A
+git -C s-git ls-files --error-unmatch tests/shots/shots.spec.ts >/dev/null
+git -C s-git check-ignore -q shots/index-390-light.png
+git -C d-hooks ls-files --error-unmatch web/tests/shots/shots.spec.ts >/dev/null
+git -C d-hooks check-ignore -q web/shots/index-390-light.png
 # h's commit-msg hook takes a sign-off with an email, and refuses one without.
 dco_hook=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --hook-stage commit-msg --commit-msg-filename msg dco-signoff)
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg

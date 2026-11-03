@@ -10,62 +10,82 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
-### Removed
+Upgrade steps:
 
-- The `status` question is gone. New READMEs say "Status: experimental"; edit the line by hand when the project moves on. Existing READMEs are unaffected.
-- A web app's end-to-end tests no longer fail while its legal pages hold TODOs, or once the accessibility statement's "Last reviewed" date is over 400 days old, so a new web app passes CI as rendered. Fill in the TODOs before the first public deploy and review the statement yearly: see [docs/web-legal.md](docs/web-legal.md).
+- **Breaking:** in a web app, add `export const LEGAL_LINKED_FROM: readonly string[] = [...ROUTES];` to `tests/e2e/routes.ts` to keep the old legal-page check, or list only the routes that link the legal pages.
+- **Breaking:** in a web app, merge the `copier update`, run `just repo-settings` and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` to the `production` environment. Once the Worker is live, move the custom domain to it and delete the Pages project ([steps](docs/usage.md#moving-an-app-off-cloudflare-pages)).
+- **Breaking:** in a web app, move any hand tests in `docs/accessibility.md` under "How we check" and delete the "Tested with" heading, or the statement test fails.
+- **Breaking:** with the mutation extra, run `just py-mutation` and list each survivor you accept in `tests/mutation-baseline.txt`, with its reason.
+- **Breaking:** to keep your `docs/decisions/README.md`, run `git checkout HEAD -- docs/decisions/README.md` before you commit the update.
+- **Breaking:** to keep `cold-install.yml`, run `copier update --data cold_install=true`.
+- **Breaking:** delete `.github/scripts/citation.py` if it is still there, then run `prek run citesync --all-files` and fix what it reports.
+- **Breaking:** delete `.zenodo.json` unless you added to it what `CITATION.cff` cannot hold, such as contributors, related records, communities or grants.
+- **Breaking:** with `license` set to `none`, `copier update` deletes `CITATION.cff` and `codemeta.json`. To keep them, run `git checkout HEAD -- CITATION.cff codemeta.json` before you commit the update.
+- **Breaking:** in a public repo, run `prek install`, then commit with `-s`: the `dco-signoff` hook refuses an unsigned commit.
+- In a public repo, run `just repo-settings` after the update, so `main` also requires the checks of each stack at the repo root.
 
 ### Added
 
 - `just ts-shots` in web apps: full-page screenshots of every route at 390 and 1440 px, light and dark, saved to the gitignored `shots/`.
-- The pull request template asks for `How I know it works:` (the command and its output, or a test that fails without the change) and `What to check:`. Existing projects get them with `copier update`.
-- A web app's bug form asks for the page URL and the browser, with the commit optional, and no longer formats the steps as shell. Other projects keep the command-line form; one with a web app and other stacks gets the web form.
-- `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch split off `origin/main`, for a check on each change. TypeScript has none: Stryker has no diff mode. See [Test extras](docs/usage.md#test-extras).
-- Web apps get pull request previews on Cloudflare Workers. Each pull request that is open, not a draft and not from a bot gets its own Worker, `<slug>-pr-<number>`, deployed by a `preview` job in `ts.yml`. `preview-retire.yml` deletes it when the pull request closes, merges or turns draft, and fails unless the address stops serving. A daily run deletes the Worker of any pull request that is no longer open and ready. To switch on, run `just repo-settings` to create the `preview` GitHub environment and add the secrets `CLOUDFLARE_API_TOKEN` (Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to it. The Cloudflare account needs a workers.dev subdomain. See [Pull request previews](docs/usage.md#pull-request-previews).
-- `just release X.Y.Z` cuts `[Unreleased]` in `CHANGELOG.md` into the new version with compare links, checks the manifest version when you publish, and then signs, verifies and pushes the annotated tag `vX.Y.Z` on `origin/main`. A tag with no changelog section no longer fails at `release-notes.sh`. See [Publishing](docs/usage.md#publishing).
-- Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` gives each file's copyright and license, `LICENSES/` holds the texts, and a `reuse` git hook fails while a file is not covered. `LICENSE` stays. The Code of Conduct keeps the Contributor Covenant's CC-BY-SA-4.0. A file you copied in from elsewhere fails the hook until you give it its own license: see [Licenses](docs/usage.md#licenses).
+- The pull request template asks for `How I know it works:` (the command and its output, or a test that fails without the change) and `What to check:`.
+- A web app's bug form asks for the page URL and the browser, and no longer formats the steps as shell. Other projects keep the command-line form.
+- `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch left `origin/main`. See [Test extras](docs/usage.md#test-extras).
+- Web apps get a preview Worker for each open, ready pull request, deleted again when the pull request closes, merges or turns draft. See [Pull request previews](docs/usage.md#pull-request-previews).
+- `just release X.Y.Z` cuts `[Unreleased]` in `CHANGELOG.md` into the new version, then signs and pushes the tag on `origin/main`. See [Publishing](docs/usage.md#publishing).
+- The PyPI and npm release workflows refuse a tag that differs from the package version.
+- `advisories.yml` runs zizmor over the workflows every Monday, so a newly known-bad action fails without a commit here.
+- A project that publishes to PyPI gets classifiers, `keywords` and a `Changelog` URL in `pyproject.toml`.
+- `copier copy` ends with how to release: `just release X.Y.Z`, the signing key it needs and where to set the version.
+- Projects with a license follow the [REUSE spec](https://reuse.software): `REUSE.toml` and `LICENSES/` cover every file, and a `reuse` git hook fails on a file they don't. See [Licenses](docs/usage.md#licenses).
 - Research and data-pipeline projects ask `data_license` for what they commit under `data/`: CC-BY-4.0 by default for research, CC0-1.0 for a pipeline. Until now data took the code license.
 - [docs/usage.md](docs/usage.md#licenses) says which code license to pick.
 - TypeScript, Rust and Go libraries get the citation files too, as Python libraries already did. `codemeta.json`'s `programmingLanguage` names your stacks instead of always saying Python.
-- A `profiling` option for the Python and Rust stacks, off by default. Python gets `just py-profile` (pyinstrument). Rust gets a `[profile.profiling]` build with frame pointers, `just rs-profile` (samply) and `just rs-counters` (`perf stat`). See [Profiling](docs/usage.md#profiling).
-- With publishing options enabled (PyPI, npm, GHCR), `just repo-settings` creates their GitHub environments with required reviewer and `v*` tag deployment policies (GHCR also on `main`). On public repos, it turns on CodeQL default setup and prints the PyPI pending-publisher and Zenodo URLs.
-- A Python web service's `compose.yaml` sets `OTEL_RESOURCE_ATTRIBUTES` to `project=<slug>,env=dev` unless you set it, so a monitoring hub can tell projects and environments apart. See [Python kinds](docs/python-kinds.md#web-service).
-- Python libraries get `just py-matrix`, which runs the tests on every Python version `python.yml` covers, and a README line for it.
+- A `profiling` option for the Python and Rust stacks, off by default, adds `just py-profile`, `just rs-profile` and `just rs-counters`. See [Profiling](docs/usage.md#profiling).
+- With publishing on, `just repo-settings` creates the PyPI, npm and GHCR environments with you as required reviewer. On a public repo it also turns on CodeQL default setup and prints the PyPI pending-publisher and Zenodo URLs.
+- A Python web service's `compose.yaml` sets `OTEL_RESOURCE_ATTRIBUTES` to `project=<slug>,env=dev` unless you set it, so a monitoring hub can tell projects apart. See [Python kinds](docs/python-kinds.md#web-service).
+- Python libraries get `just py-matrix`, which runs the tests on every Python version `python.yml` covers.
 - The README installs the `prek` version the checks workflow runs, and the justfile says why `just hooks` can fail where CI passes.
 
 ### Changed
 
-- In a public repo, `main-checks.json` also requires the check job of each stack at the repo root (`python: lint, types, tests`, `ts: lint, types, tests`, `fmt, clippy, tests, deny`, `golangci-lint, tests, govulncheck`), so a failing test blocks the merge. Run `just repo-settings` after the update. Nested stacks are left out: their workflow runs only when their folder changes.
-- The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build, so a small feature doesn't trip it. The limit itself is unchanged. Existing apps get the comment with `copier update`; check your own limit against it.
-- **Breaking:** a web app's legal pages no longer have to be linked from a footer on every route. `tests/e2e/legal-pages.spec.ts` checks the routes in a `LEGAL_LINKED_FROM` export from `tests/e2e/routes.ts`, and each page must link back to `/`, since an installed app has no back button. `routes.ts` is yours, so `copier update` doesn't add the export: add `export const LEGAL_LINKED_FROM: readonly string[] = [...ROUTES];` to keep the old check, or list only the screen that links the pages, such as `["/settings"]`.
-- **Breaking:** A web app's production moves from Cloudflare Pages to a Cloudflare Worker that serves the build as static assets. Pages built a preview of every branch push, and those previews could not be deleted. A new `production` job in `ts.yml` deploys the build the checks ran on at each push to `main`, through a `production` GitHub environment that only `main` can deploy to. `wrangler.jsonc` is now the Worker's config for production and previews, and `wrangler.preview.jsonc` is gone. `site_url` defaults to `https://<slug>.<github_user>.workers.dev`. Upgrade: merge the `copier update`, run `just repo-settings`, and add both Cloudflare secrets to the `production` environment. Once the next push to `main` has deployed the Worker, move the custom domain from the Pages project to the Worker, then delete the Pages project. Without a custom domain, also change the `site_url` answer to the workers.dev address. See [Moving an app off Cloudflare Pages](docs/usage.md#moving-an-app-off-cloudflare-pages).
-- **Breaking:** `just py-mutation` now fails on a surviving mutant that is not listed in `tests/mutation-baseline.txt`, and on a listed one that no longer survives, so the weekly `mutation.yml` python job can fail. Upgrade: after `copier update`, run `just py-mutation` and list each survivor you accept in the new `tests/mutation-baseline.txt`, one per line with the reason. See [Test extras](docs/usage.md#test-extras).
+- **Breaking:** a web app's production moves from Cloudflare Pages to a Cloudflare Worker, deployed by a `production` job in `ts.yml` at each push to `main`. `site_url` defaults to `https://<slug>.<github_user>.workers.dev`. See [Moving an app off Cloudflare Pages](docs/usage.md#moving-an-app-off-cloudflare-pages).
+- **Breaking:** a web app's legal pages no longer need a footer link on every route. The test checks the routes in `LEGAL_LINKED_FROM` from `tests/e2e/routes.ts`, and each page must link back to `/`. See [Legal pages](docs/usage.md#legal-pages).
+- **Breaking:** the accessibility statement has no "Tested with" section any more, and its test fails while the heading is still there. Hand tests go under "How we check".
+- **Breaking:** `just py-mutation` fails on a surviving mutant not listed in `tests/mutation-baseline.txt`, so the weekly mutation job can fail. See [Test extras](docs/usage.md#test-extras).
+- **Breaking:** new projects no longer get `docs/decisions/`, and `copier update` deletes its `README.md` and `0000-template.md`. Your numbered records stay.
+- **Breaking:** `cold-install.yml` is now opt-in through the `cold_install` question, off by default. See [CI baseline](docs/ci-baseline.md).
+- **Breaking:** [citesync](https://github.com/simonvanlierde/citesync) replaces `.github/scripts/citation.py`, and its git hook also checks the package manifests against `CITATION.cff`. `just citation --check` is gone: the hook does the check.
+- **Breaking:** no more `.zenodo.json`: Zenodo reads `CITATION.cff` when a repo has none. A project with `license` set to `none` gets no citation files, since a Zenodo record needs a license.
+- **Breaking:** the `dco-signoff` commit-msg hook and the web sign-off setting now come with every public render, not only with `openssf_badge=silver` ([CI baseline](docs/ci-baseline.md)).
+- A web app's end-to-end tests no longer fail on TODOs in the legal pages or on an accessibility statement last reviewed over 400 days ago, so a new web app passes CI as rendered ([docs/web-legal.md](docs/web-legal.md)).
+- In a public repo, `main-checks.json` also requires the check job of each stack at the repo root, so a failing test blocks the merge. Nested stacks are left out: their workflow runs only when their folder changes.
+- The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build. The limit itself is unchanged; check yours against it.
 - A README of a project that publishes to PyPI or npm links to repository files by full GitHub URL, so the links work on the package page.
-- The README no longer has a "Releasing" section or the note on holding back the week-old-release rule. Public projects get both in `CONTRIBUTING.md`, the release steps in [Publishing](docs/usage.md#publishing). After `copier update`, delete those sections from the README if you don't want them twice.
-- **Breaking:** new projects no longer get `docs/decisions/`. Add the folder when a choice needs a record. `copier update` deletes `docs/decisions/README.md` and `0000-template.md`, even an index you edited; your numbered records stay. To keep the index, run `git checkout HEAD -- docs/decisions/README.md` before you commit the update.
-- **Breaking:** `cold-install.yml`, which runs the README's setup steps in a clean container, is now opt-in through the `cold_install` question under `customise`, off by default. `copier update` removes it; to keep it, run `copier update --data cold_install=true`. See [CI baseline](docs/ci-baseline.md).
-- `just repo-settings` adopts existing rulesets by target instead of rigid names, updating older rulesets (`protect-main`, `protect-main-checks`) in place without creating duplicates. If you renamed any check jobs, rerun `just repo-settings` after `copier update` to sync required status checks.
-- **Breaking:** [citesync](https://github.com/simonvanlierde/citesync) replaces `.github/scripts/citation.py`. Its git hook also checks the package manifests against `CITATION.cff`, and `just citation` runs its writer, so `just citation --check` is gone: the hook does the check. After `copier update`, delete `.github/scripts/citation.py` if it is still there, and run `prek run citesync --all-files` to see what disagrees. A nested package gets a `citesync.toml` that lists its manifests.
-- **Breaking:** no more `.zenodo.json`. Zenodo reads `CITATION.cff` when a repo has none, and the rendered one held nothing more. After `copier update`, delete your `.zenodo.json` unless you added contributors who aren't authors, links to related records, communities or grants: Zenodo reads only `.zenodo.json` when one exists, so keep it complete. A project with `license` set to `none` gets no citation files, since a Zenodo record needs a license.
-- A web app's privacy and accessibility statements are rewritten in plain language. The privacy page opens with what is stored and whether anything leaves the device, then says how to delete it, and has no legal jargon. The accessibility page drops test file names and CI details. The TODOs ask for facts in the user's words. `copier update` merges the new wording into pages you have already filled in, so expect conflicts there: keep your facts and take the new phrasing where it fits. [docs/web-legal.md](docs/web-legal.md) now says how to write the pages, with an example.
-- The accessibility statement has no "Tested with" section any more: it only repeated the Chromium line from "How we check", where the browser and any hand tests now go. Its test checks for one heading fewer, so move your hand tests under "How we check" and delete the heading, or the test fails.
-- The `dco-signoff` commit-msg hook and the web sign-off setting in `just repo-settings` now come with every public render, as the `dco` workflow does, not only with `openssf_badge=silver` ([CI baseline](docs/ci-baseline.md)).
+- The README no longer has a "Releasing" section or the note on the week-old-release rule; public projects get both in `CONTRIBUTING.md`. After `copier update`, delete them from the README if you don't want them twice.
+- `just repo-settings` updates existing rulesets in place, found by what they protect rather than by name, without creating duplicates.
+- A web app's privacy and accessibility statements are rewritten in plain language, so expect merge conflicts in pages you have filled in. [docs/web-legal.md](docs/web-legal.md) says how to write them, with an example.
 - `cold-install.yml` also runs when `pyproject.toml`, `uv.lock` or `.python-version` change, so a lockfile that breaks first setup fails on the pull request.
+- In Python projects, the whitespace, end-of-file and notebook hooks leave `tests/fixtures/` alone, as they already did `data/`.
+
+### Removed
+
+- The `status` question is gone. New READMEs say "Status: experimental"; edit the line by hand when the project moves on.
 
 ### Fixed
 
 - Release notes keep named Markdown link definitions, including definitions at the end of a section. See [Publishing](docs/usage.md#publishing).
 - The Copier update workflow selects stable template tags and skips prereleases. See [Dependency updates](docs/usage.md#dependency-updates).
 - `just repo-settings` turns on GitHub's "Automatically delete head branches", so a merged PR's branch goes away.
-- A web app's markdown plugin now strips HTML comments until none are left. One pass over `<!<!---->---->` left a comment behind. CodeQL flagged the single pass as incomplete sanitization (`js/incomplete-multi-character-sanitization`, high) in every rendered web app.
-- A project description with a `\` is refused. It went into the package docstring, where an escape such as `\x` is a syntax error, so the package did not import.
+- A deleted `tests/test_add.py` no longer comes back on `copier update`, and the update keeps your package's `__init__.py`.
+- A web app's markdown plugin strips HTML comments until none are left: one pass over `<!<!---->---->` left a comment behind. CodeQL flagged this in every rendered web app.
+- A project description with a `\` is refused. It went into the package docstring, where an escape such as `\x` is a syntax error.
 - A project description with `{{` no longer breaks the justfile. just read it as a variable, so no recipe ran.
-- A project name ending in `.`, `-` or `_` no longer leaves it on the package, image and Pages names: `app.` made `app-`, and `https://app-.pages.dev` is not a valid address.
+- A project name ending in `.`, `-` or `_` no longer leaves it on the package, image and Worker names: `app.` made `app-`, and `https://app-.example-org.workers.dev` is not a valid address.
 - A project name with `~`, or with `_` at the start or end of a word (`a _b_`), is refused: Markdown read it as strikethrough or emphasis. `_` inside a word, as in `my_app`, is still fine.
 - A package directory with `//`, such as `apps//web`, is refused. It counted as one level too many, so `biome.json` pointed above the repo.
-- A private or unlicensed project given `openssf_badge=silver` no longer gets the sign-off hook, the `web_commit_signoff_required` setting or the silver DCO wording, the same as it gets no silver documents. A private project had the hook with no `dco` workflow behind it, and the next update removed it.
-- The image labels in a Dockerfile show the description and name as written. They were JSON strings, which a Dockerfile reads differently: `Café` showed as `Caf\u00e9`, and `$USD` expanded to nothing.
-- The sign-off instructions in CONTRIBUTING and the `dco` failure message give `origin/main` as the base, which a fresh clone has, and tell you to use `git push --force-with-lease` on a branch you already pushed, not a plain force-push.
+- A private or unlicensed project given `openssf_badge=silver` no longer gets the sign-off hook, the `web_commit_signoff_required` setting or the silver DCO wording. A private project had the hook with no `dco` workflow behind it.
+- The image labels in a Dockerfile show the description and name as written: `Café` showed as `Caf\u00e9`, and `$USD` expanded to nothing.
+- The sign-off instructions in CONTRIBUTING and the `dco` failure message give `origin/main` as the base, which a fresh clone has, and say to use `git push --force-with-lease` on a branch you already pushed.
 
 ### Security
 
