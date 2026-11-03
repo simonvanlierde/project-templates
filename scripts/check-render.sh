@@ -1014,6 +1014,11 @@ test -f d/web/public/_headers
 test -f d/web/wrangler.jsonc
 test -f d/web/tests/e2e/a11y.spec.ts
 test -f d/web/tests/e2e/csp.spec.ts
+# `just shots` screenshots the same routes; shots/ stays out of git.
+test -f d/web/tests/shots/shots.spec.ts
+grep -q '^shots:' d/just/ts.just
+grep -qx 'shots/' d/.gitignore
+(! grep -q 'shots' a/just/ts.just)
 # The legal pages: statement and privacy always, terms for accounts or uploads,
 # each a route the axe, CSP, privacy and legal-page specs visit.
 for page in accessibility privacy terms; do
@@ -1218,6 +1223,7 @@ grep -qx 'playwright-report/' d/.gitignore
 (! grep -q reuseExistingServer d/web/playwright.config.ts)
 (! grep -q 'playwright-report' a/.gitignore)
 (! grep -q 'e2e' a/.github/workflows/ts.yml)
+(! grep -qx 'shots/' a/.gitignore)
 grep -q 'applies-to: security-updates' a/.github/dependabot.yml
 # Actions and hook revs share one multi-ecosystem PR, with the same group in Renovate.
 grep -qx '  actions-and-hooks:' a/.github/dependabot.yml
