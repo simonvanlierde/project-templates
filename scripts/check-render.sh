@@ -1091,15 +1091,18 @@ grep -qF "pnpm dlx wrangler@$wrangler_pin deploy --config wrangler.preview.jsonc
 grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
 (! grep -q '^  X-Robots-Tag' d/web/public/_headers)
 test -f d/.github/workflows/preview-retire.yml
-grep -qF "pnpm dlx wrangler@$wrangler_pin delete \"\$name\" --config wrangler.preview.jsonc --force" d/.github/workflows/preview-retire.yml
+# shellcheck disable=SC2016
+grep -qF 'workers/scripts/$name?force=true' d/.github/workflows/preview-retire.yml
+(! grep -q 'pnpm' d/.github/workflows/preview-retire.yml)
+grep -qx "            if grep -qx 'pipe-me-preview' <<< \"\$all\"; then names=\"pipe-me-preview\"; fi" d/.github/workflows/preview-retire.yml
 (! grep -q 'versions upload' d/.github/workflows/preview-retire.yml)
 # shellcheck disable=SC2016
-grep -qF 'name="pipe-me-pr-$pr"' d/.github/workflows/preview-retire.yml
-grep -qF 'select(test("^pipe-me-pr-[0-9]+$"))' d/.github/workflows/preview-retire.yml
+grep -qF 'names="$names pipe-me-pr-$pr"' d/.github/workflows/preview-retire.yml
+grep -qF "grep -E '^pipe-me-pr-[0-9]+\$'" d/.github/workflows/preview-retire.yml
+grep -qF 'required: false' d/.github/workflows/preview-retire.yml
 grep -qF 'workers/scripts' d/.github/workflows/preview-retire.yml
 grep -qx '    environment: preview' d/.github/workflows/preview-retire.yml
-grep -qx '        working-directory: web' d/.github/workflows/preview-retire.yml
-grep -qx '          package_json_file: web/package.json' d/.github/workflows/preview-retire.yml
+(! grep -q 'working-directory\|checkout' d/.github/workflows/preview-retire.yml)
 # Lifecycle: the upload re-reads the pull request, each preview is its own Worker, the retire deletes it and
 # checks the address, and a daily run sweeps the account for missed events.
 # shellcheck disable=SC2016
@@ -1107,7 +1110,7 @@ grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq' d/.github/workflows/ts.yml
 grep -qx '      pull-requests: read' d/.github/workflows/ts.yml
 grep -qxF '    - cron: "17 4 * * *"' d/.github/workflows/preview-retire.yml
 grep -qx '  schedule:' d/.github/workflows/preview-retire.yml
-grep -qx '      pull-requests: read' d/.github/workflows/preview-retire.yml
+grep -q '^      pull-requests: read' d/.github/workflows/preview-retire.yml
 (! grep -q 'preview-closed-marker' d/.github/workflows/preview-retire.yml)
 # A web app at the repo root builds in place.
 test -f s/wrangler.preview.jsonc

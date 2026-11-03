@@ -1,10 +1,11 @@
 name: Retire preview
 
-# Each pull request previews on its own Worker, {{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>. A pull request that
-# closes or turns draft has that Worker deleted, then the address is fetched to check
-# that it no longer serves the build. A daily run deletes the Worker of any pull request
-# that is no longer open and ready, in case an event was missed. Run it by hand with a
-# list of pull request numbers to retire older previews.
+# A preview is a Worker of its own, {{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>, so retiring it means
+# deleting the Worker. The job then fetches the address and fails unless it has stopped
+# serving the build. A daily run lists the account's preview Workers and deletes each one
+# whose pull request is not open and ready, which also covers events that never ran. Run
+# it by hand with a list of pull request numbers to retire those previews now, or with the
+# list empty to run the sweep.
 on:
   pull_request:
     types: [closed, converted_to_draft]
@@ -13,120 +14,105 @@ on:
   workflow_dispatch:
     inputs:
       prs:
-        description: PR numbers to retire, separated by spaces
-        required: true
+        description: PR numbers to retire, separated by spaces. Leave empty to run the daily sweep.
+        required: false
 
 permissions:
   contents: read
 
+# Shares ts.yml's preview group, so a retire waits for a deploy in flight.
 concurrency:
   group: preview-{% raw %}${{ github.event.pull_request.number || github.run_id }}{% endraw %}
 
 jobs:
   retire:
+    name: Retire
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    environment: preview
+    timeout-minutes: 15
     permissions:
       contents: read
-      pull-requests: read
-    environment: preview
-{%- if ts_dir != '.' %}
-    defaults:
-      run:
-        working-directory: {{ ts_dir }}
-{%- endif %}
+      pull-requests: read # to re-read each PR's state before the sweep deletes its Worker
     steps:
-      - name: Work out which pull requests to retire
-        id: list
-{%- if ts_dir != '.' %}
-        # Runs before checkout, when {{ ts_dir }}/ does not exist yet.
-        working-directory: .
-{%- endif %}
+      - name: Check credentials
+        id: gate
         env:
-          CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
-          CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
-          EVENT: {% raw %}${{ github.event_name }}{% endraw %}
-          PRS: {% raw %}${{ github.event.pull_request.number || inputs.prs }}{% endraw %}
+          TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
         run: |
-          set -o pipefail
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+          if [ -z "$TOKEN" ]; then
             echo "::notice::Nothing to retire: CLOUDFLARE_API_TOKEN is not set."
-            PRS=
-          elif [ "$EVENT" = "schedule" ]; then
-            # Backstop for a missed event: every preview Worker in the account. The
-            # delete step keeps the ones whose pull request is still open and ready.
-            PRS=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" \
-              | jq -r '.result[].id | select(test("^{{ slug | replace('.', '-') | replace('_', '-') }}-pr-[0-9]+$")) | sub("^.*-pr-"; "")' | sort -un | tr '\n' ' ')
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
           fi
-          echo "prs=$PRS" >> "$GITHUB_OUTPUT"
 
-      - if: steps.list.outputs.prs != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - if: steps.list.outputs.prs != ''
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-{%- if ts_dir != '.' %}
-        with:
-          package_json_file: {{ ts_dir }}/package.json
-{%- endif %}
-
-      - if: steps.list.outputs.prs != ''
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "{{ node_version }}"
-
-      - name: Delete each preview Worker
-        if: steps.list.outputs.prs != ''
+      - if: steps.gate.outputs.run == 'true'
+        name: Delete the preview Workers
         env:
           CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
           GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
           REPO: {% raw %}${{ github.repository }}{% endraw %}
           EVENT: {% raw %}${{ github.event_name }}{% endraw %}
-          PRS: {% raw %}${{ steps.list.outputs.prs }}{% endraw %}
-        # pipefail: the default shell takes the pipe's status from tee.
+          PRS: {% raw %}${{ github.event.pull_request.number || inputs.prs }}{% endraw %}
         run: |
           set -o pipefail
-          api=https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID
-          sub=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/workers/subdomain" | jq -r '.result.subdomain')
           failed=0
+          names=""
+          if [ "$EVENT" = schedule ] || [ -z "$PRS" ]; then
+            # Every preview Worker whose PR is not open and ready. The PR is read again
+            # here, just before the delete, so a PR that became ready since the list
+            # was made keeps its preview.
+            PRS=""
+            all=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" \
+              | jq -r '.result[].id') || { echo "::error::Could not list the account's Workers."; exit 1; }
+            for name in $(grep -E '^{{ slug | replace('.', '-') | replace('_', '-') }}-pr-[0-9]+$' <<< "$all" || true); do
+              n=${name#{{ slug | replace('.', '-') | replace('_', '-') }}-pr-}
+              [ "$(gh api "repos/$REPO/pulls/$n" --jq '.state, .draft' | paste -sd' ')" = "open false" ] || PRS="$PRS $n"
+            done
+            # The shared Worker of the earlier alias design; its version URLs still serve builds.
+            if grep -qx '{{ slug | replace('.', '-') | replace('_', '-') }}-preview' <<< "$all"; then names="{{ slug | replace('.', '-') | replace('_', '-') }}-preview"; fi
+          fi
           for pr in $PRS; do
             case "$pr" in *[!0-9]*|'') echo "::error::Not a PR number: $pr"; exit 1 ;; esac
-            if [ "$EVENT" = "schedule" ]; then
-              # Read the pull request again right before deleting, so a pull request
-              # that was reopened since the list was made keeps its preview.
-              state=$(gh api "repos/$REPO/pulls/$pr" --jq '.state, .draft' | tr '\n' ' ')
-              if [ "$state" = "open false " ]; then
-                echo "pr-$pr is open and ready, so its preview stays."
-                continue
-              fi
-            fi
-            name="{{ slug | replace('.', '-') | replace('_', '-') }}-pr-$pr"
-            # A pull request that never had a preview has no Worker to delete.
-            if ! pnpm dlx wrangler@{{ wrangler_version }} delete "$name" --config wrangler.preview.jsonc --force 2>&1 | tee delete.log; then
-              grep -Eqi 'not found|does not exist|10007' delete.log || exit 1
-              echo "::notice::No Worker $name, so there is no preview to delete."
-            fi
-            # Check the takedown: the address must stop serving the build.
-            url="https://$name.$sub.workers.dev"
-            ok=0
-            for wait in 2 5 10 20 30; do
-              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
-              if [ "$code" != 200 ]; then
-                ok=1
-                break
-              fi
-              sleep "$wait"
-            done
-            if [ "$ok" != 1 ]; then
-              echo "::error::$url still serves the preview after the Worker was deleted."
+            names="$names {{ slug | replace('.', '-') | replace('_', '-') }}-pr-$pr"
+          done
+          for name in $names; do
+            # The API rather than `wrangler delete`: that also lists KV namespaces, which the
+            # token has no right to read. A pull request that never had a preview has no
+            # Worker, and the API answers 404: not an error.
+            status=$(curl -sS -o delete.json -w '%{http_code}' -X DELETE \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$name?force=true" || true)
+            case "$status" in
+              200) echo "Deleted $name." ;;
+              404) echo "::notice::$name does not exist, so there is nothing to retire." ;;
+              *) echo "::error::Could not delete $name (HTTP $status): $(cat delete.json)"; failed=1; continue ;;
+            esac
+            # The address is the Worker's name plus the account's workers.dev subdomain.
+            sub=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
+              | jq -r '.result.subdomain')
+            if [ -z "$sub" ] || [ "$sub" = null ]; then
+              echo "::error::Could not read the account's workers.dev subdomain, so takedown of $name is unverified."
               failed=1
               continue
             fi
-            echo "Deleted $name (verified: $url answers $code)" >> "$GITHUB_STEP_SUMMARY"
+            url="https://$name.$sub.workers.dev"
+            # The delete takes a moment to reach every edge: retry with backoff.
+            code=000
+            for wait in 5 10 20 40 60; do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' "$url" || true)
+              [ "$code" != 200 ] && break
+              sleep "$wait"
+            done
+            if [ "$code" = 200 ]; then
+              echo "::error::$url still serves the build after the delete."
+              failed=1
+            else
+              echo "Retired $name: $url answers HTTP $code" >> "$GITHUB_STEP_SUMMARY"
+            fi
           done
           exit "$failed"

@@ -102,7 +102,7 @@ Each pull request that is open and not a draft gets its own Cloudflare Worker, `
 send `X-Robots-Tag: noindex`. The job reads the pull request again just before deploying, so a pull request that closed in the meantime gets none.
 `preview-retire.yml` deletes the Worker when the pull request closes or turns draft, then fetches the address and fails unless it stops serving the build.
 A daily run deletes the Worker of any pull request that is no longer open and ready, in case an event was missed.
-An app made before this change should delete its old shared `{{ slug | replace('.', '-') | replace('_', '-') }}-preview` Worker once in the Cloudflare dashboard: its version URLs stay live otherwise. One-time setup:
+An app made before this change still has the old shared `{{ slug | replace('.', '-') | replace('_', '-') }}-preview` Worker, whose version URLs stay live. Run `preview-retire.yml` by hand once with the list empty: the sweep deletes that Worker too. One-time setup:
 
 1. Run `just repo-settings` to create the `preview` environment, or create it under Settings > Environments.
 2. Add the secrets `CLOUDFLARE_API_TOKEN` (a token with Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to that environment.
