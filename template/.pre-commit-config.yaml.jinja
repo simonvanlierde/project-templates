@@ -59,8 +59,8 @@ repos:
         entry: sh -c 'test -f "$(git rev-parse --git-path MERGE_HEAD)" || exec committed "$@"' --
 {%- if public %}
 
-  # The dco workflow fails a pull request with an unsigned commit, so refuse one here. Merge
-  # commits are skipped, as the workflow skips them.
+  # Refuse an unsigned commit before the dco workflow sees it: that checks fork pull requests,
+  # and every pull request with openssf_badge=silver. Merge commits are skipped, as there.
   - repo: local
     hooks:
       - id: dco-signoff

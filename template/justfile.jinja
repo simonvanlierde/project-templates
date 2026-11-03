@@ -123,9 +123,9 @@ repo-settings:
     for name in main{% if public %} main-checks{% endif %} tags; do
         file=.github/rulesets/$name.json
         case "$name" in
-            main) filter='first(.[] | select(.name == "main") | .id) // first(.[] | select(.name == "protect-main") | .id) // first(.[] | select(.target == "branch" and (.name | test("checks?") | not)) | .id) // empty' ;;
-            main-checks) filter='first(.[] | select(.name == "main-checks") | .id) // first(.[] | select(.name == "protect-main-checks") | .id) // first(.[] | select(.target == "branch" and (.name | test("checks?"))) | .id) // empty' ;;
-            tags) filter='first(.[] | select(.name == "tags") | .id) // first(.[] | select(.name == "protect-tags") | .id) // first(.[] | select(.target == "tag") | .id) // empty' ;;
+            main) filter='first(.[] | select(.name == "main") | .id) // first(.[] | select(.target == "branch" and (.name | test("checks?") | not)) | .id) // empty' ;;
+            main-checks) filter='first(.[] | select(.name == "main-checks") | .id) // first(.[] | select(.target == "branch" and (.name | test("checks?"))) | .id) // empty' ;;
+            tags) filter='first(.[] | select(.name == "tags") | .id) // first(.[] | select(.target == "tag") | .id) // empty' ;;
         esac
         id=$(gh api "repos/{owner}/{repo}/rulesets?includes_parents=false" --jq "$filter" 2>"$err") || fail
         if [ -n "$id" ]; then

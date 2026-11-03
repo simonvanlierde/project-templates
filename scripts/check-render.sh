@@ -154,6 +154,8 @@ grep -qx 'source = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/k/LICENSE"
 grep -qx 'license = "GPL-3.0-or-later"' "$out/k/pyproject.toml"
 grep -q '"license": "https://spdx.org/licenses/GPL-3.0-or-later"' "$out/k/codemeta.json"
+# The REUSE.toml year is stored, so an update does not move it to the current year.
+grep -qE "^copyright_year: .?[0-9]{4}" "$out/k/.copier-answers.yml"
 grep -q 'Programming Language :: Python :: 3' "$out/k/pyproject.toml"
 grep -qx 'keywords = \[\] # citesync compares this list to keywords in CITATION.cff' "$out/k/pyproject.toml"
 grep -q 'Changelog = "https://github.com/[^/]*/adopt-me/blob/main/CHANGELOG.md"' "$out/k/pyproject.toml"

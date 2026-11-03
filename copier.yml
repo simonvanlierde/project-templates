@@ -295,11 +295,12 @@ author_orcid:
     Give the bare iD, as 0000-0000-0000-0000, without the https://orcid.org/ prefix.
     {% endif %}
 
-# Only the permissive texts carry a copyright line. The GNU texts are fixed, and
-# their copyright notice goes in each source file instead.
+# REUSE.toml's copyright line needs it for every license, so it is stored once and
+# does not move to the current year on each update. Of the license texts, only the
+# permissive ones carry it; the GNU texts are fixed.
 copyright_year:
   type: str
-  when: "{{ license in ('MIT', 'Apache-2.0', 'BSD-3-Clause') }}"
+  when: "{{ license != 'none' }}"
   ask: "{{ customise }}"
   help: Copyright year in the license
   default: "{{ '%Y' | strftime }}"
