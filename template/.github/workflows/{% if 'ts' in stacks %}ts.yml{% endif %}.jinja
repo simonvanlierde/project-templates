@@ -171,16 +171,16 @@ jobs:
           path: {% if ts_dir != '.' %}{{ ts_dir }}/{% endif %}playwright-report/
           retention-days: 7
 
-  # Uploads a pull request's build as a version of the preview Worker in
-  # wrangler.preview.jsonc, at a stable pr-<number> address. Production stays on Pages.
+  # Deploys a pull request's build as its own Worker, {{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>, from
+  # wrangler.preview.jsonc. Production stays on Pages.
   # Fork pull requests never get the token, so they skip with a notice, as does a repo
   # without the secret. The secrets live in the `preview` environment. A draft gets no
   # preview, and preview-retire.yml takes it down when a pull request closes or turns draft.
-  # The upload step re-reads the pull request first, in case a retire ran while this queued.
+  # The deploy step re-reads the pull request first, in case a retire ran while this queued.
   preview:
     name: preview
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft
-    # Shares preview-retire.yml's group, so a retire waits for an upload in flight.
+    # Shares preview-retire.yml's group, so a retire waits for a deploy in flight.
     concurrency:
       group: preview-{% raw %}${{ github.event.pull_request.number }}{% endraw %}
     needs: check
@@ -243,7 +243,9 @@ jobs:
         run: |
           printf '\n/*\n  X-Robots-Tag: noindex\n' >> dist/_headers
 
-      # wrangler through dlx, so the project's own install stays without it.
+      # One Worker per pull request, so retiring a preview deletes the Worker and
+      # every address with it. wrangler runs through dlx, so the project's own install
+      # stays without it.
       - if: steps.gate.outputs.run == 'true'
         id: upload
         env:
@@ -252,34 +254,21 @@ jobs:
           GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
           REPO: {% raw %}${{ github.repository }}{% endraw %}
           PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
-          SHA: {% raw %}${{ github.event.pull_request.head.sha }}{% endraw %}
         # pipefail: the default shell takes the pipe's status from tee, so a
-        # refused upload would otherwise pass.
+        # refused deploy would otherwise pass.
         run: |
           set -o pipefail
           # This job may have queued behind a close or a draft switch, so read the
-          # pull request again: a retire that ran first must not be undone by an upload.
+          # pull request again: a retire that ran first must not be undone by a deploy.
           state=$(gh api "repos/$REPO/pulls/$PR" --jq '.state, .draft' | tr '\n' ' ')
           if [ "$state" != "open false " ]; then
             echo "::notice::Preview skipped: pull request $PR is no longer open and ready ($state)."
             exit 0
           fi
-          upload() {
-            pnpm dlx wrangler@{{ wrangler_version }} versions upload --config wrangler.preview.jsonc --preview-alias "pr-$PR" --message "PR $PR at $SHA" 2>&1 | tee upload.log
-          }
-          if ! upload; then
-            # Only an existing Worker takes versions. Create it once with a
-            # placeholder page, so its own workers.dev address never serves a PR.
-            grep -q 'does not yet exist' upload.log || exit 1
-            mkdir placeholder
-            cp dist/_headers placeholder/
-            echo 'Pull request previews of this project live at pr-NUMBER addresses.' > placeholder/index.html
-            pnpm dlx wrangler@{{ wrangler_version }} deploy --config wrangler.preview.jsonc --assets placeholder
-            upload
-          fi
-          url=$(grep 'Version Preview Alias URL:' upload.log | grep -Eo 'https://[^ ]+' || true)
+          pnpm dlx wrangler@{{ wrangler_version }} deploy --config wrangler.preview.jsonc --name "{{ slug | replace('.', '-') | replace('_', '-') }}-pr-$PR" 2>&1 | tee deploy.log
+          url=$(grep -Eo 'https://[^ ]+\.workers\.dev' deploy.log | head -n 1 || true)
           if [ -z "$url" ]; then
-            echo "::error::Version uploaded, but wrangler printed no alias URL. Check preview_urls and workers_dev in wrangler.preview.jsonc."
+            echo "::error::Worker deployed, but wrangler printed no workers.dev address. Check workers_dev in wrangler.preview.jsonc."
             exit 1
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"

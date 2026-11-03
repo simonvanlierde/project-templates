@@ -1,9 +1,10 @@
 name: Retire preview
 
-# Wrangler cannot delete a preview alias, so a pull request that closes or turns draft
-# gets its alias pointed at a short "preview closed" page instead, then checks that the
-# alias serves it. A daily run retires any closed or draft pull request whose event was
-# missed. Run it by hand with a list of pull request numbers to retire older previews.
+# Each pull request previews on its own Worker, {{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>. A pull request that
+# closes or turns draft has that Worker deleted, then the address is fetched to check
+# that it no longer serves the build. A daily run deletes the Worker of any pull request
+# that is no longer open and ready, in case an event was missed. Run it by hand with a
+# list of pull request numbers to retire older previews.
 on:
   pull_request:
     types: [closed, converted_to_draft]
@@ -43,23 +44,21 @@ jobs:
         working-directory: .
 {%- endif %}
         env:
-          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
-          REPO: {% raw %}${{ github.repository }}{% endraw %}
+          CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
+          CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
           EVENT: {% raw %}${{ github.event_name }}{% endraw %}
           PRS: {% raw %}${{ github.event.pull_request.number || inputs.prs }}{% endraw %}
         run: |
           set -o pipefail
-          if [ "$EVENT" = "schedule" ]; then
-            # Backstop for a missed event: pull requests closed in the last 14 days
-            # and every open draft, from this repository only (forks get no preview).
-            # Retiring one twice is harmless. shortcut: the closed list reads one page
-            # of 100, which covers 14 days unless the repo closes more than 100 a fortnight.
-            since=$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ)
-            closed=$(gh api "repos/$REPO/pulls?state=closed&sort=updated&direction=desc&per_page=100" \
-              --jq ".[] | select(.head.repo.full_name == \"$REPO\" and .closed_at >= \"$since\") | .number")
-            drafts=$(gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
-              --jq ".[] | select(.draft and .head.repo.full_name == \"$REPO\") | .number")
-            PRS=$(printf '%s\n%s\n' "$closed" "$drafts" | { grep -E '^[0-9]+$' || true; } | sort -un | tr '\n' ' ')
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::Nothing to retire: CLOUDFLARE_API_TOKEN is not set."
+            PRS=
+          elif [ "$EVENT" = "schedule" ]; then
+            # Backstop for a missed event: every preview Worker in the account. The
+            # delete step keeps the ones whose pull request is still open and ready.
+            PRS=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" \
+              | jq -r '.result[].id | select(test("^{{ slug | replace('.', '-') | replace('_', '-') }}-pr-[0-9]+$")) | sub("^.*-pr-"; "")' | sort -un | tr '\n' ' ')
           fi
           echo "prs=$PRS" >> "$GITHUB_OUTPUT"
 
@@ -80,52 +79,54 @@ jobs:
         with:
           node-version: "{{ node_version }}"
 
-      - name: Point each alias at the closed page
+      - name: Delete each preview Worker
         if: steps.list.outputs.prs != ''
         env:
           CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          REPO: {% raw %}${{ github.repository }}{% endraw %}
+          EVENT: {% raw %}${{ github.event_name }}{% endraw %}
           PRS: {% raw %}${{ steps.list.outputs.prs }}{% endraw %}
         # pipefail: the default shell takes the pipe's status from tee.
         run: |
           set -o pipefail
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::notice::Nothing to retire: CLOUDFLARE_API_TOKEN is not set."
-            exit 0
-          fi
-          mkdir retired
-          printf '/*\n  X-Robots-Tag: noindex\n' > retired/_headers
-          echo '<!doctype html><title>Preview closed</title><p>This pull request preview is closed. See <a href="{{ site_url }}">{{ site_url }}</a>.</p><!-- preview-closed-marker -->' > retired/index.html
-          cp retired/index.html retired/404.html
+          api=https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID
+          sub=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/workers/subdomain" | jq -r '.result.subdomain')
           failed=0
           for pr in $PRS; do
             case "$pr" in *[!0-9]*|'') echo "::error::Not a PR number: $pr"; exit 1 ;; esac
-            # A pull request that never had a preview has no alias, and may have no Worker.
-            if ! pnpm dlx wrangler@{{ wrangler_version }} versions upload --config wrangler.preview.jsonc --assets retired --preview-alias "pr-$pr" --message "PR $pr closed" 2>&1 | tee upload.log; then
-              grep -q 'does not yet exist' upload.log || exit 1
-              echo "::notice::No preview Worker yet, so pr-$pr has no preview to retire."
-              continue
+            if [ "$EVENT" = "schedule" ]; then
+              # Read the pull request again right before deleting, so a pull request
+              # that was reopened since the list was made keeps its preview.
+              state=$(gh api "repos/$REPO/pulls/$pr" --jq '.state, .draft' | tr '\n' ' ')
+              if [ "$state" = "open false " ]; then
+                echo "pr-$pr is open and ready, so its preview stays."
+                continue
+              fi
             fi
-            # Check the takedown: the alias must now serve the closed page.
-            url=$(grep 'Version Preview Alias URL:' upload.log | grep -Eo 'https://[^ ]+' || true)
-            if [ -z "$url" ]; then
-              echo "::error::pr-$pr: wrangler printed no alias URL, so the takedown is unverified."
-              failed=1
-              continue
+            name="{{ slug | replace('.', '-') | replace('_', '-') }}-pr-$pr"
+            # A pull request that never had a preview has no Worker to delete.
+            if ! pnpm dlx wrangler@{{ wrangler_version }} delete "$name" --config wrangler.preview.jsonc --force 2>&1 | tee delete.log; then
+              grep -Eqi 'not found|does not exist|10007' delete.log || exit 1
+              echo "::notice::No Worker $name, so there is no preview to delete."
             fi
+            # Check the takedown: the address must stop serving the build.
+            url="https://$name.$sub.workers.dev"
             ok=0
             for wait in 2 5 10 20 30; do
-              if curl -fsS --max-time 20 "$url" 2>/dev/null | grep -qF 'preview-closed-marker'; then
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
+              if [ "$code" != 200 ]; then
                 ok=1
                 break
               fi
               sleep "$wait"
             done
             if [ "$ok" != 1 ]; then
-              echo "::error::pr-$pr: $url still does not serve the closed page."
+              echo "::error::$url still serves the preview after the Worker was deleted."
               failed=1
               continue
             fi
-            echo "Retired pr-$pr (verified at $url)" >> "$GITHUB_STEP_SUMMARY"
+            echo "Deleted $name (verified: $url answers $code)" >> "$GITHUB_STEP_SUMMARY"
           done
           exit "$failed"

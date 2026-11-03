@@ -182,9 +182,9 @@ Cloudflare Pages deploys via Git integration: configure build command `pnpm buil
 
 ### Pull request previews
 
-Production stays on Cloudflare Pages. Previews run on a separate Worker named `<slug>-preview`, so Pages needs no preview builds. Each pull request that is not a draft uploads its build as a version of that Worker, at a `pr-<number>` address. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. The job adds that header to the uploaded copy of the build only, so `public/_headers` and production never carry it.
+Production stays on Cloudflare Pages. Each pull request that is open and not a draft gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`, so Pages needs no preview builds. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. The job adds that header to the deployed copy of the build only, so `public/_headers` and production never carry it. The job reads the pull request again right before deploying, in case it closed while the job was queued.
 
-When a pull request closes or turns draft, `preview-retire.yml` points its address at a short "preview closed" page, because wrangler cannot delete an alias. To retire older previews, run that workflow by hand with a list of pull request numbers.
+When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker, then fetches the address and fails unless it stops serving the build. A daily run lists the account's `<slug>-pr-<number>` Workers and deletes those whose pull request is not open and ready. To retire a preview by hand, run that workflow with a list of pull request numbers.
 
 Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` skip the job with a notice. One-time setup:
 
@@ -192,7 +192,7 @@ Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` skip the job with a 
 2. Create a Cloudflare API token from the "Edit Cloudflare Workers" template (Workers Scripts: Edit). Add it to the `preview` environment as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
 3. In the Pages project, open Settings > Builds > Branch control and set Preview branch to None, so Pages stops building previews of its own.
 
-The first upload creates the Worker with a placeholder page. The wrangler version is pinned in `ts.yml` and `preview-retire.yml`, and `copier update` brings new versions.
+The first deploy creates the Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. An app made before this change should delete its old shared `<slug>-preview` Worker once, in the Cloudflare dashboard: its version URLs stay live otherwise. The wrangler version is pinned in `ts.yml` and `preview-retire.yml`, and `copier update` brings new versions.
 
 Copier updates do not overwrite user-owned starter files: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`, `tests/e2e/routes.ts`, and markdown files in `docs/`.
 

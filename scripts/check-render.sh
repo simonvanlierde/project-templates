@@ -1077,7 +1077,8 @@ wrangler_pin=$(sed -n '/^wrangler_version:/,/^$/s/^  default: //p' "$repo/copier
 test -n "$wrangler_pin"
 grep -qF '"name": "pipe-me-preview",' d/web/wrangler.preview.jsonc
 grep -qF '"directory": "./dist",' d/web/wrangler.preview.jsonc
-grep -qF '"preview_urls": true,' d/web/wrangler.preview.jsonc
+grep -qF '"preview_urls": false,' d/web/wrangler.preview.jsonc
+grep -qF '"workers_dev": true' d/web/wrangler.preview.jsonc
 grep -qF '"name": "app-preview",' s/wrangler.preview.jsonc
 grep -qx '  preview:' d/.github/workflows/ts.yml
 grep -qx '          name: preview-dist' d/.github/workflows/ts.yml
@@ -1085,24 +1086,29 @@ test "$(grep -cx '          path: web/dist' d/.github/workflows/ts.yml)" = 2
 grep -qx '      name: preview' d/.github/workflows/ts.yml
 # The gate step runs before checkout, so it must not cd into web/.
 grep -A2 -x '      - id: gate' d/.github/workflows/ts.yml | grep -qx '        working-directory: .'
-grep -qF "pnpm dlx wrangler@$wrangler_pin versions upload --config wrangler.preview.jsonc --preview-alias" d/.github/workflows/ts.yml
+grep -qF "pnpm dlx wrangler@$wrangler_pin deploy --config wrangler.preview.jsonc --name \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
+(! grep -q 'versions upload' d/.github/workflows/ts.yml)
 grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
 (! grep -q '^  X-Robots-Tag' d/web/public/_headers)
 test -f d/.github/workflows/preview-retire.yml
-grep -qF "pnpm dlx wrangler@$wrangler_pin versions upload --config wrangler.preview.jsonc --assets retired" d/.github/workflows/preview-retire.yml
+grep -qF "pnpm dlx wrangler@$wrangler_pin delete \"\$name\" --config wrangler.preview.jsonc --force" d/.github/workflows/preview-retire.yml
+(! grep -q 'versions upload' d/.github/workflows/preview-retire.yml)
+# shellcheck disable=SC2016
+grep -qF 'name="pipe-me-pr-$pr"' d/.github/workflows/preview-retire.yml
+grep -qF 'select(test("^pipe-me-pr-[0-9]+$"))' d/.github/workflows/preview-retire.yml
+grep -qF 'workers/scripts' d/.github/workflows/preview-retire.yml
 grep -qx '    environment: preview' d/.github/workflows/preview-retire.yml
 grep -qx '        working-directory: web' d/.github/workflows/preview-retire.yml
 grep -qx '          package_json_file: web/package.json' d/.github/workflows/preview-retire.yml
-grep -qF 'href="https://pipe-me.pages.dev"' d/.github/workflows/preview-retire.yml
-# Lifecycle: the upload re-reads the pull request, the retire verifies the takedown and a
-# daily run backstops missed events; the marker is in the closed page and the check.
+# Lifecycle: the upload re-reads the pull request, each preview is its own Worker, the retire deletes it and
+# checks the address, and a daily run sweeps the account for missed events.
 # shellcheck disable=SC2016
 grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq' d/.github/workflows/ts.yml
 grep -qx '      pull-requests: read' d/.github/workflows/ts.yml
 grep -qxF '    - cron: "17 4 * * *"' d/.github/workflows/preview-retire.yml
 grep -qx '  schedule:' d/.github/workflows/preview-retire.yml
 grep -qx '      pull-requests: read' d/.github/workflows/preview-retire.yml
-test "$(grep -cF 'preview-closed-marker' d/.github/workflows/preview-retire.yml)" = 2
+(! grep -q 'preview-closed-marker' d/.github/workflows/preview-retire.yml)
 # A web app at the repo root builds in place.
 test -f s/wrangler.preview.jsonc
 test -f s/.github/workflows/preview-retire.yml
