@@ -100,8 +100,11 @@ Fill in their TODOs before the first public deploy.
 Previews run on a separate Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-preview`, configured in
 [`{{ d }}wrangler.preview.jsonc`]({{ blob }}{{ d }}wrangler.preview.jsonc). The `preview` job in `ts.yml` uploads each pull
 request's build to it at a `pr-<number>` address, shown in the job summary. Previews are public and
-send `X-Robots-Tag: noindex`. `preview-retire.yml` points the address at a "preview closed" page when
-the pull request closes or turns draft. One-time setup:
+send `X-Robots-Tag: noindex`. A preview is live only while its pull request is open and not a draft:
+the job skips drafts and checks the pull request again just before uploading. `preview-retire.yml`
+points the address at a "preview closed" page when the pull request closes or turns draft, then
+fetches the address and fails unless the page is served. A daily run does the same for pull requests
+closed in the last 14 days and for open drafts, in case an event was missed. One-time setup:
 
 1. Run `just repo-settings` to create the `preview` environment, or create it under Settings > Environments.
 2. Add the secrets `CLOUDFLARE_API_TOKEN` (a token with Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to that environment.

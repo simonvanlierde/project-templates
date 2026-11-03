@@ -1094,6 +1094,15 @@ grep -qx '    environment: preview' d/.github/workflows/preview-retire.yml
 grep -qx '        working-directory: web' d/.github/workflows/preview-retire.yml
 grep -qx '          package_json_file: web/package.json' d/.github/workflows/preview-retire.yml
 grep -qF 'href="https://pipe-me.pages.dev"' d/.github/workflows/preview-retire.yml
+# Lifecycle: the upload re-reads the pull request, the retire verifies the takedown and a
+# daily run backstops missed events; the marker is in the closed page and the check.
+# shellcheck disable=SC2016
+grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq' d/.github/workflows/ts.yml
+grep -qx '      pull-requests: read' d/.github/workflows/ts.yml
+grep -qxF '    - cron: "17 4 * * *"' d/.github/workflows/preview-retire.yml
+grep -qx '  schedule:' d/.github/workflows/preview-retire.yml
+grep -qx '      pull-requests: read' d/.github/workflows/preview-retire.yml
+test "$(grep -cF 'preview-closed-marker' d/.github/workflows/preview-retire.yml)" = 2
 # A web app at the repo root builds in place.
 test -f s/wrangler.preview.jsonc
 test -f s/.github/workflows/preview-retire.yml

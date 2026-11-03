@@ -1,11 +1,14 @@
 name: Retire preview
 
 # Wrangler cannot delete a preview alias, so a pull request that closes or turns draft
-# gets its alias pointed at a short "preview closed" page instead. Run it by hand with
-# a list of pull request numbers to retire older previews.
+# gets its alias pointed at a short "preview closed" page instead, then checks that the
+# alias serves it. A daily run retires any closed or draft pull request whose event was
+# missed. Run it by hand with a list of pull request numbers to retire older previews.
 on:
   pull_request:
     types: [closed, converted_to_draft]
+  schedule:
+    - cron: "17 4 * * *"
   workflow_dispatch:
     inputs:
       prs:
@@ -20,9 +23,12 @@ concurrency:
 
 jobs:
   retire:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
     environment: preview
 {%- if ts_dir != '.' %}
     defaults:
@@ -30,25 +36,56 @@ jobs:
         working-directory: {{ ts_dir }}
 {%- endif %}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Work out which pull requests to retire
+        id: list
+{%- if ts_dir != '.' %}
+        # Runs before checkout, when {{ ts_dir }}/ does not exist yet.
+        working-directory: .
+{%- endif %}
+        env:
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          REPO: {% raw %}${{ github.repository }}{% endraw %}
+          EVENT: {% raw %}${{ github.event_name }}{% endraw %}
+          PRS: {% raw %}${{ github.event.pull_request.number || inputs.prs }}{% endraw %}
+        run: |
+          set -o pipefail
+          if [ "$EVENT" = "schedule" ]; then
+            # Backstop for a missed event: pull requests closed in the last 14 days
+            # and every open draft, from this repository only (forks get no preview).
+            # Retiring one twice is harmless. shortcut: the closed list reads one page
+            # of 100, which covers 14 days unless the repo closes more than 100 a fortnight.
+            since=$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ)
+            closed=$(gh api "repos/$REPO/pulls?state=closed&sort=updated&direction=desc&per_page=100" \
+              --jq ".[] | select(.head.repo.full_name == \"$REPO\" and .closed_at >= \"$since\") | .number")
+            drafts=$(gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
+              --jq ".[] | select(.draft and .head.repo.full_name == \"$REPO\") | .number")
+            PRS=$(printf '%s\n%s\n' "$closed" "$drafts" | { grep -E '^[0-9]+$' || true; } | sort -un | tr '\n' ' ')
+          fi
+          echo "prs=$PRS" >> "$GITHUB_OUTPUT"
+
+      - if: steps.list.outputs.prs != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - if: steps.list.outputs.prs != ''
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 {%- if ts_dir != '.' %}
         with:
           package_json_file: {{ ts_dir }}/package.json
 {%- endif %}
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - if: steps.list.outputs.prs != ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "{{ node_version }}"
 
       - name: Point each alias at the closed page
+        if: steps.list.outputs.prs != ''
         env:
           CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
-          PRS: {% raw %}${{ github.event.pull_request.number || inputs.prs }}{% endraw %}
+          PRS: {% raw %}${{ steps.list.outputs.prs }}{% endraw %}
         # pipefail: the default shell takes the pipe's status from tee.
         run: |
           set -o pipefail
@@ -58,8 +95,9 @@ jobs:
           fi
           mkdir retired
           printf '/*\n  X-Robots-Tag: noindex\n' > retired/_headers
-          echo '<!doctype html><title>Preview closed</title><p>This pull request preview is closed. See <a href="{{ site_url }}">{{ site_url }}</a>.</p>' > retired/index.html
+          echo '<!doctype html><title>Preview closed</title><p>This pull request preview is closed. See <a href="{{ site_url }}">{{ site_url }}</a>.</p><!-- preview-closed-marker -->' > retired/index.html
           cp retired/index.html retired/404.html
+          failed=0
           for pr in $PRS; do
             case "$pr" in *[!0-9]*|'') echo "::error::Not a PR number: $pr"; exit 1 ;; esac
             # A pull request that never had a preview has no alias, and may have no Worker.
@@ -68,5 +106,26 @@ jobs:
               echo "::notice::No preview Worker yet, so pr-$pr has no preview to retire."
               continue
             fi
-            echo "Retired pr-$pr" >> "$GITHUB_STEP_SUMMARY"
+            # Check the takedown: the alias must now serve the closed page.
+            url=$(grep 'Version Preview Alias URL:' upload.log | grep -Eo 'https://[^ ]+' || true)
+            if [ -z "$url" ]; then
+              echo "::error::pr-$pr: wrangler printed no alias URL, so the takedown is unverified."
+              failed=1
+              continue
+            fi
+            ok=0
+            for wait in 2 5 10 20 30; do
+              if curl -fsS --max-time 20 "$url" 2>/dev/null | grep -qF 'preview-closed-marker'; then
+                ok=1
+                break
+              fi
+              sleep "$wait"
+            done
+            if [ "$ok" != 1 ]; then
+              echo "::error::pr-$pr: $url still does not serve the closed page."
+              failed=1
+              continue
+            fi
+            echo "Retired pr-$pr (verified at $url)" >> "$GITHUB_STEP_SUMMARY"
           done
+          exit "$failed"
