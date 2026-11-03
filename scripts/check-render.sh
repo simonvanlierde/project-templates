@@ -1101,7 +1101,7 @@ test "$(grep -c 'path: web/dist$' d/.github/workflows/ts.yml)" = 3
 # deploy at a time, under the config's own name.
 prod=$(sed -n '/^  production:$/,/^  [a-z]/p' d/.github/workflows/ts.yml)
 grep -qxF "    if: github.event_name == 'push' && github.ref == 'refs/heads/main'" <<<"$prod"
-grep -qxF '    needs: check' <<<"$prod"
+grep -qxF '    needs: [check, e2e]' <<<"$prod"
 grep -qxF '      name: production' <<<"$prod"
 grep -qxF '      group: production' <<<"$prod"
 grep -qxF '      cancel-in-progress: false' <<<"$prod"
@@ -1197,6 +1197,7 @@ grep -qF 'answers HTTP 502 after the delete' "$stub/out"
 # A web app at the repo root builds in place.
 test -f s/wrangler.jsonc
 grep -q '^  production:' s/.github/workflows/ts.yml
+sed -n '/^  production:$/,/^  [a-z]/p' s/.github/workflows/ts.yml | grep -xF '    needs: [check, e2e]' >/dev/null
 test -f s/.github/workflows/preview-retire.yml
 grep -qx '          path: dist' s/.github/workflows/ts.yml
 (! grep -q 'working-directory' s/.github/workflows/preview-retire.yml)
