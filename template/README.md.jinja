@@ -79,11 +79,19 @@ Issues turned on for this repository.
 {% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}{% set d = '' if ts_dir == '.' else ts_dir ~ '/' %}
 ## Deploy
 
-`pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} dev` serves the app with live reload. Cloudflare Pages deploys it through its Git
-integration: create a Pages project from this repository, with build command
-`pnpm build`{% if ts_dir != '.' %}, root directory `{{ ts_dir }}`{% endif %} and output directory `dist`. Every push to `main` deploys. Every
-pull request that is neither a draft nor from a bot gets a preview URL (see below). [`{{ d }}public/_headers`]({{ blob }}{{ d }}public/_headers) sets the
+`pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} dev` serves the app with live reload. The app runs on a Cloudflare Worker
+that serves the build as static assets, configured in [`{{ d }}wrangler.jsonc`]({{ blob }}{{ d }}wrangler.jsonc). CI deploys it: every
+push to `main` deploys the build the checks ran on, at `{{ site_url }}`. Every pull request that is
+neither a draft nor from a bot gets a preview URL (see below). [`{{ d }}public/_headers`]({{ blob }}{{ d }}public/_headers) sets the
 response headers, including the Content-Security-Policy that the e2e tests run under.
+
+One-time setup, for production and previews alike:
+
+1. Run `just repo-settings` to create the `production` and `preview` environments, or create them under Settings > Environments, with `production` limited to `main`.
+2. Add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to both environments.
+3. Give the Cloudflare account a workers.dev subdomain, if it has none yet.
+
+Without the token, the deploy jobs skip with a notice. For a custom domain, add it under the Worker's Settings > Domains & Routes. It needs a zone on Cloudflare.
 
 {% if user_data == 'accounts' -%}
 The footer links the [accessibility statement]({{ blob }}{{ d }}docs/accessibility.md), the
@@ -98,14 +106,7 @@ Fill in their TODOs before the first public deploy.
 
 ### Pull request previews
 
-Each pull request that is open, not a draft and not from a bot gets its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>`, from [`{{ d }}wrangler.preview.jsonc`]({{ blob }}{{ d }}wrangler.preview.jsonc), deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#pull-request-previews)).
-One-time setup:
-
-1. Run `just repo-settings` to create the `preview` environment, or create it under Settings > Environments.
-2. Add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to that environment.
-3. In the Pages project, set Settings > Builds > Branch control > Preview branch to None.
-
-Without the token, the job skips with a notice.
+Each pull request that is open, not a draft and not from a bot gets its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>`, deployed from the same `wrangler.jsonc` under that name and deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#pull-request-previews)).
 {% endif %}
 ## License
 

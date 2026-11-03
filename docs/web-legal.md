@@ -67,7 +67,7 @@ shelf saves data in browser local storage only after you add an item:
 
 - Document purpose, legal basis, and retention period for all stored data, including server logs and user accounts.
 - Update "Last updated" with each modification.
-- Keep Cloudflare Web Analytics disabled for Cloudflare Pages projects. The bundled script violates the template's Content-Security-Policy (`script-src 'self'`).
+- Keep Cloudflare Web Analytics turned off for the app. The bundled script violates the template's Content-Security-Policy (`script-src 'self'`).
 - Verify post-deployment headers to ensure no unexpected cookies are set:
 
   ```sh
