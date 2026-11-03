@@ -1,72 +1,63 @@
 name: Retire preview
 
-# Wrangler cannot delete a preview alias, so a pull request that closes or turns draft
-# gets its alias pointed at a short "preview closed" page instead. Run it by hand with
-# a list of pull request numbers to retire older previews.
+# Deletes the preview Worker of a pull request that closes or turns draft, and sweeps
+# daily for any that were missed. The README's "Pull request previews" has the rest.
 on:
   pull_request:
     types: [closed, converted_to_draft]
+  schedule:
+    - cron: "17 4 * * *"
   workflow_dispatch:
     inputs:
       prs:
-        description: PR numbers to retire, separated by spaces
-        required: true
+        description: PR numbers to retire, separated by spaces. Leave empty to run the daily sweep.
+        required: false
 
 permissions:
   contents: read
 
+# Shares ts.yml's preview group, so a retire waits for a deploy in flight.
 concurrency:
   group: preview-{% raw %}${{ github.event.pull_request.number || github.run_id }}{% endraw %}
 
 jobs:
   retire:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    name: Retire
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     environment: preview
-{%- if ts_dir != '.' %}
-    defaults:
-      run:
-        working-directory: {{ ts_dir }}
-{%- endif %}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read # the sweep reads each PR's state
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check credentials
+        id: gate
+        env:
+          TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::Nothing to retire: CLOUDFLARE_API_TOKEN is not set."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The base branch's script: a closed pull request may have no merge ref left.
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: {% raw %}${{ github.event.pull_request.base.ref }}{% endraw %}
+          sparse-checkout: .github/scripts
           persist-credentials: false
 
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-{%- if ts_dir != '.' %}
-        with:
-          package_json_file: {{ ts_dir }}/package.json
-{%- endif %}
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "{{ node_version }}"
-
-      - name: Point each alias at the closed page
+      - if: steps.gate.outputs.run == 'true'
+        name: Delete the preview Workers
         env:
           CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          REPO: {% raw %}${{ github.repository }}{% endraw %}
+          SLUG: {{ slug | replace('.', '-') | replace('_', '-') }}
           PRS: {% raw %}${{ github.event.pull_request.number || inputs.prs }}{% endraw %}
-        # pipefail: the default shell takes the pipe's status from tee.
-        run: |
-          set -o pipefail
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::notice::Nothing to retire: CLOUDFLARE_API_TOKEN is not set."
-            exit 0
-          fi
-          mkdir retired
-          printf '/*\n  X-Robots-Tag: noindex\n' > retired/_headers
-          echo '<!doctype html><title>Preview closed</title><p>This pull request preview is closed. See <a href="{{ site_url }}">{{ site_url }}</a>.</p>' > retired/index.html
-          cp retired/index.html retired/404.html
-          for pr in $PRS; do
-            case "$pr" in *[!0-9]*|'') echo "::error::Not a PR number: $pr"; exit 1 ;; esac
-            # A pull request that never had a preview has no alias, and may have no Worker.
-            if ! pnpm dlx wrangler@{{ wrangler_version }} versions upload --config wrangler.preview.jsonc --assets retired --preview-alias "pr-$pr" --message "PR $pr closed" 2>&1 | tee upload.log; then
-              grep -q 'does not yet exist' upload.log || exit 1
-              echo "::notice::No preview Worker yet, so pr-$pr has no preview to retire."
-              continue
-            fi
-            echo "Retired pr-$pr" >> "$GITHUB_STEP_SUMMARY"
-          done
+        run: .github/scripts/preview-retire.sh

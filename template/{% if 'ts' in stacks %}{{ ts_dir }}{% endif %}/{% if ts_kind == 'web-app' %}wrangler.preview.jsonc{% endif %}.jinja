@@ -1,10 +1,7 @@
-// PR previews only: CI's preview job uploads each pull request's build as a version
-// of this Worker, at a stable pr-<number> address. Production stays on Cloudflare
-// Pages (wrangler.jsonc), and Pages ignores this file. See "Pull request previews"
-// in docs/usage.md of the template for the one-time setup.
+// PR previews only. CI always deploys this file with --name <slug>-pr-<number>, so
+// the name below is never used. Pages ignores it: production is wrangler.jsonc.
 //
-// To rename, rename the Worker in the Cloudflare dashboard first: a preview under a
-// new name creates a new Worker, which then blocks the rename.
+// Keep the slug short: a Worker name can have at most 63 characters, and "-pr-123" takes seven.
 {
   "name": "{{ slug | replace('.', '-') | replace('_', '-') }}-preview",
   "compatibility_date": "2026-10-01",
@@ -13,7 +10,8 @@
     // A single-page app answers every path with index.html, as Pages does.
     "not_found_handling": "single-page-application"
   },
-  // Preview URLs need both.
-  "preview_urls": true,
+  // Off, so the workers.dev address is the Worker's only one, and the retire job can
+  // check that one address after the delete.
+  "preview_urls": false,
   "workers_dev": true
 }
