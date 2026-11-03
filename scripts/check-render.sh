@@ -1151,7 +1151,7 @@ grep -qxF '    needs: [check, e2e]' <<<"$prod"
 grep -qxF '      name: production' <<<"$prod"
 grep -qxF '      group: production' <<<"$prod"
 grep -qxF '      cancel-in-progress: false' <<<"$prod"
-grep -qxF "          pnpm dlx wrangler@$wrangler_pin deploy 2>&1 | tee deploy.log" <<<"$prod"
+grep -qxF "          pnpm exec wrangler deploy 2>&1 | tee deploy.log" <<<"$prod"
 grep -qxF '          set -o pipefail' <<<"$prod"
 (! grep -q -- '--name\|X-Robots-Tag' <<<"$prod")
 # A newer push to main must not cancel the run whose deploy is in flight.
@@ -1159,7 +1159,12 @@ grep -qF "cancel-in-progress: \${{ github.event_name == 'pull_request' }}" d/.gi
 grep -q '^ *name: preview$' d/.github/workflows/ts.yml
 # The gate step runs before checkout, so it must not cd into web/.
 grep -A2 -- '- id: gate$' d/.github/workflows/ts.yml | grep -q 'working-directory: \.$'
-grep -qF "pnpm dlx wrangler@$wrangler_pin deploy --name \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
+grep -qF "pnpm exec wrangler deploy --name \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
+# wrangler is an exact devDependency of a web app only, which both deploy jobs install.
+grep -qxF "    \"wrangler\": \"$wrangler_pin\"" d/web/package.json
+(! grep -q 'pnpm dlx' d/.github/workflows/ts.yml)
+test "$(grep -c 'run: pnpm install --frozen-lockfile' d/.github/workflows/ts.yml)" -ge 4
+(! grep -q '"wrangler"' m/web/package.json)
 (! grep -q 'versions upload' d/.github/workflows/ts.yml)
 grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
 (! grep -q '^  X-Robots-Tag' d/web/public/_headers)

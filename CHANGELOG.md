@@ -48,6 +48,7 @@ Upgrade steps:
 
 ### Changed
 
+- A web app pins wrangler as an exact devDependency, and the production and preview jobs run that copy instead of `pnpm dlx`, so Renovate bumps it and the lockfile records it. See [Production](docs/usage.md#production).
 - In a public repo, `main-checks.json` also requires the check job of each stack at the repo root (`python: lint, types, tests`, or one `python: lint, types, tests (3.x)` per version for a library, `ts: lint, types, tests`, `fmt, clippy, tests, deny`, `golangci-lint, tests, govulncheck`), so a failing test blocks the merge. Run `just repo-settings` after the update. Nested stacks are left out: their workflow runs only when their folder changes.
 - The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build, so a small feature doesn't trip it. The limit itself is unchanged. Existing apps get the comment with `copier update`; check your own limit against it.
 - **Breaking:** a web app's legal pages no longer have to be linked from a footer on every route. `tests/e2e/legal-pages.spec.ts` checks the routes in a `LEGAL_LINKED_FROM` export from `tests/e2e/routes.ts`, and each page must link back to `/`, since an installed app has no back button. `routes.ts` is yours, so `copier update` doesn't add the export: add `export const LEGAL_LINKED_FROM: readonly string[] = [...ROUTES];` to keep the old check, or list only the screen that links the pages, such as `["/settings"]`.

@@ -207,7 +207,7 @@ Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` skip the job with a 
 1. Run `just repo-settings`. It creates the `preview` and `production` environments in GitHub (or create them under Settings > Environments, with `production` limited to `main`).
 2. Create a custom Cloudflare API token with the permission Account > Workers Scripts: Edit. Add it to both environments as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
 
-The first deploy creates each Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. The wrangler version is pinned in `ts.yml`, and `copier update` brings new versions.
+The first deploy creates each Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. wrangler is an exact devDependency in `package.json`, which both jobs install, and Renovate bumps it like any other package.
 
 Copier updates do not overwrite user-owned starter files: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`, `tests/e2e/routes.ts`, and markdown files in `docs/`.
 
