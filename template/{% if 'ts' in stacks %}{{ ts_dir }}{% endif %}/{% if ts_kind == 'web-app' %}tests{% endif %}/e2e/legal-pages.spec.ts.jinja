@@ -1,8 +1,5 @@
 import { expect, test } from "@playwright/test";
-import * as routes from "./routes";
-
-// routes.ts belongs to the app, so one rendered before LEGAL_LINKED_FROM existed has only ROUTES.
-const { LEGAL_LINKED_FROM, ROUTES }: { LEGAL_LINKED_FROM?: readonly string[]; ROUTES: readonly string[] } = routes;
+import { LEGAL_LINKED_FROM } from "./routes";
 
 /**
  * The pages in docs/, as the app renders them, the links to them from every route in
@@ -27,7 +24,7 @@ for (const [href, name] of PAGES) {
   });
 }
 
-for (const path of LEGAL_LINKED_FROM ?? ROUTES) {
+for (const path of LEGAL_LINKED_FROM) {
   test(`${path} links every page`, async ({ page }) => {
     await page.goto(path);
     for (const [href, name] of PAGES) {

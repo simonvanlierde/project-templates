@@ -206,7 +206,7 @@ Legal documents reside in `docs/` and compile to HTML at build time:
 | `docs/privacy.md` | `/privacy` | Always (includes storage disclosure) |
 | `docs/terms.md` | `/terms` | `user_data=accounts` |
 
-`user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render properly, contain required contact information, and introduce no undeclared storage or network requests. They also check that every route in `LEGAL_LINKED_FROM` links each page and that each page links back to `/`. `LEGAL_LINKED_FROM` in `tests/e2e/routes.ts` defaults to all of `ROUTES`; an app that links the pages from one screen, such as its settings, sets it to that screen and the pages themselves.
+`user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render properly, contain required contact information, and introduce no undeclared storage or network requests. They also check that every route in `LEGAL_LINKED_FROM` links each page and that each page links back to `/`. The starter's `LEGAL_LINKED_FROM` in `tests/e2e/routes.ts` is all of `ROUTES`; an app that links the pages from one screen, such as its settings, sets it to that screen.
 See [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) for compliance guidance.
 
 ### Adopting the template in an existing web app

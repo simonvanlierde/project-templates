@@ -1,6 +1,6 @@
 # Legal pages: tips
 
-A rendered web app serves three pages from its `docs/` folder: `accessibility.md` at `/accessibility`, `privacy.md` at `/privacy`, and, for apps with accounts or uploads, `terms.md` at `/terms`. The app links them from every route in `LEGAL_LINKED_FROM` in `tests/e2e/routes.ts` (all routes by default, and the starter uses a footer), and each page links back home.
+A rendered web app serves three pages from its `docs/` folder: `accessibility.md` at `/accessibility`, `privacy.md` at `/privacy`, and, for apps with accounts or uploads, `terms.md` at `/terms`. The app links them from every route in `LEGAL_LINKED_FROM` in `tests/e2e/routes.ts` (all routes in the starter, which uses a footer), and each page links back home.
 [Legal pages](usage.md#legal-pages) in the usage guide explains how the app compiles the pages and which tests verify them.
 
 These tips help keep your pages accurate, but they are not formal legal advice. For high-stakes applications, consult a qualified lawyer or privacy officer.
