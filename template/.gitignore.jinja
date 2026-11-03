@@ -33,7 +33,8 @@ node_modules/
 coverage/
 {%- if 'ts' in stacks and ts_kind == 'web-app' %}
 playwright-report/
-shots/
+{#- Anchored: `just ts-shots` writes <ts_dir>/shots/, and tests/shots/ holds its spec. #}
+/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}shots/
 test-results/
 blob-report/
 .wrangler/

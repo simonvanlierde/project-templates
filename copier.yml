@@ -67,8 +67,12 @@ _message_after_copy: |
   https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing
   {%- endfor %}
   To release, run `just release X.Y.Z` (it cuts the CHANGELOG, then signs and pushes the tag).
-  It needs a git signing key GitHub trusts. Set the version in the package manifest first
+  It needs a git signing key GitHub trusts.
+  {%- if citable %} Set the version first in every manifest
+  {{ 'citesync.toml lists' if (python_dir != '.' or ts_dir != '.' or rust_dir != '.') else 'at the root' }}: citesync stops the release while they differ.
+  {%- else %} Set the version in the package manifest first
   when you publish to PyPI or npm.
+  {%- endif %}
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it

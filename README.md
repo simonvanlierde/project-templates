@@ -79,9 +79,9 @@ lists what each release changes.
 
 ### Your details
 
-Copier asks for your GitHub user, name and email, and for some Python kinds your ORCID
-iD. They have no defaults, so nobody publishes the template author's details by
-accident. To fill them in for you, save your answers once in Copier's
+Copier asks for your GitHub user, name and email, and for a licensed library or a
+Python research or data-pipeline project your ORCID iD. They have no defaults, so
+nobody publishes the template author's details by accident. To fill them in for you, save your answers once in Copier's
 [settings file](https://copier.readthedocs.io/en/stable/settings/):
 `~/.config/copier/settings.yml` on Linux, `~/Library/Application Support/copier/settings.yml`
 on macOS, or wherever `COPIER_SETTINGS_PATH` points.

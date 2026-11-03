@@ -7,7 +7,7 @@ These tips help keep your pages accurate, but they are not formal legal advice. 
 
 ## Fill in every TODO
 
-The template populates initial details: app name, address, email, and generation date. Remaining sections are marked TODO. Fill in all TODO markers before deploying publicly. Keep these pages updated alongside any code changes that affect their accuracy.
+The template populates initial details: app name, address, email, and generation date. Remaining sections are marked TODO. Nothing checks for TODOs before a deploy, so a quick app can go live first. Fill them in before you share the app widely or once it stores personal data. Keep these pages updated alongside any code changes that affect their accuracy.
 
 ## Write for the person using the app
 

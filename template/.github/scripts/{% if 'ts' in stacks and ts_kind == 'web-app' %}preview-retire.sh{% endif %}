@@ -21,6 +21,8 @@ if [ -z "$prs" ]; then
   fi
   for name in $(grep -E "^$SLUG-pr-[0-9]+\$" <<<"$all" || true); do
     n=${name#"$SLUG"-pr-}
+    # NOTE: each PR's state is read once, here. A PR reopened while the sweep runs
+    # loses its Worker until its next push deploys it again.
     # A failed read keeps the Worker: delete only on a confirmed state.
     if ! state=$(gh api "repos/$REPO/pulls/$n" --jq '.state + " " + (.draft|tostring)'); then
       echo "::warning::Could not read PR $n, so its preview stays for now."
