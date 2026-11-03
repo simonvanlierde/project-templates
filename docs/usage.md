@@ -32,6 +32,7 @@ When `customise` is `no`, advanced questions take these defaults:
 | `codecov` | Disabled |
 | `codspeed` | Disabled ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
 | `profiling` | Disabled ([Profiling](#profiling)) |
+| `cold_install` | Disabled ([CI baseline](ci-baseline.md)) |
 | `openssf_badge` | None ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
@@ -176,6 +177,7 @@ When projects record architectural choices, store them in `docs/decisions/`.
 - Mandatory legal pages, linked from the footer in the starter app.
 - Cloudflare Worker configuration: `public/_headers` (security headers) and `wrangler.jsonc` (static assets, no Worker script).
 - A `production` job in `.github/workflows/ts.yml` that deploys `main`.
+- `just ts-shots`: full-page screenshots of every route at 390 and 1440 px, light and dark, in `shots/`, to attach to a pull request that changes the UI.
 - Pull request previews: a `preview` job in `.github/workflows/ts.yml`, `.github/workflows/preview-retire.yml` and `.github/scripts/preview-retire.sh`.
 - Bundle size budget in `scripts/checkBundleBudget.mjs`: 100 KiB of gzipped JavaScript in the largest file. It catches a heavy dependency or a broken chunk split, not ordinary features, so keep it at least 25% above the build rather than just above it.
 

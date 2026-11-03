@@ -18,19 +18,22 @@ Checks included in repositories generated from this template, their purposes, an
 | Conventional commit and PR title checks | `committed.toml`, commit-msg hook, `pr-title.yml` | Enforces clean git history for squash merges to `main` |
 | zizmor workflow auditor | Git hook and CI | Scans workflows for injection vulnerabilities, leaked secrets, and compromised actions |
 | jactionlint | Git hook and CI | Validates workflow syntax, expressions, and shell commands in `run:` blocks |
+| CodeQL code scanning | GitHub default setup, turned on by `just repo-settings` (when `public`) | Finds injection and other security bugs in the code; free for public repos |
 | Dependency review | `checks.yml` (PRs only) | Blocks pull requests that introduce dependencies with known security advisories |
 | Cooldown period on dependency updates | `.github/dependabot.yml` or `renovate.json5` | Delays non-critical updates by 7 days to allow malicious releases to be detected and yanked |
 | `SECURITY.md` | `.github/` (when `public`) | Documents private vulnerability disclosure procedures, SLAs (14 days), and remediation policies |
 | `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, PR template | `.github/` (when `public`) | Provides contributor setup instructions, sign-off guidelines, and Contributor Covenant 3.0 |
 | Issue forms | `.github/ISSUE_TEMPLATE/` (when `public`) | Structured templates for bugs and feature requests, validated against GitHub schemas |
 | DCO sign-off check | `dco.yml` (when `public`) | Verifies `Signed-off-by:` lines on fork commits; enforced on all branches with `openssf_badge=silver`. The `dco-signoff` commit-msg hook refuses an unsigned commit locally in every public render |
-| `CITATION.cff`, `codemeta.json` | `library` kinds, plus Python `research` and `data-pipeline` | Maintained for Zenodo, Software Heritage, and GitHub citation. `citesync` verifies consistency |
+| `CITATION.cff`, `codemeta.json` | Licensed `library` kinds, plus licensed Python `research` and `data-pipeline` | Maintained for Zenodo, Software Heritage, and GitHub citation. `citesync` verifies consistency |
+| REUSE licensing check | `reuse` git hook (when licensed) | Fails while a file has no copyright and license in `REUSE.toml` or `LICENSES/` |
 | Multi-version Python testing | `python.yml` (`library` kind) | Tests packages across all supported minor versions from `python_min` to `python_version` |
 | Code coverage reporting | `python.yml`, `ts.yml`, `codecov.yml` (`codecov` option) | Uploads coverage to Codecov; flags PR regressions exceeding 2 percentage points |
 | Scheduled extended property tests | `property.yml` (`property` extra) | Runs 10,000 cases per property (or 10 minutes of Go fuzzing) weekly; excluded from PRs |
 | Scheduled mutation testing | `mutation.yml` (`mutation` extra) | Measures test resilience against injected bugs weekly; excluded from PRs |
 | Pull request benchmarks | `benchmarks.yml` (`codspeed` option) | Runs CodSpeed instruction-count benchmarks on PRs and `main` using OIDC authentication |
 | Production deploy from CI | `ts.yml` (`web-app` kind) | Deploys the build the checks ran on to a Cloudflare Worker on each push to `main`, through a `production` environment limited to `main` |
+| Pull request previews | `ts.yml` preview job, `preview-retire.yml` (`web-app` kind) | Deploys each open, ready pull request to its own Worker, and deletes it when the pull request closes, merges or turns draft |
 | Browser tests in Playwright container | `ts.yml` (`web-app` kind) | Runs end-to-end tests against production builds using the pinned Playwright container |
 | Automated accessibility tests (axe) | `tests/e2e/a11y.spec.ts` (`web-app` kind) | Tests routes in light and dark modes against WCAG 2.0–2.2 Levels A and AA |
 | Content-Security-Policy enforcement | `public/_headers`, `tests/e2e/csp.spec.ts` | Validates strict CSP (`script-src 'self'`), HSTS, and frame protection without inline scripts |
@@ -60,7 +63,6 @@ CI skips hooks that require the local runtime environment (`ruff`, `ty`, `biome`
 
 | Omitted | Rationale | When to add |
 | --- | --- | --- |
-| CodeQL | Significant runtime and memory overhead; overlaps with ruff and ty on small repos | When repository accepts untrusted outside code or grows a substantial web surface |
 | In-workflow Renovate | Requires private GitHub App and secrets; Dependabot works out of the box | When advanced Renovate configuration options are required |
 | release-please | Creates release PR churn on every push; ill-suited for tag-driven research releases | When release frequency justifies automated changelog PR generation |
 | Repository history secret scan | GitHub secret scanning covers public repos; local hooks scan staged commits | For private repositories without GitHub Advanced Security |
