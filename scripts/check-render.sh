@@ -1451,6 +1451,9 @@ grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows
 # filter to it. An existing ruleset with a legacy name (protect-main) is adopted in place.
 test -f a/.github/rulesets/main.json
 test -f a/.github/rulesets/main-checks.json
+# A root stack's check is required; c's nested stacks run only on their own paths, so theirs aren't.
+test "$(jq -c '[.rules[0].parameters.required_status_checks[].context]' a/.github/rulesets/main-checks.json)" = '["git hooks","pull request title","DCO sign-off","dependency review","python: lint, types, tests","ts: lint, types, tests","fmt, clippy, tests, deny","golangci-lint, tests, govulncheck"]'
+test "$(jq '.rules[0].parameters.required_status_checks | length' c/.github/rulesets/main-checks.json)" = 4
 test -f a/.github/rulesets/tags.json
 fake=$out/fake-gh
 mkdir -p "$fake"
