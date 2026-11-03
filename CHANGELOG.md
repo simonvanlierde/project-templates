@@ -35,6 +35,7 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- A web app's legal pages no longer have to be linked from a footer on every route. `tests/e2e/legal-pages.spec.ts` checks the routes in an optional `LEGAL_LINKED_FROM` export in `tests/e2e/routes.ts`, and falls back to `ROUTES`, so existing apps pass unchanged. It also checks that each page links back to `/`, since an installed app has no back button. To link the pages from one screen only, such as settings, add `export const LEGAL_LINKED_FROM = ["/settings", "/accessibility", "/privacy"];` to `routes.ts`.
 - **Breaking:** `just py-mutation` now fails on a surviving mutant that is not listed in `tests/mutation-baseline.txt`, and on a listed one that no longer survives, so the weekly `mutation.yml` python job can fail. Upgrade: after `copier update`, run `just py-mutation` and list each survivor you accept in the new `tests/mutation-baseline.txt`, one per line with the reason. See [Test extras](docs/usage.md#test-extras).
 - A README of a project that publishes to PyPI or npm links to repository files by full GitHub URL, so the links work on the package page.
 - The README no longer has a "Releasing" section or the note on holding back the week-old-release rule. Public projects get both in `CONTRIBUTING.md`, the release steps in [Publishing](docs/usage.md#publishing). After `copier update`, delete those sections from the README if you don't want them twice.

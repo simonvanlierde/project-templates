@@ -173,7 +173,7 @@ When projects record architectural choices, store them in `docs/decisions/`.
 
 - Single-page application entry points (`index.html`, `src/main.tsx`, `src/App.tsx`) and Vitest setup.
 - Playwright end-to-end tests in `tests/e2e/`: axe accessibility scans in light/dark modes and Content-Security-Policy enforcement.
-- Mandatory legal pages linked from the footer.
+- Mandatory legal pages, linked from the footer in the starter app.
 - Cloudflare Pages configuration: `public/_headers` (security headers) and `wrangler.jsonc`.
 - Pull request previews: `wrangler.preview.jsonc`, a `preview` job in `.github/workflows/ts.yml`, `.github/workflows/preview-retire.yml` and `.github/scripts/preview-retire.sh`.
 - Bundle size budget in `scripts/checkBundleBudget.mjs`.
@@ -206,7 +206,7 @@ Legal documents reside in `docs/` and compile to HTML at build time:
 | `docs/privacy.md` | `/privacy` | Always (includes storage disclosure) |
 | `docs/terms.md` | `/terms` | `user_data=accounts` |
 
-`user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render properly, contain required contact information, and introduce no undeclared storage or network requests.
+`user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render properly, contain required contact information, and introduce no undeclared storage or network requests. They also check that every route in `LEGAL_LINKED_FROM` links each page and that each page links back to `/`. `LEGAL_LINKED_FROM` in `tests/e2e/routes.ts` defaults to all of `ROUTES`; an app that links the pages from one screen, such as its settings, sets it to that screen and the pages themselves.
 See [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) for compliance guidance.
 
 ### Adopting the template in an existing web app
