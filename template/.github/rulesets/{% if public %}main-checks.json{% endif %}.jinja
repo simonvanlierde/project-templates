@@ -14,6 +14,19 @@
           { "context": "pull request title", "integration_id": 15368 },
           { "context": "DCO sign-off", "integration_id": 15368 },
           { "context": "dependency review", "integration_id": 15368 }
+{#- A nested stack's workflow runs only when its folder changes, so its check can't be required. #}
+{%- if 'python' in stacks and python_dir == '.' %},
+          { "context": "python: lint, types, {% if kind == 'data-pipeline' %}pipeline, {% endif %}tests", "integration_id": 15368 }
+{%- endif %}
+{%- if 'ts' in stacks and ts_dir == '.' %},
+          { "context": "ts: lint, types, tests", "integration_id": 15368 }
+{%- endif %}
+{%- if 'rust' in stacks and rust_dir == '.' %},
+          { "context": "fmt, clippy, tests, deny", "integration_id": 15368 }
+{%- endif %}
+{%- if 'go' in stacks and go_dir == '.' %},
+          { "context": "golangci-lint, tests, govulncheck", "integration_id": 15368 }
+{%- endif %}
         ]
       }
     }

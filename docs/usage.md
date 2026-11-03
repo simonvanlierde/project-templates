@@ -92,7 +92,7 @@ Licensed projects follow the [REUSE specification](https://reuse.software). `REU
 - Blocks force-pushes and branch deletions.
 - Enforces linear history and squash merges.
 - Requires pull requests with passing checks: `git hooks`, `pull request title`, `dependency review`, and `DCO sign-off`.
-- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`.
+- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which also requires each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root. A nested stack's workflow runs only when its folder changes, so its check is not required.
 - With `dependency_bot=renovate`, permits the Renovate app to bypass review for minor and patch updates once required checks pass.
 - Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
 - Enables Dependabot security alerts (`gh api -X PUT repos/OWNER/REPO/vulnerability-alerts`).
