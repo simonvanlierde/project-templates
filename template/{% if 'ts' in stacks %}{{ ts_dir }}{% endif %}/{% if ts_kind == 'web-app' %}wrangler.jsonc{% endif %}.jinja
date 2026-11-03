@@ -1,10 +1,18 @@
-// Cloudflare Pages builds and deploys this app through its Git integration:
-// create the project in the dashboard from this repository, with build command
-// `pnpm build`{% if ts_dir != '.' %}, root directory `{{ ts_dir }}`{% endif %} and output directory `dist`. No workflow deploys it.
-// public/_headers sets the response headers. Pull request previews run on a Worker
-// instead: see wrangler.preview.jsonc and .github/workflows/ts.yml.
+// A Worker that serves the build as static assets. CI deploys it: the production job in
+// .github/workflows/ts.yml on every push to main, and the preview job with
+// --name <slug>-pr-<number> for each pull request. public/_headers sets the response headers.
+//
+// Keep the slug short: a Worker name can have at most 63 characters, and "-pr-123" takes seven.
 {
   "name": "{{ slug | replace('.', '-') | replace('_', '-') }}",
   "compatibility_date": "2026-10-01",
-  "pages_build_output_dir": "./dist"
+  "assets": {
+    "directory": "./dist",
+    // A single-page app answers every path with index.html.
+    "not_found_handling": "single-page-application"
+  },
+  // Off, so the workers.dev address is a Worker's only one, and the retire job can
+  // check that one address after the delete.
+  "preview_urls": false,
+  "workers_dev": true
 }
