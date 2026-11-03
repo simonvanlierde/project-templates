@@ -92,8 +92,8 @@ Licensed projects follow the [REUSE specification](https://reuse.software). `REU
 
 - Blocks force-pushes and branch deletions.
 - Enforces linear history and squash merges.
-- Requires pull requests with passing checks: `git hooks`, `pull request title`, `dependency review`, and `DCO sign-off`.
-- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which also requires each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root. A nested stack's workflow runs only when its folder changes, so its check is not required.
+- Requires pull requests. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
+- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root. A nested stack's workflow runs only when its folder changes, so its check is not required.
 - With `dependency_bot=renovate`, permits the Renovate app to bypass review for minor and patch updates once required checks pass.
 - Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
 - Enables Dependabot security alerts (`gh api -X PUT repos/OWNER/REPO/vulnerability-alerts`).
@@ -154,7 +154,7 @@ Select any combination of stacks:
 | `go` | Go module (library or binary) with golangci-lint |
 | `docker` | Dockerfile for Python or TypeScript packages and root `compose.yaml` |
 
-Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<stack>.just`. All projects receive `README.md`, `CHANGELOG.md`, `LICENSE`, `REUSE.toml`, `.gitignore`, `.editorconfig`, dependency bot configuration, git hooks, and `AGENTS.md`. Python projects select a [kind](python-kinds.md).
+Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<stack>.just`. All projects receive `README.md`, `CHANGELOG.md`, `.gitignore`, `.editorconfig`, dependency bot configuration, git hooks, and `AGENTS.md`. Projects with a license also get `LICENSE` and `REUSE.toml`. Python projects select a [kind](python-kinds.md).
 
 CLI binaries (Rust, Go, or Python `data-pipeline`) include `docs/accessibility.md`, documenting terminal output standards (`NO_COLOR` support, plain output redirection, error formats). Review and edit these claims to reflect your application.
 
@@ -235,7 +235,7 @@ See [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/bl
    Select `ts_kind=web-app`, your framework, and your `user_data` setting.
 2. Review `git diff`:
    - Remove unused starter components.
-   - Integrate legal page routes and footer links into your `src/App.tsx`, and add paths to `tests/e2e/routes.ts`.
+   - Integrate the legal page routes and links into your `src/App.tsx`. Add the paths to `tests/e2e/routes.ts`, and set its `LEGAL_LINKED_FROM` to the routes that link the legal pages.
    - Restore custom configurations in `vite.config.ts` and `vitest.config.ts`. Retain the template's `markdown()` plugin.
    - Restore custom package names in `package.json` and `wrangler.jsonc`.
    - Fill in all TODO markers in `docs/`.
@@ -411,7 +411,7 @@ copier update --data profiling=true
 `openssf_badge` configures documentation for the [OpenSSF Best Practices badge](https://www.bestpractices.dev):
 
 - `passing`: adds testing and style sections to `.github/CONTRIBUTING.md`.
-- `silver`: adds `GOVERNANCE.md`, `docs/roadmap.md`, and `docs/assurance-case.md`. Enforces DCO sign-offs on all commits (`git commit -s`) via the commit-msg hook.
+- `silver`: adds `GOVERNANCE.md`, `docs/roadmap.md`, and `docs/assurance-case.md`, and the `dco` workflow checks every pull request, not only fork ones. The `dco-signoff` commit-msg hook (`git commit -s`) comes with every public render.
 
 Submit the questionnaire on bestpractices.dev and add the resulting markdown badge to `README.md`.
 
