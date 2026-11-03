@@ -13,12 +13,13 @@ changes are marked **Breaking**.
 Upgrade steps:
 
 - **Breaking:** in a web app, add `export const LEGAL_LINKED_FROM: readonly string[] = [...ROUTES];` to `tests/e2e/routes.ts` to keep the old legal-page check, or list only the routes that link the legal pages.
-- **Breaking:** in a web app, merge the `copier update`, run `just repo-settings` and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` to the `production` environment. Once the Worker is live, move the custom domain to it and delete the Pages project ([steps](docs/usage.md#moving-an-app-off-cloudflare-pages)).
+- **Breaking:** in a web app, merge the `copier update`, run `just repo-settings` and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` to the `production` environment. Once the Worker is live, move the custom domain to it and delete the Pages project ([steps](docs/usage.md#moving-an-app-off-cloudflare-pages)). Then fix the lines that still name Pages in files the update leaves alone: `docs/privacy.md`, the README's deploy section and the comment in `src/App.tsx`.
 - **Breaking:** in a web app, move any hand tests in `docs/accessibility.md` under "How we check" and delete the "Tested with" heading, or the statement test fails.
 - **Breaking:** with the mutation extra, run `just py-mutation` and list each survivor you accept in `tests/mutation-baseline.txt`, with its reason.
 - **Breaking:** to keep your `docs/decisions/README.md`, run `git checkout HEAD -- docs/decisions/README.md` before you commit the update.
 - **Breaking:** to keep `cold-install.yml`, run `copier update --data cold_install=true`.
-- **Breaking:** delete `.github/scripts/citation.py` if it is still there, then run `prek run citesync --all-files` and fix what it reports.
+- **Breaking:** delete `.github/scripts/citation.py` if it is still there, then run `prek run citesync --all-files` and fix what it reports. A TypeScript, Rust or Go library that gets the citation files for the first time needs the same run.
+- **Breaking:** in a research or data-pipeline project, the update licenses `data/` under CC-BY-4.0 or CC0-1.0 instead of the code license. To keep the code license there, run `copier update --data data_license=none`.
 - **Breaking:** delete `.zenodo.json` unless you added to it what `CITATION.cff` cannot hold, such as contributors, related records, communities or grants.
 - **Breaking:** with `license` set to `none`, `copier update` deletes `CITATION.cff` and `codemeta.json`. To keep them, run `git checkout HEAD -- CITATION.cff codemeta.json` before you commit the update.
 - **Breaking:** in a public repo, run `prek install`, then commit with `-s`: the `dco-signoff` hook refuses an unsigned commit.
@@ -31,7 +32,7 @@ Upgrade steps:
 - A web app's bug form asks for the page URL and the browser, and no longer formats the steps as shell. Other projects keep the command-line form.
 - `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch left `origin/main`. See [Test extras](docs/usage.md#test-extras).
 - Web apps get a preview Worker for each open, ready pull request, deleted again when the pull request closes, merges or turns draft. See [Pull request previews](docs/usage.md#pull-request-previews).
-- `just release X.Y.Z` cuts `[Unreleased]` in `CHANGELOG.md` into the new version, then signs and pushes the tag on `origin/main`. See [Publishing](docs/usage.md#publishing).
+- `just release X.Y.Z` runs twice. The first run cuts `[Unreleased]` in `CHANGELOG.md` into the new version and commits it; merge that to `main`. The second run, on an up-to-date `main`, signs and pushes the tag. See [Publishing](docs/usage.md#publishing).
 - The PyPI and npm release workflows refuse a tag that differs from the package version.
 - `advisories.yml` runs zizmor over the workflows every Monday, so a newly known-bad action fails without a commit here.
 - A project that publishes to PyPI gets classifiers, `keywords` and a `Changelog` URL in `pyproject.toml`.
@@ -44,15 +45,11 @@ Upgrade steps:
 - With publishing on, `just repo-settings` creates the PyPI, npm and GHCR environments with you as required reviewer. On a public repo it also turns on CodeQL default setup and prints the PyPI pending-publisher and Zenodo URLs.
 - A Python web service's `compose.yaml` sets `OTEL_RESOURCE_ATTRIBUTES` to `project=<slug>,env=dev` unless you set it, so a monitoring hub can tell projects apart. See [Python kinds](docs/python-kinds.md#web-service).
 - Python libraries get `just py-matrix`, which runs the tests on every Python version `python.yml` covers.
+- The justfile imports `just/local.just` when it exists, so a project can keep its own recipes there, out of the way of `copier update`. They show in `just --list`.
 - The README installs the `prek` version the checks workflow runs, and the justfile says why `just hooks` can fail where CI passes.
 
 ### Changed
 
-- In a public repo, `main-checks.json` also requires the check job of each stack at the repo root (`python: lint, types, tests`, or one `python: lint, types, tests (3.x)` per version for a library, `ts: lint, types, tests`, `fmt, clippy, tests, deny`, `golangci-lint, tests, govulncheck`), so a failing test blocks the merge. Run `just repo-settings` after the update. Nested stacks are left out: their workflow runs only when their folder changes.
-- The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build, so a small feature doesn't trip it. The limit itself is unchanged. Existing apps get the comment with `copier update`; check your own limit against it.
-- **Breaking:** a web app's legal pages no longer have to be linked from a footer on every route. `tests/e2e/legal-pages.spec.ts` checks the routes in a `LEGAL_LINKED_FROM` export from `tests/e2e/routes.ts`, and each page must link back to `/`, since an installed app has no back button. `routes.ts` is yours, so `copier update` doesn't add the export: add `export const LEGAL_LINKED_FROM: readonly string[] = [...ROUTES];` to keep the old check, or list only the screen that links the pages, such as `["/settings"]`.
-- **Breaking:** A web app's production moves from Cloudflare Pages to a Cloudflare Worker that serves the build as static assets. Pages built a preview of every branch push, and those previews could not be deleted. A new `production` job in `ts.yml` deploys the build the checks ran on at each push to `main`, through a `production` GitHub environment that only `main` can deploy to. `wrangler.jsonc` is now the Worker's config for production and previews, and `wrangler.preview.jsonc` is gone. `site_url` defaults to `https://<slug>.<github_user>.workers.dev`. Upgrade: merge the `copier update`, run `just repo-settings`, and add both Cloudflare secrets to the `production` environment. Once the next push to `main` has deployed the Worker, move the custom domain from the Pages project to the Worker, then delete the Pages project. Without a custom domain, also change the `site_url` answer to the workers.dev address. See [Moving an app off Cloudflare Pages](docs/usage.md#moving-an-app-off-cloudflare-pages).
-- **Breaking:** `just py-mutation` now fails on a surviving mutant that is not listed in `tests/mutation-baseline.txt`, and on a listed one that no longer survives, so the weekly `mutation.yml` python job can fail. Upgrade: after `copier update`, run `just py-mutation` and list each survivor you accept in the new `tests/mutation-baseline.txt`, one per line with the reason. See [Test extras](docs/usage.md#test-extras).
 - **Breaking:** a web app's production moves from Cloudflare Pages to a Cloudflare Worker, deployed by a `production` job in `ts.yml` at each push to `main`. `site_url` defaults to `https://<slug>.<github_user>.workers.dev`. See [Moving an app off Cloudflare Pages](docs/usage.md#moving-an-app-off-cloudflare-pages).
 - **Breaking:** a web app's legal pages no longer need a footer link on every route. The test checks the routes in `LEGAL_LINKED_FROM` from `tests/e2e/routes.ts`, and each page must link back to `/`. See [Legal pages](docs/usage.md#legal-pages).
 - **Breaking:** the accessibility statement has no "Tested with" section any more, and its test fails while the heading is still there. Hand tests go under "How we check".
@@ -63,7 +60,7 @@ Upgrade steps:
 - **Breaking:** no more `.zenodo.json`: Zenodo reads `CITATION.cff` when a repo has none. A project with `license` set to `none` gets no citation files, since a Zenodo record needs a license.
 - **Breaking:** the `dco-signoff` commit-msg hook and the web sign-off setting now come with every public render, not only with `openssf_badge=silver` ([CI baseline](docs/ci-baseline.md)).
 - A web app's end-to-end tests no longer fail on TODOs in the legal pages or on an accessibility statement last reviewed over 400 days ago, so a new web app passes CI as rendered ([docs/web-legal.md](docs/web-legal.md)).
-- In a public repo, `main-checks.json` also requires the check job of each stack at the repo root, so a failing test blocks the merge. Nested stacks are left out: their workflow runs only when their folder changes.
+- In a public repo, `main-checks.json` also requires the check job of each stack at the repo root, one per Python version for a library, so a failing test blocks the merge. Nested stacks are left out: their workflow runs only when their folder changes.
 - The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build. The limit itself is unchanged; check yours against it.
 - A README of a project that publishes to PyPI or npm links to repository files by full GitHub URL, so the links work on the package page.
 - The README no longer has a "Releasing" section or the note on the week-old-release rule; public projects get both in `CONTRIBUTING.md`. After `copier update`, delete them from the README if you don't want them twice.
@@ -78,6 +75,9 @@ Upgrade steps:
 
 ### Fixed
 
+- A GPL or AGPL project now stores `copyright_year`, so `REUSE.toml` keeps its year instead of taking the current one on each update.
+- yamlfmt no longer reformats a `pnpm-lock.yaml` in a nested package, such as `web/pnpm-lock.yaml`.
+- The mutation extra needs mutmut 3.8.1: 3.8.0 crashes under pytest 9.2.
 - Release notes keep named Markdown link definitions, including definitions at the end of a section. See [Publishing](docs/usage.md#publishing).
 - The Copier update workflow selects stable template tags and skips prereleases. See [Dependency updates](docs/usage.md#dependency-updates).
 - `just repo-settings` turns on GitHub's "Automatically delete head branches", so a merged PR's branch goes away.
