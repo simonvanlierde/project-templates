@@ -35,6 +35,7 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build, so a small feature doesn't trip it. The limit itself is unchanged. Existing apps get the comment with `copier update`; check your own limit against it.
 - **Breaking:** `just py-mutation` now fails on a surviving mutant that is not listed in `tests/mutation-baseline.txt`, and on a listed one that no longer survives, so the weekly `mutation.yml` python job can fail. Upgrade: after `copier update`, run `just py-mutation` and list each survivor you accept in the new `tests/mutation-baseline.txt`, one per line with the reason. See [Test extras](docs/usage.md#test-extras).
 - A README of a project that publishes to PyPI or npm links to repository files by full GitHub URL, so the links work on the package page.
 - The README no longer has a "Releasing" section or the note on holding back the week-old-release rule. Public projects get both in `CONTRIBUTING.md`, the release steps in [Publishing](docs/usage.md#publishing). After `copier update`, delete those sections from the README if you don't want them twice.

@@ -176,7 +176,7 @@ When projects record architectural choices, store them in `docs/decisions/`.
 - Mandatory legal pages linked from the footer.
 - Cloudflare Pages configuration: `public/_headers` (security headers) and `wrangler.jsonc`.
 - Pull request previews: `wrangler.preview.jsonc`, a `preview` job in `.github/workflows/ts.yml`, `.github/workflows/preview-retire.yml` and `.github/scripts/preview-retire.sh`.
-- Bundle size budget in `scripts/checkBundleBudget.mjs`.
+- Bundle size budget in `scripts/checkBundleBudget.mjs`: 100 KiB of gzipped JavaScript in the largest file. It catches a heavy dependency or a broken chunk split, not ordinary features, so keep it at least 25% above the build rather than just above it.
 
 Cloudflare Pages deploys via Git integration: configure build command `pnpm build`, output directory `dist`, and set the root directory to `ts_dir` for nested apps.
 
