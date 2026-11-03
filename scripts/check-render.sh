@@ -1165,6 +1165,9 @@ grep -qxF "    \"wrangler\": \"$wrangler_pin\"" d/web/package.json
 (! grep -q 'pnpm dlx' d/.github/workflows/ts.yml)
 test "$(grep -c 'run: pnpm install --frozen-lockfile' d/.github/workflows/ts.yml)" -ge 4
 (! grep -q '"wrangler"' m/web/package.json)
+# pnpm refuses the install unless wrangler's esbuild and workerd builds are allowed.
+grep -A2 -x 'allowBuilds:' d/web/pnpm-workspace.yaml | grep -qx '  workerd: true'
+(! grep -q 'allowBuilds' m/web/pnpm-workspace.yaml)
 (! grep -q 'versions upload' d/.github/workflows/ts.yml)
 grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
 (! grep -q '^  X-Robots-Tag' d/web/public/_headers)
