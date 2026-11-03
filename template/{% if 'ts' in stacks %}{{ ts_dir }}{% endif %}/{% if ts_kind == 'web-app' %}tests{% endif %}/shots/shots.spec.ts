@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { ROUTES } from "../e2e/routes";
 
 // `just ts-shots` runs this: a full-page PNG of every route at phone and desktop
@@ -12,7 +12,8 @@ for (const path of ROUTES) {
       test(`${path} at ${width} px, ${colorScheme}`, async ({ browser, baseURL }) => {
         const context = await browser.newContext({ baseURL, colorScheme, viewport: { width, height: 900 } });
         const page = await context.newPage();
-        await page.goto(path);
+        // A route that errors would otherwise be saved as a passing screenshot.
+        expect((await page.goto(path))?.ok()).toBe(true);
         const name = path === "/" ? "index" : path.slice(1).replaceAll("/", "-");
         await page.screenshot({ fullPage: true, path: `shots/${name}-${width}-${colorScheme}.png` });
         await context.close();
