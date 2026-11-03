@@ -15,6 +15,7 @@ out=${1:?usage: scripts/check-render.sh OUT_DIR}
 # replaces your own copier settings for this run.
 export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml
 COPIER_VERSION=${COPIER_VERSION:-$(sed -n 's/^ *COPIER_VERSION: *//p' .github/workflows/ci.yml)}
+PREK_VERSION=${PREK_VERSION:-$(sed -n 's/^ *PREK_VERSION: *//p' .github/workflows/ci.yml)}
 copier_pin=$(sed -n '/^copier_version:/,/^$/s/^  default: //p' copier.yml)
 howfairis_pin=$(sed -n '/^howfairis_version:/,/^$/s/^  default: \([^ ]*\).*/\1/p' copier.yml)
 copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwrite)
@@ -463,11 +464,19 @@ test "$("$notes" 1.0.0 "$out/sample-changelog.md")" = $'\n- first release'
 rel=$out/rel
 mkdir "$rel"
 ssh-keygen -q -t ed25519 -N '' -f "$rel/key"
+# A citable project's recipe runs the citesync hook through `prek`; CI has only uvx.
+# The shim stays on PATH for the rest of the run, at the version CI pins.
+mkdir "$rel/bin"
+printf '#!/bin/sh\nexec uvx -q prek%s "$@"\n' "${PREK_VERSION:+@$PREK_VERSION}" >"$rel/bin/prek"
+chmod +x "$rel/bin/prek"
+PATH=$rel/bin:$PATH
 git init -q --bare -b main "$rel/origin.git"
 cp -R k "$rel/w"
 (
   # shellcheck disable=SC2030 # only this subshell reads it
   export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+  # k keeps a placeholder CITATION.cff that citesync cannot read; c's case below runs it.
+  export SKIP=citesync
   cd "$rel/w"
   git init -q -b main
   git remote add origin "$rel/origin.git"
@@ -496,6 +505,22 @@ cp -R k "$rel/w"
   git verify-tag v0.1.0 >/dev/null 2>&1
   test "$(git -C "$rel/origin.git" rev-parse 'v0.1.0^{commit}')" = "$(git rev-parse HEAD)"
   .github/scripts/release-notes.sh v0.1.0 CHANGELOG.md >/dev/null
+)
+# c lists three manifests in citesync.toml. Bumping the two the recipe reads, but not
+# Cargo.toml, stops the release at citesync with CHANGELOG.md unchanged. No remote: the
+# check runs before the fetch.
+cp -R c "$rel/c"
+(
+  cd "$rel/c"
+  git init -q -b main
+  sed -i 's/^## \[Unreleased\]$/&\n\n- first thing/' CHANGELOG.md
+  sed -i 's/^version = "0.1.0"$/version = "0.2.0"/' api/pyproject.toml
+  sed -i 's/^  "version": "0.1.0",$/  "version": "0.2.0",/' apps/web/package.json
+  git add -A
+  git -c user.name=t -c user.email=t@t.test commit -qm base --no-verify
+  (! just release 0.2.0 >../c-release.log 2>&1)
+  grep -q "version-mismatch.*0.1.0" ../c-release.log
+  git diff --quiet
 )
 
 # cold-install.yml runs the README's Development blocks. Run its step with `bash -ex`
@@ -1227,7 +1252,6 @@ done
 # Spelling and links: a fresh render passes both hooks, and fails them on a misspelt
 # word and on a relative link to a missing file. prek needs a git repo, so each check
 # runs in a copy. lychee runs offline in the hook; links.yml checks the web weekly.
-PREK_VERSION=${PREK_VERSION:-$(sed -n 's/^ *PREK_VERSION: *//p' "$repo/.github/workflows/ci.yml")}
 prek=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --all-files)
 for r in a b d h; do
   rm -rf "$r-hooks"

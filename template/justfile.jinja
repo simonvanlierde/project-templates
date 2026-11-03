@@ -71,6 +71,10 @@ release version:
 {%- if 'ts' in stacks and publish_to_npm %}
     [ "$(node -p "require('./{{ ts_dir }}/package.json').version")" = "$version" ] || { echo "{{ ts_dir ~ '/' if ts_dir != '.' else '' }}package.json is not at $version" >&2; exit 1; }
 {%- endif %}
+{%- if citable %}
+    # citesync fails while the manifests and citation files disagree. Run it before any file changes.
+    {{ prek }} run citesync --all-files
+{%- endif %}
     git fetch --quiet origin main
     # Not grep -q: it stops reading early, and under pipefail git show then fails on a
     # changelog bigger than the pipe buffer.
