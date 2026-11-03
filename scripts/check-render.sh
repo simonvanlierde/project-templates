@@ -270,11 +270,11 @@ test ! -e "$out/l/src"
 # j: a private web app, so its legal pages must not link a repo visitors can't open.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
-# s: a name ending in `.`, which the slug drops: `app-.pages.dev` is no hostname.
+# s: a name ending in `.`, which the slug drops: `app-.example-org.workers.dev` is no hostname.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app. --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=browser . "$out/s"
 grep -qF '"name": "app",' "$out/s/wrangler.jsonc"
-grep -qx 'site_url: https://app.pages.dev' "$out/s/.copier-answers.yml"
+grep -qx 'site_url: https://app.example-org.workers.dev' "$out/s/.copier-answers.yml"
 
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the
@@ -1047,10 +1047,10 @@ test "$(grep -cE '^\| [1-4]\.[0-9]+\.[0-9]+ .* \| AA? \| Not assessed \| \|$' d/
 test ! -e m/web/docs/accessibility-assessment.md
 # The answers reach the terms: the site, who runs it and the contact, and the privacy
 # statement links them.
-grep -qxF 'These terms cover pipe-me at [pipe-me.pages.dev](https://pipe-me.pages.dev).' d/web/docs/terms.md
+grep -qxF 'These terms cover pipe-me at [pipe-me.example-org.workers.dev](https://pipe-me.example-org.workers.dev).' d/web/docs/terms.md
 grep -qxF 'Ada Lovelace, who runs pipe-me.' d/web/docs/terms.md
 grep -qF '[ada@example.com](mailto:ada@example.com)' d/web/docs/terms.md
-grep -qxF 'Using pipe-me also means accepting its [terms of use](https://pipe-me.pages.dev/terms).' d/web/docs/privacy.md
+grep -qxF 'Using pipe-me also means accepting its [terms of use](https://pipe-me.example-org.workers.dev/terms).' d/web/docs/privacy.md
 # j keeps work in the browser, with no accounts: its privacy statement says so, and it has
 # no terms page, route or footer link.
 grep -qxF 'private-web keeps your work on your device. It isn'"'"'t sent to us or to anyone else.' j/docs/privacy.md
@@ -1079,23 +1079,41 @@ grep -qF 'image: mcr.microsoft.com/playwright:v' d/.github/workflows/ts.yml
 grep -qF 'needs.check.outputs.playwright }}-noble' d/.github/workflows/ts.yml
 grep -q 'fonts-dejavu-core' d/.github/workflows/ts.yml
 grep -qx '          path: web/playwright-report/' d/.github/workflows/ts.yml
-# Pull request previews: web-app renders get the preview Worker config, the preview job
-# and preview-retire.yml, with wrangler at the pinned version and nested paths for d.
-# Production headers never carry noindex.
+# Deploys: web-app renders get one Worker config for production and previews, the
+# production and preview jobs and preview-retire.yml, with wrangler at the pinned version
+# and nested paths for d. Production headers never carry noindex.
 wrangler_pin=$(sed -n '/^wrangler_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
 test -n "$wrangler_pin"
-grep -qF '"name": "pipe-me-preview",' d/web/wrangler.preview.jsonc
-grep -qF '"directory": "./dist",' d/web/wrangler.preview.jsonc
-grep -qF '"preview_urls": false,' d/web/wrangler.preview.jsonc
-grep -qF '"workers_dev": true' d/web/wrangler.preview.jsonc
-grep -qF '"name": "app-preview",' s/wrangler.preview.jsonc
+grep -qF '"name": "pipe-me",' d/web/wrangler.jsonc
+grep -qF '"directory": "./dist",' d/web/wrangler.jsonc
+grep -qF '"not_found_handling": "single-page-application"' d/web/wrangler.jsonc
+grep -qF '"preview_urls": false,' d/web/wrangler.jsonc
+grep -qF '"workers_dev": true' d/web/wrangler.jsonc
+(! grep -q 'pages_build_output_dir' d/web/wrangler.jsonc s/wrangler.jsonc)
+test ! -e d/web/wrangler.preview.jsonc
+# No web app names Pages' address anywhere.
+(! grep -rq --exclude-dir=.git 'pages\.dev' d j s)
 grep -q '^  preview:' d/.github/workflows/ts.yml
-grep -q 'name: preview-dist$' d/.github/workflows/ts.yml
-test "$(grep -c 'path: web/dist$' d/.github/workflows/ts.yml)" = 2
+grep -q 'name: dist$' d/.github/workflows/ts.yml
+(! grep -q 'preview-dist' d/.github/workflows/ts.yml)
+test "$(grep -c 'path: web/dist$' d/.github/workflows/ts.yml)" = 3
+# Production: push to main only, after the checks, in the production environment, one
+# deploy at a time, under the config's own name.
+prod=$(sed -n '/^  production:$/,/^  [a-z]/p' d/.github/workflows/ts.yml)
+grep -qxF "    if: github.event_name == 'push' && github.ref == 'refs/heads/main'" <<<"$prod"
+grep -qxF '    needs: [check, e2e]' <<<"$prod"
+grep -qxF '      name: production' <<<"$prod"
+grep -qxF '      group: production' <<<"$prod"
+grep -qxF '      cancel-in-progress: false' <<<"$prod"
+grep -qxF "          pnpm dlx wrangler@$wrangler_pin deploy 2>&1 | tee deploy.log" <<<"$prod"
+grep -qxF '          set -o pipefail' <<<"$prod"
+(! grep -q -- '--name\|X-Robots-Tag' <<<"$prod")
+# A newer push to main must not cancel the run whose deploy is in flight.
+grep -qF "cancel-in-progress: \${{ github.event_name == 'pull_request' }}" d/.github/workflows/ts.yml
 grep -q '^ *name: preview$' d/.github/workflows/ts.yml
 # The gate step runs before checkout, so it must not cd into web/.
 grep -A2 -- '- id: gate$' d/.github/workflows/ts.yml | grep -q 'working-directory: \.$'
-grep -qF "pnpm dlx wrangler@$wrangler_pin deploy --config wrangler.preview.jsonc --name \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
+grep -qF "pnpm dlx wrangler@$wrangler_pin deploy --name \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
 (! grep -q 'versions upload' d/.github/workflows/ts.yml)
 grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
 (! grep -q '^  X-Robots-Tag' d/web/public/_headers)
@@ -1177,12 +1195,15 @@ grep -qF 'answers HTTP 000 after the delete' "$stub/out"
 (! retire PRS=1 PROBE_CODE=502)
 grep -qF 'answers HTTP 502 after the delete' "$stub/out"
 # A web app at the repo root builds in place.
-test -f s/wrangler.preview.jsonc
+test -f s/wrangler.jsonc
+grep -q '^  production:' s/.github/workflows/ts.yml
+sed -n '/^  production:$/,/^  [a-z]/p' s/.github/workflows/ts.yml | grep -xF '    needs: [check, e2e]' >/dev/null
 test -f s/.github/workflows/preview-retire.yml
 grep -qx '          path: dist' s/.github/workflows/ts.yml
 (! grep -q 'working-directory' s/.github/workflows/preview-retire.yml)
 # Other kinds get none of it.
-test ! -e a/wrangler.preview.jsonc
+test ! -e a/wrangler.jsonc
+(! grep -q 'production' a/.github/workflows/ts.yml)
 test ! -e a/.github/workflows/preview-retire.yml
 (! grep -q 'preview' a/.github/workflows/ts.yml)
 grep -q 'stages: \[pre-push\]' d/.pre-commit-config.yaml
@@ -1579,6 +1600,7 @@ chmod +x "$fake/gh"
   test "$(grep -c 'deployment-branch-policies -f name=main' "$fake/log-c")" = 1
   # Only a web app has the preview environment.
   (! grep -q 'environments/preview' "$fake/log-c")
+  (! grep -q 'environments/production' "$fake/log-c")
   grep -q 'https://pypi.org/manage/account/publishing/?provider=github&project_name=mono-me&owner=simonvanlierde&repository=project-templates&workflow_filename=python-release.yml&environment=pypi' "$fake/out-c"
   grep -q 'https://zenodo.org/account/settings/github/' "$fake/out-c"
 )
@@ -1592,6 +1614,11 @@ chmod +x "$fake/gh"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/preview' "$FAKE_LOG"
   (! grep -q 'environments/preview/' "$FAKE_LOG")
   grep -q "Configured environment 'preview'" "$fake/out-d"
+  # production: no reviewer, and only main may deploy to it, posted once over two runs.
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/production -F deployment_branch_policy[protected_branches]=false -F deployment_branch_policy[custom_branch_policies]=true' "$FAKE_LOG"
+  test "$(grep -cxF -- 'api -X POST repos/{owner}/{repo}/environments/production/deployment-branch-policies -f name=main -f type=branch' "$FAKE_LOG")" = 1
+  (! grep -q 'environments/production.*reviewers' "$FAKE_LOG")
+  grep -q "Configured environment 'production'" "$fake/out-d"
 )
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
@@ -1629,7 +1656,7 @@ for r in a b d; do
 done
 grep -qxF -- 'repo edit --add-topic python --add-topic typescript --add-topic rust --add-topic go --add-topic docker' "$fake/about-a"
 grep -qxF -- "repo edit --description A \"quoted\" {{ one }}, naïve \$USD --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
-grep -qxF -- 'repo edit --homepage https://pipe-me.pages.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
+grep -qxF -- 'repo edit --homepage https://pipe-me.example-org.workers.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
   r=${answers%%/*}
