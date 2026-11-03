@@ -1,7 +1,7 @@
 import { test } from "@playwright/test";
 import { ROUTES } from "../e2e/routes";
 
-// `just shots` runs this: a full-page PNG of every route at phone and desktop
+// `just ts-shots` runs this: a full-page PNG of every route at phone and desktop
 // width, in light and dark, saved as shots/<route>-<width>-<scheme>.png.
 const WIDTHS = [390, 1440];
 const SCHEMES = ["light", "dark"] as const;

@@ -1014,9 +1014,9 @@ test -f d/web/public/_headers
 test -f d/web/wrangler.jsonc
 test -f d/web/tests/e2e/a11y.spec.ts
 test -f d/web/tests/e2e/csp.spec.ts
-# `just shots` screenshots the same routes; shots/ stays out of git.
+# `just ts-shots` screenshots the same routes; shots/ stays out of git.
 test -f d/web/tests/shots/shots.spec.ts
-grep -q '^shots:' d/just/ts.just
+grep -q '^ts-shots:' d/just/ts.just
 grep -qx 'shots/' d/.gitignore
 (! grep -q 'shots' a/just/ts.just)
 # The legal pages: statement and privacy always, terms for accounts or uploads,

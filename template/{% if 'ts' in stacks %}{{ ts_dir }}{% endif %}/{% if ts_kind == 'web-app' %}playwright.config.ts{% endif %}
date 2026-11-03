@@ -14,7 +14,7 @@ export default defineConfig({
   use: { baseURL: url, trace: "on-first-retry" },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    // `just shots` only: the normal run has no such project, so it skips tests/shots.
+    // `just ts-shots` only: the normal run has no such project, so it skips tests/shots.
     ...(process.env.SHOTS ? [{ name: "shots", testDir: "tests/shots", use: { ...devices["Desktop Chrome"] } }] : []),
   ],
   // The tests run against the production build, which is what Cloudflare Pages serves.
