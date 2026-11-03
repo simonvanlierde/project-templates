@@ -305,7 +305,7 @@ if [ -n "$missing" ]; then
 fi
 
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
-import ast, collections, json, json5, os, pathlib, subprocess, tempfile, tomllib, yaml
+import ast, collections, itertools, json, json5, os, pathlib, subprocess, tempfile, tomllib, yaml
 
 load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
@@ -369,6 +369,25 @@ for render in "abcdm":
                 names.setdefault(job["name"], []).append(f"{wf.name}:{job_id}")
     dupes = {n: where for n, where in names.items() if len(where) > 1}
     assert not dupes, f"{render}: jobs share a name: {dupes}"
+# Every check a ruleset requires is one a rendered workflow reports. GitHub names a
+# matrix job's runs "<name> (<value>, ...)" when the name holds no matrix expression.
+for checks in sorted(out.glob("*/.github/rulesets/main*.json")):
+    render = checks.parents[2]
+    runs = set()
+    for wf in (render / ".github/workflows").glob("*.yml"):
+        for job in yaml.safe_load(wf.read_text())["jobs"].values():
+            name = job.get("name")
+            matrix = {k: v for k, v in job.get("strategy", {}).get("matrix", {}).items() if isinstance(v, list)}
+            if not name:
+                continue
+            if matrix and "${{" not in name:
+                for combo in itertools.product(*matrix.values()):
+                    runs.add(f"{name} ({', '.join(map(str, combo))})")
+            else:
+                runs.add(name)
+    for rule in json.loads(checks.read_text())["rules"]:
+        for required in rule.get("parameters", {}).get("required_status_checks", []):
+            assert required["context"] in runs, f"{checks}: {required['context']!r} is no job's check run"
 # A pull request saves no cache: only it could read one, and it evicts main's. Each
 # action that caches by default must carry its switch. CodSpeed's instrument cache has
 # no save switch and is left on. A job whose `if` excludes pull requests outright (an
