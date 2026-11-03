@@ -68,6 +68,16 @@
       "publint"
 {%- endif %}
     ]
+{%- if web %},
+{#- playwright.config.ts adds tests/shots only when SHOTS is set, so knip, which
+    loads the config without it, needs the spec named. The plugin's entry adds to
+    the config's test files; a top-level entry would replace knip's defaults. #}
+    "playwright": {
+      "entry": [
+        "tests/shots/*.spec.ts"
+      ]
+    }
+{%- endif %}
   },
 {%- if web %}
   "dependencies": {

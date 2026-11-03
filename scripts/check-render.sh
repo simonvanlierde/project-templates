@@ -1021,7 +1021,7 @@ grep -qF 'rm -rf web/shots' d/just/ts.just
 grep -qF 'SHOTS=1 pnpm -C web exec playwright test --project shots' d/just/ts.just
 grep -qF 'web/shots/' d/README.md
 grep -qF 'ts-(e2e|shots)' d/.github/workflows/cold-install.yml
-grep -qx 'shots/' d/.gitignore
+grep -qx '/web/shots/' d/.gitignore
 (! grep -q '^ts-shots:' a/just/ts.just)
 # The legal pages: statement and privacy always, terms for accounts or uploads,
 # each a route the axe, CSP, privacy and legal-page specs visit.
@@ -1236,6 +1236,15 @@ for r in a b d h; do
   git -C "$r-hooks" add -A
   (cd "$r-hooks" && "${prek[@]}" typos lychee jsonvet >/dev/null)
 done
+# The web apps track the shots spec and ignore only the screenshots `just ts-shots` writes.
+rm -rf s-git
+cp -R s s-git
+git -C s-git init -q
+git -C s-git add -A
+git -C s-git ls-files --error-unmatch tests/shots/shots.spec.ts >/dev/null
+git -C s-git check-ignore -q shots/index-390-light.png
+git -C d-hooks ls-files --error-unmatch web/tests/shots/shots.spec.ts >/dev/null
+git -C d-hooks check-ignore -q web/shots/index-390-light.png
 # h's commit-msg hook takes a sign-off with an email, and refuses one without.
 dco_hook=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --hook-stage commit-msg --commit-msg-filename msg dco-signoff)
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg
