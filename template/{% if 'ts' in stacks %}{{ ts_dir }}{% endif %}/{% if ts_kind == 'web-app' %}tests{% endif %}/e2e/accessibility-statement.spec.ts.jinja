@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
  * statement's value is that it claims no more than the repo can show, so these
  * fail when it overclaims, promises no reply time, or goes a year without review.
  * a11y.spec.ts runs axe over it with the other routes, and legal-pages.spec.ts
- * checks its title, email contact, TODOs and footer link.
+ * checks its title, email contact and the links to and from it.
  */
 
 // The status sentence, with the W3C conformance terms the statement may use.
