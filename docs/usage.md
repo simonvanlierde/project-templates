@@ -38,7 +38,7 @@ When `customise` is `no`, advanced questions take these defaults:
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](#publishing)) |
 | `test_extras` | None ([Test extras](#test-extras)) |
 | `app_port` | 8000 |
-| `site_url` | `https://<project>.pages.dev` (Cloudflare Pages default) |
+| `site_url` | `https://<project>.<github_user>.workers.dev` (the Worker's workers.dev address, if the account's subdomain is the GitHub user) |
 
 During `copier update`, previously configured answers are preserved even when `customise` is `no`. Change an individual setting with `copier update --data <key>=<value>` or prompt for a single setting with `copier update --ask <key>`.
 
@@ -167,32 +167,45 @@ When projects record architectural choices, store them in `docs/decisions/`.
 | --- | --- |
 | `library` | ES module compiled by `tsc` to `dist/`, publishable to npm |
 | `app` | Node application compiled to `dist/`, not published |
-| `web-app` | Single-page application built with Vite for Cloudflare Pages |
+| `web-app` | Single-page application built with Vite, served by a Cloudflare Worker |
 
 `web-app` prompts for `web_framework` (React or Preact) and `user_data` ([legal pages](#legal-pages)). Web apps include:
 
 - Single-page application entry points (`index.html`, `src/main.tsx`, `src/App.tsx`) and Vitest setup.
 - Playwright end-to-end tests in `tests/e2e/`: axe accessibility scans in light/dark modes and Content-Security-Policy enforcement.
 - Mandatory legal pages, linked from the footer in the starter app.
-- Cloudflare Pages configuration: `public/_headers` (security headers) and `wrangler.jsonc`.
-- Pull request previews: `wrangler.preview.jsonc`, a `preview` job in `.github/workflows/ts.yml`, `.github/workflows/preview-retire.yml` and `.github/scripts/preview-retire.sh`.
+- Cloudflare Worker configuration: `public/_headers` (security headers) and `wrangler.jsonc` (static assets, no Worker script).
+- A `production` job in `.github/workflows/ts.yml` that deploys `main`.
+- Pull request previews: a `preview` job in `.github/workflows/ts.yml`, `.github/workflows/preview-retire.yml` and `.github/scripts/preview-retire.sh`.
 - Bundle size budget in `scripts/checkBundleBudget.mjs`.
 
-Cloudflare Pages deploys via Git integration: configure build command `pnpm build`, output directory `dist`, and set the root directory to `ts_dir` for nested apps.
+### Production
+
+Every push to `main` runs the `production` job after the checks pass. It deploys the build the checks ran on to the Worker `<slug>`, with the pinned wrangler, at `https://<slug>.<subdomain>.workers.dev`. Static-asset requests are free and unlimited on the Workers Free plan. The job runs in the `production` GitHub environment, which `just repo-settings` limits to `main`. One deploy runs at a time, and a deploy in flight is never cancelled by the next. Without `CLOUDFLARE_API_TOKEN`, the job skips with a notice. For a custom domain, add it under the Worker's Settings > Domains & Routes. The domain needs a zone on Cloudflare.
+
+#### Moving an app off Cloudflare Pages
+
+An app made before this template deployed from CI was deployed by Cloudflare Pages. To move it:
+
+1. Merge the `copier update`, then run `just repo-settings` and add both secrets to the new `production` environment.
+2. The next push to `main` deploys the Worker. Check the app at its workers.dev address.
+3. Move the custom domain from the Pages project to the Worker (Worker > Settings > Domains & Routes).
+4. Delete the Pages project, now that the Worker serves production.
+
+Without a custom domain, the app's address changes: set the new one with `copier update --data site_url=https://<slug>.<subdomain>.workers.dev`.
 
 ### Pull request previews
 
-Production stays on Cloudflare Pages. Each pull request that is open, not a draft and not opened by a bot such as Renovate gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`, so Pages needs no preview builds. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. The job adds that header to the deployed copy of the build only, so `public/_headers` and production never carry it. The job reads the pull request again right before deploying, in case it closed while the job was queued.
+Each pull request that is open, not a draft and not opened by a bot such as Renovate gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`. The `preview` job deploys `wrangler.jsonc` under that name. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. The job adds that header to the deployed copy of the build only, so `public/_headers` and production never carry it. The job reads the pull request again right before deploying, in case it closed while the job was queued.
 
 When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker through the Cloudflare API. It then fetches the address and fails unless it answers 404, which shows the Worker is gone. A daily run lists the account's `<slug>-pr-<number>` Workers and deletes those whose pull request is not open and ready, in case an event was missed. When it cannot read a pull request, it keeps that Worker and fails. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep. The workflow runs `.github/scripts/preview-retire.sh`.
 
 Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` skip the job with a notice. One-time setup:
 
-1. Run `just repo-settings`. It creates the `preview` environment in GitHub (or create it under Settings > Environments).
-2. Create a custom Cloudflare API token with the permission Account > Workers Scripts: Edit. Add it to the `preview` environment as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
-3. In the Pages project, open Settings > Builds > Branch control and set Preview branch to None, so Pages stops building previews of its own.
+1. Run `just repo-settings`. It creates the `preview` and `production` environments in GitHub (or create them under Settings > Environments, with `production` limited to `main`).
+2. Create a custom Cloudflare API token with the permission Account > Workers Scripts: Edit. Add it to both environments as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
 
-The first deploy creates the Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. The wrangler version is pinned in `ts.yml`, and `copier update` brings new versions.
+The first deploy creates each Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. The wrangler version is pinned in `ts.yml`, and `copier update` brings new versions.
 
 Copier updates do not overwrite user-owned starter files: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`, `tests/e2e/routes.ts`, and markdown files in `docs/`.
 

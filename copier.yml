@@ -133,11 +133,11 @@ kind:
 ts_kind:
   type: str
   when: "{{ 'ts' in stacks }}"
-  help: What the TypeScript package is; a Node package, or a browser app on Cloudflare Pages
+  help: What the TypeScript package is; a Node package, or a browser app on Cloudflare Workers
   choices:
     Library (publishes dist/ and type declarations): library
     Application (builds to dist/, not published): app
-    Web app (Vite single-page app, Playwright e2e, Cloudflare Pages): web-app
+    Web app (Vite single-page app, Playwright e2e, Cloudflare Workers): web-app
   default: library
 
 # Only the web-app kind renders JSX. Preact runs the same code through its
@@ -482,13 +482,16 @@ publish_to_pypi:
 # --- ts -----------------------------------------------------------------------
 
 # The address the accessibility statement and privacy page name. The default is
-# the address Cloudflare Pages gives the project from wrangler.jsonc's name.
+# the workers.dev address of the Worker named in wrangler.jsonc, assuming the
+# account's workers.dev subdomain is the GitHub user.
 site_url:
   type: str
   when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
   ask: "{{ customise }}"
-  help: The web app's public address, for its accessibility statement and privacy page
-  default: "https://{{ slug | replace('.', '-') | replace('_', '-') }}.pages.dev"
+  help: >-
+    The web app's public address, for its accessibility statement and privacy page.
+    Give your custom domain, or your own workers.dev subdomain if it is not the GitHub user.
+  default: "https://{{ slug | replace('.', '-') | replace('_', '-') }}.{{ github_user | lower }}.workers.dev"
   validator: >-
     {% if not site_url|regex_search('^https://[^/\\s]+(/[^\\s]*)?$') %}
     Give the full address, starting with https://.
@@ -714,7 +717,7 @@ docker_stacks:
     and data-pipeline kinds and the python image need their starter modules in src/.
     {% elif 'ts' in docker_stacks and ts_kind == 'web-app' %}
     The ts image is a Node service with /health. A web app is static files that
-    Cloudflare Pages serves: drop ts from `docker_stacks`.
+    a Cloudflare Worker serves: drop ts from `docker_stacks`.
     {% elif kind == 'web-service' and 'python' not in docker_stacks %}
     The web-service kind is the python image: add python to `docker_stacks`.
     {% elif docker_stacks | length > 1 and python_dir == ts_dir %}

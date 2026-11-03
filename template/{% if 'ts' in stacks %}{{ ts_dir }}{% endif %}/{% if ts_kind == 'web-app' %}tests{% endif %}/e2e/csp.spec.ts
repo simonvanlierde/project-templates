@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { ROUTES } from "./routes";
 
 // vite preview sends no headers, so apply the Content-Security-Policy from the
-// built _headers file, the one Cloudflare Pages serves, and fail on any violation.
+// built _headers file, the one the Cloudflare Worker serves, and fail on any violation.
 test("the built app runs under its own Content-Security-Policy", async ({ page }) => {
   const headersFile = await (await page.request.get("/_headers")).text();
   const policy = headersFile.match(/Content-Security-Policy:\s*(.+)/)?.[1];
