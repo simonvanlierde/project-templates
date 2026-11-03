@@ -81,7 +81,7 @@ Issues turned on for this repository.
 `pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} dev` serves the app with live reload. Cloudflare Pages deploys it through its Git
 integration: create a Pages project from this repository, with build command
 `pnpm build`{% if ts_dir != '.' %}, root directory `{{ ts_dir }}`{% endif %} and output directory `dist`. Every push to `main` deploys. Every
-pull request that is not a draft gets a preview URL (see below). [`{{ d }}public/_headers`]({{ blob }}{{ d }}public/_headers) sets the
+pull request that is neither a draft nor from a bot gets a preview URL (see below). [`{{ d }}public/_headers`]({{ blob }}{{ d }}public/_headers) sets the
 response headers, including the Content-Security-Policy that the e2e tests run under.
 
 {% if user_data == 'accounts' -%}
@@ -97,7 +97,7 @@ Fill in their TODOs before the first public deploy.
 
 ### Pull request previews
 
-Each pull request that is open and not a draft gets its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>`, from [`{{ d }}wrangler.preview.jsonc`]({{ blob }}{{ d }}wrangler.preview.jsonc), deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#pull-request-previews)).
+Each pull request that is open, not a draft and not from a bot gets its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>`, from [`{{ d }}wrangler.preview.jsonc`]({{ blob }}{{ d }}wrangler.preview.jsonc), deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#pull-request-previews)).
 One-time setup:
 
 1. Run `just repo-settings` to create the `preview` environment, or create it under Settings > Environments.

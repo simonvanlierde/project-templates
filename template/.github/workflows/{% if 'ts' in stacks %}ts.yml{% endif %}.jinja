@@ -175,7 +175,8 @@ jobs:
   # the token, so they skip with a notice, as does a repo without the secret.
   preview:
     name: preview
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+    # Bot pull requests (Renovate, Dependabot) get no preview, so their code never sees the token.
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !endsWith(github.event.pull_request.user.login, '[bot]')
     # Shares preview-retire.yml's group, so a retire waits for a deploy in flight.
     concurrency:
       group: preview-{% raw %}${{ github.event.pull_request.number }}{% endraw %}
