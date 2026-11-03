@@ -49,7 +49,7 @@ rs-profiling-build:
     RUSTFLAGS="-C force-frame-pointers=yes" cargo build{{ mp }} --profile profiling --all-targets
 
 # Record a command with samply and open the profile in Firefox Profiler, e.g.
-# `just rs-profile target/profiling/<binary> <args>`. Needs samply and perf events
+# `just rs-profile {{ '' if rust_dir == '.' else rust_dir ~ '/' }}target/profiling/<binary> <args>`. Needs samply and perf events
 # (`perf_event_paranoid` 1 or lower).
 rs-profile *cmd: rs-profiling-build
     samply record {% raw %}{{ cmd }}{% endraw %}
