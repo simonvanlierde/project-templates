@@ -4,7 +4,7 @@
 {%- set tree = blob | replace('/blob/', '/tree/') -%}
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
-{% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}[![{{ s }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ 'compose' if s == 'docker' and not docker_stacks else s }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ 'compose' if s == 'docker' and not docker_stacks else s }}.yml)
+{% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}{% set w = 'compose' if s == 'docker' and not docker_stacks else s %}[![{{ w }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml)
 {% endfor %}{% if codecov %}[![codecov](https://codecov.io/gh/{{ github_user }}/{{ slug }}/graph/badge.svg)](https://codecov.io/gh/{{ github_user }}/{{ slug }})
 {% endif %}{% if codspeed %}[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/{{ github_user }}/{{ slug }}?utm_source=badge)
 {% endif %}{% if publish_to_pypi %}[![PyPI](https://img.shields.io/pypi/v/{{ slug }})](https://pypi.org/project/{{ slug }}/)

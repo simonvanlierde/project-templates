@@ -76,6 +76,7 @@ updates:
 {%- endfor %}
 
 {%- if 'docker' in stacks and not docker_stacks %}
+
   # The images compose.yaml names, tag and digest together.
   - package-ecosystem: docker-compose
     directory: /

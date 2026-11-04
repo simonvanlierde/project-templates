@@ -190,6 +190,12 @@ The render has no Dockerfile, no image build and no `docker.yml`. It gets:
 - The `docker-compose` ecosystem in the dependency bot, so image tags and digests get update
   pull requests. Image stacks leave it off, because their `FROM` tags are copier answers.
 
+The shellcheck and shfmt images in `just/docker.just` are pinned by digest, and no bot
+bumps them: update the tags and digests by hand now and then. `just docker-fmt` applies
+shfmt's formatting (`.editorconfig` sets 2-space indent for `*.sh`), and `just fmt` runs it.
+Shell files are the `*.sh` files and files whose first line is an sh, bash, dash or ksh
+shebang. A zsh or fish script, or a shebang inside a Markdown code block, is not linted.
+
 The git hooks, license and REUSE files, community files and the other CI workflows come
 from the same questions as in any other project. `app_port` and `publish_to_ghcr` are not
 asked: there is no image to expose or push.

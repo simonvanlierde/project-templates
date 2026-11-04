@@ -350,7 +350,6 @@ jobs:
         run: scripts/check-render.sh "$RUNNER_TEMP"
 
       # A Compose-only render's own check: compose.yaml parses and the shell scripts lint.
-      - *just
       - name: compose-only sample check
         working-directory: ${{ runner.temp }}/compose
         run: git init -q && git add -A && just check
