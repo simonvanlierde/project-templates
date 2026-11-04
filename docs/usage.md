@@ -212,6 +212,8 @@ The first deploy creates each Worker, so there is nothing to set up in Cloudflar
 
 Copier updates do not overwrite user-owned starter files: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`, `tests/e2e/routes.ts`, and markdown files in `docs/`.
 
+The web app's folder also gets `PRODUCT.md` and `DESIGN.md`, stubs to fill in. They name who uses the app and how it looks, and are yours to edit: an update leaves them alone.
+
 ### Legal pages
 
 Legal documents reside in `docs/` and compile to HTML at build time:

@@ -1134,6 +1134,22 @@ test ! -e j/docs/terms.md
 rumdl_version=$(sed -n '/rumdl-pre-commit/{n;s/.*frozen: v//p;}' "$repo/.pre-commit-config.yaml")
 uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs d/AGENTS.md
 test ! -e a/docs/privacy.md
+# PRODUCT.md and DESIGN.md stubs: a web app gets both, beside its package.json,
+# and they speak of the project's own users. Other kinds have neither.
+for f in PRODUCT DESIGN; do
+  test -f "d/web/$f.md"
+  grep -qF 'pipe-me' "d/web/$f.md"
+  (! grep -qiE 'recruit|portfolio|hiring|showcase' "d/web/$f.md")
+  test ! -e "t/$f.md"
+  test ! -e "w/$f.md"
+  test ! -e "a/$f.md"
+done
+grep -qx '## Users' d/web/PRODUCT.md
+grep -qx '## Overview' d/web/DESIGN.md
+# Like the other starter files, they are the project's once rendered.
+echo '<!-- project edit -->' >>"$out/d/web/PRODUCT.md"
+"${copier[@]}" --vcs-ref=HEAD "${d_args[@]}" "$repo" "$out/d" >/dev/null 2>&1
+grep -q 'project edit' "$out/d/web/PRODUCT.md"
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json
 test ! -e d/web/Dockerfile

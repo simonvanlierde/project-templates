@@ -30,6 +30,8 @@ _skip_if_exists:
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}PRODUCT.md"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}DESIGN.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility-assessment.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/privacy.md"

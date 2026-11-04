@@ -30,4 +30,5 @@ Read `docs/decisions/` if present before changing a recorded choice.
 {%- endif %}
 {%- if 'ts' in stacks and ts_kind == 'web-app' %}
 The legal pages the web app serves are in `{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/`.
+`PRODUCT.md` and `DESIGN.md` beside them say who the app is for and how it looks.
 {%- endif %}
