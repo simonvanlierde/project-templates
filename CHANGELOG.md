@@ -81,6 +81,7 @@ Upgrade steps:
 
 ### Fixed
 
+- A template update PR opened without `COPIER_UPDATE_TOKEN` says in its body that its checks do not start and that closing and reopening it runs them.
 - A GPL or AGPL project now stores `copyright_year`, so `REUSE.toml` keeps its year instead of taking the current one on each update.
 - yamlfmt no longer reformats a `pnpm-lock.yaml` in a nested package, such as `web/pnpm-lock.yaml`.
 - The mutation extra needs mutmut 3.8.1: 3.8.0 crashes under pytest 9.2.
