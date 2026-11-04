@@ -132,7 +132,7 @@ repos:
   # CITATION.cff against the official schema. GitHub's "Cite this repository"
   # silently drops a file that fails it.
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0494aa7fa1314e98913a41227d8f0a515b2c1049 # frozen: 0.38.2
+    rev: a76b92851fc9eede9f9bc4073eb55202f34eb0df # frozen: 0.39.0
     hooks:
       - id: check-citation-file-format
 
@@ -153,7 +153,7 @@ repos:
         exclude: {{ data_exclude }}
 {%- endif %}
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: 03a7d1a4936b5889602852175bca2d39acb3281e # frozen: v0.3.0
+    rev: eaeb8abc646954face3eb41726f085385410f761 # frozen: v0.3.1
     hooks:
       - id: rumdl
         args: [--fix]

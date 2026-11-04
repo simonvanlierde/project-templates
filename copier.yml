@@ -634,7 +634,7 @@ committed_version:
 uv_version:
   type: str
   when: false
-  default: 0.13.5
+  default: 0.13.6
 
 # Computed, never asked: the griffe that python.yml's api job runs with uvx when
 # publish_to_pypi and python_api are on. It compares the public API with the last git tag.
@@ -738,7 +738,7 @@ copier_version:
 wrangler_version:
   type: str
   when: false
-  default: 4.152.0
+  default: 4.154.0
 
 # Computed, never asked: the astro an Astro site pins exactly in site/package.json.
 # Renovate bumps it here; a project gets the bump through `copier update`, and its own

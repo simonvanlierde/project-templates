@@ -28,7 +28,7 @@
 {%- if not publish_to_npm %}
   "private": true,
 {%- endif %}
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.16.1",
   "engines": {
     "node": ">={{ node_version }}"
   },
@@ -92,7 +92,7 @@
 {%- if web %}
   "dependencies": {
 {%- if web_framework == 'preact' %}
-    "preact": "^11.0.2"
+    "preact": "^11.1.0"
 {%- else %}
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
@@ -106,7 +106,7 @@
     "@biomejs/biome": "^2.6.3",
     "@j178/prek": "^0.5.7",
 {%- if publish_to_npm %}
-    "@microsoft/api-extractor": "^7.59.4",
+    "@microsoft/api-extractor": "^7.60.0",
 {%- endif %}
 {%- if mutation %}
     "@stryker-mutator/core": "^10.1.1",

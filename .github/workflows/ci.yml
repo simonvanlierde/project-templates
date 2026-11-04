@@ -30,11 +30,11 @@ env:
   # renovate: datasource=github-releases depName=jdx/jactionlint
   JACTIONLINT_VERSION: 2.3.0
   # renovate: datasource=pypi depName=check-jsonschema
-  CHECK_JSONSCHEMA_VERSION: 0.38.2
+  CHECK_JSONSCHEMA_VERSION: 0.39.0
   # renovate: datasource=pypi depName=rust-just
   JUST_VERSION: 1.59.0
   # renovate: datasource=npm depName=renovate
-  RENOVATEBOT_VERSION: 44.181.7
+  RENOVATEBOT_VERSION: 44.190.2
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
