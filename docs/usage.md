@@ -16,7 +16,7 @@ A new project asks at most ten questions for a single stack (eleven for a web ap
 | `github_user`, `author_name`, `author_email` | Always | Repository URLs, badges, licenses, and package metadata |
 | `customise` | Always | `yes` prompts for advanced settings; `no` accepts defaults |
 | `author_orcid` | Licensed `library`, or Python `research`/`data-pipeline` | Citation metadata |
-| `docker_stacks` | `docker` stack selected | Selects which packages receive a Dockerfile and Compose service; empty for a [Compose-only repo](#compose-only-repos) |
+| `docker_image` | `docker` and `python` stacks selected | Builds the Python package into an image with a Dockerfile and Compose service; no for a [Compose-only repo](#compose-only-repos) |
 
 Identity answers have no defaults.
 
@@ -162,7 +162,7 @@ Select any combination of stacks:
 | `ts` | TypeScript package or Vite web app ([kinds](#typescript-kinds)) |
 | `rust` | Rust crate (library or binary) with strict clippy rules |
 | `go` | Go module (library or binary) with golangci-lint |
-| `docker` | Dockerfile for Python or TypeScript packages and root `compose.yaml`; alone, a [Compose-only repo](#compose-only-repos) |
+| `docker` | Dockerfile for the Python package and root `compose.yaml`; without `python`, a [Compose-only repo](#compose-only-repos) |
 
 Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<stack>.just`. All projects receive `README.md`, `CHANGELOG.md`, `.gitignore`, `.editorconfig`, dependency bot configuration, git hooks, and `AGENTS.md`. Projects with a license also get `LICENSE` and `REUSE.toml`. Python projects select a [kind](python-kinds.md).
 
@@ -173,9 +173,10 @@ When projects record architectural choices, store them in `docs/decisions/`.
 ## Compose-only repos
 
 A repo that only composes upstream images, with shell scripts and Compose files but no
-Dockerfile of its own, answers `stacks=[docker]` and leaves `docker_stacks` empty. That is
-its default when `stacks` has no `python` or `ts` (and for a `ts` web app, which has no
-image). Combined with other stacks, set `docker_stacks=[]` to keep them without an image.
+Dockerfile of its own, answers `stacks=[docker]`. Any `stacks` with `docker` but not
+`python` renders one, because the only image the template builds is the Python one. With
+the python stack, answer no to `docker_image` (`--data docker_image=false`) to keep the
+package without an image.
 
 The render has no Dockerfile, no image build and no `docker.yml`. It gets:
 
@@ -318,13 +319,13 @@ By default, packages reside at the repository root. To host multiple packages, e
 
 ```text
 apps/api/{pyproject.toml,src,tests,Dockerfile,.dockerignore}
-apps/web/{package.json,tsconfig.json,biome.json,src,Dockerfile,.dockerignore}
+apps/web/{package.json,tsconfig.json,biome.json,src}
 compose.yaml
 .github/workflows/
 justfile, just/, .pre-commit-config.yaml, .copier-answers.yml
 ```
 
-Workflows and configuration files remain at the repository root. Two packages may share the root directory, but two Docker images cannot because both Dockerfiles would collide at `./Dockerfile`.
+Workflows and configuration files remain at the repository root. Two packages may share the root directory.
 
 ## Keeping your project up to date
 

@@ -470,7 +470,7 @@ module_name:
 # `flat` is for adopting the template in a repo whose package already sits at the
 # root: no src/ stub, and no starter tests that import it. web-service,
 # data-pipeline and the python image need the starter modules, so they stay `src`.
-# docker_stacks is asked later, so its validator refuses flat with the python image.
+# docker_image is asked later, so its validator refuses flat with the python image.
 python_layout:
   type: str
   when: "{{ 'python' in stacks }}"
@@ -769,56 +769,37 @@ howfairis_version:
 
 # --- docker -------------------------------------------------------------------
 
-# Asked even without `customise`: the right images depend on the stacks, and its
-# validator reads the *_dir answers, so it stays after them.
-docker_stacks:
-  type: str
-  multiselect: true
-  when: "{{ 'docker' in stacks }}"
-  help: Which stacks get an image (one Dockerfile each, one compose service each); none for a repo that only composes upstream images
-  choices: [python, ts]
-  # An image needs its stack's package. Neither stack, or a web app, defaults to no image:
-  # a Compose-only repo.
-  default: >-
-    {{ ['python'] if 'python' in stacks
-    else ['ts'] if 'ts' in stacks and ts_kind != 'web-app'
-    else [] }}
-  # Each image builds from its stack's package, and two Dockerfiles cannot share a
-  # directory, so two images need a monorepo layout. An empty answer is valid.
+# Asked even without `customise`: without an image the render is a Compose-only repo.
+# Its validator reads python_layout and kind, so it stays after them.
+docker_image:
+  type: bool
+  when: "{{ 'docker' in stacks and 'python' in stacks }}"
+  help: Build the Python package into an image (a Dockerfile and its compose service); no for a repo that only composes upstream images
+  # Read even when not asked: docker without python is a Compose-only repo. Templates
+  # test `'docker' in stacks and docker_image`.
+  default: "{{ 'python' in stacks }}"
   validator: >-
-    {% if docker_stacks | reject('in', stacks) | list %}
-    An image needs its stack: add {{ docker_stacks | reject('in', stacks) | join(' and ') }} to `stacks` too.
-    {% elif 'python' in docker_stacks and python_layout == 'flat' %}
+    {% if docker_image and python_layout == 'flat' %}
     The flat layout is for an existing library, app or research package: the web-service
     and data-pipeline kinds and the python image need their starter modules in src/.
-    {% elif 'ts' in docker_stacks and ts_kind == 'web-app' %}
-    The ts image is a Node service with /health. A web app is static files that
-    a Cloudflare Worker serves: drop ts from `docker_stacks`.
-    {% elif kind == 'web-service' and 'python' not in docker_stacks %}
-    The web-service kind is the python image: add python to `docker_stacks`.
-    {% elif docker_stacks | length > 1 and python_dir == ts_dir %}
-    Both images would be written to {{ python_dir }}/Dockerfile. Answer yes to
-    `customise` and give python_dir
-    and ts_dir different values first.
+    {% elif kind == 'web-service' and not docker_image %}
+    The web-service kind is shipped as the python image: answer yes to `docker_image`.
     {% endif %}
 
 app_port:
   type: int
-  when: "{{ 'docker' in stacks and docker_stacks }}"
+  when: "{{ 'docker' in stacks and docker_image }}"
   ask: "{{ customise }}"
   help: Port the service listens on
   default: 8000
-  # A second image publishes on the next host port up (compose.yaml).
   validator: >-
     {% if app_port < 1 or app_port > 65535 %}
     Give a port from 1 to 65535.
-    {% elif docker_stacks | length > 1 and app_port == 65535 %}
-    The second image publishes on port {{ app_port + 1 }}, which doesn't exist: pick a lower port.
     {% endif %}
 
 publish_to_ghcr:
   type: bool
-  when: "{{ 'docker' in stacks and docker_stacks }}"
+  when: "{{ 'docker' in stacks and docker_image }}"
   ask: "{{ customise }}"
   help: Push the image to GitHub Container Registry (CI builds it either way)
   default: false

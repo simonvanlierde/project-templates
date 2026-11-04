@@ -9,7 +9,7 @@
 # every ecosystem and every update type. Security updates ignore it.
 #
 # No docker ecosystem: it reads FROM lines only, and those tags are copier answers,
-# so its PRs would fight the next `copier update`.{% if 'docker' in stacks and not docker_stacks %} A Compose-only repo has no Dockerfile
+# so its PRs would fight the next `copier update`.{% if 'docker' in stacks and not docker_image %} A Compose-only repo has no Dockerfile
 # and its images are yours, so it gets the docker-compose ecosystem below.{% endif %}
 # `commit-message` gives each PR a Conventional Commits title, `chore(deps): bump ...`, which
 # the pr-title workflow checks.
@@ -75,7 +75,7 @@ updates:
 {%- endif %}
 {%- endfor %}
 
-{%- if 'docker' in stacks and not docker_stacks %}
+{%- if 'docker' in stacks and not docker_image %}
 
   # The images compose.yaml names, tag and digest together.
   - package-ecosystem: docker-compose

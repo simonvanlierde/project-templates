@@ -78,8 +78,8 @@ repos:
     rev: 479be5958357ba5ab65ce47172117348516860e9 # frozen: v3.14.1-1
     hooks:
       - id: shfmt
-        # The repo root has no .editorconfig, so the style is pinned here; otherwise
-        # shfmt takes it from whatever .editorconfig sits above the clone.
+        # Pinned to match .editorconfig's [*.sh], so the flags win over any
+        # .editorconfig shfmt finds elsewhere.
         args: [--write, --indent=2]
 
   # Successor to gitleaks, which now gets security fixes only.
@@ -112,3 +112,38 @@ repos:
     rev: a3c5a9794449e78a33583e456af41bb24ebd240e # frozen: v0.1.0
     hooks:
       - id: citesync
+
+  # CITATION.cff against the official schema. GitHub's "Cite this repository"
+  # silently drops a file that fails it.
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: a76b92851fc9eede9f9bc4073eb55202f34eb0df # frozen: 0.39.0
+    hooks:
+      - id: check-citation-file-format
+
+  # Misspelt words in code, comments and docs. It fixes the ones it is sure of and
+  # fails, so you review the fix. List a word it must leave alone in _typos.toml.
+  - repo: https://github.com/crate-ci/typos
+    rev: 7f9d0819ca1c008ade73f4b41fa9d258d48f605b # frozen: v1.51.1
+    hooks:
+      - id: typos
+        # typos reads ruff's copyright rule code in the Python template's pyproject as a
+        # misspelling of "copy". The rendered pyproject.toml passes, so the template file
+        # alone is skipped.
+        exclude: pyproject\.toml\.jinja$
+
+  # Dead relative links in Markdown and HTML. Offline, so a commit never waits on the
+  # network: the weekly links.yml checks the web links. lychee's own hook installs its
+  # binary with an unpinned install script, so this takes upstream's wheel from PyPI
+  # at an exact version instead.
+  - repo: local
+    hooks:
+      - id: lychee
+        name: lychee --offline
+        entry: lychee --no-progress --offline
+        language: python
+        additional_dependencies: [lychee-bin==0.24.2]
+        types_or: [markdown, html]
+        require_serial: true
+        # Links to accessibility.md, whose template name is a Jinja condition. The link
+        # resolves in the rendered project, where lychee checks it.
+        exclude: accessibility-assessment\.md$

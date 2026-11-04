@@ -1,22 +1,8 @@
-{#- The build and push jobs share one matrix and one smoke test. #}
-{%- macro matrix(push=false) %}
-{%- for stack, name, dir in [
-      ('python', 'api', python_dir),
-      ('ts', 'web', ts_dir),
-    ] if stack in docker_stacks %}
-{%- set suffix = '' if docker_stacks | length == 1 else name %}
-          - stack: {{ stack }}
-            context: {{ dir }}
-            tag: {{ slug }}{% if suffix %}-{{ suffix }}{% endif %}:ci
-{%- if push %}
-            image: {% raw %}ghcr.io/${{ github.repository }}{% endraw %}{% if suffix %}/{{ suffix }}{% endif %}
-{%- endif %}
-{%- endfor %}
-{%- endmacro %}
+{#- The build and push jobs share one smoke test. #}
 {%- macro smoke_test() %}
       - name: smoke test
         env:
-          TAG: {% raw %}${{ matrix.tag }}{% endraw %}
+          TAG: {{ slug }}:ci
         run: |-
           docker run -d --name ci -p {{ app_port }}:{{ app_port }} "$TAG"
           ok=""
@@ -46,23 +32,22 @@
       - name: scan image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: {% raw %}${{ matrix.tag }}{% endraw %}
+          image-ref: {{ slug }}:ci
           cache: {% raw %}${{ github.event_name != 'pull_request' }}{% endraw %}
           ignore-unfixed: true
           severity: HIGH,CRITICAL
           exit-code: {% raw %}${{ github.event_name == 'schedule' && '1' || '0' }}{% endraw %}
 {%- endmacro -%}
-{#- The build contexts. Filtered by path, as python.yml and ts.yml are, only when every
-    image builds from a subdirectory: a root context is the whole repo. -#}
-{%- set dirs = ([python_dir] if 'python' in docker_stacks else []) + ([ts_dir] if 'ts' in docker_stacks else []) -%}
+{#- Filtered by path, as python.yml and ts.yml are, only when the image builds from a
+    subdirectory: a root context is the whole repo. -#}
 {%- macro paths() %}
-{%- if '.' not in dirs %}
-    paths: [{% for d in dirs %}"{{ d }}/**", {% endfor %}".github/workflows/docker.yml"]
+{%- if python_dir != '.' %}
+    paths: ["{{ python_dir }}/**", ".github/workflows/docker.yml"]
 {%- endif %}
 {%- endmacro -%}
 name: docker
 
-{% if '.' not in dirs -%}
+{% if python_dir != '.' -%}
 # A pull request that touches no build context skips this workflow, so a branch rule
 # that requires its build check leaves that pull request pending. A tag push ignores
 # the paths and always runs.
@@ -109,12 +94,6 @@ jobs:
 {%- endif %}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      # One image per containerized stack, each built from its own context.
-      fail-fast: false
-      matrix:
-        include:
-{{- matrix() }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -124,10 +103,8 @@ jobs:
 
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: {% raw %}${{ matrix.context }}{% endraw %}
-          # Scoped per stack: two images sharing the default gha scope would evict each
-          # other's layers.
-          cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
+          context: {{ python_dir }}
+          cache-from: {% raw %}type=gha,scope=python{% endraw %}
 {%- if publish_to_ghcr %}
           # No cache-to: this job runs on pull requests and the weekly rebuild, and a cache
           # saved from a pull request is dropped on merge. The push job below fills the
@@ -136,16 +113,15 @@ jobs:
           # Export only on push. A cache saved from a pull request is readable by that PR
           # alone and dropped on merge. mode=max there would upload hundreds of MB that
           # nothing reads, evicting main's cache.
-          cache-to: {% raw %}${{ github.event_name == 'push' && format('type=gha,mode=max,scope={0}', matrix.stack) || '' }}{% endraw %}
+          cache-to: {% raw %}${{ github.event_name == 'push' && 'type=gha,mode=max,scope=python' || '' }}{% endraw %}
 {%- endif %}
           push: false
           load: true # so the smoke test below can run it
-          tags: {% raw %}${{ matrix.tag }}{% endraw %}
+          tags: {{ slug }}:ci
           # No provenance/sbom: the docker exporter cannot load attestations, and they only
           # matter once the image reaches a registry.
 
-      # An image that cannot start is not a passing build. Matrix jobs get their
-      # own runner, so both images can use {{ app_port }}.
+      # An image that cannot start is not a passing build.
 {{- smoke_test() }}
 {{- scan() }}
 {%- if publish_to_ghcr %}
@@ -166,12 +142,6 @@ jobs:
       packages: write
       id-token: write # keyless signing for the provenance attestation
       attestations: write
-    strategy:
-      # The build job's matrix again, plus the registry image name.
-      fail-fast: false
-      matrix:
-        include:
-{{- matrix(push=true) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -180,16 +150,16 @@ jobs:
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       # Build to the local store and prove the image starts before the registry login puts
-      # a credential on this runner. This job runs on push only, so it fills the per-stack
+      # a credential on this runner. This job runs on push only, so it fills the
       # cache. A tag build reads no cache: a poisoned entry would ship in the release image.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: {% raw %}${{ matrix.context }}{% endraw %}
-          cache-from: {% raw %}${{ !startsWith(github.ref, 'refs/tags/') && format('type=gha,scope={0}', matrix.stack) || '' }}{% endraw %}
-          cache-to: {% raw %}type=gha,mode=max,scope=${{ matrix.stack }}{% endraw %}
+          context: {{ python_dir }}
+          cache-from: {% raw %}${{ !startsWith(github.ref, 'refs/tags/') && 'type=gha,scope=python' || '' }}{% endraw %}
+          cache-to: {% raw %}type=gha,mode=max,scope=python{% endraw %}
           push: false
           load: true # so the smoke test below can run it
-          tags: {% raw %}${{ matrix.tag }}{% endraw %}
+          tags: {{ slug }}:ci
 {{ smoke_test() }}
 
       # No image scan here: trivy-action restores its database from the Actions cache,
@@ -205,7 +175,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: {% raw %}${{ matrix.image }}{% endraw %}
+          images: {% raw %}ghcr.io/${{ github.repository }}{% endraw %}
           tags: |
             type=ref,event=branch
             type=semver,pattern={% raw %}{{version}}{% endraw %}
@@ -218,8 +188,8 @@ jobs:
       - id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: {% raw %}${{ matrix.context }}{% endraw %}
-          cache-from: {% raw %}${{ !startsWith(github.ref, 'refs/tags/') && format('type=gha,scope={0}', matrix.stack) || '' }}{% endraw %}
+          context: {{ python_dir }}
+          cache-from: {% raw %}${{ !startsWith(github.ref, 'refs/tags/') && 'type=gha,scope=python' || '' }}{% endraw %}
           push: true
           tags: {% raw %}${{ steps.meta.outputs.tags }}{% endraw %}
           labels: {% raw %}${{ steps.meta.outputs.labels }}{% endraw %}
@@ -228,7 +198,7 @@ jobs:
 
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-name: {% raw %}${{ matrix.image }}{% endraw %}
+          subject-name: {% raw %}ghcr.io/${{ github.repository }}{% endraw %}
           subject-digest: {% raw %}${{ steps.build.outputs.digest }}{% endraw %}
           push-to-registry: true
 {%- endif %}

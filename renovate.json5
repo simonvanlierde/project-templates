@@ -81,15 +81,12 @@
     },
     {
       customType: "regex",
-      managerFilePatterns: ["/(^|/)package\\.json\\.jinja$/", "/(^|/)Dockerfile\\.jinja$/"],
+      managerFilePatterns: ["/(^|/)package\\.json\\.jinja$/"],
       matchStrings: [
         // Caret ranges are the devDependencies. Keep @types/node literal. A
         // {{ node_version }} placeholder cannot be extracted.
         "\"(?<depName>@?[\\w.\\-/]+)\": \"\\^(?<currentValue>\\d[^\"]*)\"",
         "\"packageManager\": \"(?<depName>[a-z]+)@(?<currentValue>[\\d.]+)\"",
-        // The ts image's bootstrap pnpm. Same depName as packageManager, so both
-        // move in one PR.
-        "npm i -g (?<depName>pnpm)@(?<currentValue>[\\d.]+)",
       ],
       datasourceTemplate: "npm",
     },

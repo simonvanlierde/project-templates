@@ -8,7 +8,11 @@ describes who acts on a generated project and what render and update do. Everyon
 follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 You need [uv](https://docs.astral.sh/uv/) (it runs copier), [just](https://just.systems),
-git, and prek for the hooks (`uv tool install prek`, then `prek install`).
+git, jq, and prek for the hooks (`uv tool install prek`, then `prek install`).
+
+The branch and tag rulesets live in `.github/rulesets/`. After you edit one, apply it with
+`gh api -X PUT repos/simonvanlierde/project-templates/rulesets/<id> --input <file>`
+(`gh api repos/simonvanlierde/project-templates/rulesets` lists the ids).
 
 ## Test an untagged change
 
@@ -28,14 +32,15 @@ root: the output would land among the template files.
 
 ## Run the checks before you push
 
-Run the git hooks and the render checks CI runs. The render script includes uncommitted
-edits. CI also runs zizmor, jactionlint and the CITATION.cff schema check on the rendered
-output, because `.jinja` files aren't YAML:
+`just check` runs the git hooks and the render checks CI runs. The render includes
+uncommitted edits. CI also runs zizmor, jactionlint and the CITATION.cff schema check on
+the rendered output, because `.jinja` files aren't YAML:
 
 ```sh
-prek run -a
-scripts/check-render.sh "$(mktemp -d)"
+just check
 ```
+
+`just hooks` and `just render` run each half alone.
 
 The render script checks which files each answer set produces. It doesn't run the
 generated projects' own checks. CI does that for each stack and kind. To run one locally,

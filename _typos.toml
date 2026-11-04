@@ -1,0 +1,19 @@
+# Words typos must leave alone. Add your own below.
+[default.extend-words]
+# NumPy's API spells it this way (`array.flags.writeable`).
+writeable = "writeable"
+WRITEABLE = "WRITEABLE"
+
+# Spellings in this repo's own docs and scripts that are deliberate.
+# The Python package certifi, pinned in docs/tooling.md.
+certifi = "certifi"
+# A sample typos config in docs/usage.md names this word.
+ue = "ue"
+
+[files]
+# check-render.sh feeds typos a misspelling on purpose, to prove the rendered hook fails.
+extend-exclude = ["scripts/check-render.sh"]
+
+[default]
+# `Café` in the CHANGELOG, written out as a test case's name.
+extend-ignore-re = ["Caf\\S*"]

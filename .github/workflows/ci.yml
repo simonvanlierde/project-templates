@@ -157,7 +157,6 @@ jobs:
               python_dir: apps/api
               kind: library
               publish_to_pypi: true
-              docker_stacks: [python]
           - name: app
             answers:
               project_name: ci-app
@@ -175,14 +174,12 @@ jobs:
               project_name: ci-pipeline
               stacks: [python, docker]
               kind: data-pipeline
-              docker_stacks: [python]
           # Also starts the FastAPI container and probes /health.
           - name: web-service
             answers:
               project_name: ci-web
               stacks: [python, docker]
               kind: web-service
-              docker_stacks: [python]
     steps:
       - *checkout
 
@@ -480,7 +477,7 @@ jobs:
           git init -q "$PROJ"
           uvx "copier@$COPIER_VERSION" copy --vcs-ref="$TAG" --defaults --overwrite \
             --data project_name=update-me --data 'stacks=[python,ts,docker]' \
-            --data python_dir=api --data 'docker_stacks=[python]' . "$PROJ"
+            --data python_dir=api . "$PROJ"
           # The answers name the GitHub source; point the update at the pushed commit.
           sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
           uv add -q --directory "$PROJ/api" 'attrs>=25'
@@ -511,9 +508,8 @@ jobs:
           cd "$PROJ" && uv lock -q && uv sync -q --locked && just check
 
   typescript:
-    # TS stack, with docker. The image builds nested (monorepo). The root Dockerfile is
-    # the same template, and the render job renders it. publish_to_npm (asked only of a
-    # library) renders the conditionally named ts-release.yml.
+    # TS stack. publish_to_npm (asked only of a library) renders the conditionally named
+    # ts-release.yml.
     name: typescript (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -549,11 +545,10 @@ jobs:
           - name: monorepo
             answers:
               project_name: ci-mono-ts
-              stacks: [ts, docker]
+              stacks: [ts]
               ts_dir: apps/web
               ts_kind: library
               publish_to_npm: true
-              docker_stacks: [ts]
           # Both web frameworks, one at the root and one nested, with the least and the
           # most user_data. Each also runs its Playwright specs; check-render covers browser.
           - name: web-app (react)
@@ -644,15 +639,9 @@ jobs:
             exit 1
           fi
 
-      - if: contains(matrix.answers.stacks, 'docker')
-        name: docker build
-        env:
-          CONTEXT: ${{ runner.temp }}/proj/${{ matrix.answers.ts_dir }}
-        run: docker build "$CONTEXT"
-
   fullstack:
     # Python and ts in one repo, each nested: the root justfile imports both recipe
-    # files, and `check` runs both stacks. Both get an image, on a non-default port.
+    # files, and `check` runs both stacks. The python image listens on a non-default port.
     name: python + ts + docker
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -673,7 +662,7 @@ jobs:
           uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
             --data project_name=ci-fullstack --data 'stacks=[python,ts,docker]' \
             --data python_dir=api --data ts_dir=web \
-            --data 'docker_stacks=[python,ts]' --data app_port=9000 . "$RUNNER_TEMP/proj"
+            --data app_port=9000 . "$RUNNER_TEMP/proj"
 
       - *ts-versions
 
@@ -685,14 +674,12 @@ jobs:
         working-directory: ${{ runner.temp }}/proj
         run: just py-sync ts-sync check
 
-      # --wait holds until both HEALTHCHECKs pass. The second service's host port is
-      # app_port + 1.
+      # --wait holds until the HEALTHCHECK passes.
       - name: compose up
         working-directory: ${{ runner.temp }}/proj
         run: |
           docker compose up -d --build --wait
           curl -fsS http://127.0.0.1:9000/health
-          curl -fsS http://127.0.0.1:9001/health
 
   rust:
     # The rust stack, one row per crate kind: the library flat (rust_dir left at its
@@ -858,8 +845,8 @@ jobs:
           if grep -E '(KILLED|LIVED|NOT COVERED) .* at cigoextras.go:' "$log" | grep -qv "cigoextras.go:$line:"; then cat "$log"; exit 1; fi
 
   ok:
-    # The one check the main ruleset requires, so jobs and matrix rows can change
-    # without touching repo settings. always(): a skipped job must fail it.
+    # The one ci check the main ruleset requires (with DCO sign-off, its own workflow),
+    # so jobs and matrix rows can change without touching repo settings. always(): a skipped job must fail it.
     name: ci ok
     if: always()
     needs: [hooks, renovate, python, render, update, typescript, rust, go, fullstack]

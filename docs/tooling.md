@@ -39,7 +39,7 @@ Coverage is opt-in. `just py-cov` and `just ts-cov` print summaries without thre
 
 ## Docker images
 
-Dockerfiles follow upstream uv and pnpm patterns: multi-stage builds on `-slim` base images, BuildKit cache mounts, a non-root runtime user, and OCI labels.
+The Dockerfile follows upstream uv patterns: multi-stage builds on `-slim` base images, BuildKit cache mounts, a non-root runtime user, and OCI labels.
 
 ## Dependencies
 
@@ -73,7 +73,7 @@ To lock an urgent security patch before the cooldown expires, add a temporary ex
 
   `minimumReleaseAgeExcludePrune` removes the entry automatically once the lockfile moves past that version.
 
-Docker base image tags (`python_version`, `node_version`) are Copier answers. Rebuilds pull the latest security patches for that tag.
+The Docker base image tag (`python_version`) is a Copier answer. Rebuilds pull the latest security patches for that tag.
 
 Fresh renders generate without lockfiles. The initial `uv lock` or `pnpm install` locks the newest versions past the one-week cooldown. Once committed, CI installs strictly from lockfiles.
 

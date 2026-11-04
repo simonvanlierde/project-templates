@@ -1,4 +1,4 @@
-{%- if docker_stacks -%}
+{%- if docker_image -%}
 # Run the service, rebuilding the image when src/ or the lockfile changes.
 up:
     docker compose up --watch
@@ -19,7 +19,7 @@ down:
 # Follow the service logs.
 logs:
     docker compose logs -f
-{%- if not docker_stacks %}
+{%- if not docker_image %}
 
 # The tracked shell scripts: *.sh, and any file whose first line is an sh, bash, dash or ksh shebang.
 _shell-files:
@@ -28,7 +28,7 @@ _shell-files:
     git ls-files -z | while IFS= read -r -d '' f; do
         [ -f "$f" ] || continue
         case $f in *.sh) printf '%s\0' "$f"; continue ;; esac
-        if head -n1 "$f" | grep -qE '^#!.*/(env +)?(ba|da|k)?sh( |$)'; then printf '%s\0' "$f"; fi
+        if head -n1 "$f" | grep -qE '^#!.*/(env +)?(bash|dash|ksh|sh)( |$)'; then printf '%s\0' "$f"; fi
     done
 
 # Validate compose.yaml, then shellcheck and shfmt-check every shell script (needs Docker).

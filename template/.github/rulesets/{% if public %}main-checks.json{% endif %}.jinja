@@ -35,7 +35,7 @@
           { "context": "golangci-lint, tests, govulncheck", "integration_id": 15368 }
 {%- endif %}
 {#- compose.yml has no path filter either. #}
-{%- if 'docker' in stacks and not docker_stacks %},
+{%- if 'docker' in stacks and not docker_image %},
           { "context": "compose", "integration_id": 15368 }
 {%- endif %}
 {#- site.yml has no path filter, so its build runs on every pull request. #}

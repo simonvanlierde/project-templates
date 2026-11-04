@@ -104,6 +104,7 @@ defaults:
 - [docs/ci-baseline.md](docs/ci-baseline.md): every CI check, and what was left out.
 - [docs/design.md](docs/design.md): who can change what, and the workflows that can publish.
 - [docs/web-legal.md](docs/web-legal.md): tips for filling in a web app's legal pages.
+- [docs/decisions/](docs/decisions/README.md): the decisions behind the template's shape.
 - [CONTRIBUTING.md](CONTRIBUTING.md): how to test a template change before you tag it.
 - [SECURITY.md](SECURITY.md): how to report a vulnerability and verify a release.
 - [GOVERNANCE.md](GOVERNANCE.md): who decides, who can release, and who takes over.
