@@ -49,6 +49,26 @@ fmt:
 # this can fail where the checks workflow passes.
 hooks:
     {{ prek }} run -a
+{%- if site != 'none' %}
+
+# Build the page in site/ into {{ site_out }}/, which site.yml deploys. Replace the body with the
+# project's own build (for example `uv run site/build.py --out {{ site_out }}`), writing to {{ site_out }}/.
+site:
+{%- if site == 'plain' %}
+    rm -rf {{ site_out }}
+    cp -R site {{ site_out }}
+{%- elif site == 'astro' %}
+    pnpm -C site install --frozen-lockfile
+    ASTRO_TELEMETRY_DISABLED=1 pnpm -C site run build
+{%- endif %}
+{%- endif %}
+{%- if site == 'astro' %}
+
+# Install the site's node_modules, writing site/pnpm-lock.yaml if it is missing. `just site`
+# and CI use --frozen-lockfile.
+site-sync:
+    pnpm -C site install
+{%- endif %}
 {% if citable %}
 # Rewrite codemeta.json to agree with CITATION.cff, then check. The writer
 # exits 1 whenever it changes a file, so the check that follows decides the result.
@@ -79,16 +99,7 @@ release version:
     # Not grep -q: it stops reading early, and under pipefail git show then fails on a
     # changelog bigger than the pipe buffer.
     if git show origin/main:CHANGELOG.md | grep "^## \[$version\] - " >/dev/null; then
-        sha=$(git rev-parse origin/main)
-        [ "$(git rev-parse HEAD)" = "$sha" ] || { echo "HEAD is not origin/main: check out and pull main first" >&2; exit 1; }
-        # A tag left by an earlier run is reused only if it marks the same commit.
-        if git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
-            [ "$(git rev-parse "$tag^{commit}")" = "$sha" ] || { echo "tag $tag exists on another commit" >&2; exit 1; }
-        else
-            git tag --sign "$tag" --message "$tag" "$sha"
-        fi
-        git verify-tag "$tag" >/dev/null 2>&1 || { echo "tag $tag is not signed with a key git trusts (gpg.ssh.allowedSignersFile)" >&2; exit 1; }
-        git push origin "refs/tags/$tag"
+        .github/scripts/tag-release.sh "$version"
         exit 0
     fi
     prev=$(sed -n 's/^## \[\([0-9][0-9.]*\)\].*/\1/p' CHANGELOG.md | head -1)
@@ -172,11 +183,13 @@ repo-settings:
         echo "Configured environment '$env'."
     done
 {%- endif %}
-{%- if 'ts' in stacks and ts_kind == 'web-app' %}
-    # The preview job reads the Cloudflare secrets from this environment. It takes no reviewer
+{%- if ('ts' in stacks and ts_kind == 'web-app') or site != 'none' %}
+    # The preview jobs read the Cloudflare secrets from this environment. It takes no reviewer
     # or branch limit: previews run on pull request refs and must start unattended.
     gh api -X PUT "repos/{owner}/{repo}/environments/preview" >/dev/null 2>"$err" || fail
     echo "Configured environment 'preview'."
+{%- endif %}
+{%- if 'ts' in stacks and ts_kind == 'web-app' %}
     # The production job deploys from main only, unattended, so no reviewer.
     gh api -X PUT "repos/{owner}/{repo}/environments/production" \
         -F "deployment_branch_policy[protected_branches]=false" \
@@ -186,6 +199,22 @@ repo-settings:
         gh api -X POST "repos/{owner}/{repo}/environments/production/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
     fi
     echo "Configured environment 'production'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to both environments: see the Deploy section of the README."
+{%- endif %}
+{%- if site != 'none' %}
+    # site.yml deploys to GitHub Pages from the workflow, not from a branch. GitHub answers
+    # 409 when Pages is already on, and then the PUT switches its source instead. A 403 or
+    # 422 means this repo cannot have Pages, such as a private repo on the free plan.
+    if gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1; then
+        echo "GitHub Pages deploys from Actions."
+    elif grep -q 'HTTP 409' "$err"; then
+        gh api -X PUT repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1 || fail
+        echo "GitHub Pages deploys from Actions."
+    elif grep -qE 'HTTP (403|422)' "$err"; then
+        echo "Warning: GitHub Pages is not available for this repo (a private repo needs a paid plan for it), so site.yml's deploy job skips. Previews still run." >&2
+    else
+        fail
+    fi
+    echo "For the site's previews, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the 'preview' environment: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site"
 {%- endif %}
 {%- if publish_to_pypi %}
     repo_full_name=$(gh api repos/{owner}/{repo} --jq .full_name 2>"$err") || fail

@@ -33,9 +33,11 @@ When `customise` is `no`, advanced questions take these defaults:
 | `codspeed` | Disabled ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
 | `profiling` | Disabled ([Profiling](#profiling)) |
 | `cold_install` | Disabled ([CI baseline](ci-baseline.md)) |
+| `site` | None ([Static site](#static-site)) |
 | `openssf_badge` | None ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
+| `python_api` | Enabled ([API-break check](#api-break-check)) |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](#publishing)) |
 | `test_extras` | None ([Test extras](#test-extras)) |
 | `app_port` | 8000 |
@@ -211,6 +213,8 @@ The first deploy creates each Worker, so there is nothing to set up in Cloudflar
 
 Copier updates do not overwrite user-owned starter files: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`, `tests/e2e/routes.ts`, and markdown files in `docs/`.
 
+The web app's folder also gets `PRODUCT.md` and `DESIGN.md`, stubs to fill in. They name who uses the app and how it looks, and are yours to edit: an update leaves them alone.
+
 ### Legal pages
 
 Legal documents reside in `docs/` and compile to HTML at build time:
@@ -301,6 +305,8 @@ To allow `copier-update.yml` to update workflow files in `.github/workflows/`, g
 
 Without this secret, workflow changes open an issue requesting a manual local update.
 
+A PR opened without this secret starts no checks, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so.
+
 ## Test extras
 
 Library kinds configure `test_extras` under `customise`:
@@ -314,7 +320,7 @@ Property tests run fast suites locally and in CI. Weekly scheduled jobs (`.githu
 
 Mutation testing runs weekly via `.github/workflows/mutation.yml` and on demand via `just <stack>-mutation`. The Python and Rust jobs fail on a surviving mutant. The TypeScript and Go tools exit 0 when a mutant survives, so those jobs only print survivors.
 
-Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change. Mutant numbers shift when their function changes, so recheck the lines then. `copier update` adds the file with no entries; run the recipe once and list what it reports.
+Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change. Mutant numbers shift when their function changes, so recheck the lines then. `copier update` adds the file with no entries; run the recipe once and list what it reports. Give it mutmut patterns, e.g. `just py-mutation 'mypkg.core.x_parse__mutmut_*'`, to run only those mutants; that run skips the check for listed ones that no longer survive.
 
 A full run takes minutes to hours, so check each change with the diff recipe instead and keep the full run for the weekly job and before a release:
 
@@ -332,6 +338,29 @@ To add extras to an existing project:
 ```sh
 copier update --data 'test_extras=[property]'
 ```
+
+## Static site
+
+Answer `site` (under `customise`) to give any project a static page beside its code: a playground, a demo or a report. GitHub Pages serves it from `main`, and each pull request gets a preview. The page's readers are the project's users, so it stays small: the tool in the first screen, details in disclosures.
+
+The two choices differ only in what is in `site/` and how `just site` builds it:
+
+- `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a starter page with a header, a main area with a TODO for the tool, and a footer with the licence and a privacy line. Plain HTML, CSS and an ES module, no build step or framework. It works at 320 px and in dark mode. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
+- `site=astro`: a small Astro project. `package.json` has astro at the version `copier.yml` pins, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once to write `site/pnpm-lock.yaml`, and commit it. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `astro.config.mjs` sets `site` and `base` to match. With a custom domain, set `site` to it and drop `base`.
+
+The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
+
+- `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`.
+- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/`, and sends `X-Robots-Tag: noindex`. It runs the wrangler pinned in `copier.yml` with `pnpm dlx`.
+
+One-time setup:
+
+1. Run `just repo-settings`. It creates the `preview` environment and sets GitHub Pages to deploy from Actions (Settings > Pages > Source: GitHub Actions).
+2. Add the Cloudflare API token (Account > Workers Scripts: Edit) to the `preview` environment as `CLOUDFLARE_API_TOKEN`, and your account ID as `CLOUDFLARE_ACCOUNT_ID`. Without them the preview job skips with a notice, and Pages still deploys.
+
+A GitHub Pages site is public even when the repo is private, and a private repo needs a paid GitHub plan for Pages. Until Pages is on, the `deploy` job skips with a notice, and `just repo-settings` warns and goes on where GitHub refuses Pages.
+
+The daily sweep finds preview Workers by name alone. In one Cloudflare account, a repo `foo` with a site and a repo `foo-site` with a web app would share the names `foo-site-pr-<number>`: rename one of them if that happens.
 
 ## Publishing
 
@@ -364,6 +393,18 @@ Setting up trusted publishing (OIDC):
    ```sh
    copier update --data publish_to_pypi=true
    ```
+
+## API-break check
+
+With `publish_to_pypi`, a Python library gets an `api` job in `python.yml`. It runs griffe against the last git tag and fails when a public name loses or changes a parameter. Every name without a leading underscore counts as public.
+
+A package used only through its command line has no Python API to protect. Answer `python_api=false` to drop the job:
+
+```sh
+copier update --data python_api=false
+```
+
+To keep the job and mark a module internal instead, start its name with an underscore (`_check.py`).
 
 ## Coverage on Codecov
 

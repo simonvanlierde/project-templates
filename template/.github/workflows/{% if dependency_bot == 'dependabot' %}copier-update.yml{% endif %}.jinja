@@ -69,7 +69,7 @@ jobs:
           {
             echo "Updates this project from the template: \`$current\` to \`$latest\`."
             echo
-            echo "Read the diff before merging, then refresh the lockfiles for your stacks (\`uv lock\`, \`pnpm install\`, \`just go-sync\`)."
+            echo "Read the diff before merging, then refresh the lockfiles for your stacks (\`uv lock\`, \`pnpm install\`, \`just go-sync\`{% endraw %}{% if site == 'astro' %}, \`just site-sync\`{% endif %}{% raw %})."
             if [ -s conflicts.txt ]; then
               echo
               echo "These files have merge conflicts. Their markers are committed as they are:"
@@ -161,6 +161,10 @@ jobs:
             fi
             echo "::warning::$title: GITHUB_TOKEN can't push workflow changes"
             exit 0
+          fi
+
+          if [ "$HAS_TOKEN" != true ]; then
+            printf '\n%s\n' "This PR was opened without \`COPIER_UPDATE_TOKEN\`, so its checks do not start: close it and reopen it to run them." >>"$RUNNER_TEMP/copier-update/body.md"
           fi
 
           git -c core.hooksPath=/dev/null push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"

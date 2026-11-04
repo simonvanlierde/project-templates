@@ -62,15 +62,22 @@
   "knip": {
     "ignoreDependencies": [
       "@j178/prek"
-{#- Only workflows run publint (ts-release.yml) and wrangler (ts.yml). knip finds
-    them there from a root package, but a nested one never sees .github/. #}
+{#- Only workflows run publint (ts-release.yml). knip finds it there from a root
+    package, but a nested one never sees .github/. wrangler runs only from
+    .github/scripts/deploy-worker.sh, a shell script knip does not read. #}
 {%- if publish_to_npm and ts_dir != '.' %},
       "publint"
 {%- endif %}
-{%- if web and ts_dir != '.' %},
+{%- if web %},
       "wrangler"
 {%- endif %}
     ]
+{%- if site != 'none' and ts_dir == '.' %},
+{#- site/ is a page of its own: nothing in this package imports it. #}
+    "ignoreFiles": [
+      "site/**"
+    ]
+{%- endif %}
 {%- if web %},
 {#- playwright.config.ts adds tests/shots only when SHOTS is set, so knip, which
     loads the config without it, needs the spec named. The plugin's entry adds to

@@ -25,8 +25,8 @@ Questions and bugs: see [CONTRIBUTING.md]({{ blob }}.github/CONTRIBUTING.md).
 {% set tools = [
   ('[uv](https://docs.astral.sh/uv/)', 'python' in stacks or 'ts' not in stacks),
   ('[just](https://just.systems)', true),
-  ('[Node.js](https://nodejs.org)', 'ts' in stacks),
-  ('[pnpm](https://pnpm.io)', 'ts' in stacks),
+  ('[Node.js](https://nodejs.org)', 'ts' in stacks or site == 'astro'),
+  ('[pnpm](https://pnpm.io)', 'ts' in stacks or site == 'astro'),
   ('[cargo](https://rustup.rs)', 'rust' in stacks),
   ('[Go](https://go.dev/dl/)', 'go' in stacks),
   ('Docker', 'docker' in stacks),
@@ -107,6 +107,14 @@ Nothing checks them before a deploy, so an app can ship first. Fill in their TOD
 ### Pull request previews
 
 Each pull request that is open, not a draft and not from a bot gets its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-pr-<number>`, deployed from the same `wrangler.jsonc` under that name and deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#pull-request-previews)).
+{% endif %}{% if site != 'none' %}
+## Site
+
+The {{ 'Astro site' if site == 'astro' else 'page' }} in [`site/`]({{ tree }}site) is for the people who use this project. `just site` builds it into `{{ site_out }}/`{% if site == 'astro' %}, from the lockfile that `just site-sync` writes{% endif %}. Every push to `main` deploys that build to GitHub Pages, at `https://{{ github_user | lower }}.github.io/{{ slug }}/`. A Pages site is public, even when the repo is private.
+{% if not ('ts' in stacks and ts_kind == 'web-app') %}
+### Pull request previews
+{% endif %}
+Each pull request that is open, not a draft and not from a bot gets a preview of the site on its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-site-pr-<number>`, deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site)). One-time setup: run `just repo-settings`, which creates the `preview` environment and sets Pages to deploy from Actions, then add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to the `preview` environment. Without them the previews skip with a notice.
 {% endif %}
 ## License
 

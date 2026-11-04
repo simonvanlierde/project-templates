@@ -35,12 +35,14 @@ updates:
     multi-ecosystem-group: actions-and-hooks
     patterns: ["*"]
     cooldown: {default-days: 7}
-{%- for eco, stack, dir in [
-      ('uv', 'python', python_dir),
-      ('npm', 'ts', ts_dir),
-      ('cargo', 'rust', rust_dir),
-      ('gomod', 'go', go_dir),
-    ] if stack in stacks %}
+{#- An Astro site in site/ is an npm package of its own. #}
+{%- for eco, on, dir in [
+      ('uv', 'python' in stacks, python_dir),
+      ('npm', 'ts' in stacks, ts_dir),
+      ('npm', site == 'astro', 'site'),
+      ('cargo', 'rust' in stacks, rust_dir),
+      ('gomod', 'go' in stacks, go_dir),
+    ] if on %}
 {% if loop.first and eco != 'gomod' %}
   # Dev tooling lands as one PR and runtime minor and patch bumps as another, so a risky
   # bump is not buried in lint-tool churn. A runtime major gets its own PR.

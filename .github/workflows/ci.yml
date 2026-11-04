@@ -218,7 +218,39 @@ jobs:
 
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
-        run: just py-mutation py-property
+        # Two calls: py-mutation takes mutant patterns, so `just py-mutation py-property`
+        # would hand py-property to mutmut instead of running the recipe.
+        run: |-
+          just py-mutation
+          just py-property
+
+      # The run above passes, but so would a gate that ignored mutmut. Each case here must
+      # turn it red, and py-mutation-diff must mutate only the function a commit changes.
+      # Not in check-render: it needs the synced env this job already has.
+      - if: matrix.answers.test_extras
+        name: mutation gate fails when it should
+        working-directory: ${{ runner.temp }}/proj
+        run: |
+          set -euo pipefail
+          log=$RUNNER_TEMP/mutation.log
+          # The run above generated and killed mutants.
+          uv run mutmut results --all true | grep -q ': killed$'
+          # A baseline line for a mutant the tests kill.
+          cp tests/mutation-baseline.txt "$RUNNER_TEMP/baseline"
+          echo 'ci_extras.x_add__mutmut_1  killed, so the gate must reject this line' >>tests/mutation-baseline.txt
+          (! just py-mutation >"$log" 2>&1) || { cat "$log"; exit 1; }
+          grep -qx 'ci_extras.x_add__mutmut_1' "$log"
+          cp "$RUNNER_TEMP/baseline" tests/mutation-baseline.txt
+          # A new function with no test, committed on top of the scaffold.
+          git init -q && git add -A
+          git -c user.name=ci -c user.email=ci@example.com commit -qm scaffold --no-verify
+          printf '\n\ndef sub(left: int, right: int) -> int:\n    """Untested."""\n    return left - right\n' >>src/ci_extras/__init__.py
+          git -c user.name=ci -c user.email=ci@example.com commit -qam sub --no-verify
+          (! just py-mutation-diff HEAD~1 >"$log" 2>&1) || { cat "$log"; exit 1; }
+          grep -qx 'ci_extras.x_sub__mutmut_1' "$log"
+          uv run mutmut results --all true | grep -qx ' *ci_extras.x_add__mutmut_1: not checked'
+          (! just py-mutation >"$log" 2>&1) || { cat "$log"; exit 1; }
+          grep -qx 'ci_extras.x_sub__mutmut_1' "$log"
 
       # A new Hypothesis profile copies the loaded one, here the derandomized "ci"
       # profile, which would make the weekly run repeat its inputs.
@@ -278,7 +310,8 @@ jobs:
     # Renders the branches the jobs above skip and checks only that the output parses.
     name: render
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The Astro render installs its packages cold.
+    timeout-minutes: 15
     steps:
       - *checkout
 
@@ -292,6 +325,22 @@ jobs:
 
       # check-render runs `just repo-settings` against a fake gh.
       - *just
+
+      # check-render builds an Astro site with pnpm, at the pnpm and Node copier.yml pins.
+      - name: site versions
+        id: site-v
+        run: |
+          set -euo pipefail
+          pnpm=$(sed -n '/^pnpm_version:/,/^$/s/^  default: //p' copier.yml)
+          node=$(sed -n '/^node_version:/,/^$/s/^  default: //p' copier.yml | tr -d "\"'")
+          test -n "$pnpm" && test -n "$node"
+          { echo "pnpm=$pnpm"; echo "node=$node"; } >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          version: ${{ steps.site-v.outputs.pnpm }}
+          runtime: node@${{ steps.site-v.outputs.node }}
+          install: false
 
       - name: render and check
         run: scripts/check-render.sh "$RUNNER_TEMP"
@@ -418,13 +467,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # A project_name with punctuation that `slug` strips.
+          # A project_name with punctuation that `slug` strips. With the static site, so
+          # biome and knip at the root also meet site/.
           - name: library
             answers:
               project_name: 'Ci "TS" Lib'
               stacks: [ts]
               ts_kind: library
               publish_to_npm: true
+              site: plain
           # Nested, so a report the mutation run writes beside the package must be
           # gitignored there too: ts-check runs again after it.
           - name: library (test extras)

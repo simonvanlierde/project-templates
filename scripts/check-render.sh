@@ -7,6 +7,12 @@
 set -euo pipefail
 # A bare test or grep below fails silently under set -e; say which line tripped.
 trap 'echo "check-render: failed at line $LINENO" >&2' ERR
+# A negated grep passes when the file is missing (grep exits 2). lacks passes only on exit 1, no match.
+lacks() {
+  local rc=0
+  grep -q "$@" || rc=$?
+  [ "$rc" -eq 1 ]
+}
 
 bash scripts/check-release-fixtures.sh
 
@@ -74,12 +80,13 @@ grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name
 # workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, the
 # only one with Renovate, and the only web-app: Preact, nested, so the e2e job's
 # paths are audited with the rest. Its user_data answer is the one that adds terms.md.
+# It also has the static site, so both kinds of preview share one retire workflow.
 d_args=(
   --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
   --data dependency_bot=renovate --data codecov=true --data cold_install=true
-  --data 'docker_stacks=[python]'
+  --data 'docker_stacks=[python]' --data site=plain
 )
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d"
@@ -97,7 +104,7 @@ grep -q 'project edit' "$out/d/web/src/App.tsx"
 grep -q 'project edit' "$out/d/web/index.html"
 grep -q 'project edit' "$out/d/web/docs/privacy.md"
 grep -q 'project edit' "$out/d/web/docs/accessibility-assessment.md"
-(! grep -q 'project edit' "$out/d/web/vite.config.ts")
+(lacks -q 'project edit' "$out/d/web/vite.config.ts")
 
 # h: a go library named like the Example file. The unit test must not share its path
 # with example_test.go, which a project_name of `example` would otherwise claim. The
@@ -127,13 +134,25 @@ grep -q 'project edit' "$out/h/go.mod"
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
   --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true . "$out/m"
+# x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
+# x and r have the static site without a package.json.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
+  --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
-# only its own manifest beside them, and t's hooks run through pnpm.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=crate-me --data 'stacks=[rust]' . "$out/r"
+# only its own manifest beside them, and t's hooks run through pnpm. Both have the
+# static site: r the plain one, t the Astro one beside a package at the root.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=crate-me --data 'stacks=[rust]' --data site=plain . "$out/r"
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true . "$out/t"
+  --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true --data site=astro . "$out/t"
+# y: the Astro site in a project without the TypeScript stack. Rendered again over edited
+# copies: the starter pages stay the project's, package.json is rewritten.
+y_args=(--data project_name=site-me --data 'stacks=[python]' --data kind=app --data site=astro)
+"${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y"
+echo '<!-- project edit -->' >>"$out/y/site/src/layouts/Base.astro"
+echo 'project edit' >>"$out/y/site/package.json"
+"${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y" >/dev/null 2>&1
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -149,7 +168,7 @@ grep -qx '# project citation' "$out/k/CITATION.cff"
 grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
 test ! -e "$out/k/src"
 test ! -e "$out/k/tests/test_add.py"
-(! grep -q 'import add' "$out/k/tests/test_benchmarks.py")
+(lacks -q 'import add' "$out/k/tests/test_benchmarks.py")
 grep -qx 'module-root = ""' "$out/k/pyproject.toml"
 grep -qx 'source = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/k/LICENSE"
@@ -160,16 +179,18 @@ grep -qE "^copyright_year: .?[0-9]{4}" "$out/k/.copier-answers.yml"
 grep -q 'Programming Language :: Python :: 3' "$out/k/pyproject.toml"
 grep -qx 'keywords = \[\] # citesync compares this list to keywords in CITATION.cff' "$out/k/pyproject.toml"
 grep -q 'Changelog = "https://github.com/[^/]*/adopt-me/blob/main/CHANGELOG.md"' "$out/k/pyproject.toml"
-(! grep -q 'Private :: Do Not Upload' "$out/k/pyproject.toml")
+(lacks -q 'Private :: Do Not Upload' "$out/k/pyproject.toml")
 # A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
 grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
 # Per hook, never top-level: the secret scan and the large-file check still cover them.
 test "$(grep -cx ' *exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")" = 4
-(! grep -qx 'exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")
+(lacks -qx 'exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")
 grep -qx 'source_paths = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'check --search \. --format github adopt_me' "$out/k/.github/workflows/python.yml"
 # yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
 grep -qx '        run: |-' "$out/k/.github/workflows/copier-update.yml"
+# A GITHUB_TOKEN PR starts no checks, so its body says how to start them.
+grep -qF 'close it and reopen it to run them' "$out/k/.github/workflows/copier-update.yml"
 
 # copier matches _skip_if_exists like .gitignore lines, so an entry without a leading /
 # also skips the same name in any directory, such as data/README.md.
@@ -239,6 +260,13 @@ refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'pro
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=a _b_'
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my~app'
 refuses 'at least one stack' --data 'stacks=[]'
+# A package directory can't be where the site goes.
+# shellcheck disable=SC2016 # the messages quote with backticks
+{
+  refuses 'python_dir is `site`, where the static site goes' --data 'stacks=[python]' --data python_dir=site --data site=plain
+  refuses 'ts_dir is `_site`, where the static site goes' --data 'stacks=[ts]' --data ts_dir=_site --data site=plain
+  refuses 'go_dir is `site/api`, where the static site goes' --data 'stacks=[go]' --data go_dir=site/api --data site=astro
+}
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 refuses 'The flat layout' --data 'stacks=[python,docker]' --data 'docker_stacks=[python]' \
   --data python_layout=flat
@@ -263,7 +291,7 @@ refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test ! -e "$out/i/$f"
 done
-(! grep -q '## Tests and code style' "$out/i/.github/CONTRIBUTING.md")
+(lacks -q '## Tests and code style' "$out/i/.github/CONTRIBUTING.md")
 # l: a flat Python package next to a ts image. Only the python image needs src/.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=flat-ts-image \
   --data 'stacks=[python,ts,docker]' --data python_layout=flat --data ts_dir=web \
@@ -439,19 +467,21 @@ test ! -e a/.github/workflows/ts-release.yml
 test -f a/.github/workflows/release.yml
 # Release steps are for the maintainer: the README has none, and the public CONTRIBUTING
 # points to the template docs for them.
-for r in a c m; do (! grep -q 'Releasing' "$r/README.md"); done
+for r in a c m; do (lacks -q 'Releasing' "$r/README.md"); done
 # shellcheck disable=SC2016 # literal backticks in the rendered text
 grep -q '`just release X.Y.Z`' c/.github/CONTRIBUTING.md
 # PyPI and npm render the README as the package page, so its links must not be relative.
 # A link may start with http, # or {; anything else is a repo path that is dead there.
 for f in c/README.md c/api/README.md k/README.md m/README.md t/README.md; do
-  (! grep -E '\]\([^h#]' "$f")
+  (lacks -E '\]\([^h#]' "$f")
 done
 grep -qF '](https://github.com/example-org/mono-me/blob/main/README.md)' c/api/README.md
 grep -qF '](https://github.com/example-org/mono-me/tree/main/.github/workflows/)' c/README.md
 # Without publishing, the README keeps its relative links.
 grep -qF '](LICENSE)' d/README.md
 test -x a/.github/scripts/release-notes.sh
+test -x a/.github/scripts/tag-release.sh
+grep -q 'scripts/tag-release.sh' a/justfile
 cat >"$out/sample-changelog.md" <<'MD'
 # Changelog
 
@@ -526,6 +556,13 @@ cp -R k "$rel/w"
   git verify-tag v0.1.0 >/dev/null 2>&1
   test "$(git -C "$rel/origin.git" rev-parse 'v0.1.0^{commit}')" = "$(git rev-parse HEAD)"
   .github/scripts/release-notes.sh v0.1.0 CHANGELOG.md >/dev/null
+  # The tag step refuses a bad version, a version with no changelog section, and a HEAD
+  # that is not origin/main.
+  (! .github/scripts/tag-release.sh 1.2 >/dev/null 2>&1)
+  (! .github/scripts/tag-release.sh 9.9.9 >/dev/null 2>&1)
+  git commit -q -s --allow-empty -m 'chore: local only'
+  (! just release 0.1.0 >release.log 2>&1)
+  grep -q 'HEAD is not origin/main' release.log
 )
 # c lists three manifests in citesync.toml. Bumping the two the recipe reads, but not
 # Cargo.toml, stops the release at citesync with CHANGELOG.md unchanged. No remote: the
@@ -557,13 +594,13 @@ cold d >"$out/d-readme.sh"
 grep -qx 'uv sync --directory pipe' "$out/d-readme.sh"
 grep -q '^pnpm -C web exec playwright install chromium' "$out/d-readme.sh"
 grep -q '^just check ' "$out/d-readme.sh"
-(! grep -E '^just +(up|pipeline|ts-e2e)' "$out/d-readme.sh")
+(lacks -E '^just +(up|pipeline|ts-e2e)' "$out/d-readme.sh")
 cold c >"$out/c-readme.sh"
 grep -q '^just hooks ' "$out/c-readme.sh"
-(! grep -q -- '-mutation' "$out/c-readme.sh")
+(lacks -q -- '-mutation' "$out/c-readme.sh")
 cold m >"$out/m-readme.sh"
 grep -q '^just check ' "$out/m-readme.sh"
-(! grep -qE -- '-(mutation|property)' "$out/m-readme.sh")
+(lacks -qE -- '-(mutation|property)' "$out/m-readme.sh")
 # Any sh, bash or shell fence, trailing spaces and all. Indented slow recipes are
 # dropped too; other languages and other sections are not run.
 mkdir -p "$out/fence/.github/workflows"
@@ -591,18 +628,18 @@ done
 grep -qF 'for v in 3.12 3.13 3.14; do uv --directory api run --isolated --locked --python "$v" pytest' c/just/python.just
 grep -qF 'python: ["3.12", "3.13", "3.14"]' c/.github/workflows/python.yml
 grep -qF 'just py-matrix ' c/README.md
-(! grep -q 'py-matrix' a/just/python.just d/just/python.just)
-(! grep -q 'py-matrix' c/.github/workflows/python.yml)
+(lacks -q 'py-matrix' a/just/python.just d/just/python.just)
+(lacks -q 'py-matrix' c/.github/workflows/python.yml)
 cold c >"$out/c-matrix.sh"
-(! grep -q 'py-matrix' "$out/c-matrix.sh")
+(lacks -q 'py-matrix' "$out/c-matrix.sh")
 # The README installs the prek that checks.yml runs, and justfile explains the SKIP gap.
 prek_ci=$(sed -n 's/^ *PREK_VERSION: *//p' c/.github/workflows/checks.yml)
 grep -qF "uv tool install prek==$prek_ci " a/README.md
 grep -qF 'checks workflow skips' c/justfile
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
-(! grep -q 'Development Status' a/pyproject.toml)
-(! grep -q 'keywords =' a/pyproject.toml)
-(! grep -q 'Changelog =' a/pyproject.toml)
+(lacks -q 'Development Status' a/pyproject.toml)
+(lacks -q 'keywords =' a/pyproject.toml)
+(lacks -q 'Changelog =' a/pyproject.toml)
 grep -q '"private": true' a/package.json
 # The one-week release age, in both resolvers.
 grep -qx 'exclude-newer = "1 week"' a/pyproject.toml
@@ -618,11 +655,10 @@ grep -q tombi-toml.tombi a/.vscode/settings.json
 grep -q 'Contributor Covenant, version 3.0' a/.github/CODE_OF_CONDUCT.md
 grep -q 'send an email to <ada@example.com>' a/.github/CODE_OF_CONDUCT.md
 # Scorecard: its workflow and badge exist only with public (a), never without (b).
-test -f a/.github/workflows/scorecard.yml
 grep -qx '      id-token: write # to publish the results' a/.github/workflows/scorecard.yml
 grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md
 test ! -e b/.github/workflows/scorecard.yml
-(! grep -q -i scorecard b/README.md)
+(lacks -q -i scorecard b/README.md)
 # fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
 # and public. b is private; h, a public Go library, gets both.
 grep -qx "          uvx --exclude-newer \"1 week\" --from git+https://github.com/fair-software/howfairis@$howfairis_pin howfairis $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
@@ -631,26 +667,26 @@ grep -qF 'cat out.txt >> "$GITHUB_STEP_SUMMARY"' a/.github/workflows/fair.yml
 grep -qx '      FAIR_MIN: 3' a/.github/workflows/fair.yml
 grep -qxF "      APIKEY_GITHUB: x-access-token:\${{ github.token }}" a/.github/workflows/fair.yml
 grep -qx 'permissions: {}' a/.github/workflows/fair.yml
-(! grep -q continue-on-error a/.github/workflows/fair.yml)
+(lacks -q continue-on-error a/.github/workflows/fair.yml)
 # howfairis order: repository, license, registry, citation, checklist.
 # The badge waits for 5 of 5, so no render ships one.
-(! grep -q fair-software.eu a/README.md)
+(lacks -q fair-software.eu a/README.md)
 test ! -e b/.github/workflows/fair.yml
-(! grep -q fair-software.eu b/README.md)
+(lacks -q fair-software.eu b/README.md)
 test -f h/.github/workflows/fair.yml
-(! grep -q fair-software.eu h/README.md)
+(lacks -q fair-software.eu h/README.md)
 # Badges follow their answers: a has codspeed only; c has codecov, codspeed, PyPI and npm;
 # d has codecov alone; b has none.
 grep -qF 'https://app.codspeed.io/' a/README.md
-(! grep -q -e codecov.io -e img.shields.io/pypi -e img.shields.io/npm a/README.md)
+(lacks -q -e codecov.io -e img.shields.io/pypi -e img.shields.io/npm a/README.md)
 grep -qF 'https://codecov.io/gh/' c/README.md
 grep -qF 'https://app.codspeed.io/' c/README.md
 grep -qF 'img.shields.io/pypi/v/mono-me' c/README.md
 grep -qF 'img.shields.io/pypi/pyversions/mono-me' c/README.md
 grep -qF 'img.shields.io/npm/v/mono-me' c/README.md
 grep -qF 'https://codecov.io/gh/' d/README.md
-(! grep -q -e codspeed -e img.shields.io/pypi -e img.shields.io/npm d/README.md)
-(! grep -q -e codecov -e codspeed -e img.shields.io/pypi -e img.shields.io/npm b/README.md)
+(lacks -q -e codspeed -e img.shields.io/pypi -e img.shields.io/npm d/README.md)
+(lacks -q -e codecov -e codspeed -e img.shields.io/pypi -e img.shields.io/npm b/README.md)
 # The weekly audit: one job per stack, on a Monday schedule. python.yml keeps its own
 # schedule for the data pipeline (d) and has none elsewhere.
 for r in a b c d; do grep -q 'cron: "23 5 \* \* 1"' "$r/.github/workflows/advisories.yml"; done
@@ -660,21 +696,21 @@ grep -q 'cargo deny check advisories' a/.github/workflows/advisories.yml
 grep -q 'go tool govulncheck' a/.github/workflows/advisories.yml
 grep -q 'uv audit --locked' a/.github/workflows/advisories.yml
 grep -q 'pnpm audit --prod' a/.github/workflows/advisories.yml
-(! grep -q -e '^  rust:' -e '^  go:' b/.github/workflows/advisories.yml)
+(lacks -q -e '^  rust:' -e '^  go:' b/.github/workflows/advisories.yml)
 grep -q 'working-directory: svc' b/.github/workflows/advisories.yml
 grep -q 'working-directory: crates/cli' c/.github/workflows/advisories.yml
 grep -q 'working-directory: services/tool' c/.github/workflows/advisories.yml
 grep -q 'working-directory: apps/web' c/.github/workflows/advisories.yml
 grep -q 'cron: "0 6 \* \* 1"' d/.github/workflows/python.yml
-(! grep -q 'cron:' a/.github/workflows/python.yml)
+(lacks -q 'cron:' a/.github/workflows/python.yml)
 test -f h/.github/workflows/advisories.yml
-(! grep -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
+(lacks -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
 # Decision records are not scaffolded by default; create docs/decisions/ when choices are made.
 for r in a b c d h i; do
   test ! -e "$r/docs/decisions"
 done
-(! grep -rq vale a/.pre-commit-config.yaml a/.gitignore)
+(lacks -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.
 test -f a/.github/workflows/checks.yml
 test -f b/.github/workflows/checks.yml
@@ -694,11 +730,11 @@ for r in b w; do
   for f in CITATION.cff .zenodo.json codemeta.json citesync.toml; do
     test ! -e "$r/$f"
   done
-  (! grep -q citesync "$r/.pre-commit-config.yaml")
-  (! grep -q '^citation' "$r/justfile")
+  (lacks -q citesync "$r/.pre-commit-config.yaml")
+  (lacks -q '^citation' "$r/justfile")
 done
 grep -q check-citation-file-format c/.pre-commit-config.yaml
-(! grep -q check-citation-file-format w/.pre-commit-config.yaml)
+(lacks -q check-citation-file-format w/.pre-commit-config.yaml)
 grep -qx '    pnpm exec prek run citesync --all-files' t/justfile
 # citesync reads root manifests unless told otherwise, so a nested one gets listed.
 grep -qx 'manifests = \["py/pyproject.toml", "crates/lib/Cargo.toml", "web/package.json"\]' m/citesync.toml
@@ -719,9 +755,9 @@ grep -q "Programming Language :: Python :: $min" c/api/pyproject.toml
 grep -q 'Typing :: Typed' c/api/pyproject.toml
 grep -qx 'keywords = \[\] # citesync compares this list to keywords in CITATION.cff' c/api/pyproject.toml
 grep -q 'Changelog = "https://github.com/[^/]*/mono-me/blob/main/CHANGELOG.md"' c/api/pyproject.toml
-(! grep -q 'Private :: Do Not Upload' c/api/pyproject.toml)
+(lacks -q 'Private :: Do Not Upload' c/api/pyproject.toml)
 grep -q "python: \[\"$min\"" c/.github/workflows/python.yml
-(! grep -q 'matrix' a/.github/workflows/python.yml)
+(lacks -q 'matrix' a/.github/workflows/python.yml)
 # Codecov (c only): one upload per stack, from the nested paths, with a flag each,
 # and the Python one from a single matrix job.
 test -f c/codecov.yml
@@ -750,8 +786,7 @@ grep -qF 'cargo build --profile profiling' a/just/rust.just
 grep -qF 'cargo build --manifest-path crates/cli/Cargo.toml --profile profiling' c/just/rust.just
 grep -qx 'py-profile \*args:' a/just/python.just
 grep -qx 'py-profile \*args:' c/just/python.just
-(! grep -rq 'py-profile' b/just d/just)
-test -f c/crates/cli/benches/codspeed.rs
+(lacks -rq 'py-profile' b/just d/just)
 grep -q 'use render_me::add;' a/benches/codspeed.rs
 grep -q 'fn stand_in' c/crates/cli/benches/codspeed.rs
 grep -q 'pytest-codspeed' a/pyproject.toml
@@ -763,17 +798,17 @@ grep -q 'working-directory: api' c/.github/workflows/benchmarks.yml
 for r in b d; do
   test ! -e "$r/.github/workflows/benchmarks.yml"
   test ! -e "$r/tests/test_benchmarks.py"
-  (! grep -rq codspeed "$r" --include=pyproject.toml --include=Cargo.toml)
+  (lacks -rq codspeed "$r" --include=pyproject.toml --include=Cargo.toml)
 done
 # The data-pipeline workflow has its own pytest line, so d checks its coverage flags.
 grep -qx '      - run: uv run pytest --cov --cov-report=xml' d/.github/workflows/python.yml
-(! grep -q codecov a/.github/workflows/python.yml a/.github/workflows/ts.yml)
+(lacks -q codecov a/.github/workflows/python.yml a/.github/workflows/ts.yml)
 grep -qx '      - run: pnpm run test' a/.github/workflows/ts.yml
 # test_extras: asked only with a library kind (d has none), off by default (a's rust
 # and go libraries get no property-test or mutation dependency).
-(! grep -q '^test_extras' d/.copier-answers.yml)
+(lacks -q '^test_extras' d/.copier-answers.yml)
 grep -qx 'test_extras: \[\]' a/.copier-answers.yml
-(! grep -q -e proptest -e gremlins a/Cargo.toml a/go.mod)
+(lacks -q -e proptest -e gremlins a/Cargo.toml a/go.mod)
 # mutation.yml: only with the extra, one job per library stack, weekly and by hand only.
 test -f m/.github/workflows/mutation.yml
 test ! -e a/.github/workflows/mutation.yml
@@ -798,6 +833,11 @@ grep -qxF '    rm -rf mutants' m/just/python.just
 grep -qxF '    export LC_ALL=C' m/just/python.just
 # shellcheck disable=SC2016 # a literal recipe line
 grep -qxF '    [ -z "$new$gone" ]' m/just/python.just
+# mutmut's output shows why the gate failed, and the diff recipe reuses the gate. ci.yml's
+# python job runs both against a broken baseline and an untested function.
+(lacks -q 'mutmut run.*/dev/null' m/just/python.just)
+# shellcheck disable=SC2016 # a literal recipe line
+grep -qF ' py-mutation $patterns' m/just/python.just
 # The per-change recipes: python maps the diff to functions with a script, rust and go use
 # the tool's own diff mode, ts has no mutation-diff recipe (Stryker has no diff mode).
 test -f m/just/mutation_diff.py
@@ -810,9 +850,9 @@ grep -q -e 'unleash --diff' m/just/go.just
 # Each diffs against where the branch split off, not main's tip, so a branch behind
 # main does not mutate functions only main changed.
 for f in python rust go; do grep -q 'git merge-base' "m/just/$f.just"; done
-(! grep -q 'mutation-diff' m/just/ts.just)
+(lacks -q 'mutation-diff' m/just/ts.just)
 grep -q '^just py-mutation-diff ' m/README.md
-(! grep -q 'ts-mutation-diff' m/README.md)
+(lacks -q 'ts-mutation-diff' m/README.md)
 # mutation_diff.py names only the changed methods, matches only_mutate and do_not_mutate as
 # globs the way mutmut does, and skips a function mutmut leaves alone for its decorator.
 mutdiff="$out/mutdiff"
@@ -866,7 +906,7 @@ commit=$(sed -n 's/^_commit: //p' a/.copier-answers.yml)
 if git -C "$repo" show-ref --verify -q "refs/tags/$commit"; then
   grep -qx '_src_path: gh:simonvanlierde/project-templates' a/.copier-answers.yml
 else
-  (! grep -q '^_src_path: gh:' a/.copier-answers.yml)
+  (lacks -q '^_src_path: gh:' a/.copier-answers.yml)
 fi
 # Every stack: every hook block is present.
 grep -q hadolint a/.pre-commit-config.yaml
@@ -882,7 +922,6 @@ grep -q 'cargo test --doc' a/just/rust.just
 grep -qx '    @just rs-check' a/justfile
 # go library: a package named from the slug, its Example importing it under that
 # name, since render-me is not an identifier.
-test -f a/go.mod
 test -f a/.golangci.yml
 grep -qx 'tool golang.org/x/vuln/cmd/govulncheck' a/go.mod
 test -f a/renderme.go
@@ -901,13 +940,13 @@ test -f d/renovate.json5
 test -f a/.github/workflows/copier-update.yml
 test ! -e d/.github/workflows/copier-update.yml
 test ! -e d/.github/dependabot.yml
-(! grep -q working-directory a/just/go.just)
+(lacks -q working-directory a/just/go.just)
 # public=false defaults the license to none: no file and no license key.
 test ! -e b/LICENSE
-(! grep -q '"license"' b/package.json)
-(! grep -q 'image.licenses' b/Dockerfile)
-(! grep -q 'image.licenses' b/svc/Dockerfile)
-(! grep -q '^license' b/svc/pyproject.toml)
+(lacks -q '"license"' b/package.json)
+(lacks -q 'image.licenses' b/Dockerfile)
+(lacks -q 'image.licenses' b/svc/Dockerfile)
+(lacks -q '^license' b/svc/pyproject.toml)
 # The awkward project name became a valid npm name.
 grep -q '"name": "odd-name--co"' b/package.json
 # Monorepo: packages nested, root files at the root, one Dockerfile each.
@@ -926,8 +965,8 @@ test -f c/crates/cli/Cargo.toml
 test -f c/crates/cli/deny.toml
 test -f c/crates/cli/src/main.rs
 test ! -e c/Cargo.toml
-(! grep -q missing_docs c/crates/cli/Cargo.toml)
-(! grep -q -- '--doc' c/just/rust.just)
+(lacks -q missing_docs c/crates/cli/Cargo.toml)
+(lacks -q -- '--doc' c/just/rust.just)
 grep -q 'cargo fmt --manifest-path crates/cli/Cargo.toml --check' c/just/rust.just
 grep -q 'working-directory: crates/cli' c/.github/workflows/rust.yml
 grep -q 'directory: /crates/cli' c/.github/dependabot.yml
@@ -943,17 +982,16 @@ grep -q 'directory: /services/tool' c/.github/dependabot.yml
 grep -qx '/services/tool/mono-me' c/.gitignore
 # rust-analyzer finds a crate two levels down only when told.
 grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/settings.json
-(! grep -q linkedProjects a/.vscode/settings.json)
+(lacks -q linkedProjects a/.vscode/settings.json)
 # Another stack's secrets stay out of an image's build context.
 grep -qx '\*\*/.env' c/apps/web/.dockerignore
 grep -qx '\*\*/.env' c/api/.dockerignore
 # A local .env stays out of git, and compose publishes each port on loopback only.
 grep -qxF '.env' c/.gitignore
 test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 2
-(! grep -qE '^ +- "[0-9]+:' c/compose.yaml)
+(lacks -qE '^ +- "[0-9]+:' c/compose.yaml)
 # Both package workflows exist; Python creates the GitHub release after PyPI.
 test ! -e c/.github/workflows/release.yml
-test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
 grep -qx "    needs: publish" c/.github/workflows/python-release.yml
 # The build refuses a tag that does not match the manifest version it publishes.
@@ -969,14 +1007,19 @@ grep -qF '${{ steps.attest.outputs.bundle-path }}' c/.github/workflows/python-re
 # the repository root, so its search path carries the nested dir; the npm report beside
 # the nested package.
 grep -qx '      - run: uvx griffe@[0-9.]* check --search api/src --format github mono_me' c/.github/workflows/python.yml
+# A CLI-only package (x, python_api=false) gets no api job, though it publishes.
+grep -q 'name: "python: API breaks since the last tag"' c/.github/workflows/python.yml
+test -f x/.github/workflows/python.yml
+(lacks -q 'griffe' x/.github/workflows/python.yml)
+test -f x/.github/workflows/python-release.yml
 # Not in py-check: a deliberate break would keep local checks red until the next tag.
-(! grep -q griffe c/just/python.just)
+(lacks -q griffe c/just/python.just)
 grep -qx '      - run: pnpm run api' c/.github/workflows/ts.yml
 grep -qx '    pnpm -C apps/web run api' c/just/ts.just
 test -f c/apps/web/api-extractor.json
 test -f c/apps/web/mono-me.api.md
-(! grep -q griffe a/.github/workflows/python.yml a/just/python.just)
-(! grep -q 'run api' a/.github/workflows/ts.yml a/just/ts.just)
+(lacks -q griffe a/.github/workflows/python.yml a/just/python.just)
+(lacks -q 'run api' a/.github/workflows/ts.yml a/just/ts.just)
 test ! -e a/api-extractor.json
 test ! -e a/render-me.api.md
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
@@ -984,7 +1027,7 @@ grep -q 'packages: write' c/.github/workflows/docker.yml
 # docker.yml filters by path only when every build context is nested (c), not with a
 # root context (a, b).
 grep -qF 'paths: ["api/**", "apps/web/**", ".github/workflows/docker.yml"]' c/.github/workflows/docker.yml
-(! grep -q 'paths:' a/.github/workflows/docker.yml b/.github/workflows/docker.yml)
+(lacks -q 'paths:' a/.github/workflows/docker.yml b/.github/workflows/docker.yml)
 # The push job also runs on main, so repo-settings must not limit `ghcr` to tags alone.
 # shellcheck disable=SC2016 # literal $env in the recipe
 grep -qF '"$env" = "ghcr"' c/justfile
@@ -995,7 +1038,7 @@ grep -qx '          path: dist/' c/.github/workflows/python-release.yml
 # must follow the tag push, not the release.
 grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/python-release.yml
 grep -qx '    tags: \["v\[0-9\]+.\[0-9\]+.\[0-9\]+"\]' c/.github/workflows/ts-release.yml
-(! grep -q 'types: \[published\]' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
+(lacks -q 'types: \[published\]' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 for w in python ts; do
   # shellcheck disable=SC2016 # the literal workflow text, not a shell expansion
   grep -q 'release-notes.sh" "$GITHUB_REF_NAME' "c/.github/workflows/$w-release.yml"
@@ -1006,14 +1049,13 @@ grep -qF '"root": "../.."' c/apps/web/biome.json
 test -f d/pipe/sources.toml
 test -f d/pipe/src/pipe_me/pipeline.py
 test -f d/pipe/data/raw/.gitkeep
-test -f d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/README.md
 # The week-old-release escape hatch names each nested lockfile owner, and only those.
-(! grep -q 'exclude-newer' d/README.md)
+(lacks -q 'exclude-newer' d/README.md)
 grep -qF 'uv and pnpm lock only' d/.github/CONTRIBUTING.md
 grep -q 'in .pipe/pyproject\.toml. or .minimumReleaseAgeExclude. in .web/pnpm-workspace\.yaml.' d/.github/CONTRIBUTING.md
-(! grep -q 'exclude-newer' h/.github/CONTRIBUTING.md)
+(lacks -q 'exclude-newer' h/.github/CONTRIBUTING.md)
 grep -q 'Apache License' d/LICENSE
 grep -qx 'BSD 3-Clause License' m/LICENSE
 grep -q '^Copyright (c) [0-9]\{4\}, ' m/LICENSE
@@ -1036,13 +1078,13 @@ grep -qx 'path = "pipe/data/\*\*"' d/REUSE.toml
 grep -qx 'SPDX-License-Identifier = "CC0-1.0"' d/REUSE.toml
 test -f d/LICENSES/CC0-1.0.txt
 test -f k/LICENSES/GPL-3.0-or-later.txt
-(! grep -q 'data/' k/REUSE.toml m/REUSE.toml)
+(lacks -q 'data/' k/REUSE.toml m/REUSE.toml)
 test ! -e b/REUSE.toml
 # A public render's Code of Conduct is the Contributor Covenant, under CC-BY-SA-4.0.
 grep -qx 'path = ".github/CODE_OF_CONDUCT.md"' a/REUSE.toml
 test -f a/LICENSES/CC-BY-SA-4.0.txt
 test ! -e b/LICENSES
-(! grep -q reuse-tool b/.pre-commit-config.yaml)
+(lacks -q reuse-tool b/.pre-commit-config.yaml)
 reuse_version=$(sed -n '/fsfe\/reuse-tool/{n;s/.*frozen: v//p;}' "$repo/template/.pre-commit-config.yaml.jinja")
 for r in a d k m; do
   uvx "reuse@$reuse_version" --root "$r" lint --quiet
@@ -1068,7 +1110,7 @@ grep -qF 'SHOTS=1 pnpm -C web exec playwright test --project shots' d/just/ts.ju
 grep -qF 'web/shots/' d/README.md
 grep -qF 'ts-(e2e|shots)' d/.github/workflows/cold-install.yml
 grep -qx '/web/shots/' d/.gitignore
-(! grep -q '^ts-shots:' a/just/ts.just)
+(lacks -q '^ts-shots:' a/just/ts.just)
 # The legal pages: statement and privacy always, terms for accounts or uploads,
 # each a route the axe, CSP, privacy and legal-page specs visit.
 for page in accessibility privacy terms; do
@@ -1082,14 +1124,14 @@ grep -q 'Its conformance is \*\*not assessed\*\*' d/web/docs/accessibility.md
 grep -qx '    "marked": "[0-9.]*",' d/web/package.json
 # A private repo's GitHub links would 404 for visitors, so its legal pages have none.
 test -f j/docs/accessibility.md
-(! grep -rq 'github.com/example-org/private-web' j/docs)
+(lacks -rq 'github.com/example-org/private-web' j/docs)
 grep -qF '[tests/e2e](https://github.com/example-org/pipe-me/tree/main/web/tests/e2e)' d/web/docs/accessibility.md
 grep -qF "are in \`tests/e2e\`." j/docs/accessibility.md
 # The WCAG 2.2 self-assessment sits beside the statement, which links it only once every row
 # has a result: one row per level A and AA criterion, 55 in all, none of them assessed yet.
 # Other kinds have none.
 test "$(grep -cE '^\| [1-4]\.[0-9]+\.[0-9]+ .* \| AA? \| Not assessed \| \|$' d/web/docs/accessibility-assessment.md)" = 55
-(! grep -q 'accessibility-assessment.md)' d/web/docs/accessibility.md)
+(lacks -q 'accessibility-assessment.md)' d/web/docs/accessibility.md)
 test ! -e m/web/docs/accessibility-assessment.md
 # The answers reach the terms: the site, who runs it and the contact, and the privacy
 # statement links them.
@@ -1104,11 +1146,27 @@ grep -qF "private-web saves your work in your browser's local storage" j/docs/pr
 grep -qx "private-web sets no cookies, so there's no cookie banner. Local storage holds only what you" j/docs/privacy.md
 grep -qx 'private-web comes with no warranty.' j/docs/privacy.md
 test ! -e j/docs/terms.md
-(! grep -q '/terms' j/src/App.tsx j/tests/e2e/routes.ts j/tests/e2e/legal-pages.spec.ts j/docs/privacy.md)
+(lacks -q '/terms' j/src/App.tsx j/tests/e2e/routes.ts j/tests/e2e/legal-pages.spec.ts j/docs/privacy.md)
 # GitHub shows the pages as they are, so they pass the project's own Markdown lint.
 rumdl_version=$(sed -n '/rumdl-pre-commit/{n;s/.*frozen: v//p;}' "$repo/.pre-commit-config.yaml")
 uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs d/AGENTS.md
 test ! -e a/docs/privacy.md
+# PRODUCT.md and DESIGN.md stubs: a web app gets both, beside its package.json,
+# and they speak of the project's own users. Other kinds have neither.
+for f in PRODUCT DESIGN; do
+  test -f "d/web/$f.md"
+  grep -qF 'pipe-me' "d/web/$f.md"
+  (lacks -iE 'recruit|portfolio|hiring|showcase' "d/web/$f.md")
+  test ! -e "t/$f.md"
+  test ! -e "w/$f.md"
+  test ! -e "a/$f.md"
+done
+grep -qx '## Users' d/web/PRODUCT.md
+grep -qx '## Overview' d/web/DESIGN.md
+# Like the other starter files, they are the project's once rendered.
+echo '<!-- project edit -->' >>"$out/d/web/PRODUCT.md"
+"${copier[@]}" --vcs-ref=HEAD "${d_args[@]}" "$repo" "$out/d" >/dev/null 2>&1
+grep -q 'project edit' "$out/d/web/PRODUCT.md"
 test ! -e d/web/src/index.ts
 test ! -e d/web/tsconfig.build.json
 test ! -e d/web/Dockerfile
@@ -1116,9 +1174,9 @@ grep -q 'stub for a data pipeline' d/pipe/Dockerfile
 test ! -e a/index.html
 grep -q '"react": \["./node_modules/preact/compat/"\]' d/web/tsconfig.json
 grep -q 'react: "preact/compat"' d/web/vite.config.ts
-(! grep -q '"react":' d/web/package.json)
+(lacks -q '"react":' d/web/package.json)
 grep -q 'script-src .self.;' d/web/public/_headers
-(! grep -q "'unsafe-inline'" d/web/public/_headers)
+(lacks -q "'unsafe-inline'" d/web/public/_headers)
 grep -q '"budget": "node scripts/checkBundleBudget.mjs"' d/web/package.json
 grep -q 'pnpm -C web run budget' d/just/ts.just
 grep -qF 'image: mcr.microsoft.com/playwright:v' d/.github/workflows/ts.yml
@@ -1135,13 +1193,13 @@ grep -qF '"directory": "./dist",' d/web/wrangler.jsonc
 grep -qF '"not_found_handling": "single-page-application"' d/web/wrangler.jsonc
 grep -qF '"preview_urls": false,' d/web/wrangler.jsonc
 grep -qF '"workers_dev": true' d/web/wrangler.jsonc
-(! grep -q 'pages_build_output_dir' d/web/wrangler.jsonc s/wrangler.jsonc)
+(lacks -q 'pages_build_output_dir' d/web/wrangler.jsonc s/wrangler.jsonc)
 test ! -e d/web/wrangler.preview.jsonc
 # No web app names Pages' address anywhere.
-(! grep -rq --exclude-dir=.git 'pages\.dev' d j s)
+(lacks -rq --exclude-dir=.git 'pages\.dev' d j s)
 grep -q '^  preview:' d/.github/workflows/ts.yml
 grep -q 'name: dist$' d/.github/workflows/ts.yml
-(! grep -q 'preview-dist' d/.github/workflows/ts.yml)
+(lacks -q 'preview-dist' d/.github/workflows/ts.yml)
 test "$(grep -c 'path: web/dist$' d/.github/workflows/ts.yml)" = 3
 # Production: push to main only, after the checks, in the production environment, one
 # deploy at a time, under the config's own name.
@@ -1151,29 +1209,62 @@ grep -qxF '    needs: [check, e2e]' <<<"$prod"
 grep -qxF '      name: production' <<<"$prod"
 grep -qxF '      group: production' <<<"$prod"
 grep -qxF '      cancel-in-progress: false' <<<"$prod"
-grep -qxF "          pnpm exec wrangler deploy 2>&1 | tee deploy.log" <<<"$prod"
-grep -qxF '          set -o pipefail' <<<"$prod"
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production'" <<<"$prod"
 (! grep -q -- '--name\|X-Robots-Tag' <<<"$prod")
 # A newer push to main must not cancel the run whose deploy is in flight.
 grep -qF "cancel-in-progress: \${{ github.event_name == 'pull_request' }}" d/.github/workflows/ts.yml
 grep -q '^ *name: preview$' d/.github/workflows/ts.yml
 # The gate step runs before checkout, so it must not cd into web/.
 grep -A2 -- '- id: gate$' d/.github/workflows/ts.yml | grep -q 'working-directory: \.$'
-grep -qF "pnpm exec wrangler deploy --name \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
+grep -qF "deploy-worker.sh\" Preview \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
+# Both jobs deploy through the one script, which only a web app gets and which runs wrangler.
+test "$(grep -cE 'deploy-worker\.sh" (Preview|Production)' d/.github/workflows/ts.yml)" = 2
+# A nested app's ts.yml also runs when only the script changes, on push and on PRs.
+test "$(grep -cF 'paths: ["web/**", ".github/workflows/ts.yml", ".github/scripts/deploy-worker.sh"]' d/.github/workflows/ts.yml)" = 2
+(lacks -q 'wrangler deploy' d/.github/workflows/ts.yml)
+test -x d/.github/scripts/deploy-worker.sh
+test ! -e m/.github/scripts/deploy-worker.sh
+test -x s/.github/scripts/deploy-worker.sh
+test ! -e a/.github/scripts/deploy-worker.sh
+# deploy-worker.sh against a stub pnpm: the name goes to wrangler only when given, the
+# address lands in the output and summary, and a deploy that prints none fails.
+deploy_sh=$out/d/.github/scripts/deploy-worker.sh
+dstub=$out/fake-deploy
+mkdir -p "$dstub/work"
+cat >"$dstub/pnpm" <<'STUB'
+#!/usr/bin/env bash
+echo "pnpm $*" >>"$STUB/calls"
+[ -z "${NO_URL:-}" ] || exit 0
+echo "Deployed https://pipe-me.acct.workers.dev"
+STUB
+chmod +x "$dstub/pnpm"
+deploy() {
+  : >"$dstub/calls" && : >"$dstub/gho" && : >"$dstub/sum"
+  (cd "$dstub/work" && env STUB="$dstub" PATH="$dstub:$PATH" GITHUB_OUTPUT="$dstub/gho" \
+    GITHUB_STEP_SUMMARY="$dstub/sum" "$@" "$deploy_sh" Label ${DEPLOY_NAME:+"$DEPLOY_NAME"} >"$dstub/out" 2>&1)
+}
+deploy
+grep -qx 'pnpm exec wrangler deploy' "$dstub/calls"
+grep -qx 'url=https://pipe-me.acct.workers.dev' "$dstub/gho"
+grep -qx '### Label: https://pipe-me.acct.workers.dev' "$dstub/sum"
+DEPLOY_NAME=pipe-me-pr-4 deploy
+grep -qx 'pnpm exec wrangler deploy --name pipe-me-pr-4' "$dstub/calls"
+(! deploy NO_URL=1)
+grep -qF 'wrangler printed no workers.dev address' "$dstub/out"
 # wrangler is an exact devDependency of a web app only, which both deploy jobs install.
 grep -qxF "    \"wrangler\": \"$wrangler_pin\"" d/web/package.json
-(! grep -q 'pnpm dlx' d/.github/workflows/ts.yml)
+(lacks -q 'pnpm dlx' d/.github/workflows/ts.yml)
 test "$(grep -c 'run: pnpm install --frozen-lockfile' d/.github/workflows/ts.yml)" -ge 4
-(! grep -q '"wrangler"' m/web/package.json)
+(lacks -q '"wrangler"' m/web/package.json)
 # pnpm refuses the install unless wrangler's esbuild and workerd builds are allowed.
 grep -A2 -x 'allowBuilds:' d/web/pnpm-workspace.yaml | grep -qx '  workerd: true'
-(! grep -q 'allowBuilds' m/web/pnpm-workspace.yaml)
-# knip sees ts.yml's wrangler from a root app only, so a nested one ignores it.
+(lacks -q 'allowBuilds' m/web/pnpm-workspace.yaml)
+# knip does not read deploy-worker.sh, the only caller of wrangler, so every web app ignores it.
 jq -e '.knip.ignoreDependencies | index("wrangler")' d/web/package.json >/dev/null
-(! jq -e '.knip.ignoreDependencies | index("wrangler")' s/package.json >/dev/null)
-(! grep -q 'versions upload' d/.github/workflows/ts.yml)
+jq -e '.knip.ignoreDependencies | index("wrangler")' s/package.json >/dev/null
+(lacks -q 'versions upload' d/.github/workflows/ts.yml)
 grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
-(! grep -q '^  X-Robots-Tag' d/web/public/_headers)
+(lacks -q '^  X-Robots-Tag' d/web/public/_headers)
 # A preview lives only while its pull request is open and ready: drafts get none, the deploy
 # re-reads the state, the retire runs on close and on a draft switch, and both share one
 # concurrency group so a retire waits for a deploy in flight.
@@ -1191,9 +1282,9 @@ grep -qF 'types: [closed, converted_to_draft]' d/.github/workflows/preview-retir
 grep -qF 'cron: "17 4 * * *"' d/.github/workflows/preview-retire.yml
 grep -q 'pull-requests: read' d/.github/workflows/preview-retire.yml
 grep -q 'environment: preview$' d/.github/workflows/preview-retire.yml
-grep -q 'SLUG: pipe-me$' d/.github/workflows/preview-retire.yml
-grep -q 'run: \.github/scripts/preview-retire\.sh$' d/.github/workflows/preview-retire.yml
-(! grep -q 'pnpm\|working-directory' d/.github/workflows/preview-retire.yml)
+# shellcheck disable=SC2016
+grep -qxF '            SLUG=$slug .github/scripts/preview-retire.sh || status=1' d/.github/workflows/preview-retire.yml
+(lacks -q 'pnpm\|working-directory' d/.github/workflows/preview-retire.yml)
 test -x d/.github/scripts/preview-retire.sh
 # preview-retire.sh against a stub curl and gh. The account holds pipe-me-pr-1 to -3 and
 # pipe-me-preview; each test sets the PR states, the DELETE answer and the address answer.
@@ -1238,7 +1329,7 @@ grep -q 'Could not read PR 3' "$stub/out"
 echo '{"state": "closed", "draft": false}' >"$stub/pr-3"
 retire
 test "$(grep -c 'pr-3' "$stub/deleted")" = 1
-(! grep -q 'pr-2' "$stub/deleted")
+(lacks -q 'pr-2' "$stub/deleted")
 # A Worker that does not exist answers 404, which is not an error.
 retire PRS=7 DELETE_CODE=404
 grep -qx 'pipe-me-pr-7?force=true' "$stub/deleted"
@@ -1251,21 +1342,205 @@ grep -q 'no takedown below is verified' "$stub/out"
 grep -qF 'answers HTTP 000 after the delete' "$stub/out"
 (! retire PRS=1 PROBE_CODE=502)
 grep -qF 'answers HTTP 502 after the delete' "$stub/out"
+# Static site: x (Python), r (Rust) and d (beside a web app) answer site=plain. One build,
+# which only the deploy job may publish to Pages, and a preview Worker per open, ready PR,
+# deployed from that build through the web app's own script.
+pnpm_pin=$(sed -n '/^pnpm_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+grep -qF "\"packageManager\": \"pnpm@$pnpm_pin\"" d/web/package.json
+for r in x r d; do
+  for f in site/index.html site/style.css site/main.mjs wrangler.site.jsonc .github/workflows/site.yml .github/workflows/preview-retire.yml; do
+    test -f "$r/$f"
+  done
+  test -x "$r/.github/scripts/deploy-worker.sh"
+  test -x "$r/.github/scripts/preview-retire.sh"
+  grep -qF '<script type="module" src="main.mjs"></script>' "$r/site/index.html"
+  grep -qx '/_site/' "$r/.gitignore"
+  grep -qx 'site:' "$r/justfile"
+  grep -qF '"directory": "./_site"' "$r/wrangler.site.jsonc"
+  grep -qF '"preview_urls": false,' "$r/wrangler.site.jsonc"
+  grep -qF '"workers_dev": true' "$r/wrangler.site.jsonc"
+  wf=$r/.github/workflows/site.yml
+  # Least privilege: contents: read for the workflow, Pages rights on the deploy job alone.
+  sed -n '1,/^jobs:/p' "$wf" | grep -qx '  contents: read'
+  test "$(grep -c 'pages: write' "$wf")" = 1
+  test "$(grep -c 'id-token: write' "$wf")" = 1
+  deploy_job=$(sed -n '/^  deploy:$/,/^  [a-z]/p' "$wf")
+  grep -q '^      pages: write' <<<"$deploy_job"
+  grep -q '^      id-token: write' <<<"$deploy_job"
+  grep -qx '      name: github-pages' <<<"$deploy_job"
+  grep -qxF "    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'" <<<"$deploy_job"
+  test "$(grep -c '^    timeout-minutes:' "$wf")" = 3
+  test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
+  grep -qx '      - run: just site' "$wf"
+  grep -qx '          path: _site' "$wf"
+  # The preview deploys the build job's artifact: it never runs the build with the token.
+  preview_job=$(sed -n '/^  preview:$/,$p' "$wf")
+  (! grep -q 'just site' <<<"$preview_job")
+  grep -qx '          name: github-pages' <<<"$preview_job"
+  grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !endsWith(github.event.pull_request.user.login, '[bot]')" <<<"$preview_job"
+  # shellcheck disable=SC2016
+  grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostring)'\''' <<<"$preview_job"
+  # shellcheck disable=SC2016
+  grep -qF '[ "$state" != "open false" ]' <<<"$preview_job"
+  # shellcheck disable=SC2016
+  grep -qF 'group: preview-${{ github.event.pull_request.number }}' <<<"$preview_job"
+  grep -qF 'X-Robots-Tag: noindex' <<<"$preview_job"
+  grep -qF "dlx wrangler@$wrangler_pin" <<<"$preview_job"
+  cmp "$r/.github/scripts/deploy-worker.sh" d/.github/scripts/deploy-worker.sh
+  cmp "$r/.github/scripts/preview-retire.sh" d/.github/scripts/preview-retire.sh
+done
+# Site previews are <slug>-site-pr-<n>, apart from a web app's <slug>-pr-<n>.
+# shellcheck disable=SC2016
+grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.jsonc' x/.github/workflows/site.yml
+# shellcheck disable=SC2016
+grep -qF 'deploy-worker.sh" Preview "crate-me-site-pr-$PR" --config wrangler.site.jsonc' r/.github/workflows/site.yml
+# shellcheck disable=SC2016
+grep -qF 'deploy-worker.sh" Preview "pipe-me-site-pr-$PR" --config wrangler.site.jsonc' d/.github/workflows/site.yml
+grep -qx '          for slug in cli-me-site; do' x/.github/workflows/preview-retire.yml
+grep -qx '          for slug in pipe-me pipe-me-site; do' d/.github/workflows/preview-retire.yml
+grep -qx '          for slug in app; do' s/.github/workflows/preview-retire.yml
+# Without a package.json, the preview job's pnpm comes from the pin; with one, from it.
+grep -qxF "          version: \"$pnpm_pin\"" x/.github/workflows/site.yml
+grep -qx '          package_json_file: web/package.json' d/.github/workflows/site.yml
+# The starter page builds as it is.
+(cd x && just site >/dev/null)
+test -f x/_site/index.html
+test -f x/_site/main.mjs
+# deploy-worker.sh with the site's wrangler command and config.
+(cd "$dstub/work" && env STUB="$dstub" PATH="$dstub:$PATH" GITHUB_OUTPUT="$dstub/gho" GITHUB_STEP_SUMMARY="$dstub/sum" \
+  WRANGLER="pnpm dlx wrangler@$wrangler_pin" "$deploy_sh" Preview cli-me-site-pr-4 --config wrangler.site.jsonc >"$dstub/out" 2>&1)
+test "$(tail -n 1 "$dstub/calls")" = "pnpm dlx wrangler@$wrangler_pin deploy --name cli-me-site-pr-4 --config wrangler.site.jsonc"
+# A nested package's knip never sees the page's files.
+jq -e '.knip | has("ignoreFiles") | not' d/web/package.json >/dev/null
+# The preview serves the build under /<repo>/, as Pages does.
+grep -qF "printf '/ /cli-me/ 302\n' > _site/_redirects" x/.github/workflows/site.yml
+test ! -e x/site/package.json
+# A project without the site gets none of it.
+for r in a m w; do
+  test ! -e "$r/site"
+  test ! -e "$r/wrangler.site.jsonc"
+  test ! -e "$r/.github/workflows/site.yml"
+  test ! -e "$r/.github/workflows/preview-retire.yml"
+  test ! -e "$r/.github/scripts/preview-retire.sh"
+  test ! -e "$r/.github/scripts/deploy-worker.sh"
+  (lacks -q '_site' "$r/.gitignore")
+  (lacks -qx 'site:' "$r/justfile")
+  (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile")
+done
+(lacks -q 'app-site' s/.github/workflows/preview-retire.yml)
+# Astro site: y has no TypeScript stack, so the site's node and pnpm come from site.yml and
+# site/package.json alone. t has it beside a TypeScript package at the root.
+astro_pin=$(sed -n '/^astro_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+test -n "$astro_pin"
+for r in y t; do
+  for f in astro.config.mjs package.json pnpm-workspace.yaml src/layouts/Base.astro src/pages/index.astro src/pages/about.md; do
+    test -f "$r/site/$f"
+  done
+  test ! -e "$r/site/index.html"
+  jq -e --arg v "$astro_pin" '.dependencies.astro == $v' "$r/site/package.json" >/dev/null
+  jq -e --arg v "pnpm@$pnpm_pin" '.packageManager == $v' "$r/site/package.json" >/dev/null
+  grep -qx 'minimumReleaseAge: 10080' "$r/site/pnpm-workspace.yaml"
+  grep -qx '/site/dist/' "$r/.gitignore"
+  grep -qx '/site/.astro/' "$r/.gitignore"
+  grep -qF '"directory": "./site/dist"' "$r/wrangler.site.jsonc"
+  grep -qx '    pnpm -C site install --frozen-lockfile' "$r/justfile"
+  grep -qx 'site-sync:' "$r/justfile"
+  wf=$r/.github/workflows/site.yml
+  grep -qx '          path: site/dist' "$wf"
+  # The build job sets up node and pnpm from the site's own package.json.
+  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -qx '          package_json_file: site/package.json'
+  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -q 'uses: actions/setup-node@'
+  # Pages serves the site under /<repo>/, and so does its preview.
+  grep -qx "  base: \"/$([ "$r" = y ] && echo site-me || echo lib-me)\"," "$r/site/astro.config.mjs"
+  # The lockfile it writes is skipped by the YAML hooks at any depth.
+  grep -qxF '  - "**/pnpm-lock.yaml"' "$r/.yamlfmt"
+  test "$(grep -cxF '        exclude: (^|/)pnpm-lock\.yaml$' "$r/.pre-commit-config.yaml")" -ge 2
+done
+grep -qx '          version: "'"$pnpm_pin"'"' y/.github/workflows/site.yml
+# shellcheck disable=SC2016
+grep -qF 'tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C site/dist/site-me' y/.github/workflows/site.yml
+grep -qF "printf '/ /site-me/ 302\n' > site/dist/_redirects" y/.github/workflows/site.yml
+# The site's package.json gets its own Dependabot entry; Renovate finds every package.json.
+grep -A1 -x '  - package-ecosystem: npm' y/.github/dependabot.yml | grep -qx '    directory: /site'
+(lacks -q 'directory: /site' x/.github/dependabot.yml)
+(lacks -q 'ignorePaths\|enabledManagers' d/renovate.json5)
+# A root package's tools leave the site alone: knip reports none of it, biome skips the
+# .astro files it can only half read.
+jq -e '.knip.ignoreFiles == ["site/**"]' t/package.json >/dev/null
+jq -e '.files.includes | index("!site/**/*.astro")' t/biome.json >/dev/null
+(lacks -q 'astro' x/.github/workflows/site.yml)
+# The starter pages are the project's; package.json stays the template's.
+grep -q 'project edit' y/site/src/layouts/Base.astro
+(lacks -q 'project edit' y/site/package.json)
+# It builds: every page, Markdown included, inside the layout.
+astro_start=$SECONDS
+(cd y && just site-sync >/dev/null 2>&1 && just site >/dev/null 2>&1)
+echo "check-render: the Astro build took $((SECONDS - astro_start)) s" >&2
+test -f y/site/dist/index.html
+test -f y/site/dist/about/index.html
+grep -qF '<h1>About</h1>' y/site/dist/about/index.html
+grep -qF 'href="/site-me/about/"' y/site/dist/index.html
+test -f y/site/pnpm-lock.yaml
+# The deploy job's gate: it deploys only when Pages deploys from Actions, skips with a
+# notice while Pages is off (404), and fails on any other error. Run against a stub gh.
+gate_sh=$out/fake-pages-gate
+mkdir -p "$gate_sh"
+sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml |
+  sed -n '/^          if build=/,/^          echo "run=false"/s/^          //p' >"$gate_sh/gate.sh"
+test -s "$gate_sh/gate.sh"
+cat >"$gate_sh/gh" <<'STUB'
+#!/usr/bin/env bash
+case $PAGES in
+  workflow | legacy) echo "$PAGES" ;;
+  404) echo 'gh: Not Found (HTTP 404)' >&2 && exit 1 ;;
+  *) echo 'gh: Server Error (HTTP 500)' >&2 && exit 1 ;;
+esac
+STUB
+chmod +x "$gate_sh/gh"
+pages_gate() {
+  : >"$gate_sh/gho"
+  (cd "$gate_sh" && env PAGES="$1" REPO=o/r PATH="$gate_sh:$PATH" GITHUB_OUTPUT="$gate_sh/gho" bash -e gate.sh >"$gate_sh/out" 2>&1)
+}
+pages_gate workflow
+grep -qx 'run=true' "$gate_sh/gho"
+pages_gate 404
+grep -qx 'run=false' "$gate_sh/gho"
+grep -qF '::notice::GitHub Pages is off' "$gate_sh/out"
+pages_gate legacy
+grep -qx 'run=false' "$gate_sh/gho"
+(! pages_gate 500)
+grep -qxF "      - if: steps.gate.outputs.run == 'true'" <<<"$(sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml)"
+# dlx resolves wrangler without a lockfile, so it waits the same week as an install.
+grep -qxF "          WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@$wrangler_pin" x/.github/workflows/site.yml
+# The site's README section, with its own previews heading unless the web app's is there.
+for r in x y d; do grep -qx '## Site' "$r/README.md"; done
+grep -qx '### Pull request previews' x/README.md
+test "$(grep -cx '### Pull request previews' d/README.md)" = 1
+grep -qF 'cli-me-site-pr-<number>' x/README.md
+grep -qF 'just site-sync' y/README.md
+grep -q 'You need .*\[pnpm\]' y/README.md
+(lacks -q '\[pnpm\]' x/README.md)
+(lacks -qx '## Site' a/README.md)
+# The copier-update PR names the Astro lockfile refresh too.
+# shellcheck disable=SC2016
+grep -qF '\`just site-sync\`' y/.github/workflows/copier-update.yml
+(lacks -q 'site-sync' x/.github/workflows/copier-update.yml)
+grep -q '^  # shortcut: the sweep matches Workers by name alone' x/.github/scripts/preview-retire.sh
 # A web app at the repo root builds in place.
 test -f s/wrangler.jsonc
 grep -q '^  production:' s/.github/workflows/ts.yml
 sed -n '/^  production:$/,/^  [a-z]/p' s/.github/workflows/ts.yml | grep -xF '    needs: [check, e2e]' >/dev/null
 test -f s/.github/workflows/preview-retire.yml
 grep -qx '          path: dist' s/.github/workflows/ts.yml
-(! grep -q 'working-directory' s/.github/workflows/preview-retire.yml)
+(lacks -q 'working-directory' s/.github/workflows/preview-retire.yml)
 # Other kinds get none of it.
 test ! -e a/wrangler.jsonc
-(! grep -q 'production' a/.github/workflows/ts.yml)
+(lacks -q 'production' a/.github/workflows/ts.yml)
 test ! -e a/.github/workflows/preview-retire.yml
-(! grep -q 'preview' a/.github/workflows/ts.yml)
+(lacks -q 'preview' a/.github/workflows/ts.yml)
 grep -q 'stages: \[pre-push\]' d/.pre-commit-config.yaml
 grep -qx 'default_install_hook_types: \[pre-commit, commit-msg, pre-push\]' d/.pre-commit-config.yaml
-(! grep -q 'pre-push' a/.pre-commit-config.yaml)
+(lacks -q 'pre-push' a/.pre-commit-config.yaml)
 # Commit messages and PR titles: one committed.toml, read by the commit-msg hook and
 # the pr-title workflow, in every render. The bots write titles that pass it.
 grep -qx 'default_install_hook_types: \[pre-commit, commit-msg\]' a/.pre-commit-config.yaml
@@ -1349,6 +1624,13 @@ printf 'See [the guide](missing.md).\n' >a-hooks/docs/dead.md
 git -C a-hooks add docs/typo.md docs/dead.md
 (cd a-hooks && ! "${prek[@]}" typos >typos.log 2>&1)
 grep -qx 'This is definitely wrong.' a-hooks/docs/typo.md
+# NumPy spells the flag `writeable`; typos must not rewrite the API to `writable`.
+printf 'a.flags.writeable = False\nb = a.flags["WRITEABLE"]\n' >a-hooks/docs/flags.py
+cp a-hooks/docs/flags.py flags.py.orig
+git -C a-hooks add docs/flags.py
+(cd a-hooks && "${prek[@]}" typos >/dev/null)
+cmp a-hooks/docs/flags.py flags.py.orig
+rm -f flags.py.orig
 (cd a-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
 grep -q 'docs/missing.md.*File not found' a-hooks/lychee.log
 # yamlfmt ignores a nested pnpm-lock.yaml passed by prek
@@ -1377,16 +1659,16 @@ for r in a b; do
   grep -q 'cron:' "$r/.github/workflows/links.yml"
 done
 # A private repo's own pages need a sign-in, so its link check skips them.
-(! grep -q -- '--exclude' a/.github/workflows/links.yml)
+(lacks -q -- '--exclude' a/.github/workflows/links.yml)
 grep -qF -- "--exclude '^https://github\\.com/example-org/odd-name--co([/#?]|\$)'" b/.github/workflows/links.yml
 test "$(grep -c 'commit-message: {prefix: chore, include: scope}' a/.github/dependabot.yml)" -eq 5
 grep -q "extends: \['config:recommended', ':semanticCommits'\]" d/renovate.json5
 grep -qx 'playwright-report/' d/.gitignore
 # Outside CI, reusing a server on the preview port would test whichever app holds it.
-(! grep -q reuseExistingServer d/web/playwright.config.ts)
-(! grep -q 'playwright-report' a/.gitignore)
-(! grep -q 'e2e' a/.github/workflows/ts.yml)
-(! grep -qx 'shots/' a/.gitignore)
+(lacks -q reuseExistingServer d/web/playwright.config.ts)
+(lacks -q 'playwright-report' a/.gitignore)
+(lacks -q 'e2e' a/.github/workflows/ts.yml)
+(lacks -qx 'shots/' a/.gitignore)
 grep -q 'applies-to: security-updates' a/.github/dependabot.yml
 # Actions and hook revs share one multi-ecosystem PR, with the same group in Renovate.
 grep -qx '  actions-and-hooks:' a/.github/dependabot.yml
@@ -1407,7 +1689,7 @@ test ! -e a/sources.toml
 test ! -e a/ATTRIBUTION.md
 # Only web-service renders the FastAPI modules; the others keep the stdlib stub.
 test ! -e a/src/render_me/app.py
-(! grep -q fastapi a/pyproject.toml)
+(lacks -q fastapi a/pyproject.toml)
 grep -q http.server a/src/render_me/__main__.py
 # h: the unit test and the Example are two files, not one overwriting the other.
 grep -q 'func TestAdd' h/add_test.go
@@ -1504,7 +1786,7 @@ done
 test "$(grep -c -- '-test`' a/AGENTS.md)" = 4
 # shellcheck disable=SC2016
 grep -qF 'are in `web/docs/`' d/AGENTS.md
-(! grep -q CONTRIBUTING b/AGENTS.md)
+(lacks -q CONTRIBUTING b/AGENTS.md)
 # A repo's own recipes in just/local.just appear in just --list:
 cat >a/just/local.just <<'JUST'
 # Run a custom local task.
@@ -1531,7 +1813,7 @@ grep -qx '      attestations: write' c/.github/workflows/python-release.yml
 grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 # The publish step: npm, from a tarball built earlier.
 grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
-(! grep -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
+(lacks -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 
 # repo-settings: a fake gh keeps a list of rulesets and applies the recipe's real --jq
 # filter to it. An existing ruleset with a legacy name (protect-main) is adopted in place.
@@ -1585,6 +1867,20 @@ case $call in
     [ -f "$pol" ] || echo '{"branch_policies":[]}' >"$pol"
     jq -r "$filter" "$pol" ;;
   *"-X PUT repos/{owner}/{repo}/environments/"*) echo '{}' ;;
+  # Pages is created once; GitHub refuses a second create with 409.
+  *"-X POST repos/{owner}/{repo}/pages "*)
+    if [ -n "${FAKE_PAGES:-}" ]; then
+      echo "gh: refused (HTTP $FAKE_PAGES)" >&2
+      exit 1
+    fi
+    if [ -f "$FAKE_DIR/pages" ]; then
+      echo '{"message":"GitHub Pages is already enabled.","status":"409"}'
+      echo 'gh: GitHub Pages is already enabled. (HTTP 409)' >&2
+      exit 1
+    fi
+    : >"$FAKE_DIR/pages"
+    echo '{}' ;;
+  *"-X PUT repos/{owner}/{repo}/pages "*) echo '{}' ;;
   *"repos/{owner}/{repo}"*"--jq .full_name"*) echo "simonvanlierde/project-templates" ;;
 esac
 FAKE
@@ -1639,7 +1935,7 @@ chmod +x "$fake/gh"
     and .bypass_actors == [{actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "pull_request"}]' \
     .github/rulesets/main-checks.json >/dev/null
   # A path filter would leave a required check unreported on some PRs, which blocks them.
-  (! grep -q '^ *paths' .github/workflows/checks.yml .github/workflows/pr-title.yml .github/workflows/dco.yml)
+  (lacks -q '^ *paths' .github/workflows/checks.yml .github/workflows/pr-title.yml .github/workflows/dco.yml)
   jq -e '.target == "tag" and .conditions.ref_name.include == ["refs/tags/v*"]' .github/rulesets/tags.json >/dev/null
 )
 (cd b && ! grep -q 'DCO sign-off' .github/rulesets/main.json)
@@ -1667,8 +1963,8 @@ chmod +x "$fake/gh"
   test "$(grep -c 'deployment-branch-policies -f name=v\*' "$fake/log-c")" = 3
   test "$(grep -c 'deployment-branch-policies -f name=main' "$fake/log-c")" = 1
   # Only a web app has the preview environment.
-  (! grep -q 'environments/preview' "$fake/log-c")
-  (! grep -q 'environments/production' "$fake/log-c")
+  (lacks -q 'environments/preview' "$fake/log-c")
+  (lacks -q 'environments/production' "$fake/log-c")
   grep -q 'https://pypi.org/manage/account/publishing/?provider=github&project_name=mono-me&owner=simonvanlierde&repository=project-templates&workflow_filename=python-release.yml&environment=pypi' "$fake/out-c"
   grep -q 'https://zenodo.org/account/settings/github/' "$fake/out-c"
 )
@@ -1680,14 +1976,36 @@ chmod +x "$fake/gh"
   just repo-settings >"$fake/out-d"
   just repo-settings >/dev/null
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/preview' "$FAKE_LOG"
-  (! grep -q 'environments/preview/' "$FAKE_LOG")
+  (lacks -q 'environments/preview/' "$FAKE_LOG")
   grep -q "Configured environment 'preview'" "$fake/out-d"
   # production: no reviewer, and only main may deploy to it, posted once over two runs.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/production -F deployment_branch_policy[protected_branches]=false -F deployment_branch_policy[custom_branch_policies]=true' "$FAKE_LOG"
   test "$(grep -cxF -- 'api -X POST repos/{owner}/{repo}/environments/production/deployment-branch-policies -f name=main -f type=branch' "$FAKE_LOG")" = 1
-  (! grep -q 'environments/production.*reviewers' "$FAKE_LOG")
+  (lacks -q 'environments/production.*reviewers' "$FAKE_LOG")
   grep -q "Configured environment 'production'" "$fake/out-d"
 )
+# The site (x) gets the preview environment and Pages from Actions: created on the first
+# run, switched over on the second, when GitHub answers 409.
+(
+  cd x
+  # shellcheck disable=SC2030,SC2031 # as above
+  export FAKE_LOG="$fake/log-x" FAKE_DIR="$fake/x" PATH="$fake:$PATH"
+  mkdir -p "$FAKE_DIR"
+  cp "$fake/rulesets.json" "$FAKE_DIR/"
+  just repo-settings >"$fake/out-x"
+  just repo-settings >/dev/null
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/preview' "$FAKE_LOG"
+  test "$(grep -cxF -- 'api -X POST repos/{owner}/{repo}/pages -f build_type=workflow' "$FAKE_LOG")" = 2
+  test "$(grep -cxF -- 'api -X PUT repos/{owner}/{repo}/pages -f build_type=workflow' "$FAKE_LOG")" = 1
+  (lacks -q 'environments/production' "$FAKE_LOG")
+  grep -q 'GitHub Pages deploys from Actions' "$fake/out-x"
+  # A repo that cannot have Pages (403, 422) gets a warning, and the rest still runs.
+  FAKE_PAGES=403 just repo-settings >/dev/null 2>"$fake/err-x"
+  grep -q 'GitHub Pages is not available for this repo' "$fake/err-x"
+  FAKE_PAGES=422 just repo-settings >/dev/null 2>&1
+  (! FAKE_PAGES=500 just repo-settings >/dev/null 2>&1)
+)
+(lacks -qF 'repos/{owner}/{repo}/pages' "$fake/log-c")
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
 jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null
@@ -1714,8 +2032,8 @@ grep -qx '    for name in main tags; do' b/justfile
 jq -e '(.rules[] | select(.type == "pull_request").parameters
     | .required_approving_review_count == 0 and (.dismiss_stale_reviews_on_push | not) and (.require_last_push_approval | not))
   and (.rules | any(.type == "required_status_checks")) and (has("bypass_actors") | not)' b/.github/rulesets/main.json >/dev/null
-(! grep -q private-vulnerability-reporting b/justfile)
-(! grep -q code-scanning b/justfile)
+(lacks -q private-vulnerability-reporting b/justfile)
+(lacks -q code-scanning b/justfile)
 # repo-about: the About box comes from the answers. No description answer leaves the description alone;
 # a quote in it survives the shell and braces survive just; topics only get added.
 for r in a b d; do
@@ -1756,20 +2074,20 @@ grep -qx '# Accessibility statement' d/web/docs/accessibility.md
 # The README says experimental; only a public repo points to CONTRIBUTING.md.
 grep -qx 'Status: experimental. It may change in ways that break your code, without notice.' a/README.md
 grep -qxF 'Questions and bugs: see [CONTRIBUTING.md](.github/CONTRIBUTING.md).' a/README.md
-(! grep -q 'Questions and bugs' b/README.md)
+(lacks -q 'Questions and bugs' b/README.md)
 grep -qx 'blank_issues_enabled: false' a/.github/ISSUE_TEMPLATE/config.yml
 grep -qx '    url: https://github.com/example-org/render-me/blob/main/.github/CONTRIBUTING.md' \
   a/.github/ISSUE_TEMPLATE/config.yml
-(! grep -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
+(lacks -q '\[NOTE:' a/.github/CODE_OF_CONDUCT.md)
 # The bug form: a render with a web app (d) asks for a page URL and a browser and does not
 # force shell formatting; the others keep the command-line form. Both pass GitHub's schema.
 grep -qx '    id: url' d/.github/ISSUE_TEMPLATE/bug.yml
 grep -qx '    id: browser' d/.github/ISSUE_TEMPLATE/bug.yml
-(! grep -q 'render: shell' d/.github/ISSUE_TEMPLATE/bug.yml)
+(lacks -q 'render: shell' d/.github/ISSUE_TEMPLATE/bug.yml)
 grep -qx '      render: shell' a/.github/ISSUE_TEMPLATE/bug.yml
-(! grep -qE 'id: (url|browser)$' a/.github/ISSUE_TEMPLATE/bug.yml)
+(lacks -qE 'id: (url|browser)$' a/.github/ISSUE_TEMPLATE/bug.yml)
 # The browser field covers the environment question on the web form.
-(! grep -q 'id: environment' d/.github/ISSUE_TEMPLATE/bug.yml)
+(lacks -q 'id: environment' d/.github/ISSUE_TEMPLATE/bug.yml)
 grep -qx '    id: environment' a/.github/ISSUE_TEMPLATE/bug.yml
 uvx check-jsonschema --builtin-schema vendor.github-issue-forms \
   a/.github/ISSUE_TEMPLATE/bug.yml d/.github/ISSUE_TEMPLATE/bug.yml
@@ -1780,7 +2098,7 @@ badge_docs=(GOVERNANCE.md docs/roadmap.md docs/assurance-case.md)
 for r in a m; do
   for f in "${badge_docs[@]}"; do test ! -e "$r/$f"; done
 done
-(! grep -q '## Tests and code style' a/.github/CONTRIBUTING.md)
+(lacks -q '## Tests and code style' a/.github/CONTRIBUTING.md)
 grep -q '## Tests and code style' m/.github/CONTRIBUTING.md
 test "$(grep -c '^- \(Python\|TypeScript\|Rust\|Go\): ' m/.github/CONTRIBUTING.md)" = 4
 grep -qx -- '- Go: gofmt and \[golangci-lint\](https://golangci-lint.run).' h/.github/CONTRIBUTING.md
@@ -1797,7 +2115,7 @@ grep -qx 'Bus factor: TODO (the fewest people whose departure would leave the pr
 diff "$repo/.github/workflows/dco.yml" h/.github/workflows/dco.yml
 grep -qx '    if: github.event.pull_request.head.repo.full_name != github.repository' \
   a/.github/workflows/dco.yml
-(! grep -q '^    if: ' h/.github/workflows/dco.yml)
+(lacks -q '^    if: ' h/.github/workflows/dco.yml)
 grep -q 'id: dco-signoff' h/.pre-commit-config.yaml
 # The hook and sign-off setting follow dco.yml, which every public render has, with or
 # without a license; b is private and has none of the three.
@@ -1806,18 +2124,18 @@ for r in a h i; do
   grep -q 'web_commit_signoff_required=true' "$r/justfile"
 done
 test ! -e b/.github/workflows/dco.yml
-(! grep -q 'id: dco-signoff' b/.pre-commit-config.yaml)
-(! grep -q 'web_commit_signoff_required' b/justfile)
+(lacks -q 'id: dco-signoff' b/.pre-commit-config.yaml)
+(lacks -q 'web_commit_signoff_required' b/justfile)
 # A fresh clone has only origin, and a pushed branch needs a lease, not a bare force-push.
 for f in "$repo/CONTRIBUTING.md" a/.github/CONTRIBUTING.md h/.github/CONTRIBUTING.md \
   a/.github/workflows/dco.yml; do
   grep -qF 'git rebase --signoff origin/main' "$f"
   grep -qF -- '--force-with-lease' "$f"
-  (! grep -q 'upstream/main\|force-push' "$f")
+  (lacks -q 'upstream/main\|force-push' "$f")
 done
 grep -qx '    if: github.event.pull_request.head.repo.full_name != github.repository' \
   i/.github/workflows/dco.yml
-(! grep -q 'the maintainers. included' i/.github/CONTRIBUTING.md)
+(lacks -q 'the maintainers. included' i/.github/CONTRIBUTING.md)
 grep -q 'the maintainers. included' h/.github/CONTRIBUTING.md
 cmp "$repo/committed.toml" "$repo/template/committed.toml"
 # Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off
@@ -1959,17 +2277,17 @@ CASES
   grep -q '^pr close 7 --delete-branch ' issue.log
   (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml 2>/dev/null)
   # An issue that exists, open or closed, is not asked again.
-  (! grep -q '^issue create' asked.log)
+  (lacks -q '^issue create' asked.log)
   # A token pushes the branch with the workflow change, over the open PR's, then opens or
   # updates the PR. So does no token with no workflow change.
   for r in push:.github/workflows/ci.yml edit:.github/workflows/ci.yml plain:README.md; do
     git -C "${r%%:*}.git" show "chore/copier-update:${r#*:}" | grep -qx '# from the template'
-    (! grep -q '^issue ' "${r%%:*}.log")
+    (lacks -q '^issue ' "${r%%:*}.log")
   done
   grep -q '^pr create --head chore/copier-update --base main ' push.log
   grep -q '^pr create --head chore/copier-update --base main ' plain.log
   grep -q '^pr edit chore/copier-update ' edit.log
-  (! grep -q '^pr create' edit.log)
+  (lacks -q '^pr create' edit.log)
   # Patch data must never replace Git configuration, and artifact symlinks are refused.
   git clone -q "$cuh/tpl" "$cuh/reject-checkout"
   mkdir -p "$cuh/reject/copier-update"
@@ -1998,7 +2316,7 @@ PATCH
       exit 1
     fi
     # The symlink fails before Git gets to parse its invalid patch.
-    (! grep -qF '.git/config' "$cuh/rejected.log")
+    (lacks -qF '.git/config' "$cuh/rejected.log")
   )
 )
 
@@ -2053,7 +2371,7 @@ done
 # shellcheck disable=SC2031 # COPIER_VERSION is set at file top
 uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >"$out/sample-up.log" 2>&1
 grep -q 'Updating to template version' "$out/sample-up.log"
-(! grep -q 'def add(' "$sample_up/src/sample_me/__init__.py")
+(lacks -q 'def add(' "$sample_up/src/sample_me/__init__.py")
 test ! -e "$sample_up/tests/test_add.py"
 
 echo "all render checks passed"

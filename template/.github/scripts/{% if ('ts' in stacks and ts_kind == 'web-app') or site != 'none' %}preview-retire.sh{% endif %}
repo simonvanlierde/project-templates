@@ -15,6 +15,9 @@ names=""
 failed=0
 
 if [ -z "$prs" ]; then
+  # shortcut: the sweep matches Workers by name alone, so in one Cloudflare account a repo
+  # foo with a site and a repo foo-site with a web app share foo-site-pr-<n>. Rename one
+  # repo's slug if that ever happens.
   if ! all=$(curl -fsS -H "$auth" "$api/scripts" | jq -r '.result[].id'); then
     echo "::error::Could not list the account's Workers."
     exit 1

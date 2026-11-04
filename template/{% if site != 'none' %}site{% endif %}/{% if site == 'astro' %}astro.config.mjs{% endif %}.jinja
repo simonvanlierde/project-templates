@@ -1,0 +1,10 @@
+import { defineConfig } from "astro/config";
+
+// Static output: `astro build` writes plain files to dist/, which site.yml deploys.
+// GitHub Pages serves a project's site at https://<user>.github.io/<repo>/, so links
+// start from `base`. With a custom domain, set `site` to it and drop `base`.
+export default defineConfig({
+  output: "static",
+  site: "https://{{ github_user | lower }}.github.io",
+  base: "/{{ slug }}",
+});

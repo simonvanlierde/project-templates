@@ -6,9 +6,9 @@ _min_copier_version: "9.19.0"
 # from its first real paragraph, so template changes to it never arrive. A release
 # adds its version, date and DOI to the citation files, and an update would then
 # conflict with that edit every time. The web-app entries are its starter files and
-# legal pages, which the project rewrites from day one. go.mod is rewritten by the
-# first `go mod tidy`, and Dependabot bumps its requirements after that; its module
-# path and go version are answers fixed at copy time. The decisions index gains a
+# legal pages, which the project rewrites from day one, as are the site's starter
+# files. go.mod is rewritten by the first `go mod tidy`, and Dependabot bumps its
+# requirements after that; its module path and go version are answers fixed at copy time. The decisions index gains a
 # line with each record the project writes. The silver-badge documents are skeletons
 # the project fills in. Each entry starts with `/`:
 # copier matches these like .gitignore lines, so a bare README.md would also skip
@@ -22,6 +22,7 @@ _skip_if_exists:
   - /docs/accessibility.md
   - /CITATION.cff
   - /codemeta.json
+  - /_typos.toml
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.tsx"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.test.tsx"
@@ -29,11 +30,20 @@ _skip_if_exists:
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}PRODUCT.md"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}DESIGN.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility-assessment.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/privacy.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/terms.md"
   - "/{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
+  - /site/index.html
+  - /site/style.css
+  - /site/main.mjs
+  - /site/astro.config.mjs
+  - /site/src/layouts/Base.astro
+  - /site/src/pages/index.astro
+  - /site/src/pages/about.md
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
@@ -59,6 +69,9 @@ _message_after_copy: |
   {%- for stack in stacks if stack != 'docker' %}
     just {{ {'python': 'py', 'ts': 'ts', 'rust': 'rs', 'go': 'go'}[stack] }}-sync
   {%- endfor %}
+  {%- if site == 'astro' %}
+    just site-sync
+  {%- endif %}
     just check
   Then commit, lockfiles included: CI installs exactly what they list.
   After the first push, run `just repo-settings` to protect main.
@@ -398,6 +411,32 @@ cold_install:
   help: Verify README setup instructions in a fresh Debian container on setup changes
   default: false
 
+# A static page beside the code (a playground, demo or report) in site/. GitHub Pages
+# serves it from main, and each open, ready pull request gets a preview Worker
+# (docs/usage.md#static-site).
+site:
+  type: str
+  when: "{{ stacks }}"
+  ask: "{{ customise }}"
+  help: A static page (playground, demo or report) in site/, deployed to GitHub Pages from main, with a preview per pull request
+  choices:
+    None: none
+    Plain (HTML, CSS and plain JavaScript modules, no build step or framework): plain
+    Astro (for a site with several pages from Markdown, shared layouts and components): astro
+  default: none
+  # site/ and _site/ belong to the site: a package there would share them with it.
+  validator: >-
+    {% if site != 'none' %}{% for q, d in [('python_dir', python_dir), ('ts_dir', ts_dir), ('rust_dir', rust_dir), ('go_dir', go_dir)] if d in ('site', '_site') or d.startswith('site/') %}
+    {{ q }} is `{{ d }}`, where the static site goes: give {{ q }} another directory, or answer site=none.
+    {% endfor %}{% endif %}
+
+# Computed, never asked: the folder `just site` builds into, which site.yml publishes
+# and previews. Gitignored.
+site_out:
+  type: str
+  when: false
+  default: "{{ 'site/dist' if site == 'astro' else '_site' }}"
+
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
 # projects. These documents are starting points for the project to complete.
 openssf_badge:
@@ -483,6 +522,15 @@ publish_to_pypi:
   ask: "{{ customise }}"
   help: Add a release workflow publishing to PyPI via trusted publishing (needs setup on pypi.org first)
   default: false
+
+python_api:
+  type: bool
+  when: "{{ 'python' in stacks and kind == 'library' }}"
+  ask: "{{ customise }}"
+  help: >-
+    Is the package used through its Python API, not only its command line?
+    Turns on the griffe API-break check in python.yml (with publish_to_pypi)
+  default: true
 
 # --- ts -----------------------------------------------------------------------
 
@@ -589,7 +637,7 @@ uv_version:
   default: 0.13.5
 
 # Computed, never asked: the griffe that python.yml's api job runs with uvx when
-# publish_to_pypi is on. It compares the public API with the last git tag.
+# publish_to_pypi and python_api are on. It compares the public API with the last git tag.
 # renovate: datasource=pypi depName=griffe
 griffe_version:
   type: str
@@ -683,12 +731,32 @@ copier_version:
   default: 9.19.1
 
 # Computed, never asked: the wrangler a web app pins as an exact devDependency, which its
-# production and preview jobs run. Renovate bumps it here and in each project's package.json.
+# production and preview jobs run, and the one site.yml's preview job runs with `pnpm dlx`.
+# Renovate bumps it here. A web app's own dependency bot bumps its package.json; site.yml
+# gets the bump through `copier update`.
 # renovate: datasource=npm depName=wrangler
 wrangler_version:
   type: str
   when: false
   default: 4.152.0
+
+# Computed, never asked: the astro an Astro site pins exactly in site/package.json.
+# Renovate bumps it here; a project gets the bump through `copier update`, and its own
+# dependency bot bumps it after that.
+# renovate: datasource=npm depName=astro
+astro_version:
+  type: str
+  when: false
+  default: 7.4.1
+
+# Computed, never asked: the pnpm that site.yml runs wrangler with when the repo has no
+# package.json, and that an Astro site's package.json names. Keep it equal to
+# packageManager in package.json.jinja (check-render asserts that).
+# renovate: datasource=npm depName=pnpm
+pnpm_version:
+  type: str
+  when: false
+  default: 12.15.0
 
 # A GitHub commit, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
 # badge URL (fair-software/howfairis#383). A commit, not the tag, because a tag can be

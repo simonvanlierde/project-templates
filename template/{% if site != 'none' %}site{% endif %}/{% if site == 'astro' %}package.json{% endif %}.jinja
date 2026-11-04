@@ -1,0 +1,17 @@
+{
+  "name": "{{ slug }}-site",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@{{ pnpm_version }}",
+  "engines": {
+    "node": ">={{ node_version }}"
+  },
+  "scripts": {
+    "build": "astro build",
+    "dev": "astro dev"
+  },
+  "dependencies": {
+{#- Exact: copier.yml pins it, and Renovate bumps it there and in each project. #}
+    "astro": "{{ astro_version }}"
+  }
+}
