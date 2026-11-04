@@ -1,9 +1,11 @@
 {#- markdown, yaml: rumdl and yamlfmt format those; biome 2.6 would too.
     vcs.root: biome looks for .gitignore beside biome.json, and the only .gitignore
-    is at the repository root, so nested packages point back up at it. -#}
+    is at the repository root, so nested packages point back up at it.
+    .astro files: biome reads only their frontmatter, so it reports every name the
+    template uses as unused. -#}
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "files": { "includes": ["**", "!.vscode"] },
+  "files": { "includes": ["**", "!.vscode"{% if site == 'astro' and ts_dir == '.' %}, "!site/**/*.astro"{% endif %}] },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "formatter": { "indentStyle": "space", "lineWidth": 120 },
   "markdown": { "formatter": { "enabled": false } },

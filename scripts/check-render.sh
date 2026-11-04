@@ -142,10 +142,17 @@ grep -q 'project edit' "$out/h/go.mod"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
 # only its own manifest beside them, and t's hooks run through pnpm. Both have the
-# static site, t beside a package at the root.
+# static site: r the plain one, t the Astro one beside a package at the root.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=crate-me --data 'stacks=[rust]' --data site=plain . "$out/r"
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true --data site=plain . "$out/t"
+  --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true --data site=astro . "$out/t"
+# y: the Astro site in a project without the TypeScript stack. Rendered again over edited
+# copies: the starter pages stay the project's, package.json is rewritten.
+y_args=(--data project_name=site-me --data 'stacks=[python]' --data kind=app --data site=astro)
+"${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y"
+echo '<!-- project edit -->' >>"$out/y/site/src/layouts/Base.astro"
+echo 'project edit' >>"$out/y/site/package.json"
+"${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y" >/dev/null 2>&1
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -1396,9 +1403,11 @@ test -f x/_site/main.mjs
 (cd "$dstub/work" && env STUB="$dstub" PATH="$dstub:$PATH" GITHUB_OUTPUT="$dstub/gho" GITHUB_STEP_SUMMARY="$dstub/sum" \
   WRANGLER="pnpm dlx wrangler@$wrangler_pin" "$deploy_sh" Preview cli-me-site-pr-4 --config wrangler.site.jsonc >"$dstub/out" 2>&1)
 test "$(tail -n 1 "$dstub/calls")" = "pnpm dlx wrangler@$wrangler_pin deploy --name cli-me-site-pr-4 --config wrangler.site.jsonc"
-# A root package's knip would report the page's files as unused; a nested one never sees them.
-jq -e '.knip.ignoreFiles == ["site/**"]' t/package.json >/dev/null
+# A nested package's knip never sees the page's files.
 jq -e '.knip | has("ignoreFiles") | not' d/web/package.json >/dev/null
+# The preview serves the build under /<repo>/, as Pages does.
+grep -qF "printf '/ /cli-me/ 302\n' > _site/_redirects" x/.github/workflows/site.yml
+test ! -e x/site/package.json
 # A project without the site gets none of it.
 for r in a m w; do
   test ! -e "$r/site"
@@ -1412,6 +1421,59 @@ for r in a m w; do
   (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile")
 done
 (lacks -q 'app-site' s/.github/workflows/preview-retire.yml)
+# Astro site: y has no TypeScript stack, so the site's node and pnpm come from site.yml and
+# site/package.json alone. t has it beside a TypeScript package at the root.
+astro_pin=$(sed -n '/^astro_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+test -n "$astro_pin"
+for r in y t; do
+  for f in astro.config.mjs package.json pnpm-workspace.yaml src/layouts/Base.astro src/pages/index.astro src/pages/about.md; do
+    test -f "$r/site/$f"
+  done
+  test ! -e "$r/site/index.html"
+  jq -e --arg v "$astro_pin" '.dependencies.astro == $v' "$r/site/package.json" >/dev/null
+  jq -e --arg v "pnpm@$pnpm_pin" '.packageManager == $v' "$r/site/package.json" >/dev/null
+  grep -qx 'minimumReleaseAge: 10080' "$r/site/pnpm-workspace.yaml"
+  grep -qx '/site/dist/' "$r/.gitignore"
+  grep -qx '/site/.astro/' "$r/.gitignore"
+  grep -qF '"directory": "./site/dist"' "$r/wrangler.site.jsonc"
+  grep -qx '    pnpm -C site install --frozen-lockfile' "$r/justfile"
+  grep -qx 'site-sync:' "$r/justfile"
+  wf=$r/.github/workflows/site.yml
+  grep -qx '          path: site/dist' "$wf"
+  # The build job sets up node and pnpm from the site's own package.json.
+  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -qx '          package_json_file: site/package.json'
+  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -q 'uses: actions/setup-node@'
+  # Pages serves the site under /<repo>/, and so does its preview.
+  grep -qx "  base: \"/$([ "$r" = y ] && echo site-me || echo lib-me)\"," "$r/site/astro.config.mjs"
+  # The lockfile it writes is skipped by the YAML hooks at any depth.
+  grep -qxF '  - "**/pnpm-lock.yaml"' "$r/.yamlfmt"
+  test "$(grep -cxF '        exclude: (^|/)pnpm-lock\.yaml$' "$r/.pre-commit-config.yaml")" -ge 2
+done
+grep -qx '          version: "'"$pnpm_pin"'"' y/.github/workflows/site.yml
+# shellcheck disable=SC2016
+grep -qF 'tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C site/dist/site-me' y/.github/workflows/site.yml
+grep -qF "printf '/ /site-me/ 302\n' > site/dist/_redirects" y/.github/workflows/site.yml
+# The site's package.json gets its own Dependabot entry; Renovate finds every package.json.
+grep -A1 -x '  - package-ecosystem: npm' y/.github/dependabot.yml | grep -qx '    directory: /site'
+(lacks -q 'directory: /site' x/.github/dependabot.yml)
+(lacks -q 'ignorePaths\|enabledManagers' d/renovate.json5)
+# A root package's tools leave the site alone: knip reports none of it, biome skips the
+# .astro files it can only half read.
+jq -e '.knip.ignoreFiles == ["site/**"]' t/package.json >/dev/null
+jq -e '.files.includes | index("!site/**/*.astro")' t/biome.json >/dev/null
+(lacks -q 'astro' x/.github/workflows/site.yml)
+# The starter pages are the project's; package.json stays the template's.
+grep -q 'project edit' y/site/src/layouts/Base.astro
+(lacks -q 'project edit' y/site/package.json)
+# It builds: every page, Markdown included, inside the layout.
+astro_start=$SECONDS
+(cd y && just site-sync >/dev/null 2>&1 && just site >/dev/null 2>&1)
+echo "check-render: the Astro build took $((SECONDS - astro_start)) s" >&2
+test -f y/site/dist/index.html
+test -f y/site/dist/about/index.html
+grep -qF '<h1>About</h1>' y/site/dist/about/index.html
+grep -qF 'href="/site-me/about/"' y/site/dist/index.html
+test -f y/site/pnpm-lock.yaml
 # A web app at the repo root builds in place.
 test -f s/wrangler.jsonc
 grep -q '^  production:' s/.github/workflows/ts.yml

@@ -40,6 +40,10 @@ _skip_if_exists:
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
+  - /site/astro.config.mjs
+  - /site/src/layouts/Base.astro
+  - /site/src/pages/index.astro
+  - /site/src/pages/about.md
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
@@ -65,6 +69,9 @@ _message_after_copy: |
   {%- for stack in stacks if stack != 'docker' %}
     just {{ {'python': 'py', 'ts': 'ts', 'rust': 'rs', 'go': 'go'}[stack] }}-sync
   {%- endfor %}
+  {%- if site == 'astro' %}
+    just site-sync
+  {%- endif %}
     just check
   Then commit, lockfiles included: CI installs exactly what they list.
   After the first push, run `just repo-settings` to protect main.
@@ -415,6 +422,7 @@ site:
   choices:
     None: none
     Plain (HTML, CSS and plain JavaScript modules, no build step or framework): plain
+    Astro (for a site with several pages from Markdown, shared layouts and components): astro
   default: none
 
 # Computed, never asked: the folder `just site` builds into, which site.yml publishes
@@ -422,7 +430,7 @@ site:
 site_out:
   type: str
   when: false
-  default: _site
+  default: "{{ 'site/dist' if site == 'astro' else '_site' }}"
 
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
 # projects. These documents are starting points for the project to complete.
@@ -726,9 +734,17 @@ wrangler_version:
   when: false
   default: 4.152.0
 
+# Computed, never asked: the astro an Astro site pins exactly in site/package.json.
+# Renovate bumps it here and in each project.
+# renovate: datasource=npm depName=astro
+astro_version:
+  type: str
+  when: false
+  default: 7.4.1
+
 # Computed, never asked: the pnpm that site.yml runs wrangler with when the repo has no
-# package.json. Keep it equal to packageManager in package.json.jinja (check-render
-# asserts that).
+# package.json, and that an Astro site's package.json names. Keep it equal to
+# packageManager in package.json.jinja (check-render asserts that).
 # renovate: datasource=npm depName=pnpm
 pnpm_version:
   type: str

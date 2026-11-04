@@ -33,7 +33,19 @@ jobs:
         with:
           tool: just@{{ just_version }}
 
+{%- if site == 'astro' %}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: site/package.json
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "{{ node_version }}"
+{%- else %}
+
       # Set up here whatever your own `just site` needs (uv, Rust, Node) before it runs.
+{%- endif %}
       - run: just site
 
       # The deploy and preview jobs both ship this one build.
@@ -119,13 +131,15 @@ jobs:
           name: github-pages
           path: {% raw %}${{ runner.temp }}{% endraw %}/pages
 
-      # Search engines should index the production site, not the preview copies. This
-      # block is appended to the build's own _headers, if it has one.
+      # GitHub Pages serves the site under /{{ slug }}/, so the preview does too, and its
+      # root redirects there. Search engines should index the production site, not the
+      # preview copies.
       - if: steps.gate.outputs.run == 'true'
         run: |
-          mkdir -p {{ site_out }}
-          tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C {{ site_out }}
-          printf '\n/*\n  X-Robots-Tag: noindex\n' >> {{ site_out }}/_headers
+          mkdir -p {{ site_out }}/{{ slug }}
+          tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C {{ site_out }}/{{ slug }}
+          printf '/ /{{ slug }}/ 302\n' > {{ site_out }}/_redirects
+          printf '/*\n  X-Robots-Tag: noindex\n' > {{ site_out }}/_headers
 
       - if: steps.gate.outputs.run == 'true'
         id: upload

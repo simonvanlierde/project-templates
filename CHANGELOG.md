@@ -27,7 +27,7 @@ Upgrade steps:
 
 ### Added
 
-- `site` question for any project (default `none`). `site=plain` adds a static page in `site/`, a `just site` recipe and `site.yml`, which deploys the page to GitHub Pages from `main` and gives each open, ready pull request a preview Worker, `<slug>-site-pr-<number>`. The previews reuse the web app's deploy and retire scripts ([Static site](docs/usage.md#static-site)).
+- `site` question for any project (default `none`). `site=plain` adds a static page in `site/` and `site=astro` a small Astro site there, with a `just site` recipe and `site.yml`, which deploys the page to GitHub Pages from `main` and gives each open, ready pull request a preview Worker, `<slug>-site-pr-<number>`. The previews reuse the web app's deploy and retire scripts ([Static site](docs/usage.md#static-site)).
 - `python_api` question for Python libraries (default yes). A package used only through its command line answers no, with `copier update --data python_api=false`, and gets no `api` job in `python.yml`.
 - A web app gets `PRODUCT.md` and `DESIGN.md` stubs in its folder to fill in. They are yours once rendered: `copier update` does not rewrite them.
 - `just ts-shots` in web apps: full-page screenshots of every route at 390 and 1440 px, light and dark, saved to the gitignored `shots/`.

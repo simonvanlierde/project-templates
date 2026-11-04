@@ -78,4 +78,8 @@ mutants.out*/
 
 # What `just site` builds from site/
 /{{ site_out }}/
+{%- if site == 'astro' %}
+# Astro's generated types
+/site/.astro/
+{%- endif %}
 {%- endif %}
