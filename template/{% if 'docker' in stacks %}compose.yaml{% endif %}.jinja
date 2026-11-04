@@ -7,22 +7,15 @@
 name: {{ slug }}
 
 services:
-{%- for stack, service, dir, lock in [
-      ('python', 'api', python_dir, 'uv.lock'),
-    ] if stack in docker_stacks %}
-  {{ 'app' if docker_stacks | length == 1 else service }}:
+  app:
     build:
-      context: {{ dir }}
+      context: {{ python_dir }}
     ports:
-{%- if loop.index0 > 0 %}
-      # Only the host side moves: each container keeps {{ app_port }} in its own
-      # network namespace.
-{%- endif %}
-      - "127.0.0.1:{{ app_port + loop.index0 }}:{{ app_port }}"
+      - "127.0.0.1:{{ app_port }}:{{ app_port }}"
     env_file:
       - path: .env
         required: false
-{%- if stack == 'python' and kind == 'web-service' %}
+{%- if kind == 'web-service' %}
     environment:
       # Fixed here, not in .env: the port mapping and the image's HEALTHCHECK both
       # expect the app on 0.0.0.0:{{ app_port }} in the container.
@@ -35,17 +28,14 @@ services:
       OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project={{ slug }},env=dev}
 {%- endif %}
     restart: unless-stopped
-{%- if loop.first %}
     # The image already runs as a non-root uid. These options stop it regaining what
     # it dropped, at no cost: the entrypoint needs no capability to bind {{ app_port }}.
-{%- endif %}
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
     develop:
       watch:
         - action: rebuild
-          path: {{ dir }}/src
+          path: {{ python_dir }}/src
         - action: rebuild
-          path: {{ dir }}/{{ lock }}
-{%- endfor %}
+          path: {{ python_dir }}/uv.lock

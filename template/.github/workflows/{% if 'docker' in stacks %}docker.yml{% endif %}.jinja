@@ -1,16 +1,11 @@
 {#- The build and push jobs share one matrix and one smoke test. #}
 {%- macro matrix(push=false) %}
-{%- for stack, name, dir in [
-      ('python', 'api', python_dir),
-    ] if stack in docker_stacks %}
-{%- set suffix = '' if docker_stacks | length == 1 else name %}
-          - stack: {{ stack }}
-            context: {{ dir }}
-            tag: {{ slug }}{% if suffix %}-{{ suffix }}{% endif %}:ci
+          - stack: python
+            context: {{ python_dir }}
+            tag: {{ slug }}:ci
 {%- if push %}
-            image: {% raw %}ghcr.io/${{ github.repository }}{% endraw %}{% if suffix %}/{{ suffix }}{% endif %}
+            image: {% raw %}ghcr.io/${{ github.repository }}{% endraw %}
 {%- endif %}
-{%- endfor %}
 {%- endmacro %}
 {%- macro smoke_test() %}
       - name: smoke test
@@ -51,17 +46,16 @@
           severity: HIGH,CRITICAL
           exit-code: {% raw %}${{ github.event_name == 'schedule' && '1' || '0' }}{% endraw %}
 {%- endmacro -%}
-{#- The build contexts. Filtered by path, as python.yml and ts.yml are, only when every
-    image builds from a subdirectory: a root context is the whole repo. -#}
-{%- set dirs = ([python_dir] if 'python' in docker_stacks else []) -%}
+{#- Filtered by path, as python.yml and ts.yml are, only when the image builds from a
+    subdirectory: a root context is the whole repo. -#}
 {%- macro paths() %}
-{%- if '.' not in dirs %}
-    paths: [{% for d in dirs %}"{{ d }}/**", {% endfor %}".github/workflows/docker.yml"]
+{%- if python_dir != '.' %}
+    paths: ["{{ python_dir }}/**", ".github/workflows/docker.yml"]
 {%- endif %}
 {%- endmacro -%}
 name: docker
 
-{% if '.' not in dirs -%}
+{% if python_dir != '.' -%}
 # A pull request that touches no build context skips this workflow, so a branch rule
 # that requires its build check leaves that pull request pending. A tag push ignores
 # the paths and always runs.
@@ -109,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
-      # One image per containerized stack, each built from its own context.
+      # The image builds from its own context.
       fail-fast: false
       matrix:
         include:
@@ -124,8 +118,7 @@ jobs:
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: {% raw %}${{ matrix.context }}{% endraw %}
-          # Scoped per stack: two images sharing the default gha scope would evict each
-          # other's layers.
+          # Scoped per stack, so a second image never evicts this one's layers.
           cache-from: {% raw %}type=gha,scope=${{ matrix.stack }}{% endraw %}
 {%- if publish_to_ghcr %}
           # No cache-to: this job runs on pull requests and the weekly rebuild, and a cache
