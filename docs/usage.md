@@ -317,7 +317,7 @@ Property tests run fast suites locally and in CI. Weekly scheduled jobs (`.githu
 
 Mutation testing runs weekly via `.github/workflows/mutation.yml` and on demand via `just <stack>-mutation`. The Python and Rust jobs fail on a surviving mutant. The TypeScript and Go tools exit 0 when a mutant survives, so those jobs only print survivors.
 
-Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change. Mutant numbers shift when their function changes, so recheck the lines then. `copier update` adds the file with no entries; run the recipe once and list what it reports.
+Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change. Mutant numbers shift when their function changes, so recheck the lines then. `copier update` adds the file with no entries; run the recipe once and list what it reports. Give it mutmut patterns, e.g. `just py-mutation 'mypkg.core.x_parse__mutmut_*'`, to run only those mutants; that run skips the check for listed ones that no longer survive.
 
 A full run takes minutes to hours, so check each change with the diff recipe instead and keep the full run for the weekly job and before a release:
 
