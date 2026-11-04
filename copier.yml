@@ -775,15 +775,18 @@ docker_stacks:
   type: str
   multiselect: true
   when: "{{ 'docker' in stacks }}"
-  help: Which stacks get an image (one Dockerfile each, one compose service each)
+  help: Which stacks get an image (one Dockerfile each, one compose service each); none for a repo that only composes upstream images
   choices: [python, ts]
-  default: [python]
+  # An image needs its stack's package. Neither stack, or a web app, defaults to no image:
+  # a Compose-only repo.
+  default: >-
+    {{ ['python'] if 'python' in stacks
+    else ['ts'] if 'ts' in stacks and ts_kind != 'web-app'
+    else [] }}
   # Each image builds from its stack's package, and two Dockerfiles cannot share a
-  # directory, so two images need a monorepo layout.
+  # directory, so two images need a monorepo layout. An empty answer is valid.
   validator: >-
-    {% if not docker_stacks %}
-    Pick at least one stack to build an image from.
-    {% elif docker_stacks | reject('in', stacks) | list %}
+    {% if docker_stacks | reject('in', stacks) | list %}
     An image needs its stack: add {{ docker_stacks | reject('in', stacks) | join(' and ') }} to `stacks` too.
     {% elif 'python' in docker_stacks and python_layout == 'flat' %}
     The flat layout is for an existing library, app or research package: the web-service
@@ -801,7 +804,7 @@ docker_stacks:
 
 app_port:
   type: int
-  when: "{{ 'docker' in stacks }}"
+  when: "{{ 'docker' in stacks and docker_stacks }}"
   ask: "{{ customise }}"
   help: Port the service listens on
   default: 8000
@@ -815,7 +818,7 @@ app_port:
 
 publish_to_ghcr:
   type: bool
-  when: "{{ 'docker' in stacks }}"
+  when: "{{ 'docker' in stacks and docker_stacks }}"
   ask: "{{ customise }}"
   help: Push the image to GitHub Container Registry (CI builds it either way)
   default: false

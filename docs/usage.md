@@ -16,7 +16,7 @@ A new project asks at most ten questions for a single stack (eleven for a web ap
 | `github_user`, `author_name`, `author_email` | Always | Repository URLs, badges, licenses, and package metadata |
 | `customise` | Always | `yes` prompts for advanced settings; `no` accepts defaults |
 | `author_orcid` | Licensed `library`, or Python `research`/`data-pipeline` | Citation metadata |
-| `docker_stacks` | `docker` stack selected | Selects which packages receive a Dockerfile and Compose service |
+| `docker_stacks` | `docker` stack selected | Selects which packages receive a Dockerfile and Compose service; empty for a [Compose-only repo](#compose-only-repos) |
 
 Identity answers have no defaults.
 
@@ -162,13 +162,43 @@ Select any combination of stacks:
 | `ts` | TypeScript package or Vite web app ([kinds](#typescript-kinds)) |
 | `rust` | Rust crate (library or binary) with strict clippy rules |
 | `go` | Go module (library or binary) with golangci-lint |
-| `docker` | Dockerfile for Python or TypeScript packages and root `compose.yaml` |
+| `docker` | Dockerfile for Python or TypeScript packages and root `compose.yaml`; alone, a [Compose-only repo](#compose-only-repos) |
 
 Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<stack>.just`. All projects receive `README.md`, `CHANGELOG.md`, `.gitignore`, `.editorconfig`, dependency bot configuration, git hooks, and `AGENTS.md`. Projects with a license also get `LICENSE` and `REUSE.toml`. Python projects select a [kind](python-kinds.md).
 
 CLI binaries (Rust, Go, or Python `data-pipeline`) include `docs/accessibility.md`, documenting terminal output standards (`NO_COLOR` support, plain output redirection, error formats). Review and edit these claims to reflect your application.
 
 When projects record architectural choices, store them in `docs/decisions/`.
+
+## Compose-only repos
+
+A repo that only composes upstream images, with shell scripts and Compose files but no
+Dockerfile of its own, answers `stacks=[docker]` and leaves `docker_stacks` empty. That is
+its default when `stacks` has no `python` or `ts` (and for a `ts` web app, which has no
+image). Combined with other stacks, set `docker_stacks=[]` to keep them without an image.
+
+The render has no Dockerfile, no image build and no `docker.yml`. It gets:
+
+- `compose.yaml`: one example service with its image pinned by digest, a healthcheck and a
+  port bound to `127.0.0.1`. Replace it with your own services.
+- `.env.example`, which `compose.yaml` reads through an optional `.env`.
+- `just check`, which runs `docker compose config -q` and then shellcheck and shfmt (2-space
+  indent, from images pinned by digest) over every tracked script that starts with a shell
+  shebang. It needs a Docker daemon.
+- `.github/workflows/compose.yml`, which runs that check with no token scopes beyond
+  `contents: read`, and is a required check on `main` when `public` is on.
+- The `docker-compose` ecosystem in the dependency bot, so image tags and digests get update
+  pull requests. Image stacks leave it off, because their `FROM` tags are copier answers.
+
+The shellcheck and shfmt images in `just/docker.just` are pinned by digest, and no bot
+bumps them: update the tags and digests by hand now and then. `just docker-fmt` applies
+shfmt's formatting (`.editorconfig` sets 2-space indent for `*.sh`), and `just fmt` runs it.
+Shell files are the `*.sh` files and files whose first line is an sh, bash, dash or ksh
+shebang. A zsh or fish script, or a shebang inside a Markdown code block, is not linted.
+
+The git hooks, license and REUSE files, community files and the other CI workflows come
+from the same questions as in any other project. `app_port` and `publish_to_ghcr` are not
+asked: there is no image to expose or push.
 
 ## TypeScript kinds
 

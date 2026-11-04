@@ -349,6 +349,11 @@ jobs:
       - name: render and check
         run: scripts/check-render.sh "$RUNNER_TEMP"
 
+      # A Compose-only render's own check: compose.yaml parses and the shell scripts lint.
+      - name: compose-only sample check
+        working-directory: ${{ runner.temp }}/compose
+        run: git init -q && git add -A && just check
+
       # check-render built the plain (x) and Astro (y) site starters. axe checks them with
       # the tags the web app's own a11y spec uses, in light and dark.
       - name: axe over the site starters

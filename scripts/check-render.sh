@@ -230,6 +230,81 @@ if "${copier[@]}" --vcs-ref=HEAD --data project_name=web-docker \
 fi
 grep -q 'A web app is static files' "$out/g.log"
 
+# compose: a deploy repo that only composes upstream images. `stacks=[docker]` with no
+# python or ts stack leaves `docker_stacks` empty by default: no Dockerfile, no image
+# workflow, and `just check` validates the Compose file and shell scripts instead.
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=compose-me --data 'stacks=[docker]' . "$out/compose"
+test -f "$out/compose/compose.yaml"
+test -f "$out/compose/.env.example"
+test -f "$out/compose/.github/workflows/compose.yml"
+test ! -e "$out/compose/.github/workflows/docker.yml"
+find "$out/compose" -name 'Dockerfile*' -not -path '*/.git/*' | grep -q . && {
+  echo "compose-only render wrote a Dockerfile" >&2
+  exit 1
+}
+grep -q 'image: .*@sha256:' "$out/compose/compose.yaml"
+grep -q '127.0.0.1:' "$out/compose/compose.yaml"
+grep -q 'healthcheck:' "$out/compose/compose.yaml"
+grep -q 'docker compose config -q' "$out/compose/just/docker.just"
+grep -q '@just docker-check' "$out/compose/justfile"
+(lacks -q 'hadolint' "$out/compose/.pre-commit-config.yaml")
+grep -q "package-ecosystem: docker-compose" "$out/compose/.github/dependabot.yml"
+grep -q '"context": "compose"' "$out/compose/.github/rulesets/main-checks.json"
+(cd "$out/compose" && docker compose config -q)
+# Files that must stay out of the shell lint: a docs page with a shebang in a code block,
+# a zsh script and a fish script. just check runs where Docker is available.
+mkdir -p "$out/compose/scripts"
+# shellcheck disable=SC2016 # literal $1 in the sample scripts
+printf '# Ops\n\n```sh\n#!/bin/bash\nfoo=$1\n```\n' >"$out/compose/docs/ops.md"
+# shellcheck disable=SC2016 # literal $1
+printf '#!/usr/bin/env zsh\nprint $1\n' >"$out/compose/scripts/z"
+# shellcheck disable=SC2016 # literal $argv
+printf '#!/usr/bin/env fish\necho $argv\n' >"$out/compose/scripts/f"
+printf '#!/usr/bin/env bash\nset -euo pipefail\nif true; then\n  echo ok\nfi\n' >"$out/compose/scripts/ok"
+printf '# shellcheck shell=bash\necho no shebang, still a .sh\n' >"$out/compose/scripts/plain.sh"
+if command -v just >/dev/null && docker info >/dev/null 2>&1; then
+  git -C "$out/compose" init -q
+  git -C "$out/compose" add -A
+  (cd "$out/compose" && just check)
+  # A badly formatted bash script must still fail it.
+  printf '#!/bin/bash\nif true;then\necho a\nfi\n' >"$out/compose/scripts/bad"
+  git -C "$out/compose" add -A
+  ( ! (cd "$out/compose" && just check) >/dev/null 2>&1)
+  # `just fmt` rewrites it to the 2-space style, and the check then passes.
+  (cd "$out/compose" && just docker-fmt && just check)
+fi
+# shfmt takes its indent from .editorconfig: *.sh must say 2, as docker-check expects.
+grep -qxF '[*.sh]' "$out/compose/.editorconfig"
+
+# compose2: Renovate reads the Compose file, and the cold-install job (a container with no
+# Docker daemon) must not run the recipes that need one.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-two --data 'stacks=[docker]' \
+  --data dependency_bot=renovate --data cold_install=true --data public=false . "$out/compose2"
+grep -qF "'docker-compose': { enabled: true }" "$out/compose2/renovate.json5"
+grep -E "^ +grep -vE" "$out/compose2/.github/workflows/cold-install.yml" | grep -qE '\|check\|fmt\||check\|fmt'
+# The same project with an image still runs `just check` there.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-img --data 'stacks=[python,docker]' \
+  --data cold_install=true . "$out/compose3"
+(lacks -qE '\|check\|fmt' "$out/compose3/.github/workflows/cold-install.yml")
+
+# The default image follows the stacks: a ts package gets a ts image, python a python
+# one, and a ts web app (static files) none. An empty answer drops the image of a stack
+# that would have one.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=ts-img --data 'stacks=[ts,docker]' . "$out/ts-img"
+test -f "$out/ts-img/Dockerfile"
+test -f "$out/ts-img/.github/workflows/docker.yml"
+test ! -e "$out/ts-img/.github/workflows/compose.yml"
+"${copier[@]}" --vcs-ref=HEAD --data project_name=ts-web --data 'stacks=[ts,docker]' \
+  --data ts_kind=web-app --data user_data=nothing . "$out/ts-web"
+test ! -e "$out/ts-web/Dockerfile"
+test -f "$out/ts-web/.github/workflows/compose.yml"
+"${copier[@]}" --vcs-ref=HEAD --data project_name=py-no-img --data 'stacks=[python,docker]' \
+  --data 'docker_stacks=[]' . "$out/py-no-img"
+test ! -e "$out/py-no-img/Dockerfile"
+test -f "$out/py-no-img/.github/workflows/compose.yml"
+test -f "$out/py-no-img/pyproject.toml"
+
 # Without the settings file, --defaults must stop at the blank identity answers.
 if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=anon-me . "$out/f" >"$out/f.log" 2>&1; then
@@ -295,6 +370,7 @@ refuses 'starting with https://' --data 'stacks=[ts]' --data ts_kind=web-app \
 refuses 'needs its own contact address' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=accounts --data author_email=Code@duinlab.nl
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
+refuses 'An image needs its stack' --data 'stacks=[docker]' --data 'docker_stacks=[ts]'
 refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
   --data python_dir=api --data ts_dir=web --data app_port=65535
 # A binary never uses the Go package name, so a digit-leading project name is fine.
