@@ -79,16 +79,7 @@ release version:
     # Not grep -q: it stops reading early, and under pipefail git show then fails on a
     # changelog bigger than the pipe buffer.
     if git show origin/main:CHANGELOG.md | grep "^## \[$version\] - " >/dev/null; then
-        sha=$(git rev-parse origin/main)
-        [ "$(git rev-parse HEAD)" = "$sha" ] || { echo "HEAD is not origin/main: check out and pull main first" >&2; exit 1; }
-        # A tag left by an earlier run is reused only if it marks the same commit.
-        if git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
-            [ "$(git rev-parse "$tag^{commit}")" = "$sha" ] || { echo "tag $tag exists on another commit" >&2; exit 1; }
-        else
-            git tag --sign "$tag" --message "$tag" "$sha"
-        fi
-        git verify-tag "$tag" >/dev/null 2>&1 || { echo "tag $tag is not signed with a key git trusts (gpg.ssh.allowedSignersFile)" >&2; exit 1; }
-        git push origin "refs/tags/$tag"
+        .github/scripts/tag-release.sh "$version"
         exit 0
     fi
     prev=$(sed -n 's/^## \[\([0-9][0-9.]*\)\].*/\1/p' CHANGELOG.md | head -1)
