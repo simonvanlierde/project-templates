@@ -202,12 +202,19 @@ repo-settings:
 {%- endif %}
 {%- if site != 'none' %}
     # site.yml deploys to GitHub Pages from the workflow, not from a branch. GitHub answers
-    # 409 when Pages is already on, and then the PUT switches its source instead.
-    if ! gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1; then
-        grep -q 'HTTP 409' "$err" || fail
+    # 409 when Pages is already on, and then the PUT switches its source instead. A 403 or
+    # 422 means this repo cannot have Pages, such as a private repo on the free plan.
+    if gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1; then
+        echo "GitHub Pages deploys from Actions."
+    elif grep -q 'HTTP 409' "$err"; then
         gh api -X PUT repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1 || fail
+        echo "GitHub Pages deploys from Actions."
+    elif grep -qE 'HTTP (403|422)' "$err"; then
+        echo "Warning: GitHub Pages is not available for this repo (a private repo needs a paid plan for it), so site.yml's deploy job skips. Previews still run." >&2
+    else
+        fail
     fi
-    echo "GitHub Pages deploys from Actions. For the site's previews, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the 'preview' environment: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site"
+    echo "For the site's previews, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the 'preview' environment: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site"
 {%- endif %}
 {%- if publish_to_pypi %}
     repo_full_name=$(gh api repos/{owner}/{repo} --jq .full_name 2>"$err") || fail

@@ -69,7 +69,7 @@ jobs:
           {
             echo "Updates this project from the template: \`$current\` to \`$latest\`."
             echo
-            echo "Read the diff before merging, then refresh the lockfiles for your stacks (\`uv lock\`, \`pnpm install\`, \`just go-sync\`)."
+            echo "Read the diff before merging, then refresh the lockfiles for your stacks (\`uv lock\`, \`pnpm install\`, \`just go-sync\`{% endraw %}{% if site == 'astro' %}, \`just site-sync\`{% endif %}{% raw %})."
             if [ -s conflicts.txt ]; then
               echo
               echo "These files have merge conflicts. Their markers are committed as they are:"

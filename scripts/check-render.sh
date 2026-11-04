@@ -260,6 +260,13 @@ refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'pro
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=a _b_'
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my~app'
 refuses 'at least one stack' --data 'stacks=[]'
+# A package directory can't be where the site goes.
+# shellcheck disable=SC2016 # the messages quote with backticks
+{
+  refuses 'python_dir is `site`, where the static site goes' --data 'stacks=[python]' --data python_dir=site --data site=plain
+  refuses 'ts_dir is `_site`, where the static site goes' --data 'stacks=[ts]' --data ts_dir=_site --data site=plain
+  refuses 'go_dir is `site/api`, where the static site goes' --data 'stacks=[go]' --data go_dir=site/api --data site=astro
+}
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 refuses 'The flat layout' --data 'stacks=[python,docker]' --data 'docker_stacks=[python]' \
   --data python_layout=flat
@@ -1378,7 +1385,7 @@ for r in x r d; do
   # shellcheck disable=SC2016
   grep -qF 'group: preview-${{ github.event.pull_request.number }}' <<<"$preview_job"
   grep -qF 'X-Robots-Tag: noindex' <<<"$preview_job"
-  grep -qxF "          WRANGLER: pnpm dlx wrangler@$wrangler_pin" <<<"$preview_job"
+  grep -qF "dlx wrangler@$wrangler_pin" <<<"$preview_job"
   cmp "$r/.github/scripts/deploy-worker.sh" d/.github/scripts/deploy-worker.sh
   cmp "$r/.github/scripts/preview-retire.sh" d/.github/scripts/preview-retire.sh
 done
@@ -1474,6 +1481,51 @@ test -f y/site/dist/about/index.html
 grep -qF '<h1>About</h1>' y/site/dist/about/index.html
 grep -qF 'href="/site-me/about/"' y/site/dist/index.html
 test -f y/site/pnpm-lock.yaml
+# The deploy job's gate: it deploys only when Pages deploys from Actions, skips with a
+# notice while Pages is off (404), and fails on any other error. Run against a stub gh.
+gate_sh=$out/fake-pages-gate
+mkdir -p "$gate_sh"
+sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml |
+  sed -n '/^          if build=/,/^          echo "run=false"/s/^          //p' >"$gate_sh/gate.sh"
+test -s "$gate_sh/gate.sh"
+cat >"$gate_sh/gh" <<'STUB'
+#!/usr/bin/env bash
+case $PAGES in
+  workflow | legacy) echo "$PAGES" ;;
+  404) echo 'gh: Not Found (HTTP 404)' >&2 && exit 1 ;;
+  *) echo 'gh: Server Error (HTTP 500)' >&2 && exit 1 ;;
+esac
+STUB
+chmod +x "$gate_sh/gh"
+pages_gate() {
+  : >"$gate_sh/gho"
+  (cd "$gate_sh" && env PAGES="$1" REPO=o/r PATH="$gate_sh:$PATH" GITHUB_OUTPUT="$gate_sh/gho" bash -e gate.sh >"$gate_sh/out" 2>&1)
+}
+pages_gate workflow
+grep -qx 'run=true' "$gate_sh/gho"
+pages_gate 404
+grep -qx 'run=false' "$gate_sh/gho"
+grep -qF '::notice::GitHub Pages is off' "$gate_sh/out"
+pages_gate legacy
+grep -qx 'run=false' "$gate_sh/gho"
+(! pages_gate 500)
+grep -qxF "      - if: steps.gate.outputs.run == 'true'" <<<"$(sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml)"
+# dlx resolves wrangler without a lockfile, so it waits the same week as an install.
+grep -qxF "          WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@$wrangler_pin" x/.github/workflows/site.yml
+# The site's README section, with its own previews heading unless the web app's is there.
+for r in x y d; do grep -qx '## Site' "$r/README.md"; done
+grep -qx '### Pull request previews' x/README.md
+test "$(grep -cx '### Pull request previews' d/README.md)" = 1
+grep -qF 'cli-me-site-pr-<number>' x/README.md
+grep -qF 'just site-sync' y/README.md
+grep -q 'You need .*\[pnpm\]' y/README.md
+(lacks -q '\[pnpm\]' x/README.md)
+(lacks -qx '## Site' a/README.md)
+# The copier-update PR names the Astro lockfile refresh too.
+# shellcheck disable=SC2016
+grep -qF '\`just site-sync\`' y/.github/workflows/copier-update.yml
+(lacks -q 'site-sync' x/.github/workflows/copier-update.yml)
+grep -q '^  # shortcut: the sweep matches Workers by name alone' x/.github/scripts/preview-retire.sh
 # A web app at the repo root builds in place.
 test -f s/wrangler.jsonc
 grep -q '^  production:' s/.github/workflows/ts.yml
@@ -1817,6 +1869,10 @@ case $call in
   *"-X PUT repos/{owner}/{repo}/environments/"*) echo '{}' ;;
   # Pages is created once; GitHub refuses a second create with 409.
   *"-X POST repos/{owner}/{repo}/pages "*)
+    if [ -n "${FAKE_PAGES:-}" ]; then
+      echo "gh: refused (HTTP $FAKE_PAGES)" >&2
+      exit 1
+    fi
     if [ -f "$FAKE_DIR/pages" ]; then
       echo '{"message":"GitHub Pages is already enabled.","status":"409"}'
       echo 'gh: GitHub Pages is already enabled. (HTTP 409)' >&2
@@ -1943,6 +1999,11 @@ chmod +x "$fake/gh"
   test "$(grep -cxF -- 'api -X PUT repos/{owner}/{repo}/pages -f build_type=workflow' "$FAKE_LOG")" = 1
   (lacks -q 'environments/production' "$FAKE_LOG")
   grep -q 'GitHub Pages deploys from Actions' "$fake/out-x"
+  # A repo that cannot have Pages (403, 422) gets a warning, and the rest still runs.
+  FAKE_PAGES=403 just repo-settings >/dev/null 2>"$fake/err-x"
+  grep -q 'GitHub Pages is not available for this repo' "$fake/err-x"
+  FAKE_PAGES=422 just repo-settings >/dev/null 2>&1
+  (! FAKE_PAGES=500 just repo-settings >/dev/null 2>&1)
 )
 (lacks -qF 'repos/{owner}/{repo}/pages' "$fake/log-c")
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.

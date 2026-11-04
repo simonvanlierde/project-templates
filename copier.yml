@@ -424,6 +424,11 @@ site:
     Plain (HTML, CSS and plain JavaScript modules, no build step or framework): plain
     Astro (for a site with several pages from Markdown, shared layouts and components): astro
   default: none
+  # site/ and _site/ belong to the site: a package there would share them with it.
+  validator: >-
+    {% if site != 'none' %}{% for q, d in [('python_dir', python_dir), ('ts_dir', ts_dir), ('rust_dir', rust_dir), ('go_dir', go_dir)] if d in ('site', '_site') or d.startswith('site/') %}
+    {{ q }} is `{{ d }}`, where the static site goes: give {{ q }} another directory, or answer site=none.
+    {% endfor %}{% endif %}
 
 # Computed, never asked: the folder `just site` builds into, which site.yml publishes
 # and previews. Gitignored.
@@ -727,7 +732,8 @@ copier_version:
 
 # Computed, never asked: the wrangler a web app pins as an exact devDependency, which its
 # production and preview jobs run, and the one site.yml's preview job runs with `pnpm dlx`.
-# Renovate bumps it here and in each project's package.json.
+# Renovate bumps it here. A web app's own dependency bot bumps its package.json; site.yml
+# gets the bump through `copier update`.
 # renovate: datasource=npm depName=wrangler
 wrangler_version:
   type: str
@@ -735,7 +741,8 @@ wrangler_version:
   default: 4.152.0
 
 # Computed, never asked: the astro an Astro site pins exactly in site/package.json.
-# Renovate bumps it here and in each project.
+# Renovate bumps it here; a project gets the bump through `copier update`, and its own
+# dependency bot bumps it after that.
 # renovate: datasource=npm depName=astro
 astro_version:
   type: str

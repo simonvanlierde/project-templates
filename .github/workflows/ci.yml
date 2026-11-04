@@ -310,7 +310,8 @@ jobs:
     # Renders the branches the jobs above skip and checks only that the output parses.
     name: render
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The Astro render installs its packages cold.
+    timeout-minutes: 15
     steps:
       - *checkout
 
@@ -324,6 +325,22 @@ jobs:
 
       # check-render runs `just repo-settings` against a fake gh.
       - *just
+
+      # check-render builds an Astro site with pnpm, at the pnpm and Node copier.yml pins.
+      - name: site versions
+        id: site-v
+        run: |
+          set -euo pipefail
+          pnpm=$(sed -n '/^pnpm_version:/,/^$/s/^  default: //p' copier.yml)
+          node=$(sed -n '/^node_version:/,/^$/s/^  default: //p' copier.yml | tr -d "\"'")
+          test -n "$pnpm" && test -n "$node"
+          { echo "pnpm=$pnpm"; echo "node=$node"; } >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          version: ${{ steps.site-v.outputs.pnpm }}
+          runtime: node@${{ steps.site-v.outputs.node }}
+          install: false
 
       - name: render and check
         run: scripts/check-render.sh "$RUNNER_TEMP"

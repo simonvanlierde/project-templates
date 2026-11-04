@@ -70,7 +70,26 @@ jobs:
       name: github-pages
       url: {% raw %}${{ steps.deploy.outputs.page_url }}{% endraw %}
     steps:
-      - id: deploy
+      # The first push to main can come before `just repo-settings` turns Pages on.
+      - id: gate
+        env:
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          REPO: {% raw %}${{ github.repository }}{% endraw %}
+        run: |
+          if build=$(gh api "repos/$REPO/pages" --jq .build_type 2>gh.err); then
+            if [ "$build" = workflow ]; then
+              echo "run=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          elif ! grep -q 'HTTP 404' gh.err; then
+            cat gh.err >&2
+            exit 1
+          fi
+          echo "::notice::GitHub Pages is off or does not deploy from Actions: run just repo-settings."
+          echo "run=false" >> "$GITHUB_OUTPUT"
+
+      - if: steps.gate.outputs.run == 'true'
+        id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   # The same lifecycle as a web app's previews: docs/usage.md#static-site in the template.
@@ -149,7 +168,9 @@ jobs:
           GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
           REPO: {% raw %}${{ github.repository }}{% endraw %}
           PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
-          WRANGLER: pnpm dlx wrangler@{{ wrangler_version }}
+          # The same week's wait as a package's own installs: dlx resolves wrangler's
+          # dependencies without a lockfile, here with the token in reach.
+          WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@{{ wrangler_version }}
         run: |-
           # This job may have queued behind a close or a draft switch: a retire that
           # ran first must not be undone by a deploy.
