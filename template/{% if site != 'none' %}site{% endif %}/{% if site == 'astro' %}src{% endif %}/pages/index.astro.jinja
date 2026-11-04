@@ -1,0 +1,12 @@
+---
+import Base from "../layouts/Base.astro";
+
+const name = {{ project_name | to_json }};
+---
+
+<Base>
+  <h1>{name}</h1>
+  <!-- TODO: the tool or the report goes here, in the first screen. Put settings and how
+       it works in <details> below it, and longer pages in Markdown beside this one. -->
+  <p>Ready.</p>
+</Base>

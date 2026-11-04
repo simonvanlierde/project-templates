@@ -1,0 +1,39 @@
+{%- set repo = 'https://github.com/' ~ github_user ~ '/' ~ slug -%}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{ project_name | e }}</title>
+{%- if project_description %}
+<meta name="description" content="{{ project_description | e }}">
+{%- endif %}
+<link rel="stylesheet" href="style.css">
+<script type="module" src="main.mjs"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the tool</a>
+<header class="wrap">
+  <p><b>{{ project_name | e }}</b>{% if project_description %} · {{ project_description | e }}{% endif %}</p>
+  <a href="{{ repo }}#readme">Docs</a>
+</header>
+<main id="main" class="wrap" tabindex="-1">
+  <h1>{{ project_name | e }}</h1>
+  <!-- TODO: the tool goes here, in the first screen: its input, then its result.
+       Put settings and how it works in <details> below it. -->
+  <p id="status" role="status">Loading…</p>
+  <noscript><p>This page needs JavaScript.</p></noscript>
+</main>
+<footer class="wrap">
+  <p>This page sets no cookies and stores nothing in your browser. Its host keeps the usual server logs.</p>
+  <p class="links">
+{%- if license != 'none' %}
+    <a href="{{ repo }}/blob/main/LICENSE">{{ license }}</a>
+{%- endif %}
+    <a href="{{ repo }}">Source</a>
+    <a href="{{ repo }}/issues">Report a problem</a>
+  </p>
+</footer>
+</body>
+</html>

@@ -27,10 +27,14 @@ Upgrade steps:
 
 ### Added
 
+- `site` question for any project (default `none`). `site=plain` adds a static page in `site/` and `site=astro` a small Astro site there, with a `just site` recipe and `site.yml`, which deploys the page to GitHub Pages from `main` and gives each open, ready pull request a preview Worker, `<slug>-site-pr-<number>`. The previews reuse the web app's deploy and retire scripts ([Static site](docs/usage.md#static-site)).
+- `python_api` question for Python libraries (default yes). A package used only through its command line answers no, with `copier update --data python_api=false`, and gets no `api` job in `python.yml`.
+- A web app gets `PRODUCT.md` and `DESIGN.md` stubs in its folder to fill in. They are yours once rendered: `copier update` does not rewrite them.
 - `just ts-shots` in web apps: full-page screenshots of every route at 390 and 1440 px, light and dark, saved to the gitignored `shots/`.
 - The pull request template asks for `How I know it works:` (the command and its output, or a test that fails without the change) and `What to check:`.
 - A web app's bug form asks for the page URL and the browser, and no longer formats the steps as shell. Other projects keep the command-line form.
 - `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch left `origin/main`. See [Test extras](docs/usage.md#test-extras).
+- `just py-mutation` takes mutmut patterns to run only those mutants, and now shows mutmut's output, so a failing run says why.
 - Web apps get a preview Worker for each open, ready pull request, deleted again when the pull request closes, merges or turns draft. See [Pull request previews](docs/usage.md#pull-request-previews).
 - `just release X.Y.Z` runs twice. The first run cuts `[Unreleased]` in `CHANGELOG.md` into the new version and commits it; merge that to `main`. The second run, on an up-to-date `main`, signs and pushes the tag. See [Publishing](docs/usage.md#publishing).
 - The PyPI and npm release workflows refuse a tag that differs from the package version.
@@ -53,6 +57,8 @@ Upgrade steps:
 - With `codecov`, the patch check now fails a pull request when tests cover under 90% of its new and changed lines, and total coverage is shown but no longer enforced.
 - Dependabot and Renovate wait one week for every update, majors included; majors used to wait a month ([dependencies](docs/tooling.md#dependencies)).
 - The setup docs show how to turn on the repo setting that refuses actions not pinned to a full commit SHA ([protecting main](docs/usage.md#protecting-main)).
+- `just release` signs and pushes the tag with `.github/scripts/tag-release.sh X.Y.Z`, which `copier update` adds. The checks are the same. You can run the script on its own.
+- A web app's production and preview jobs call one script, `.github/scripts/deploy-worker.sh`, for the deploy steps they shared. Nothing about what they deploy changes. Existing apps get the script with `copier update`.
 - A web app pins wrangler as an exact devDependency, and the production and preview jobs run that copy instead of `pnpm dlx`, so Renovate bumps it and the lockfile records it. See [Production](docs/usage.md#production).
 - In a public repo, `main-checks.json` also requires the check job of each stack at the repo root (`python: lint, types, tests`, or one `python: lint, types, tests (3.x)` per version for a library, `ts: lint, types, tests`, `fmt, clippy, tests, deny`, `golangci-lint, tests, govulncheck`), so a failing test blocks the merge. Run `just repo-settings` after the update. Nested stacks are left out: their workflow runs only when their folder changes.
 - The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build, so a small feature doesn't trip it. The limit itself is unchanged. Existing apps get the comment with `copier update`; check your own limit against it.
@@ -84,6 +90,8 @@ Upgrade steps:
 
 ### Fixed
 
+- `typos` no longer rewrites NumPy's `flags.writeable` and `flags["WRITEABLE"]` to `writable`. Projects get a `_typos.toml` that accepts both; `copier update` leaves an existing `_typos.toml` alone, so add `writeable = "writeable"` and `WRITEABLE = "WRITEABLE"` under `[default.extend-words]` there yourself. typos reads only the first config file it finds, and `_typos.toml` comes first: if your words are in `.typos.toml`, `typos.toml` or a `[tool.typos]` table in `pyproject.toml` or `Cargo.toml`, move them into `_typos.toml` and delete the old table.
+- A template update PR opened without `COPIER_UPDATE_TOKEN` says in its body that its checks do not start and that closing and reopening it runs them.
 - A GPL or AGPL project now stores `copyright_year`, so `REUSE.toml` keeps its year instead of taking the current one on each update.
 - yamlfmt no longer reformats a `pnpm-lock.yaml` in a nested package, such as `web/pnpm-lock.yaml`.
 - The mutation extra needs mutmut 3.8.1: 3.8.0 crashes under pytest 9.2.

@@ -3,7 +3,7 @@
 name: ts
 
 on:
-{{- push_and_pr(ts_dir, 'ts') }}
+{{- push_and_pr(ts_dir, 'ts', ['deploy-worker.sh'] if ts_kind == 'web-app' else []) }}
   workflow_dispatch:
 
 permissions:
@@ -256,10 +256,7 @@ jobs:
           GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
           REPO: {% raw %}${{ github.repository }}{% endraw %}
           PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
-        # pipefail: the default shell takes the pipe's status from tee, so a
-        # refused deploy would otherwise pass.
         run: |-
-          set -o pipefail
           # This job may have queued behind a close or a draft switch: a retire that
           # ran first must not be undone by a deploy.
           state=$(gh api "repos/$REPO/pulls/$PR" --jq '.state + " " + (.draft|tostring)')
@@ -267,14 +264,7 @@ jobs:
             echo "::notice::Preview skipped: pull request $PR is no longer open and ready ($state)."
             exit 0
           fi
-          pnpm exec wrangler deploy --name "{{ slug | replace('.', '-') | replace('_', '-') }}-pr-$PR" 2>&1 | tee deploy.log
-          url=$(grep -Eo 'https://[^ ]+\.workers\.dev' deploy.log | head -n 1 || true)
-          if [ -z "$url" ]; then
-            echo "::error::Worker deployed, but wrangler printed no workers.dev address. Check workers_dev in wrangler.jsonc."
-            exit 1
-          fi
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "### Preview: $url" >> "$GITHUB_STEP_SUMMARY"
+          "$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Preview "{{ slug | replace('.', '-') | replace('_', '-') }}-pr-$PR"
 
   # Production: every push to main deploys the build the checks ran on. Without the
   # token, it skips with a notice.
@@ -343,15 +333,5 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
-        # pipefail, as in the preview job.
-        run: |-
-          set -o pipefail
-          pnpm exec wrangler deploy 2>&1 | tee deploy.log
-          url=$(grep -Eo 'https://[^ ]+\.workers\.dev' deploy.log | head -n 1 || true)
-          if [ -z "$url" ]; then
-            echo "::error::Worker deployed, but wrangler printed no workers.dev address. Check workers_dev in wrangler.jsonc."
-            exit 1
-          fi
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "### Production: $url" >> "$GITHUB_STEP_SUMMARY"
+        run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production'
 {%- endif %}

@@ -28,7 +28,7 @@
 {%- if not publish_to_npm %}
   "private": true,
 {%- endif %}
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.16.1",
   "engines": {
     "node": ">={{ node_version }}"
   },
@@ -62,15 +62,22 @@
   "knip": {
     "ignoreDependencies": [
       "@j178/prek"
-{#- Only workflows run publint (ts-release.yml) and wrangler (ts.yml). knip finds
-    them there from a root package, but a nested one never sees .github/. #}
+{#- Only workflows run publint (ts-release.yml). knip finds it there from a root
+    package, but a nested one never sees .github/. wrangler runs only from
+    .github/scripts/deploy-worker.sh, a shell script knip does not read. #}
 {%- if publish_to_npm and ts_dir != '.' %},
       "publint"
 {%- endif %}
-{%- if web and ts_dir != '.' %},
+{%- if web %},
       "wrangler"
 {%- endif %}
     ]
+{%- if site != 'none' and ts_dir == '.' %},
+{#- site/ is a page of its own: nothing in this package imports it. #}
+    "ignoreFiles": [
+      "site/**"
+    ]
+{%- endif %}
 {%- if web %},
 {#- playwright.config.ts adds tests/shots only when SHOTS is set, so knip, which
     loads the config without it, needs the spec named. The plugin's entry adds to
@@ -85,7 +92,7 @@
 {%- if web %}
   "dependencies": {
 {%- if web_framework == 'preact' %}
-    "preact": "^11.0.2"
+    "preact": "^11.1.0"
 {%- else %}
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
@@ -99,7 +106,7 @@
     "@biomejs/biome": "^2.6.3",
     "@j178/prek": "^0.5.7",
 {%- if publish_to_npm %}
-    "@microsoft/api-extractor": "^7.59.4",
+    "@microsoft/api-extractor": "^7.60.0",
 {%- endif %}
 {%- if mutation %}
     "@stryker-mutator/core": "^10.1.1",

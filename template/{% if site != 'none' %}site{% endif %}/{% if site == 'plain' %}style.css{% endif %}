@@ -1,0 +1,79 @@
+:root {
+  color-scheme: light dark;
+  --bg: #fbfaf6;
+  --fg: #1d1f1c;
+  --muted: #5b5f58;
+  --line: #d8d6cf;
+  --link: #1f5fa8;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #181a17;
+    --fg: #e8e6df;
+    --muted: #a6a99f;
+    --line: #3a3d37;
+    --link: #8cb8ee;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+a {
+  color: var(--link);
+}
+
+:focus-visible {
+  outline: 3px solid var(--link);
+  outline-offset: 2px;
+}
+
+.wrap {
+  box-sizing: border-box;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+footer {
+  margin-top: 2rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.25rem;
+}
+
+/* Link targets at least 44px tall. */
+header a,
+.links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.skip {
+  position: absolute;
+  left: -100vw;
+}
+
+.skip:focus {
+  position: static;
+}
