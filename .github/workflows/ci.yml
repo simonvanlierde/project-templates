@@ -845,8 +845,8 @@ jobs:
           if grep -E '(KILLED|LIVED|NOT COVERED) .* at cigoextras.go:' "$log" | grep -qv "cigoextras.go:$line:"; then cat "$log"; exit 1; fi
 
   ok:
-    # The one check the main ruleset requires, so jobs and matrix rows can change
-    # without touching repo settings. always(): a skipped job must fail it.
+    # The one ci check the main ruleset requires (with DCO sign-off, its own workflow),
+    # so jobs and matrix rows can change without touching repo settings. always(): a skipped job must fail it.
     name: ci ok
     if: always()
     needs: [hooks, renovate, python, render, update, typescript, rust, go, fullstack]
