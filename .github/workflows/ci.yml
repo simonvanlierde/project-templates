@@ -35,6 +35,10 @@ env:
   JUST_VERSION: 1.59.0
   # renovate: datasource=npm depName=renovate
   RENOVATEBOT_VERSION: 44.190.2
+  # renovate: datasource=npm depName=@playwright/test
+  PLAYWRIGHT_VERSION: 1.64.1
+  # renovate: datasource=npm depName=@axe-core/playwright
+  AXE_PLAYWRIGHT_VERSION: 4.14.0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -345,6 +349,51 @@ jobs:
       - name: render and check
         run: scripts/check-render.sh "$RUNNER_TEMP"
 
+      # check-render built the plain (x) and Astro (y) site starters. axe checks them with
+      # the tags the web app's own a11y spec uses, in light and dark.
+      - name: axe over the site starters
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          # Astro builds for the Pages base, /site-me/, so its site is served from under it.
+          mkdir -p axe/srv
+          cp -R y/site/dist axe/srv/site-me
+          python3 -m http.server 8101 -b 127.0.0.1 -d x/_site >/dev/null 2>&1 &
+          python3 -m http.server 8102 -b 127.0.0.1 -d axe/srv >/dev/null 2>&1 &
+          cd axe
+          printf '{"private": true, "devDependencies": {"@playwright/test": "%s", "@axe-core/playwright": "%s"}}\n' \
+            "$PLAYWRIGHT_VERSION" "$AXE_PLAYWRIGHT_VERSION" >package.json
+          # Like a scaffold's dlx, the install waits a week for every package it resolves.
+          pnpm install -s --config.minimum-release-age=10080 >/dev/null
+          pnpm exec playwright install chromium >/dev/null
+          cat >axe.mjs <<'JS'
+          import AxeBuilder from "@axe-core/playwright";
+          import { chromium } from "@playwright/test";
+
+          const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
+          const browser = await chromium.launch();
+          let found = 0;
+          for (const url of process.argv.slice(2)) {
+            for (const colorScheme of ["light", "dark"]) {
+              const context = await browser.newContext({ colorScheme });
+              const page = await context.newPage();
+              const response = await page.goto(url);
+              if (!response?.ok()) throw new Error(`${url}: HTTP ${response?.status()}`);
+              const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+              for (const v of violations) {
+                console.log(`${url} (${colorScheme}): ${v.id}: ${v.help} at ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
+              }
+              found += violations.length;
+              await context.close();
+            }
+          }
+          await browser.close();
+          process.exitCode = found ? 1 : 0;
+          JS
+          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 -o /dev/null http://127.0.0.1:8101/
+          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 -o /dev/null http://127.0.0.1:8102/site-me/
+          node axe.mjs http://127.0.0.1:8101/ http://127.0.0.1:8102/site-me/ http://127.0.0.1:8102/site-me/about/
+
       # No linter can parse the .jinja workflows, so audit the rendered output. Renders a
       # to d, m, x and y together cover every conditional workflow. Scaffolds get the same
       # audit as a git hook.
@@ -580,6 +629,9 @@ jobs:
         run: |
           pnpm exec playwright install chromium
           just ts-e2e
+          # The screenshot recipe runs too, and writes its shots.
+          just ts-shots
+          test -f shots/index-390-light.png
           # The pages' authoring notes are HTML comments, which the build drops. This
           # phrase opens the note at the top of docs/privacy.md.
           if grep -rq 'Keep this page true' dist/; then
@@ -693,6 +745,22 @@ jobs:
         working-directory: ${{ runner.temp }}/proj
         run: just rs-mutation rs-property
 
+      # rs-mutation-diff must mutate the function a commit adds, and only that one.
+      - if: matrix.answers.test_extras
+        name: mutation-diff reports an untested function
+        working-directory: ${{ runner.temp }}/proj
+        run: |
+          set -euo pipefail
+          log=$RUNNER_TEMP/mutation-diff.log
+          git init -q && git add -A
+          git -c user.name=ci -c user.email=ci@example.com commit -qm scaffold --no-verify
+          printf '\n/// Untested.\npub fn sub(left: u64, right: u64) -> u64 {\n    left - right\n}\n' >>src/lib.rs
+          git -c user.name=ci -c user.email=ci@example.com commit -qam sub --no-verify
+          line=$(grep -n '^    left - right$' src/lib.rs | cut -d: -f1)
+          (! just rs-mutation-diff HEAD~1 >"$log" 2>&1) || { cat "$log"; exit 1; }
+          grep -q "^MISSED .*src/lib.rs:$line:.* in sub " "$log" || { cat "$log"; exit 1; }
+          if grep -qE '(replace| in) add ' "$log"; then cat "$log"; exit 1; fi
+
   go:
     # The go stack, one row per module kind: the library flat (go_dir left at its
     # default `.`), the binary nested.
@@ -764,6 +832,23 @@ jobs:
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj
         run: just go-mutation && just go-property -fuzztime=10s
+
+      # go-mutation-diff must reach the function a commit adds, and skip the rest. gremlins
+      # exits 0 on an uncovered mutant, so the report is the check.
+      - if: matrix.answers.test_extras
+        name: mutation-diff reports an untested function
+        working-directory: ${{ runner.temp }}/proj
+        run: |
+          set -euo pipefail
+          log=$RUNNER_TEMP/mutation-diff.log
+          git init -q && git add -A
+          git -c user.name=ci -c user.email=ci@example.com commit -qm scaffold --no-verify
+          printf '\n// Sub returns left minus right. Untested.\nfunc Sub(left, right int) int {\n\treturn left - right\n}\n' >>cigoextras.go
+          git -c user.name=ci -c user.email=ci@example.com commit -qam sub --no-verify
+          line=$(grep -n 'return left - right$' cigoextras.go | cut -d: -f1)
+          just go-mutation-diff HEAD~1 >"$log" 2>&1 || { cat "$log"; exit 1; }
+          grep -q "NOT COVERED .* at cigoextras.go:$line:" "$log" || { cat "$log"; exit 1; }
+          if grep -E '(KILLED|LIVED|NOT COVERED) .* at cigoextras.go:' "$log" | grep -qv "cigoextras.go:$line:"; then cat "$log"; exit 1; fi
 
   ok:
     # The one check the main ruleset requires, so jobs and matrix rows can change

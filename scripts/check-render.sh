@@ -414,6 +414,7 @@ for render in "abcdm":
     assert not dupes, f"{render}: jobs share a name: {dupes}"
 # Every check a ruleset requires is one a rendered workflow reports. GitHub names a
 # matrix job's runs "<name> (<value>, ...)" when the name holds no matrix expression.
+required_by = collections.defaultdict(list)
 for checks in sorted(out.glob("*/.github/rulesets/main*.json")):
     render = checks.parents[2]
     runs = set()
@@ -431,6 +432,10 @@ for checks in sorted(out.glob("*/.github/rulesets/main*.json")):
     for rule in json.loads(checks.read_text())["rules"]:
         for required in rule.get("parameters", {}).get("required_status_checks", []):
             assert required["context"] in runs, f"{checks}: {required['context']!r} is no job's check run"
+            required_by[render].append(required["context"])
+# Every render was checked, and each requires some check: an empty list passes the loop above.
+renders = {answers.parent for answers in out.glob("*/.copier-answers.yml")}
+assert len(renders) >= 19 and set(required_by) == renders, sorted(map(str, renders - set(required_by)))
 # A pull request saves no cache: only it could read one, and it evicts main's. Each
 # action that caches by default must carry its switch. CodSpeed's instrument cache has
 # no save switch and is left on. A job whose `if` excludes pull requests outright (an
@@ -556,8 +561,11 @@ cp -R k "$rel/w"
   git commit -q -s -m 'chore: init'
   git push -q origin main
   # An empty [Unreleased] and a manifest at another version both refuse, changing nothing.
-  (! just release 0.1.0 >/dev/null 2>&1)
-  (! just release 0.2.0 >/dev/null 2>&1)
+  (! just release 0.1.0 >release.log 2>&1)
+  grep -qxF '[Unreleased] has no entries to release' release.log
+  (! just release 0.2.0 >release.log 2>&1)
+  grep -qxF 'pyproject.toml is not at 0.2.0' release.log
+  rm release.log
   git diff --quiet
   sed -i 's/^## \[Unreleased\]$/&\n\n- first thing/' CHANGELOG.md
   git commit -q -s -am 'docs: add entry'
@@ -573,8 +581,15 @@ cp -R k "$rel/w"
   .github/scripts/release-notes.sh v0.1.0 CHANGELOG.md >/dev/null
   # The tag step refuses a bad version, a version with no changelog section, and a HEAD
   # that is not origin/main.
-  (! .github/scripts/tag-release.sh 1.2 >/dev/null 2>&1)
-  (! .github/scripts/tag-release.sh 9.9.9 >/dev/null 2>&1)
+  (! .github/scripts/tag-release.sh 1.2 >release.log 2>&1)
+  grep -qxF 'not a version: 1.2' release.log
+  (! .github/scripts/tag-release.sh 9.9.9 >release.log 2>&1)
+  grep -qxF 'CHANGELOG.md on origin/main has no 9.9.9 section' release.log
+  # The manifest checks read the working tree, so an uncommitted edit refuses too.
+  echo '# local edit' >>README.md
+  (! .github/scripts/tag-release.sh 0.1.0 >release.log 2>&1)
+  grep -qF 'uncommitted changes to tracked files' release.log
+  git checkout -q README.md
   git commit -q -s --allow-empty -m 'chore: local only'
   (! just release 0.1.0 >release.log 2>&1)
   grep -q 'HEAD is not origin/main' release.log
@@ -951,9 +966,11 @@ grep -q '^just go-sync' a/README.md
 grep -q 'id: golangci-lint$' a/.pre-commit-config.yaml
 grep -q golang.go a/.vscode/extensions.json
 grep -q 'package-ecosystem: gomod' a/.github/dependabot.yml
-# One cooldown for every ecosystem and update type.
-(! grep -q semver-major-days a/.github/dependabot.yml)
-(! grep -q "30 days" d/renovate.json5)
+# One cooldown for every ecosystem and update type: a week.
+test "$(grep -cx '    cooldown: {default-days: 7}' a/.github/dependabot.yml)" = "$(grep -c 'package-ecosystem:' a/.github/dependabot.yml)"
+(lacks -q semver-major-days a/.github/dependabot.yml)
+grep -qx "  minimumReleaseAge: '7 days'," d/renovate.json5
+(lacks -q "30 days" d/renovate.json5)
 # dependency_bot: Dependabot by default, Renovate in d, never both.
 test ! -e a/renovate.json5
 test -f d/renovate.json5
@@ -1011,6 +1028,15 @@ grep -qx '\*\*/.env' c/api/.dockerignore
 grep -qxF '.env' c/.gitignore
 test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 2
 (lacks -qE '^ +- "[0-9]+:' c/compose.yaml)
+# Every release workflow publishes only a tag whose signature GitHub verified. e renders
+# the last commit, without uncommitted edits.
+n=0
+for wf in */.github/workflows/{release,python-release,ts-release}.yml; do
+  [ -e "$wf" ] && [ "${wf%%/*}" != e ] || continue
+  grep -qF '.verification.verified' "$wf"
+  n=$((n + 1))
+done
+test -f c/.github/workflows/python-release.yml && test -f c/.github/workflows/ts-release.yml && test "$n" -ge 10
 # Both package workflows exist; Python creates the GitHub release after PyPI.
 test ! -e c/.github/workflows/release.yml
 test -f c/.github/workflows/ts-release.yml
@@ -1100,14 +1126,21 @@ grep -qx 'SPDX-License-Identifier = "CC0-1.0"' d/REUSE.toml
 test -f d/LICENSES/CC0-1.0.txt
 test -f k/LICENSES/GPL-3.0-or-later.txt
 (lacks -q 'data/' k/REUSE.toml m/REUSE.toml)
+# n: research data under the code license, so REUSE.toml and LICENSES/ have no data license.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=nodata-me --data 'stacks=[python]' \
+  --data kind=research --data data_license=none "$repo" "$out/n" >/dev/null 2>&1
+test -f n/data/README.md
+(lacks -q 'data/' n/REUSE.toml)
+test -z "$(find n/LICENSES -name 'CC-*' ! -name CC-BY-SA-4.0.txt)"
 test ! -e b/REUSE.toml
 # A public render's Code of Conduct is the Contributor Covenant, under CC-BY-SA-4.0.
 grep -qx 'path = ".github/CODE_OF_CONDUCT.md"' a/REUSE.toml
 test -f a/LICENSES/CC-BY-SA-4.0.txt
 test ! -e b/LICENSES
 (lacks -q reuse-tool b/.pre-commit-config.yaml)
+for r in a d h k m; do grep -qx '      - id: reuse' "$r/.pre-commit-config.yaml"; done
 reuse_version=$(sed -n '/fsfe\/reuse-tool/{n;s/.*frozen: v//p;}' "$repo/template/.pre-commit-config.yaml.jinja")
-for r in a d k m; do
+for r in a d k m n; do
   uvx "reuse@$reuse_version" --root "$r" lint --quiet
 done
 test ! -e d/pipe/notebooks
@@ -1243,6 +1276,17 @@ test "$(grep -cE 'deploy-worker\.sh" (Preview|Production)' d/.github/workflows/t
 # A nested app's ts.yml also runs when only the script changes, on push and on PRs.
 test "$(grep -cF 'paths: ["web/**", ".github/workflows/ts.yml", ".github/scripts/deploy-worker.sh"]' d/.github/workflows/ts.yml)" = 2
 (lacks -q 'wrangler deploy' d/.github/workflows/ts.yml)
+# Every Cloudflare secrets gate checks both secrets: a missing account id fails each run.
+n=0
+for wf in */.github/workflows/{ts,site,preview-retire}.yml; do
+  [ -e "$wf" ] || continue
+  gates=$(grep -c 'missing=CLOUDFLARE_API_TOKEN$' "$wf" || true)
+  [ "$gates" -gt 0 ] || continue
+  # shellcheck disable=SC2016 # the literal workflow text
+  test "$(grep -cF '[ -n "$ACCOUNT" ] || missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"' "$wf")" = "$gates"
+  n=$((n + gates))
+done
+test "$n" -ge 10
 test -x d/.github/scripts/deploy-worker.sh
 test ! -e m/.github/scripts/deploy-worker.sh
 test -x s/.github/scripts/deploy-worker.sh
@@ -1252,11 +1296,24 @@ test ! -e a/.github/scripts/deploy-worker.sh
 deploy_sh=$out/d/.github/scripts/deploy-worker.sh
 dstub=$out/fake-deploy
 mkdir -p "$dstub/work"
+# wrangler 4's deploy output; with workers_dev off it prints no address lines.
 cat >"$dstub/pnpm" <<'STUB'
 #!/usr/bin/env bash
 echo "pnpm $*" >>"$STUB/calls"
-[ -z "${NO_URL:-}" ] || exit 0
-echo "Deployed https://pipe-me.acct.workers.dev"
+cat <<'OUT'
+
+ ⛅️ wrangler 4.154.0
+───────────────────
+🌀 Building list of assets...
+✨ Read 6 files from the assets directory /home/runner/work/pipe-me/pipe-me/web/dist
+🌀 Starting asset upload...
+✨ Success! Uploaded 2 files (4 already uploaded) (1.12 sec)
+
+Total Upload: 0.34 KiB / gzip: 0.24 KiB
+Uploaded pipe-me (3.41 sec)
+OUT
+[ -n "${NO_URL:-}" ] || printf '%s\n' 'Deployed pipe-me triggers (0.87 sec)' '  https://pipe-me.acct.workers.dev'
+echo 'Current Version ID: 6f9a3c2e-1b4d-4e8f-9a7c-2d5e8b1f0c3a'
 STUB
 chmod +x "$dstub/pnpm"
 deploy() {
@@ -1608,6 +1665,8 @@ for r in a b d h; do
   git -C "$r-hooks" init -q
   git -C "$r-hooks" add -A
   (cd "$r-hooks" && "${prek[@]}" typos lychee jsonvet >/dev/null)
+  # b is private with no license, so it has no reuse hook.
+  [ "$r" = b ] || (cd "$r-hooks" && "${prek[@]}" reuse >/dev/null)
 done
 # The web apps track the shots spec and ignore only the screenshots `just ts-shots` writes.
 rm -rf s-git
@@ -1867,7 +1926,7 @@ test "$(jq '.rules[0].parameters.required_status_checks | length' c/.github/rule
 test -f a/.github/rulesets/tags.json
 fake=$out/fake-gh
 mkdir -p "$fake"
-echo '[{"name": "protect-main", "target": "branch", "id": 42}, {"name": "other", "id": 7}]' >"$fake/rulesets.json"
+echo '[{"name": "release-branches", "target": "branch", "id": 7, "conditions": {"ref_name": {"include": ["refs/heads/release/*"]}}}, {"name": "protect-main", "target": "branch", "id": 42, "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"]}}}]' >"$fake/rulesets.json"
 cat >"$fake/gh" <<'FAKE'
 #!/usr/bin/env bash
 echo "$*" >>"$FAKE_LOG"
@@ -1880,16 +1939,27 @@ done
 list=$FAKE_DIR/rulesets.json
 case $call in
   *"api user"*) echo "90462640" ;;
-  *"code-scanning/default-setup"*) echo '{"state":"configured"}' ;;
+  *"code-scanning/default-setup"*)
+    if [ -n "${FAKE_CODEQL:-}" ]; then
+      echo '{"message":"Code Security must be enabled for this repository to use code scanning.","status":"403"}'
+      echo "gh: refused (HTTP $FAKE_CODEQL)" >&2
+      exit 1
+    fi
+    echo '{"state":"configured"}' ;;
   *"-X POST repos/{owner}/{repo}/rulesets --input"*)
-    jq --slurpfile b "$input" '. + [{name: $b[0].name, target: $b[0].target, id: (length + 41)}]' "$list" >"$list.new" && mv "$list.new" "$list"
+    jq --slurpfile b "$input" '. + [{name: $b[0].name, target: $b[0].target, conditions: $b[0].conditions, id: (length + 41)}]' "$list" >"$list.new" && mv "$list.new" "$list"
     cp "$input" "$FAKE_DIR/posted.$(basename "$input")" ;;
   *"-X PUT repos/{owner}/{repo}/rulesets/"*)
     id=${call#*rulesets/}
     id=${id%% *}
-    jq --slurpfile b "$input" --argjson id "$id" 'map(if .id == $id then .name = $b[0].name | .target = $b[0].target else . end)' "$list" >"$list.new" && mv "$list.new" "$list"
+    jq --slurpfile b "$input" --argjson id "$id" 'map(if .id == $id then .name = $b[0].name | .target = $b[0].target | .conditions = $b[0].conditions else . end)' "$list" >"$list.new" && mv "$list.new" "$list"
     cp "$input" "$FAKE_DIR/put.$(basename "$input")" ;;
-  *"/rulesets?includes_parents=false"*) jq -r "$filter" "$list" ;;
+  # The list has no conditions; a GET of one ruleset does.
+  *"/rulesets?includes_parents=false"*) jq -r "map(del(.conditions)) | $filter" "$list" ;;
+  *"api repos/{owner}/{repo}/rulesets/"*)
+    id=${call#*rulesets/}
+    id=${id%% *}
+    jq -r --argjson id "$id" "first(.[] | select(.id == \$id)) | $filter" "$list" ;;
   *"-X POST repos/{owner}/{repo}/environments/"*"/deployment-branch-policies"*)
     env=${call#*environments/}
     env=${env%%/*}
@@ -1938,6 +2008,11 @@ chmod +x "$fake/gh"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/43 --input .github/rulesets/main-checks.json' "$FAKE_LOG"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/44 --input .github/rulesets/tags.json' "$FAKE_LOG"
+  # A branch ruleset that protects other refs is never adopted.
+  (lacks -q -- '-X PUT repos/{owner}/{repo}/rulesets/7 ' "$FAKE_LOG")
+  test "$(jq -r '.[] | select(.id == 7) | .name' "$fake/rulesets.json")" = "release-branches"
+  # The adoption check matches the files' own conditions.
+  jq -e '.conditions.ref_name.include == ["~DEFAULT_BRANCH"]' .github/rulesets/main.json .github/rulesets/main-checks.json >/dev/null
   # protect-main was updated in place to main: no duplicate ruleset on the default branch.
   test "$(jq -r '.[] | select(.id == 42) | .name' "$fake/rulesets.json")" = "main"
   (! jq -e '.[] | select(.name == "protect-main")' "$fake/rulesets.json" >/dev/null)
@@ -1979,6 +2054,11 @@ chmod +x "$fake/gh"
   # A path filter would leave a required check unreported on some PRs, which blocks them.
   (lacks -q '^ *paths' .github/workflows/checks.yml .github/workflows/pr-title.yml .github/workflows/dco.yml)
   jq -e '.target == "tag" and .conditions.ref_name.include == ["refs/tags/v*"]' .github/rulesets/tags.json >/dev/null
+  # A refused CodeQL setup warns with GitHub's reason, and the rest still runs.
+  : >"$FAKE_LOG"
+  FAKE_CODEQL=403 just repo-settings >/dev/null 2>"$fake/err"
+  grep -q 'Warning: CodeQL default setup could not be turned on.*Code Security must be enabled' "$fake/err"
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/vulnerability-alerts' "$FAKE_LOG"
 )
 (cd b && ! grep -q 'DCO sign-off' .github/rulesets/main.json)
 # Silver: the DCO check needs commits made in GitHub's web UI to carry a sign-off.
