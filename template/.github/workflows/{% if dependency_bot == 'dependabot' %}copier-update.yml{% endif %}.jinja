@@ -164,7 +164,7 @@ jobs:
           fi
 
           if [ "$HAS_TOKEN" != true ]; then
-            echo "This PR was opened without \`COPIER_UPDATE_TOKEN\`, so its checks do not start: close it and reopen it to run them." >>"$RUNNER_TEMP/copier-update/body.md"
+            printf '\n%s\n' 'This PR was opened without `COPIER_UPDATE_TOKEN`, so its checks do not start: close it and reopen it to run them.' >>"$RUNNER_TEMP/copier-update/body.md"
           fi
 
           git -c core.hooksPath=/dev/null push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"
