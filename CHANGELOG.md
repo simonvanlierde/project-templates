@@ -83,6 +83,7 @@ Upgrade steps:
 ### Fixed
 
 - `typos` no longer rewrites NumPy's `flags.writeable` and `flags["WRITEABLE"]` to `writable`. Projects get a `_typos.toml` that accepts both; `copier update` leaves an existing `_typos.toml` alone, so add `writeable = "writeable"` and `WRITEABLE = "WRITEABLE"` under `[default.extend-words]` there yourself. typos reads only the first config file it finds, and `_typos.toml` comes first: if your words are in `.typos.toml`, `typos.toml` or a `[tool.typos]` table in `pyproject.toml` or `Cargo.toml`, move them into `_typos.toml` and delete the old table.
+- A template update PR opened without `COPIER_UPDATE_TOKEN` says in its body that its checks do not start and that closing and reopening it runs them.
 - A GPL or AGPL project now stores `copyright_year`, so `REUSE.toml` keeps its year instead of taking the current one on each update.
 - yamlfmt no longer reformats a `pnpm-lock.yaml` in a nested package, such as `web/pnpm-lock.yaml`.
 - The mutation extra needs mutmut 3.8.1: 3.8.0 crashes under pytest 9.2.

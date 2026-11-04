@@ -179,6 +179,8 @@ grep -qx 'source_paths = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'check --search \. --format github adopt_me' "$out/k/.github/workflows/python.yml"
 # yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
 grep -qx '        run: |-' "$out/k/.github/workflows/copier-update.yml"
+# A GITHUB_TOKEN PR starts no checks, so its body says how to start them.
+grep -qF 'close it and reopen it to run them' "$out/k/.github/workflows/copier-update.yml"
 
 # copier matches _skip_if_exists like .gitignore lines, so an entry without a leading /
 # also skips the same name in any directory, such as data/README.md.

@@ -302,6 +302,8 @@ To allow `copier-update.yml` to update workflow files in `.github/workflows/`, g
 
 Without this secret, workflow changes open an issue requesting a manual local update.
 
+A PR opened without this secret starts no checks, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so.
+
 ## Test extras
 
 Library kinds configure `test_extras` under `customise`:
