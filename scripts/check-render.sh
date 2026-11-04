@@ -807,6 +807,11 @@ grep -qxF '    rm -rf mutants' m/just/python.just
 grep -qxF '    export LC_ALL=C' m/just/python.just
 # shellcheck disable=SC2016 # a literal recipe line
 grep -qxF '    [ -z "$new$gone" ]' m/just/python.just
+# mutmut's output shows why the gate failed, and the diff recipe reuses the gate. ci.yml's
+# python job runs both against a broken baseline and an untested function.
+(! grep -q 'mutmut run.*/dev/null' m/just/python.just)
+# shellcheck disable=SC2016 # a literal recipe line
+grep -qF ' py-mutation $patterns' m/just/python.just
 # The per-change recipes: python maps the diff to functions with a script, rust and go use
 # the tool's own diff mode, ts has no mutation-diff recipe (Stryker has no diff mode).
 test -f m/just/mutation_diff.py

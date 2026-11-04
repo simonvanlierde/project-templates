@@ -220,6 +220,34 @@ jobs:
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: just py-mutation py-property
 
+      # The run above passes, but so would a gate that ignored mutmut. Each case here must
+      # turn it red, and py-mutation-diff must mutate only the function a commit changes.
+      # Not in check-render: it needs the synced env this job already has.
+      - if: matrix.answers.test_extras
+        name: mutation gate fails when it should
+        working-directory: ${{ runner.temp }}/proj
+        run: |
+          set -euo pipefail
+          log=$RUNNER_TEMP/mutation.log
+          # The run above generated and killed mutants.
+          uv run mutmut results --all true | grep -q ': killed$'
+          # A baseline line for a mutant the tests kill.
+          cp tests/mutation-baseline.txt "$RUNNER_TEMP/baseline"
+          echo 'ci_extras.x_add__mutmut_1  killed, so the gate must reject this line' >>tests/mutation-baseline.txt
+          (! just py-mutation >"$log" 2>&1) || { cat "$log"; exit 1; }
+          grep -qx 'ci_extras.x_add__mutmut_1' "$log"
+          cp "$RUNNER_TEMP/baseline" tests/mutation-baseline.txt
+          # A new function with no test, committed on top of the scaffold.
+          git init -q && git add -A
+          git -c user.name=ci -c user.email=ci@example.com commit -qm scaffold --no-verify
+          printf '\n\ndef sub(left: int, right: int) -> int:\n    """Untested."""\n    return left - right\n' >>src/ci_extras/__init__.py
+          git -c user.name=ci -c user.email=ci@example.com commit -qam sub --no-verify
+          (! just py-mutation-diff HEAD~1 >"$log" 2>&1) || { cat "$log"; exit 1; }
+          grep -qx 'ci_extras.x_sub__mutmut_1' "$log"
+          uv run mutmut results --all true | grep -qx ' *ci_extras.x_add__mutmut_1: not checked'
+          (! just py-mutation >"$log" 2>&1) || { cat "$log"; exit 1; }
+          grep -qx 'ci_extras.x_sub__mutmut_1' "$log"
+
       # A new Hypothesis profile copies the loaded one, here the derandomized "ci"
       # profile, which would make the weekly run repeat its inputs.
       - if: matrix.answers.test_extras
