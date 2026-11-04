@@ -1,0 +1,34 @@
+name: Bug report
+description: A render fails, or its output does not match the docs
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Report a vulnerability as SECURITY.md says, not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: answers
+    attributes:
+      label: Copier answers
+      description: The answers you used, from `.copier-answers.yml` or the command line.
+      render: yaml
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Template version
+      description: The tag you rendered or updated to, or the commit.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system and the copier version.
