@@ -171,7 +171,7 @@ jobs:
             gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md"
           fi
 {%- endif %}
-{%- if publish_to_pypi %}
+{%- if publish_to_pypi and python_api | default(true) %}
 
   api:
     # Fails when the public API lost or changed something since the last git tag,

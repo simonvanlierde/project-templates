@@ -36,6 +36,7 @@ When `customise` is `no`, advanced questions take these defaults:
 | `openssf_badge` | None ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
+| `python_api` | Enabled ([API-break check](#api-break-check)) |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](#publishing)) |
 | `test_extras` | None ([Test extras](#test-extras)) |
 | `app_port` | 8000 |
@@ -364,6 +365,18 @@ Setting up trusted publishing (OIDC):
    ```sh
    copier update --data publish_to_pypi=true
    ```
+
+## API-break check
+
+With `publish_to_pypi`, a Python library gets an `api` job in `python.yml`. It runs griffe against the last git tag and fails when a public name loses or changes a parameter. Every name without a leading underscore counts as public.
+
+A package used only through its command line has no Python API to protect. Answer `python_api=false` to drop the job:
+
+```sh
+copier update --data python_api=false
+```
+
+To keep the job and mark a module internal instead, start its name with an underscore (`_check.py`).
 
 ## Coverage on Codecov
 

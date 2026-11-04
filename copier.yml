@@ -485,6 +485,15 @@ publish_to_pypi:
   help: Add a release workflow publishing to PyPI via trusted publishing (needs setup on pypi.org first)
   default: false
 
+python_api:
+  type: bool
+  when: "{{ 'python' in stacks and kind == 'library' }}"
+  ask: "{{ customise }}"
+  help: >-
+    Is the package used through its Python API, not only its command line?
+    Turns on the griffe API-break check in python.yml (with publish_to_pypi)
+  default: true
+
 # --- ts -----------------------------------------------------------------------
 
 # The address the accessibility statement and privacy page name. The default is
@@ -590,7 +599,7 @@ uv_version:
   default: 0.13.5
 
 # Computed, never asked: the griffe that python.yml's api job runs with uvx when
-# publish_to_pypi is on. It compares the public API with the last git tag.
+# publish_to_pypi and python_api are on. It compares the public API with the last git tag.
 # renovate: datasource=pypi depName=griffe
 griffe_version:
   type: str

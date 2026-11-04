@@ -133,6 +133,9 @@ grep -q 'project edit' "$out/h/go.mod"
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
   --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true . "$out/m"
+# x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
+  --data kind=library --data publish_to_pypi=true --data python_api=false . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
@@ -971,6 +974,12 @@ grep -qF '${{ steps.attest.outputs.bundle-path }}' c/.github/workflows/python-re
 # the repository root, so its search path carries the nested dir; the npm report beside
 # the nested package.
 grep -qx '      - run: uvx griffe@[0-9.]* check --search api/src --format github mono_me' c/.github/workflows/python.yml
+# A CLI-only package (x, python_api=false) gets no api job, though it publishes; the job is
+# not a required check, so nothing waits on it.
+grep -q 'name: "python: API breaks since the last tag"' c/.github/workflows/python.yml
+(! grep -q 'griffe' x/.github/workflows/python.yml)
+test -f x/.github/workflows/python-release.yml
+(! grep -rq 'API breaks' x/.github/rulesets)
 # Not in py-check: a deliberate break would keep local checks red until the next tag.
 (lacks -q griffe c/just/python.just)
 grep -qx '      - run: pnpm run api' c/.github/workflows/ts.yml
