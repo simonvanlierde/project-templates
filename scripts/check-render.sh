@@ -221,8 +221,38 @@ git tag -f check-render-tag >/dev/null
 # compose: a deploy repo that only composes upstream images. `stacks=[docker]` without
 # python builds no image: no Dockerfile, no image workflow, and `just check` validates
 # the Compose file and shell scripts instead.
+# Its author has a GitHub noreply address, which gets no mail.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=compose-me --data 'stacks=[docker]' . "$out/compose"
+  --data project_name=compose-me --data 'stacks=[docker]' \
+  --data author_email=1+ada@users.noreply.github.com . "$out/compose"
+c=$out/compose
+# A fresh render passes its own git hooks.
+git -C "$c" init -q
+git -C "$c" add -A
+(cd "$c" && uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --all-files >"$out/compose-hooks.log" 2>&1) ||
+  { cat "$out/compose-hooks.log" >&2; exit 1; }
+# CI has no .env: the check reads the example values.
+grep -qF 'docker compose --env-file .env.example config -q' "$c/just/docker.just"
+# README.md is the project's after the first render, so CONTRIBUTING links no anchor in it.
+(lacks -q 'README.md#' "$c/.github/CONTRIBUTING.md")
+# Compose files that `include:` pulls in from a subdirectory get updates too.
+grep -qxF '    directories: [/, /*]' "$c/.github/dependabot.yml"
+# The noreply address is never offered as a contact.
+(lacks -q 'noreply' "$c/.github/SECURITY.md" "$c/.github/CODE_OF_CONDUCT.md")
+grep -q 'Report abuse' "$c/.github/CODE_OF_CONDUCT.md"
+# No other stack's text: ignore sections, recipe prefixes and imports, tool remarks,
+# lockfile steps, SKIP entries, and docs the render does not have.
+(lacks -qE '^# (Python|Node|Rust)$' "$c/.gitignore")
+(lacks -qE 'py-|python\.just|ts\.just' "$c/justfile")
+(lacks -qE 'uv (tool|run)|pnpm|Python projects' "$c/.pre-commit-config.yaml" "$c/.yamlfmt" "$c/.yamllint.yml")
+(lacks -qE 'uv lock|pnpm|go-sync' "$c/.github/workflows/copier-update.yml")
+(lacks -qE 'ruff|biome|cargo|golangci' "$c/.github/workflows/checks.yml")
+grep -qx '          SKIP: betterleaks,zizmor' "$c/.github/workflows/checks.yml"
+(lacks -q 'NumPy' "$c/_typos.toml")
+(lacks -q 'Renovate' "$c/justfile")
+(lacks -qE 'docs/decisions|release the project' "$c/AGENTS.md")
+(lacks -q 'the dependencies' "$c/.github/CONTRIBUTING.md")
+(lacks -qE 'the version you|label: Version$' "$c/.github/SECURITY.md" "$c/.github/CONTRIBUTING.md" "$c/.github/ISSUE_TEMPLATE/bug.yml")
 test -f "$out/compose/compose.yaml"
 test -f "$out/compose/.env.example"
 test -f "$out/compose/.github/workflows/compose.yml"
@@ -252,9 +282,16 @@ printf '#!/usr/bin/env fish\necho $argv\n' >"$out/compose/scripts/f"
 printf '#!/usr/bin/env bash\nset -euo pipefail\nif true; then\n  echo ok\nfi\n' >"$out/compose/scripts/ok"
 printf '# shellcheck shell=bash\necho no shebang, still a .sh\n' >"$out/compose/scripts/plain.sh"
 if command -v just >/dev/null && docker info >/dev/null 2>&1; then
-  git -C "$out/compose" init -q
+  # A required variable, set only in .env.example: the check passes without a .env.
+  # shellcheck disable=SC2016 # literal ${...} for Compose
+  sed -i 's/^    restart: unless-stopped$/    environment:\n      EXAMPLE_VAR: ${EXAMPLE_VAR:?}\n&/' "$out/compose/compose.yaml"
+  # shellcheck disable=SC2016 # the same literal
+  grep -qF 'EXAMPLE_VAR: ${EXAMPLE_VAR:?}' "$out/compose/compose.yaml"
+  # A repo's own local-check runs at the end of just check.
+  printf 'local-check:\n    echo local-check-ran\n' >"$out/compose/just/local.just"
   git -C "$out/compose" add -A
-  (cd "$out/compose" && just check)
+  (cd "$out/compose" && just check) >"$out/compose-check.log"
+  grep -qx 'local-check-ran' "$out/compose-check.log"
   # A badly formatted bash script must still fail it.
   printf '#!/bin/bash\nif true;then\necho a\nfi\n' >"$out/compose/scripts/bad"
   git -C "$out/compose" add -A
@@ -531,6 +568,9 @@ assert checked["docker/build-push-action"] >= 1, checked
 assert sum(checked.values()) >= 70, checked  # 75 when this was written
 PY
 
+# This repo lints its own YAML with the config a project with pnpm gets.
+diff .yamlfmt "$out/t/.yamlfmt"
+diff .yamllint.yml "$out/t/.yamllint.yml"
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.
 cd "$out"
 # kind=research adds two dirs. Publishing off removes both release workflows.
@@ -740,6 +780,13 @@ grep -q biomejs.biome a/.vscode/settings.json
 grep -q tombi-toml.tombi a/.vscode/settings.json
 grep -q 'Contributor Covenant, version 3.0' a/.github/CODE_OF_CONDUCT.md
 grep -q 'send an email to <ada@example.com>' a/.github/CODE_OF_CONDUCT.md
+grep -q 'by email to <ada@example.com>' a/.github/SECURITY.md
+# Each stack's text where that stack is rendered.
+grep -qx '# Python' a/.gitignore
+grep -qx "import? 'just/python.just'" a/justfile
+grep -qF 'uv lock' a/.github/workflows/copier-update.yml
+grep -q 'SKIP: ruff-check,ruff-format,ty,biome,tsc,cargo-fmt,cargo-clippy,golangci-lint-fmt,golangci-lint,betterleaks,zizmor$' a/.github/workflows/checks.yml
+grep -q 'NumPy' a/_typos.toml
 # Scorecard: its workflow and badge exist only with public (a), never without (b).
 grep -qx '      id-token: write # to publish the results' a/.github/workflows/scorecard.yml
 grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md

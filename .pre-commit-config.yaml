@@ -53,20 +53,20 @@ repos:
     hooks:
       - id: jsonvet
 
-  # Uses the template's own config to lint this repo's YAML.
+  # The same config the template renders for a project with pnpm.
   # Formats first, so yamllint below sees the formatted file.
   - repo: https://github.com/google/yamlfmt
     rev: 21ca5323a9c87ee37a434e0ca908efc0a89daa07 # frozen: v0.21.0
     hooks:
       - id: yamlfmt
-        args: [-conf, template/.yamlfmt]
+        args: [-conf, .yamlfmt]
         exclude: (^|/)pnpm-lock\.yaml$
 
   - repo: https://github.com/adrienverge/yamllint
     rev: cba56bcde1fdd01c1deb3f945e69764c291a6530 # frozen: v1.38.0
     hooks:
       - id: yamllint
-        args: [-c, template/.yamllint.yml]
+        args: [-c, .yamllint.yml]
 
   # scripts/check-render.sh; jactionlint covers only workflow `run:` blocks.
   - repo: https://github.com/shellcheck-py/shellcheck-py

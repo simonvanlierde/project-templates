@@ -183,10 +183,11 @@ The render has no Dockerfile, no image build and no `docker.yml`. It gets:
 - `compose.yaml`: one example service with its image pinned by digest, a healthcheck and a
   port bound to `127.0.0.1`. Replace it with your own services.
 - `.env.example`, which `compose.yaml` reads through an optional `.env`.
-- `just check`, which runs `docker compose config -q` and then shellcheck and shfmt (2-space
-  indent, from images pinned by digest) over every tracked script that starts with a shell
-  shebang. It needs a Docker daemon.
-- `.github/workflows/compose.yml`, which runs that check with no token scopes beyond
+- `just check`, which runs `docker compose --env-file .env.example config -q` (CI has no
+  `.env`), then shellcheck and shfmt (2-space indent, from images pinned by digest) over
+  every tracked script that starts with a shell shebang, then the `local-check` recipe if
+  `just/local.just` has one. It needs a Docker daemon.
+- `.github/workflows/compose.yml`, which runs `just docker-check` (not `local-check`) with no token scopes beyond
   `contents: read`, and is a required check on `main` when `public` is on.
 - The `docker-compose` ecosystem in the dependency bot, so image tags and digests get update
   pull requests. Image stacks leave it off, because their `FROM` tags are copier answers.
@@ -200,6 +201,26 @@ shebang. A zsh or fish script, or a shebang inside a Markdown code block, is not
 The git hooks, license and REUSE files, community files and the other CI workflows come
 from the same questions as in any other project. `app_port` and `publish_to_ghcr` are not
 asked: there is no image to expose or push.
+
+### Adopting the template in an existing Compose-only repo
+
+1. On a clean branch, render over the repo:
+
+   ```sh
+   copier copy --vcs-ref=<tag> --overwrite --data 'stacks=[docker]' gh:simonvanlierde/project-templates .
+   ```
+
+2. The render replaces `compose.yaml`, `.env.example` and the justfile. Restore your own
+   Compose and env files with `git checkout HEAD -- compose.yaml .env.example`. `just check`
+   reads `.env.example` in place of `.env`, so give every variable a `${VAR:?}` needs there.
+3. Move your own recipes into `just/local.just`, which updates never touch. Name the checks
+   you add `local-check`: `just check` runs that recipe last.
+4. The `docker-compose` entry in `.github/dependabot.yml` reads `compose.yaml` and the
+   directories one level below it, where an `include:` usually points. A deeper Compose file
+   needs its directory added there. `copier update` keeps that edit unless the template
+   changes the same lines, which shows up as a conflict.
+5. Run `just check` and `just hooks`. Add the words typos flags in your own files to
+   `_typos.toml`, which is yours from then on. Then commit.
 
 ## TypeScript kinds
 

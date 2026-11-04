@@ -36,7 +36,8 @@ _shell-files:
 docker-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    docker compose config -q
+    # CI has no .env, and a `${VAR:?}` in a Compose file fails without it: check with the example values.
+    docker compose --env-file .env.example config -q
     files=()
     while IFS= read -r -d '' f; do files+=("$f"); done < <("{{ '{{' }}just_executable(){{ '}}' }}" --quiet _shell-files)
     if [ ${{ '{#' }}files[@]} -gt 0 ]; then
