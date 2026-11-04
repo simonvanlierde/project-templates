@@ -618,7 +618,6 @@ grep -q tombi-toml.tombi a/.vscode/settings.json
 grep -q 'Contributor Covenant, version 3.0' a/.github/CODE_OF_CONDUCT.md
 grep -q 'send an email to <ada@example.com>' a/.github/CODE_OF_CONDUCT.md
 # Scorecard: its workflow and badge exist only with public (a), never without (b).
-test -f a/.github/workflows/scorecard.yml
 grep -qx '      id-token: write # to publish the results' a/.github/workflows/scorecard.yml
 grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md
 test ! -e b/.github/workflows/scorecard.yml
@@ -751,7 +750,6 @@ grep -qF 'cargo build --manifest-path crates/cli/Cargo.toml --profile profiling'
 grep -qx 'py-profile \*args:' a/just/python.just
 grep -qx 'py-profile \*args:' c/just/python.just
 (! grep -rq 'py-profile' b/just d/just)
-test -f c/crates/cli/benches/codspeed.rs
 grep -q 'use render_me::add;' a/benches/codspeed.rs
 grep -q 'fn stand_in' c/crates/cli/benches/codspeed.rs
 grep -q 'pytest-codspeed' a/pyproject.toml
@@ -882,7 +880,6 @@ grep -q 'cargo test --doc' a/just/rust.just
 grep -qx '    @just rs-check' a/justfile
 # go library: a package named from the slug, its Example importing it under that
 # name, since render-me is not an identifier.
-test -f a/go.mod
 test -f a/.golangci.yml
 grep -qx 'tool golang.org/x/vuln/cmd/govulncheck' a/go.mod
 test -f a/renderme.go
@@ -953,7 +950,6 @@ test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 2
 (! grep -qE '^ +- "[0-9]+:' c/compose.yaml)
 # Both package workflows exist; Python creates the GitHub release after PyPI.
 test ! -e c/.github/workflows/release.yml
-test -f c/.github/workflows/python-release.yml
 test -f c/.github/workflows/ts-release.yml
 grep -qx "    needs: publish" c/.github/workflows/python-release.yml
 # The build refuses a tag that does not match the manifest version it publishes.
@@ -1006,7 +1002,6 @@ grep -qF '"root": "../.."' c/apps/web/biome.json
 test -f d/pipe/sources.toml
 test -f d/pipe/src/pipe_me/pipeline.py
 test -f d/pipe/data/raw/.gitkeep
-test -f d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/README.md
 # The week-old-release escape hatch names each nested lockfile owner, and only those.
