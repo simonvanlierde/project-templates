@@ -31,7 +31,7 @@ Upgrade steps:
 - `python_api` question for Python libraries (default yes). A package used only through its command line answers no, with `copier update --data python_api=false`, and gets no `api` job in `python.yml`.
 - A web app gets `PRODUCT.md` and `DESIGN.md` stubs in its folder to fill in. They are yours once rendered: `copier update` does not rewrite them.
 - `just ts-shots` in web apps: full-page screenshots of every route at 390 and 1440 px, light and dark, saved to the gitignored `shots/`.
-- The pull request template asks for `How I know it works:` (the command and its output, or a test that fails without the change) and `What to check:`.
+- The pull request template ends with `Tested:` (the command and its result, or a test that fails without the change) and `Not checked:` (what did not run, and what only a person can judge).
 - A web app's bug form asks for the page URL and the browser, and no longer formats the steps as shell. Other projects keep the command-line form.
 - `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch left `origin/main`. See [Test extras](docs/usage.md#test-extras).
 - `just py-mutation` takes mutmut patterns to run only those mutants, and now shows mutmut's output, so a failing run says why.
