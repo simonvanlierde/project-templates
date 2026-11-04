@@ -62,12 +62,13 @@
   "knip": {
     "ignoreDependencies": [
       "@j178/prek"
-{#- Only workflows run publint (ts-release.yml) and wrangler (ts.yml). knip finds
-    them there from a root package, but a nested one never sees .github/. #}
+{#- Only workflows run publint (ts-release.yml). knip finds it there from a root
+    package, but a nested one never sees .github/. wrangler runs only from
+    .github/scripts/deploy-worker.sh, a shell script knip does not read. #}
 {%- if publish_to_npm and ts_dir != '.' %},
       "publint"
 {%- endif %}
-{%- if web and ts_dir != '.' %},
+{%- if web %},
       "wrangler"
 {%- endif %}
     ]
