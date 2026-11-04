@@ -544,9 +544,8 @@ cp -R k "$rel/w"
   (! .github/scripts/tag-release.sh 1.2 >/dev/null 2>&1)
   (! .github/scripts/tag-release.sh 9.9.9 >/dev/null 2>&1)
   git commit -q -s --allow-empty -m 'chore: local only'
-  (! just release 0.1.0 >/dev/null 2>&1)
-  msg=$(.github/scripts/tag-release.sh 0.1.0 2>&1 || true)
-  grep -q 'HEAD is not origin/main' <<<"$msg"
+  (! just release 0.1.0 >release.log 2>&1)
+  grep -q 'HEAD is not origin/main' release.log
 )
 # c lists three manifests in citesync.toml. Bumping the two the recipe reads, but not
 # Cargo.toml, stops the release at citesync with CHANGELOG.md unchanged. No remote: the

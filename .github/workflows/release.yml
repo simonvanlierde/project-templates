@@ -27,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # scripts/tag-release.sh signs the tag. A lightweight or unverified one publishes
+      # template/.github/scripts/tag-release.sh signs the tag. A lightweight or unverified one publishes
       # nothing.
       - name: refuse a tag GitHub cannot verify
         env:
@@ -38,7 +38,7 @@ jobs:
           set -euo pipefail
           read -r type sha < <(gh api "repos/$REPO/git/ref/tags/$TAG" --jq '.object.type + " " + .object.sha')
           if [ "$type" != tag ]; then
-            echo "$TAG is a lightweight tag; make it with scripts/tag-release.sh" >&2
+            echo "$TAG is a lightweight tag; make it with template/.github/scripts/tag-release.sh" >&2
             exit 1
           fi
           if [ "$(gh api "repos/$REPO/git/tags/$sha" --jq '.verification.verified')" != true ]; then
