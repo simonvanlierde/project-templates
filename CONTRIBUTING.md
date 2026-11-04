@@ -28,14 +28,15 @@ root: the output would land among the template files.
 
 ## Run the checks before you push
 
-Run the git hooks and the render checks CI runs. The render script includes uncommitted
-edits. CI also runs zizmor, jactionlint and the CITATION.cff schema check on the rendered
-output, because `.jinja` files aren't YAML:
+`just check` runs the git hooks and the render checks CI runs. The render includes
+uncommitted edits. CI also runs zizmor, jactionlint and the CITATION.cff schema check on
+the rendered output, because `.jinja` files aren't YAML:
 
 ```sh
-prek run -a
-scripts/check-render.sh "$(mktemp -d)"
+just check
 ```
+
+`just hooks` and `just render` run each half alone.
 
 The render script checks which files each answer set produces. It doesn't run the
 generated projects' own checks. CI does that for each stack and kind. To run one locally,
