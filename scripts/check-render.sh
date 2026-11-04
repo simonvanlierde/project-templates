@@ -726,6 +726,9 @@ grep -q "python: \[\"$min\"" c/.github/workflows/python.yml
 # and the Python one from a single matrix job.
 test -f c/codecov.yml
 test ! -e a/codecov.yml
+# The patch check is the gate at 90%; total coverage is information only.
+grep -qx '        target: 90%' c/codecov.yml
+grep -A2 'project:' c/codecov.yml | grep -qx '        informational: true'
 grep -qx '      - run: uv run pytest --cov --cov-report=xml' c/.github/workflows/python.yml
 grep -qx '          files: api/coverage.xml' c/.github/workflows/python.yml
 grep -qx "        if: matrix.python == '$(sed -n 's/^python_version: *//p' c/.copier-answers.yml | tr -d "\"'")'" c/.github/workflows/python.yml
@@ -894,6 +897,9 @@ grep -q '^just go-sync' a/README.md
 grep -q 'id: golangci-lint$' a/.pre-commit-config.yaml
 grep -q golang.go a/.vscode/extensions.json
 grep -q 'package-ecosystem: gomod' a/.github/dependabot.yml
+# One cooldown for every ecosystem and update type.
+(! grep -q semver-major-days a/.github/dependabot.yml)
+(! grep -q "30 days" d/renovate.json5)
 # dependency_bot: Dependabot by default, Renovate in d, never both.
 test ! -e a/renovate.json5
 test -f d/renovate.json5

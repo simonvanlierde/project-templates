@@ -98,6 +98,14 @@ Licensed projects follow the [REUSE specification](https://reuse.software). `REU
 - Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
 - Enables Dependabot security alerts (`gh api -X PUT repos/OWNER/REPO/vulnerability-alerts`).
 
+It leaves one setting to you: refusing any action not pinned to a full commit SHA. The template's workflows pin every action, but the setting also stops a workflow added later from using a tag. Turn it on once the repo's own workflows pin too, since an unpinned action then fails its run:
+
+```sh
+gh api -X PUT repos/OWNER/REPO/actions/permissions -F enabled=true -f allowed_actions=all -F sha_pinning_required=true
+```
+
+This call also resets `allowed_actions` to `all`; check the current value first with `gh api repos/OWNER/REPO/actions/permissions`.
+
 Execute `just repo-settings` once after creating the repository and again whenever ruleset templates change. Requires administrative permissions.
 
 ## The GitHub About box

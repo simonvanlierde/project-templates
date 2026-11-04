@@ -50,6 +50,9 @@ Upgrade steps:
 
 ### Changed
 
+- With `codecov`, the patch check now fails a pull request when tests cover under 90% of its new and changed lines, and total coverage is shown but no longer enforced.
+- Dependabot and Renovate wait one week for every update, majors included; majors used to wait a month ([dependencies](docs/tooling.md#dependencies)).
+- The setup docs show how to turn on the repo setting that refuses actions not pinned to a full commit SHA ([protecting main](docs/usage.md#protecting-main)).
 - A web app pins wrangler as an exact devDependency, and the production and preview jobs run that copy instead of `pnpm dlx`, so Renovate bumps it and the lockfile records it. See [Production](docs/usage.md#production).
 - In a public repo, `main-checks.json` also requires the check job of each stack at the repo root (`python: lint, types, tests`, or one `python: lint, types, tests (3.x)` per version for a library, `ts: lint, types, tests`, `fmt, clippy, tests, deny`, `golangci-lint, tests, govulncheck`), so a failing test blocks the merge. Run `just repo-settings` after the update. Nested stacks are left out: their workflow runs only when their folder changes.
 - The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build, so a small feature doesn't trip it. The limit itself is unchanged. Existing apps get the comment with `copier update`; check your own limit against it.
