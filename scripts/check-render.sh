@@ -230,7 +230,10 @@ c=$out/compose
 git -C "$c" init -q
 git -C "$c" add -A
 (cd "$c" && uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --all-files >"$out/compose-hooks.log" 2>&1) ||
-  { cat "$out/compose-hooks.log" >&2; exit 1; }
+  {
+    cat "$out/compose-hooks.log" >&2
+    exit 1
+  }
 # CI has no .env: the check reads the example values.
 grep -qF 'docker compose --env-file .env.example config -q' "$c/just/docker.just"
 # README.md is the project's after the first render, so CONTRIBUTING links no anchor in it.
@@ -264,7 +267,6 @@ find "$out/compose" -name 'Dockerfile*' -not -path '*/.git/*' | grep -q . && {
 grep -q 'image: .*@sha256:' "$out/compose/compose.yaml"
 grep -q '127.0.0.1:' "$out/compose/compose.yaml"
 grep -q 'healthcheck:' "$out/compose/compose.yaml"
-grep -q 'docker compose config -q' "$out/compose/just/docker.just"
 grep -q '@just docker-check' "$out/compose/justfile"
 (lacks -q 'hadolint' "$out/compose/.pre-commit-config.yaml")
 grep -q "package-ecosystem: docker-compose" "$out/compose/.github/dependabot.yml"
@@ -783,6 +785,8 @@ grep -q 'send an email to <ada@example.com>' a/.github/CODE_OF_CONDUCT.md
 grep -q 'by email to <ada@example.com>' a/.github/SECURITY.md
 # Each stack's text where that stack is rendered.
 grep -qx '# Python' a/.gitignore
+# A TypeScript-only package still ignores its build output, which biome would lint.
+grep -qx 'dist/' t/.gitignore
 grep -qx "import? 'just/python.just'" a/justfile
 grep -qF 'uv lock' a/.github/workflows/copier-update.yml
 grep -q 'SKIP: ruff-check,ruff-format,ty,biome,tsc,cargo-fmt,cargo-clippy,golangci-lint-fmt,golangci-lint,betterleaks,zizmor$' a/.github/workflows/checks.yml
