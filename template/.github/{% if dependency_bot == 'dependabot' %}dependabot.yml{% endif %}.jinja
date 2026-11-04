@@ -77,9 +77,11 @@ updates:
 
 {%- if 'docker' in stacks and not docker_image %}
 
-  # The images compose.yaml names, tag and digest together.
+  # The images the Compose files name, tag and digest together: compose.yaml and the files
+  # its `include:` pulls in from a subdirectory.
+  # NOTE: one level deep; list a deeper directory here yourself.
   - package-ecosystem: docker-compose
-    directory: /
+    directories: [/, /*]
     schedule: {interval: weekly}
     cooldown: {default-days: 7}
     commit-message: {prefix: chore, include: scope}

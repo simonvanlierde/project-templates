@@ -5,6 +5,7 @@
 {%- set uv_project = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --project ' ~ python_dir %}
 {%- set uv_cd = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --directory ' ~ python_dir %}
 {%- set pnpm = 'pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir %}
+{%- set has_pnpm = 'ts' in stacks or site == 'astro' %}
 {%- set mp = '' if rust_dir == '.' else ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' %}
 {#- golangci-lint fmt takes a path. run loads packages from the cwd's module and
     has no flag to name another, so it is the one hook that cds into a nested module. #}
@@ -12,8 +13,7 @@
 {%- set go_run = 'golangci-lint run' if go_dir == '.' else "sh -c 'cd " ~ go_dir ~ " && exec golangci-lint run'" -%}
 # Run with prek, a drop-in pre-commit replacement: prek install && prek run -a
 #
-# Python projects get prek from `uv tool install prek`. TypeScript-only projects
-# get it from the @j178/prek devDependency. Revs are commit SHAs, since tags are
+# {{ 'prek comes from the @j178/prek devDependency' if 'ts' in stacks and 'python' not in stacks else 'The README says how to install prek' }}. Revs are commit SHAs, since tags are
 # mutable; the dependency bot moves each SHA and its `# frozen:` tag together.
 
 # `prek install` sets up each of these: the commit message is checked as you commit{% if 'ts' in stacks and ts_kind == 'web-app' %},
@@ -33,8 +33,10 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: check-yaml
+{%- if has_pnpm %}
         # pnpm writes its own version into the lockfile as a second YAML document.
         exclude: (^|/)pnpm-lock\.yaml$
+{%- endif %}
       - id: end-of-file-fixer
 {%- if 'python' in stacks %}
         exclude: {{ data_exclude }}
@@ -91,7 +93,9 @@ repos:
     rev: 21ca5323a9c87ee37a434e0ca908efc0a89daa07 # frozen: v0.21.0
     hooks:
       - id: yamlfmt
+{%- if has_pnpm %}
         exclude: (^|/)pnpm-lock\.yaml$
+{%- endif %}
 
   - repo: https://github.com/adrienverge/yamllint
     rev: cba56bcde1fdd01c1deb3f945e69764c291a6530 # frozen: v1.38.0

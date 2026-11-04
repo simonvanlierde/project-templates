@@ -1,3 +1,10 @@
+{%- set stack_hooks = [
+  ('ruff-check,ruff-format,ty', 'python' in stacks),
+  ('biome,tsc', 'ts' in stacks),
+  ('cargo-fmt,cargo-clippy', 'rust' in stacks),
+  ('golangci-lint-fmt,golangci-lint', 'go' in stacks),
+] | selectattr('1') | map(attribute='0') | list -%}
+{% raw -%}
 name: checks
 
 # Runs the git hooks in CI. `prek install` is opt-in per clone, so a commit made
@@ -51,12 +58,14 @@ jobs:
           prek-version: ${{ env.PREK_VERSION }}
           cache: false
         env:
+          {%- endraw %}{% if stack_hooks %}
           # The stack workflows run these from the project's own environment.
+          {%- endif %}{% raw %}
           # betterleaks scans staged changes only and CI stages nothing. GitHub secret
           # scanning covers the server side (free on public repos; a private repo needs
           # GitHub Advanced Security).
           # zizmor runs in the next step, the only one given a token.
-          SKIP: ruff-check,ruff-format,ty,biome,tsc,cargo-fmt,cargo-clippy,golangci-lint-fmt,golangci-lint,betterleaks,zizmor
+          SKIP: {% endraw %}{{ (stack_hooks + ['betterleaks', 'zizmor']) | join(',') }}{% raw %}
 
       # zizmor's online audits (impostor commits, known-vulnerable actions) need a token.
       # It is read-only, and only this hook sees it, not every third-party hook above.
@@ -86,3 +95,4 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+{% endraw -%}

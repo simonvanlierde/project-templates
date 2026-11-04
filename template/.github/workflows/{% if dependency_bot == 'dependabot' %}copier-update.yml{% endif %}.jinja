@@ -69,7 +69,7 @@ jobs:
           {
             echo "Updates this project from the template: \`$current\` to \`$latest\`."
             echo
-            echo "Read the diff before merging, then refresh the lockfiles for your stacks (\`uv lock\`, \`pnpm install\`, \`just go-sync\`{% endraw %}{% if site == 'astro' %}, \`just site-sync\`{% endif %}{% raw %})."
+            {% endraw %}{% set refresh = [('\\`uv lock\\`', 'python' in stacks), ('\\`pnpm install\\`', 'ts' in stacks), ('\\`just go-sync\\`', 'go' in stacks), ('\\`just site-sync\\`', site == 'astro')] | selectattr('1') | map(attribute='0') | list %}{% if refresh %}echo "Read the diff before merging, then refresh the lockfiles ({{ refresh | join(', ') }})."{% else %}echo "Read the diff before merging."{% endif %}{% raw %}
             if [ -s conflicts.txt ]; then
               echo
               echo "These files have merge conflicts. Their markers are committed as they are:"

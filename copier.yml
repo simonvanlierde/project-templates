@@ -261,7 +261,7 @@ author_name:
 
 author_email:
   type: str
-  help: Author email, for package metadata, SECURITY.md and the code of conduct
+  help: Author email, for package metadata, SECURITY.md and the code of conduct. A GitHub noreply address gets no mail, so with one SECURITY.md offers only the private advisory and the code of conduct only GitHub's abuse report
   default: ""
   validator: >-
     {% if not author_email|regex_search('^[^@\\s]+@[^@\\s]+$') %}

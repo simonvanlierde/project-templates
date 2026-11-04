@@ -8,7 +8,7 @@ report vulnerabilities as [SECURITY.md](SECURITY.md) describes, not in a public 
 
 Open an [issue](https://github.com/{{ github_user }}/{{ slug }}/issues) with the bug or
 feature form. For a bug, say what you did, what you expected and what happened, with the
-version you used. A question the README and docs don't answer is a gap in the docs: open
+release or commit you used. A question the README and docs don't answer is a gap in the docs: open
 a feature request for it.
 
 ## Scope and response
@@ -22,7 +22,7 @@ request outside what the project sets out to do is closed with a link to this se
 
 ## Set up and check
 
-[Development](../README.md#development) in the README installs the tools, the dependencies
+The [README](../README.md) says how to install the tools{% if stacks | reject('equalto', 'docker') | list %}, the dependencies{% endif %}
 and the git hooks. `just check` runs the checks CI runs, and `just fmt` fixes and
 formats.
 {% set hatches = [
