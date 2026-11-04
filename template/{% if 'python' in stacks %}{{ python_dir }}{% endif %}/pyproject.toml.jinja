@@ -28,7 +28,7 @@ dependencies = [
 {%- elif kind == 'data-pipeline' %}
 # fetch, build and validate. Add the `xlsx` extra to read Excel sources.
 dependencies = [
-  "sourceledger>=0.2.0",
+  "sourceledger>=0.3.1",
 ]
 {%- else %}
 dependencies = []
@@ -70,12 +70,12 @@ Changelog = "https://github.com/{{ github_user }}/{{ slug }}/blob/main/CHANGELOG
 {% endif %}
 [dependency-groups]
 dev = [
-  "pytest>=9.1.1",
+  "pytest>=9.2.0",
 {%- if codspeed %}
   "pytest-codspeed>=5.0.3",
 {%- endif %}
   "pytest-cov>=7.1.0",
-  "ruff>=0.17.2",
+  "ruff>=0.17.3",
   "ty>=0.0.91",
 {%- if kind == 'research' %}
   "jupyterlab>=4.6.4",
@@ -84,7 +84,7 @@ dev = [
   "httpx2>=2.16.0", # fastapi.testclient
 {%- endif %}
 {%- if kind == 'library' and 'property' in test_extras %}
-  "hypothesis>=6.170.10",
+  "hypothesis>=6.170.12",
 {%- endif %}
 {%- if kind == 'library' and 'mutation' in test_extras %}
   "mutmut>=3.8.1",

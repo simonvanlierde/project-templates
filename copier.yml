@@ -586,7 +586,7 @@ committed_version:
 uv_version:
   type: str
   when: false
-  default: 0.13.5
+  default: 0.13.6
 
 # Computed, never asked: the griffe that python.yml's api job runs with uvx when
 # publish_to_pypi is on. It compares the public API with the last git tag.
@@ -688,7 +688,7 @@ copier_version:
 wrangler_version:
   type: str
   when: false
-  default: 4.152.0
+  default: 4.154.0
 
 # A GitHub commit, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
 # badge URL (fair-software/howfairis#383). A commit, not the tag, because a tag can be
