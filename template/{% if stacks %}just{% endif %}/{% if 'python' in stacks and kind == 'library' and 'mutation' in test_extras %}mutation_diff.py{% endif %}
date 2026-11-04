@@ -18,8 +18,10 @@ from pathlib import Path
 HUNK = re.compile(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", re.MULTILINE)
 
 
-def changed_lines(path: str, base: str) -> set[int]:
-    """Line numbers in the new file that the diff adds or touches."""
+def changed_lines(path: str, base: str, *, untracked: bool) -> set[int]:
+    """Line numbers in the new file that the diff adds or touches; all of them when untracked."""
+    if untracked:
+        return set(range(1, len(Path(path).read_text().splitlines()) + 1))
     diff = subprocess.run(
         ["git", "diff", "-U0", "--relative", base, "--", path],
         check=True,
@@ -66,7 +68,13 @@ def main(base: str) -> None:
         capture_output=True,
         text=True,
     ).stdout.split()
-    for name in names:
+    untracked = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard", "--", "*.py"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+    for name in [*names, *untracked]:
         path = Path(name)
         if not path.exists() or not any(path.is_relative_to(r) for r in roots):
             continue
@@ -76,9 +84,10 @@ def main(base: str) -> None:
         if any(fnmatch.fnmatch(name, p) for p in skip):
             continue
         # src/pkg/mod.py is module pkg.mod; so is pkg/mod.py with source_paths = ["pkg"].
+        # mutmut strips only a leading "src".
         parts = path.with_suffix("").parts
-        module = ".".join(parts[1:] if parts[0] in ("src", "lib") else parts).removesuffix(".__init__")
-        touched = changed_lines(name, base)
+        module = ".".join(parts[1:] if parts[:1] == ("src",) else parts).removesuffix(".__init__")
+        touched = changed_lines(name, base, untracked=name in untracked)
         for lines, pattern in functions(ast.parse(path.read_text()), module):
             if touched & set(lines):
                 print(pattern)

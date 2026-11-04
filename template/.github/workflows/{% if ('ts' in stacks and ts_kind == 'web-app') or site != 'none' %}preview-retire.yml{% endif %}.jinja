@@ -20,7 +20,7 @@ permissions:
 jobs:
   retire:
     name: Retire
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.event.pull_request.user.login, '[bot]'))
     runs-on: ubuntu-latest
     environment: preview
     # One job per Worker name prefix, each in its preview job's group, so a retire waits for
@@ -46,9 +46,13 @@ jobs:
         id: gate
         env:
           TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
+          ACCOUNT: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
         run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::notice::Nothing to retire: CLOUDFLARE_API_TOKEN is not set."
+          missing=""
+          [ -n "$TOKEN" ] || missing=CLOUDFLARE_API_TOKEN
+          [ -n "$ACCOUNT" ] || missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"
+          if [ -n "$missing" ]; then
+            echo "::notice::Nothing to retire: $missing not set."
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"

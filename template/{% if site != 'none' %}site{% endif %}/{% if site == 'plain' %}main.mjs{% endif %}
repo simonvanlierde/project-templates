@@ -1,3 +1,7 @@
 // The page's script, an ES module the browser loads as it is: no build step.
 const status = document.getElementById("status");
-status.textContent = "Ready.";
+
+// Announce a result to screen readers. The region stays empty until something happens.
+export const say = (message) => {
+  status.textContent = message;
+};

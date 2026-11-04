@@ -24,11 +24,17 @@ git show "$sha:CHANGELOG.md" | grep "^## \[$version\] - " >/dev/null || {
   echo "HEAD is not origin/main: check out and pull main first" >&2
   exit 1
 }
+# The manifest version checks read the working tree, not the commit being tagged.
+git diff --quiet HEAD || {
+  echo "uncommitted changes to tracked files: commit or stash them first" >&2
+  exit 1
+}
 
 # A tag left by an earlier run is reused only if it marks the same commit.
 if git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
   [[ $(git rev-parse "$tag^{commit}") == "$sha" ]] || {
-    echo "tag $tag exists on another commit" >&2
+    echo "tag $tag exists on another commit. If no release was published from it, delete it" >&2
+    echo "(a tags-ruleset bypass is needed): git tag -d $tag && git push origin :refs/tags/$tag" >&2
     exit 1
   }
 else
