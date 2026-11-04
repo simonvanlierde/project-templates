@@ -50,7 +50,7 @@ The hadolint hook runs from its Docker image, so the git hooks need Docker runni
 `just` lists the tasks. They mirror what [.github/workflows/]({{ tree }}.github/workflows/) runs.
 
 ```sh
-just check       # lint, types and tests for every stack here{% if 'docker' in stacks %} {{ "(it doesn't build the image: `just up` and the docker workflow do)" if docker_image else '(it validates compose.yaml and lints the shell scripts, and needs Docker)' }}{% endif %}
+just check       # {{ 'lint, types and tests for every stack here' if stacks | reject('equalto', 'docker') | list else 'the checks CI runs' }}{% if 'docker' in stacks %} {{ "(it doesn't build the image: `just up` and the docker workflow do)" if docker_image else '(it validates compose.yaml and lints the shell scripts, and needs Docker)' }}{% endif %}
 just fmt         # apply each stack's fixes and formatting
 just hooks       # the git hooks, as the checks workflow runs them{% if 'python' in stacks and kind == 'library' %}
 just py-matrix   # the tests on every Python version CI covers ({{ python_min }} to {{ python_version }}){% endif %}{% if 'mutation' in test_extras %}{% for prefix, on in [('py', 'python' in stacks and kind == 'library'), ('ts', 'ts' in stacks and ts_kind == 'library'), ('rs', 'rust' in stacks and rust_kind == 'library'), ('go', 'go' in stacks and go_kind == 'library')] if on %}

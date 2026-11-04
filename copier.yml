@@ -36,6 +36,9 @@ _skip_if_exists:
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/privacy.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/terms.md"
   - "/{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
+  # A Compose-only repo's starter stack: replaced by the project's own services.
+  - "/{{ 'compose.yaml' if 'docker' in stacks and not docker_image else '.no-compose-starter' }}"
+  - "/{{ '.env.example' if 'docker' in stacks and not docker_image else '.no-compose-starter' }}"
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
@@ -261,13 +264,15 @@ author_name:
 
 author_email:
   type: str
-  help: Author email, for package metadata, SECURITY.md and the code of conduct. A GitHub noreply address gets no mail, so with one SECURITY.md offers only the private advisory and the code of conduct only GitHub's abuse report
+  help: Author email, for package metadata, SECURITY.md and the code of conduct. A GitHub noreply address gets no mail, so with one SECURITY.md offers only the private advisory and the code of conduct only GitHub's abuse report. A web app or command-line tool refuses one, since its privacy and accessibility pages give the address as the contact
   default: ""
   validator: >-
     {% if not author_email|regex_search('^[^@\\s]+@[^@\\s]+$') %}
     Give an email address: package metadata, SECURITY.md and the code of conduct use it.
     {% elif user_data|default('') == 'accounts' and author_email|lower == 'code@duinlab.nl' %}
     An app that keeps personal data on a server needs its own contact address, for example <app>@duinlab.nl.
+    {% elif author_email|regex_search('@users\\.noreply\\.github\\.com$') and (cli or ('ts' in stacks and ts_kind|default('') == 'web-app')) %}
+    A GitHub noreply address gets no mail, and the privacy, terms and accessibility pages give it as the contact: use one that does.
     {% endif %}
 
 customise:
@@ -781,7 +786,7 @@ docker_image:
   validator: >-
     {% if docker_image and python_layout == 'flat' %}
     The flat layout is for an existing library, app or research package: the web-service
-    and data-pipeline kinds and the python image need their starter modules in src/.
+    and data-pipeline kinds and the python image need their starter modules in src/, or answer no to `docker_image`.
     {% elif kind == 'web-service' and not docker_image %}
     The web-service kind is shipped as the python image: answer yes to `docker_image`.
     {% endif %}

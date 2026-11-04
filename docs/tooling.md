@@ -29,11 +29,11 @@ Install golangci-lint once per machine. The template pins the golangci-lint vers
 
 ## Git hooks
 
-Hooks run via [prek](https://prek.j178.dev), a drop-in pre-commit replacement. A single `.pre-commit-config.yaml` covers all stacks. Python projects install prek with `uv tool install prek`; TypeScript projects install the `@j178/prek` devDependency. With the `docker` stack, the hadolint hook requires a running Docker daemon.
+Hooks run via [prek](https://prek.j178.dev), a drop-in pre-commit replacement. A single `.pre-commit-config.yaml` covers all stacks. Python projects install prek with `uv tool install prek`; TypeScript projects install the `@j178/prek` devDependency. With the Python image (the `docker` stack and `docker_image`), the hadolint hook requires a running Docker daemon.
 
 ## Tasks
 
-Tasks run via [just](https://just.systems). The root `justfile` imports stack-specific `just/<stack>.just` modules. Recipes use a stack prefix (`py-`, `ts-`, `rs-`, `go-`), except for kind-specific tasks: `fetch`, `build`, `validate`, and `pipeline` (data-pipeline), `serve` (web-service), and `up` (docker). `just check` runs the checks across all enabled stacks.
+Tasks run via [just](https://just.systems). The root `justfile` imports stack-specific `just/<stack>.just` modules. Recipes use a stack prefix (`py-`, `ts-`, `rs-`, `go-`, and `docker-` in a [Compose-only repo](usage.md#compose-only-repos)), except for kind-specific tasks: `fetch`, `build`, `validate`, and `pipeline` (data-pipeline), `serve` (web-service), and `up` (docker). `just check` runs the checks across all enabled stacks, then the `local-check` recipe in `just/local.just` if there is one. In a Compose-only repo it validates the Compose file and lints the shell scripts.
 
 Coverage is opt-in. `just py-cov` and `just ts-cov` print summaries without threshold gates. With the `codecov` option enabled, CI uploads coverage to Codecov, and `just check` runs TypeScript tests with coverage.
 

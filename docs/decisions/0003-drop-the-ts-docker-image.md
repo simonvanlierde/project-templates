@@ -8,9 +8,8 @@ date: 2026-11-04
 ## Context and Problem Statement
 
 The `docker_stacks` question offered a `ts` image: a Node service with a `/health` endpoint. No render
-of the template used it. Every TypeScript project is a web app deployed to Cloudflare
-Pages or Workers, and the hand-written TypeScript Dockerfiles elsewhere serve a static
-build with Caddy instead of running Node.
+of the template used it, and the web-app kind deploys to Cloudflare Workers without
+one.
 
 ## Considered Options
 

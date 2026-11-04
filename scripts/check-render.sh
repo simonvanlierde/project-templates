@@ -226,6 +226,9 @@ git tag -f check-render-tag >/dev/null
   --data project_name=compose-me --data 'stacks=[docker]' \
   --data author_email=1+ada@users.noreply.github.com . "$out/compose"
 c=$out/compose
+"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-site --data 'stacks=[docker]' \
+  --data site=plain . "$out/compose-site"
+test -f "$out/compose-site/.github/scripts/preview-retire.sh"
 # A fresh render passes its own git hooks.
 git -C "$c" init -q
 git -C "$c" add -A
@@ -271,7 +274,6 @@ grep -q '@just docker-check' "$out/compose/justfile"
 (lacks -q 'hadolint' "$out/compose/.pre-commit-config.yaml")
 grep -q "package-ecosystem: docker-compose" "$out/compose/.github/dependabot.yml"
 grep -q '"context": "compose"' "$out/compose/.github/rulesets/main-checks.json"
-(cd "$out/compose" && docker compose config -q)
 # Files that must stay out of the shell lint: a docs page with a shebang in a code block,
 # a zsh script and a fish script. just check runs where Docker is available.
 mkdir -p "$out/compose/scripts"
@@ -283,10 +285,13 @@ printf '#!/usr/bin/env zsh\nprint $1\n' >"$out/compose/scripts/z"
 printf '#!/usr/bin/env fish\necho $argv\n' >"$out/compose/scripts/f"
 printf '#!/usr/bin/env bash\nset -euo pipefail\nif true; then\n  echo ok\nfi\n' >"$out/compose/scripts/ok"
 printf '# shellcheck shell=bash\necho no shebang, still a .sh\n' >"$out/compose/scripts/plain.sh"
-if command -v just >/dev/null && docker info >/dev/null 2>&1; then
+# CI has just and Docker, so there a missing one fails the run instead of skipping this.
+if [ -n "${CI:-}" ] || { command -v just >/dev/null && docker info >/dev/null 2>&1; }; then
   # A required variable, set only in .env.example: the check passes without a .env.
   # shellcheck disable=SC2016 # literal ${...} for Compose
-  sed -i 's/^    restart: unless-stopped$/    environment:\n      EXAMPLE_VAR: ${EXAMPLE_VAR:?}\n&/' "$out/compose/compose.yaml"
+  awk '/^    restart: unless-stopped$/ { print "    environment:"; print "      EXAMPLE_VAR: ${EXAMPLE_VAR:?}" } { print }' \
+    "$out/compose/compose.yaml" >"$out/compose.yaml.tmp"
+  mv "$out/compose.yaml.tmp" "$out/compose/compose.yaml"
   # shellcheck disable=SC2016 # the same literal
   grep -qF 'EXAMPLE_VAR: ${EXAMPLE_VAR:?}' "$out/compose/compose.yaml"
   # A repo's own local-check runs at the end of just check.
@@ -300,9 +305,21 @@ if command -v just >/dev/null && docker info >/dev/null 2>&1; then
   ( ! (cd "$out/compose" && just check) >/dev/null 2>&1)
   # `just fmt` rewrites it to the 2-space style, and the check then passes.
   (cd "$out/compose" && just docker-fmt && just check)
+  # With a site the render ships .github/scripts/preview-retire.sh, whose case arms are
+  # not indented: docker-check must pass on the template's own scripts.
+  git -C "$out/compose-site" init -q
+  git -C "$out/compose-site" add -A
+  (cd "$out/compose-site" && just docker-check)
 fi
-# shfmt takes its indent from .editorconfig: *.sh must say 2, as docker-check expects.
-grep -qxF '[*.sh]' "$out/compose/.editorconfig"
+# docker-check passes -i 2 itself; .editorconfig gives editors the same indent for *.sh.
+grep -zqF $'[*.sh]\nindent_size = 2\n' "$out/compose/.editorconfig"
+# compose.yaml and .env.example are the project's after the first render.
+echo '# project edit' >>"$out/compose/.env.example"
+echo '# project edit' >>"$out/compose/compose.yaml"
+"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-me --data 'stacks=[docker]' \
+  --data author_email=1+ada@users.noreply.github.com . "$out/compose" >/dev/null 2>&1
+grep -q 'project edit' "$out/compose/.env.example"
+grep -q 'project edit' "$out/compose/compose.yaml"
 
 # compose2: Renovate reads the Compose file, and the cold-install job (a container with no
 # Docker daemon) must not run the recipes that need one.
@@ -314,6 +331,14 @@ grep -E "^ +grep -vE" "$out/compose2/.github/workflows/cold-install.yml" | grep 
 "${copier[@]}" --vcs-ref=HEAD --data project_name=compose-img --data 'stacks=[python,docker]' \
   --data cold_install=true . "$out/compose3"
 (lacks -qE '\|check\|fmt' "$out/compose3/.github/workflows/cold-install.yml")
+# A Compose-only repo with another stack runs that stack's own check and fmt there.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-mix --data 'stacks=[python,docker]' \
+  --data docker_image=false --data cold_install=true . "$out/compose-mix"
+(lacks -qE '\|check\|fmt' "$out/compose-mix/.github/workflows/cold-install.yml")
+mkdir -p "$out/mix"
+printf 'uv sync\njust check       # all\njust fmt\n' >"$out/mix/readme.sh"
+RUNNER_TEMP=$out/mix bash -c "$(grep -E '^ +sed -i -E' "$out/compose-mix/.github/workflows/cold-install.yml")"
+[ "$(cat "$out/mix/readme.sh")" = "$(printf 'uv sync\njust py-check       # all\njust py-fmt')" ]
 
 # docker without python, or docker_image=false, is a Compose-only repo too. With no
 # image the flat layout is allowed.
@@ -384,6 +409,11 @@ refuses 'at least one stack' --data 'stacks=[]'
   refuses 'python_dir is `_site/pkg`, where the static site goes' --data 'stacks=[python]' --data python_dir=_site/pkg --data site=plain
 }
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
+# A noreply address gets no mail, and these renders give it as a contact on a page.
+refuses 'A GitHub noreply address' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
+  --data author_email=1+ada@users.noreply.github.com
+refuses 'A GitHub noreply address' --data 'stacks=[go]' --data go_kind=binary \
+  --data author_email=1+ada@users.noreply.github.com
 refuses 'The flat layout' --data 'stacks=[python,docker]' \
   --data python_layout=flat
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
@@ -449,7 +479,7 @@ load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
 seen = 0
 out = pathlib.Path(os.environ["OUT"])
-for path in sorted(out.glob("[abcdm]/**/*")):
+for path in sorted(itertools.chain(out.glob("[abcdm]/**/*"), out.glob("compose/**/*"), out.glob("compose2/**/*"))):
     parse = load.get(path.suffix)
     if parse and path.is_file():
         parse(path.read_text())
@@ -499,7 +529,7 @@ for fail_create, expected in [(False, ["create", "edit"]), (True, ["create"])]:
         assert (work / "provenance/mono-me-1.2.3.sigstore.json").is_file()
 # A ruleset requires a check by its job name, so two jobs with one name can't be told
 # apart. a, b, c and d each render more than one stack.
-for render in "abcdm":
+for render in [*"abcdm", "compose", "compose2"]:
     names = {}
     for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
         for job_id, job in yaml.safe_load(wf.read_text())["jobs"].items():
@@ -549,7 +579,7 @@ saves = {
     "docker/build-push-action": lambda w, cond: bool(w.get("cache-to")) and "github.event_name == 'push'" not in w["cache-to"],
 }
 checked = collections.Counter()
-for render in "abcdm":
+for render in [*"abcdm", "compose", "compose2"]:
     for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
         doc = yaml.safe_load(wf.read_text())
         if "pull_request" not in doc[True]:
