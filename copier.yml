@@ -747,7 +747,7 @@ wrangler_version:
 astro_version:
   type: str
   when: false
-  default: 7.4.1
+  default: 7.4.2
 
 # Computed, never asked: the pnpm that site.yml runs wrangler with when the repo has no
 # package.json, and that an Astro site's package.json names. Keep it equal to
