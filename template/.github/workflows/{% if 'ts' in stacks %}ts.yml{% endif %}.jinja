@@ -207,10 +207,17 @@ jobs:
 {%- endif %}
         env:
           TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
+          ACCOUNT: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
           FORK: {% raw %}${{ github.event.pull_request.head.repo.full_name != github.repository }}{% endraw %}
         run: |
-          if [ "$FORK" = "true" ] || [ -z "$TOKEN" ]; then
-            echo "::notice::Preview skipped: fork PR or CLOUDFLARE_API_TOKEN not set."
+          missing=""
+          [ -n "$TOKEN" ] || missing=CLOUDFLARE_API_TOKEN
+          [ -n "$ACCOUNT" ] || missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"
+          if [ "$FORK" = "true" ]; then
+            echo "::notice::Preview skipped: fork PR."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          elif [ -n "$missing" ]; then
+            echo "::notice::Preview skipped: $missing not set."
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
@@ -294,9 +301,13 @@ jobs:
 {%- endif %}
         env:
           TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
+          ACCOUNT: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
         run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::notice::Production deploy skipped: CLOUDFLARE_API_TOKEN not set."
+          missing=""
+          [ -n "$TOKEN" ] || missing=CLOUDFLARE_API_TOKEN
+          [ -n "$ACCOUNT" ] || missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"
+          if [ -n "$missing" ]; then
+            echo "::notice::Production deploy skipped: $missing not set."
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
