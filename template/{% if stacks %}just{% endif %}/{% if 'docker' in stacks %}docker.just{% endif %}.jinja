@@ -1,0 +1,36 @@
+{%- if docker_stacks -%}
+# Run the service, rebuilding the image when src/ or the lockfile changes.
+up:
+    docker compose up --watch
+{%- else -%}
+# Lint images, pinned by digest so CI and a laptop run the same tools.
+shellcheck := "koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d"
+shfmt := "mvdan/shfmt:v3.12.0@sha256:307d265ffd25ce832899ae17c93ed5062fc3375c514bba8f52cbf52792735c4d"
+
+# Run the stack in the background.
+up:
+    docker compose up -d --wait
+{%- endif %}
+
+# Stop it and remove the containers.
+down:
+    docker compose down
+
+# Follow the service logs.
+logs:
+    docker compose logs -f
+{%- if not docker_stacks %}
+
+# Validate the Compose file, then lint and format-check every shell script in the repo.
+# The linters run from their own images, so this needs a Docker daemon.
+docker-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose config -q
+    mapfile -t sh < <(git ls-files -z | xargs -0 grep -lE '^#!.*sh' 2>/dev/null || true)
+    if [ ${{ '{#' }}sh[@]} -gt 0 ]; then
+        run="docker run --rm --user $(id -u):$(id -g) -v $PWD:/src:ro -w /src"
+        $run {{ '{{' }}shellcheck{{ '}}' }} "${sh[@]}"
+        $run {{ '{{' }}shfmt{{ '}}' }} -d -i 2 "${sh[@]}"
+    fi
+{%- endif %}

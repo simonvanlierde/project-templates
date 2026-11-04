@@ -27,6 +27,9 @@ check:
 {%- if 'go' in stacks %}
     @just go-check
 {%- endif %}
+{%- if 'docker' in stacks and not docker_stacks %}
+    @just docker-check
+{%- endif %}
 {%- if site == 'astro' %}
     @just site
 {%- endif %}

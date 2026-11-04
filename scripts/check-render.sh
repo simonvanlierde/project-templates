@@ -230,6 +230,29 @@ if "${copier[@]}" --vcs-ref=HEAD --data project_name=web-docker \
 fi
 grep -q 'A web app is static files' "$out/g.log"
 
+# compose: a deploy repo that only composes upstream images. `stacks=[docker]` with no
+# python or ts stack leaves `docker_stacks` empty by default: no Dockerfile, no image
+# workflow, and `just check` validates the Compose file and shell scripts instead.
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=compose-me --data 'stacks=[docker]' . "$out/compose"
+test -f "$out/compose/compose.yaml"
+test -f "$out/compose/.env.example"
+test -f "$out/compose/.github/workflows/compose.yml"
+test ! -e "$out/compose/.github/workflows/docker.yml"
+find "$out/compose" -name 'Dockerfile*' -not -path '*/.git/*' | grep -q . && {
+  echo "compose-only render wrote a Dockerfile" >&2
+  exit 1
+}
+grep -q 'image: .*@sha256:' "$out/compose/compose.yaml"
+grep -q '127.0.0.1:' "$out/compose/compose.yaml"
+grep -q 'healthcheck:' "$out/compose/compose.yaml"
+grep -q 'docker compose config -q' "$out/compose/just/docker.just"
+grep -q '@just docker-check' "$out/compose/justfile"
+(lacks -q 'hadolint' "$out/compose/.pre-commit-config.yaml")
+grep -q "package-ecosystem: docker-compose" "$out/compose/.github/dependabot.yml"
+grep -q '"context": "compose"' "$out/compose/.github/rulesets/main-checks.json"
+(cd "$out/compose" && docker compose config -q)
+
 # Without the settings file, --defaults must stop at the blank identity answers.
 if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=anon-me . "$out/f" >"$out/f.log" 2>&1; then

@@ -69,7 +69,7 @@ jobs:
 {%- endif %}
 
       - name: Run the README's Development blocks
-{%- if 'docker' in stacks %}
+{%- if 'docker' in stacks and docker_stacks %}
         env:
           # The job container has no Docker daemon to run this hook's image.
           SKIP: hadolint-docker

@@ -10,6 +10,14 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- Compose-only repos: with `stacks=[docker]` and no `python` or `ts` stack, `docker_stacks` defaults to empty and the render has no Dockerfile. It gets a starter `compose.yaml` (an example service pinned by digest, with a healthcheck, bound to `127.0.0.1`), `.env.example`, a `compose.yml` workflow, the `docker-compose` ecosystem in the dependency bot, and a `just check` that runs `docker compose config -q` and lints shell scripts. Existing projects render as before ([Compose-only repos](docs/usage.md#compose-only-repos)).
+
+### Changed
+
+- `docker_stacks` accepts an empty answer. Its default is `python` when the project has the python stack, `ts` for a TypeScript package, and empty otherwise. `app_port` and `publish_to_ghcr` are not asked without an image.
+
 ## [0.13.0] - 2026-11-04
 
 Upgrade steps:
