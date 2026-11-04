@@ -193,7 +193,7 @@ When projects record architectural choices, store them in `docs/decisions/`.
 
 ### Production
 
-Every push to `main` runs the `production` job after the checks pass. It deploys the build the checks ran on to the Worker `<slug>`, with the pinned wrangler, at `https://<slug>.<subdomain>.workers.dev`. Static-asset requests are free and unlimited on the Workers Free plan. The job runs in the `production` GitHub environment, which `just repo-settings` limits to `main`. One deploy runs at a time, and a deploy in flight is never cancelled by the next. Without `CLOUDFLARE_API_TOKEN`, the job skips with a notice. For a custom domain, add it under the Worker's Settings > Domains & Routes. The domain needs a zone on Cloudflare.
+Every push to `main` runs the `production` job after the checks pass. It deploys the build the checks ran on to the Worker `<slug>`, with the pinned wrangler, at `https://<slug>.<subdomain>.workers.dev`. Static-asset requests are free and unlimited on the Workers Free plan. The job runs in the `production` GitHub environment, which `just repo-settings` limits to `main`. A preview job that holds the same Cloudflare token can still deploy to `<slug>` (see [Pull request previews](#pull-request-previews)). One deploy runs at a time, and a deploy in flight is never cancelled by the next. Without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID`, the job skips with a notice. For a custom domain, add it under the Worker's Settings > Domains & Routes. The domain needs a zone on Cloudflare.
 
 #### Moving an app off Cloudflare Pages
 
@@ -203,6 +203,8 @@ An app made before this template deployed from CI was deployed by Cloudflare Pag
 2. The next push to `main` deploys the Worker. Check the app at its workers.dev address.
 3. Move the custom domain from the Pages project to the Worker (Worker > Settings > Domains & Routes).
 4. Delete the Pages project, now that the Worker serves production.
+
+Before step 2, check that the account has no Worker named `<slug>`: the first deploy overwrites it. Expect a short gap while the domain moves from Pages to the Worker.
 
 Without a custom domain, the app's address changes: set the new one with `copier update --data site_url=https://<slug>.<subdomain>.workers.dev`.
 
@@ -216,6 +218,8 @@ Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` skip the job with a 
 
 1. Run `just repo-settings`. It creates the `preview` and `production` environments in GitHub (or create them under Settings > Environments, with `production` limited to `main`).
 2. Create a custom Cloudflare API token with the permission Account > Workers Scripts: Edit. Add it to both environments as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
+
+The `preview` job runs the pull request's code with the `preview` environment's Cloudflare token. If both environments hold one account-wide token, anyone who can push a branch can deploy over the production Worker. To keep them apart, give previews a token from a second Cloudflare account.
 
 The first deploy creates each Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. wrangler is an exact devDependency in `package.json`, which both jobs install, and Renovate bumps it like any other package.
 
@@ -364,7 +368,7 @@ The starter files are yours: an update leaves them alone. An Astro site's `packa
 One-time setup:
 
 1. Run `just repo-settings`. It creates the `preview` environment and sets GitHub Pages to deploy from Actions (Settings > Pages > Source: GitHub Actions).
-2. Add the Cloudflare API token (Account > Workers Scripts: Edit) to the `preview` environment as `CLOUDFLARE_API_TOKEN`, and your account ID as `CLOUDFLARE_ACCOUNT_ID`. Without the token, the preview job skips with a notice, and Pages still deploys.
+2. Add the Cloudflare API token (Account > Workers Scripts: Edit) to the `preview` environment as `CLOUDFLARE_API_TOKEN`, and your account ID as `CLOUDFLARE_ACCOUNT_ID`. Without either secret, the preview job skips with a notice, and Pages still deploys.
 
 A GitHub Pages site is public even when the repo is private, and a private repo needs a paid GitHub plan for Pages. Until Pages is on, the `deploy` job skips with a notice, and `just repo-settings` warns and goes on where GitHub refuses Pages.
 

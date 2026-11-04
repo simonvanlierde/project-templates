@@ -10,13 +10,15 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-04
+
 Upgrade steps:
 
 - **Breaking:** in a web app, add `export const LEGAL_LINKED_FROM: readonly string[] = [...ROUTES];` to `tests/e2e/routes.ts` to keep the old legal-page check, or list only the routes that link the legal pages.
-- **Breaking:** in a web app, merge the `copier update`, run `just repo-settings` and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` to the `production` environment. Once the Worker is live, move the custom domain to it and delete the Pages project ([steps](docs/usage.md#moving-an-app-off-cloudflare-pages)). Then fix the lines that still name Pages in files the update leaves alone: `docs/privacy.md`, the README's deploy section and the comment in `src/App.tsx`.
+- **Breaking:** in a web app, merge the `copier update`, run `pnpm install` and commit `pnpm-lock.yaml` (the update adds wrangler as a devDependency, and CI installs with `--frozen-lockfile`). Run `just repo-settings` and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` to the `production` environment. Once the Worker is live, move the custom domain to it and delete the Pages project ([steps](docs/usage.md#moving-an-app-off-cloudflare-pages)). Without a custom domain, change the `site_url` answer to the workers.dev address: `copier update --data site_url=https://<slug>.<subdomain>.workers.dev`. Then fix the lines that still name Pages in files the update leaves alone: `docs/privacy.md`, the README's deploy section and the comment in `src/App.tsx`.
 - **Breaking:** in a web app, move any hand tests in `docs/accessibility.md` under "How we check" and delete the "Tested with" heading, or the statement test fails.
 - **Breaking:** with the mutation extra, run `just py-mutation` and list each survivor you accept in `tests/mutation-baseline.txt`, with its reason.
-- **Breaking:** to keep your `docs/decisions/README.md`, run `git checkout HEAD -- docs/decisions/README.md` before you commit the update.
+- **Breaking:** to keep your `docs/decisions/README.md` or `docs/decisions/0000-template.md`, run `git checkout HEAD -- docs/decisions/README.md docs/decisions/0000-template.md` before you commit the update.
 - **Breaking:** to keep `cold-install.yml`, run `copier update --data cold_install=true`.
 - **Breaking:** delete `.github/scripts/citation.py` if it is still there, then run `prek run citesync --all-files` and fix what it reports. A TypeScript, Rust or Go library that gets the citation files for the first time needs the same run.
 - **Breaking:** in a research or data-pipeline project, the update licenses `data/` under CC-BY-4.0 or CC0-1.0 instead of the code license. To keep the code license there, run `copier update --data data_license=none`.
@@ -38,6 +40,7 @@ Upgrade steps:
 - Web apps get a preview Worker for each open, ready pull request, deleted again when the pull request closes, merges or turns draft. See [Pull request previews](docs/usage.md#pull-request-previews).
 - `just release X.Y.Z` runs twice. The first run cuts `[Unreleased]` in `CHANGELOG.md` into the new version and commits it; merge that to `main`. The second run, on an up-to-date `main`, signs and pushes the tag. See [Publishing](docs/usage.md#publishing).
 - The PyPI and npm release workflows refuse a tag that differs from the package version.
+- Every release workflow refuses a lightweight tag or one GitHub cannot verify, before anything builds or publishes, so only a tag signed by `just release` publishes.
 - `advisories.yml` runs zizmor over the workflows every Monday, so a newly known-bad action fails without a commit here.
 - A project that publishes to PyPI gets classifiers, `keywords` and a `Changelog` URL in `pyproject.toml`.
 - `copier copy` ends with how to release: `just release X.Y.Z`, the signing key it needs and where to set the version.
@@ -60,27 +63,22 @@ Upgrade steps:
 - `just release` signs and pushes the tag with `.github/scripts/tag-release.sh X.Y.Z`, which `copier update` adds. The checks are the same. You can run the script on its own.
 - A web app's production and preview jobs call one script, `.github/scripts/deploy-worker.sh`, for the deploy steps they shared. Nothing about what they deploy changes. Existing apps get the script with `copier update`.
 - A web app pins wrangler as an exact devDependency, and the production and preview jobs run that copy instead of `pnpm dlx`, so Renovate bumps it and the lockfile records it. See [Production](docs/usage.md#production).
-- In a public repo, `main-checks.json` also requires the check job of each stack at the repo root (`python: lint, types, tests`, or one `python: lint, types, tests (3.x)` per version for a library, `ts: lint, types, tests`, `fmt, clippy, tests, deny`, `golangci-lint, tests, govulncheck`), so a failing test blocks the merge. Run `just repo-settings` after the update. Nested stacks are left out: their workflow runs only when their folder changes.
+- In a public repo, `main-checks.json` also requires the check job of each stack at the repo root (`python: lint, types, tests`, `python: lint, types, pipeline, tests` for a data pipeline, or one `python: lint, types, tests (3.x)` per version for a library, `ts: lint, types, tests`, `fmt, clippy, tests, deny`, `golangci-lint, tests, govulncheck`), so a failing test blocks the merge. Run `just repo-settings` after the update. Nested stacks are left out: their workflow runs only when their folder changes.
 - The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build, so a small feature doesn't trip it. The limit itself is unchanged. Existing apps get the comment with `copier update`; check your own limit against it.
-- **Breaking:** a web app's legal pages no longer have to be linked from a footer on every route. `tests/e2e/legal-pages.spec.ts` checks the routes in a `LEGAL_LINKED_FROM` export from `tests/e2e/routes.ts`, and each page must link back to `/`, since an installed app has no back button. `routes.ts` is yours, so `copier update` doesn't add the export: add `export const LEGAL_LINKED_FROM: readonly string[] = [...ROUTES];` to keep the old check, or list only the screen that links the pages, such as `["/settings"]`.
-- **Breaking:** A web app's production moves from Cloudflare Pages to a Cloudflare Worker that serves the build as static assets. Pages built a preview of every branch push, and those previews could not be deleted. A new `production` job in `ts.yml` deploys the build the checks ran on at each push to `main`, through a `production` GitHub environment that only `main` can deploy to. `wrangler.jsonc` is now the Worker's config for production and previews, and `wrangler.preview.jsonc` is gone. `site_url` defaults to `https://<slug>.<github_user>.workers.dev`. Upgrade: merge the `copier update`, run `just repo-settings`, and add both Cloudflare secrets to the `production` environment. Once the next push to `main` has deployed the Worker, move the custom domain from the Pages project to the Worker, then delete the Pages project. Without a custom domain, also change the `site_url` answer to the workers.dev address. See [Moving an app off Cloudflare Pages](docs/usage.md#moving-an-app-off-cloudflare-pages).
-- **Breaking:** `just py-mutation` now fails on a surviving mutant that is not listed in `tests/mutation-baseline.txt`, and on a listed one that no longer survives, so the weekly `mutation.yml` python job can fail. Upgrade: after `copier update`, run `just py-mutation` and list each survivor you accept in the new `tests/mutation-baseline.txt`, one per line with the reason. See [Test extras](docs/usage.md#test-extras).
-- **Breaking:** a web app's production moves from Cloudflare Pages to a Cloudflare Worker, deployed by a `production` job in `ts.yml` at each push to `main`. `site_url` defaults to `https://<slug>.<github_user>.workers.dev`. See [Moving an app off Cloudflare Pages](docs/usage.md#moving-an-app-off-cloudflare-pages).
-- **Breaking:** a web app's legal pages no longer need a footer link on every route. The test checks the routes in `LEGAL_LINKED_FROM` from `tests/e2e/routes.ts`, and each page must link back to `/`. See [Legal pages](docs/usage.md#legal-pages).
+- **Breaking:** a web app's legal pages no longer have to be linked from a footer on every route. `tests/e2e/legal-pages.spec.ts` checks the routes in a `LEGAL_LINKED_FROM` export from `tests/e2e/routes.ts`, and each page must link back to `/`, since an installed app has no back button. `routes.ts` is yours, so `copier update` doesn't add the export. The spec fails while the list is empty. See [Legal pages](docs/usage.md#legal-pages).
+- **Breaking:** A web app's production moves from Cloudflare Pages to a Cloudflare Worker that serves the build as static assets. Pages built a preview of every branch push, and those previews could not be deleted. A new `production` job in `ts.yml` deploys the build the checks ran on at each push to `main`, through a `production` GitHub environment that only `main` can deploy to. `wrangler.jsonc` is now the Worker's config for production and previews, and `wrangler.preview.jsonc` is gone. `site_url` defaults to `https://<slug>.<github_user>.workers.dev`. See [Moving an app off Cloudflare Pages](docs/usage.md#moving-an-app-off-cloudflare-pages).
+- **Breaking:** `just py-mutation` now fails on a surviving mutant that is not listed in `tests/mutation-baseline.txt`, and on a listed one that no longer survives, so the weekly `mutation.yml` python job can fail. See [Test extras](docs/usage.md#test-extras).
 - **Breaking:** the accessibility statement has no "Tested with" section any more, and its test fails while the heading is still there. Hand tests go under "How we check".
-- **Breaking:** `just py-mutation` fails on a surviving mutant not listed in `tests/mutation-baseline.txt`, so the weekly mutation job can fail. See [Test extras](docs/usage.md#test-extras).
 - **Breaking:** new projects no longer get `docs/decisions/`, and `copier update` deletes its `README.md` and `0000-template.md`. Your numbered records stay.
 - **Breaking:** `cold-install.yml` is now opt-in through the `cold_install` question, off by default. See [CI baseline](docs/ci-baseline.md).
 - **Breaking:** [citesync](https://github.com/simonvanlierde/citesync) replaces `.github/scripts/citation.py`, and its git hook also checks the package manifests against `CITATION.cff`. `just citation --check` is gone: the hook does the check.
 - **Breaking:** no more `.zenodo.json`: Zenodo reads `CITATION.cff` when a repo has none. A project with `license` set to `none` gets no citation files, since a Zenodo record needs a license.
 - **Breaking:** the `dco-signoff` commit-msg hook and the web sign-off setting now come with every public render, not only with `openssf_badge=silver` ([CI baseline](docs/ci-baseline.md)).
 - A web app's end-to-end tests no longer fail on TODOs in the legal pages or on an accessibility statement last reviewed over 400 days ago, so a new web app passes CI as rendered ([docs/web-legal.md](docs/web-legal.md)).
-- In a public repo, `main-checks.json` also requires the check job of each stack at the repo root, one per Python version for a library, so a failing test blocks the merge. Nested stacks are left out: their workflow runs only when their folder changes.
-- The bundle budget's comment in `scripts/checkBundleBudget.mjs` says to keep it at least 25% above the build. The limit itself is unchanged; check yours against it.
 - A README of a project that publishes to PyPI or npm links to repository files by full GitHub URL, so the links work on the package page.
 - The README no longer has a "Releasing" section or the note on the week-old-release rule; public projects get both in `CONTRIBUTING.md`. After `copier update`, delete them from the README if you don't want them twice.
-- `just repo-settings` updates existing rulesets in place, found by what they protect rather than by name, without creating duplicates.
-- A web app's privacy and accessibility statements are rewritten in plain language, so expect merge conflicts in pages you have filled in. [docs/web-legal.md](docs/web-legal.md) says how to write them, with an example.
+- `just repo-settings` updates existing rulesets in place, found by name or else by the refs they protect, without creating duplicates.
+- A web app's privacy and accessibility statements are rewritten in plain language. New apps get the new pages; `copier update` leaves existing ones alone, because `_skip_if_exists` lists them. [docs/web-legal.md](docs/web-legal.md) says how to write them, with an example.
 - `cold-install.yml` also runs when `pyproject.toml`, `uv.lock` or `.python-version` change, so a lockfile that breaks first setup fails on the pull request.
 - In Python projects, the whitespace, end-of-file and notebook hooks leave `tests/fixtures/` alone, as they already did `data/`.
 
@@ -814,7 +812,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/simonvanlierde/project-templates/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/simonvanlierde/project-templates/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/simonvanlierde/project-templates/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/simonvanlierde/project-templates/compare/v0.9.1...v0.10.0
