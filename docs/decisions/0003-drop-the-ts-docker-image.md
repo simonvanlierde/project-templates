@@ -15,16 +15,19 @@ build with Caddy instead of running Node.
 ## Considered Options
 
 * Keep the `ts` image
-* Drop it, which leaves one image and no question to ask
+* Drop it, and refuse `docker` without `python`
+* Drop it, and ask one yes/no question for the Python image; without it, a Compose-only repo
 
 ## Decision Outcome
 
-Chosen: drop it, and the `docker_stacks` question with it. The Dockerfile,
-`.dockerignore`, `src/main.ts` stub, compose service and the CI renders that used it are
-gone. `docker` in `stacks` now means the Python image, and `docker` without `python` is
-refused on copy (`copier update --defaults` swaps in the default instead). Copier drops an old
-`docker_stacks` answer, and the update deletes the ts files,
-so the change is marked **Breaking** in the changelog.
+Chosen: drop it, and replace the `docker_stacks` question with a yes/no `docker_image`.
+The Dockerfile, `.dockerignore`, `src/main.ts` stub, compose service and the CI renders
+that used it are gone. `docker_image` is asked only when `stacks` has both `docker` and
+`python`, and defaults to yes: build the Python image. `docker` without `python`, or
+`docker_image=false`, renders the Compose-only repo (an example upstream service, no
+Dockerfile), so a deploy repo that composes upstream images keeps a place in the template.
+Copier drops an old `docker_stacks` answer, and the update deletes the ts files, so the
+change is marked **Breaking** in the changelog.
 
 ### Consequences
 
@@ -33,5 +36,5 @@ so the change is marked **Breaking** in the changelog.
 
 ### Confirmation
 
-`scripts/check-render.sh` fails if `docker` without `python` renders, and renders the
-Python image in several answer sets.
+`scripts/check-render.sh` renders `docker` without `python` and `docker_image=false` and
+fails if either writes a Dockerfile, and renders the Python image in several answer sets.

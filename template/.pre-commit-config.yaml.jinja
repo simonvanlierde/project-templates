@@ -119,7 +119,7 @@ repos:
     rev: a65ab044e916760429068fe5794b8306abdfcbb9 # frozen: v2.3.0
     hooks:
       - id: jactionlint
-{%- if 'docker' in stacks %}
+{%- if 'docker' in stacks and docker_image %}
 
   # Runs from its own image: nothing to install, but it needs the Docker daemon.
   - repo: https://github.com/hadolint/hadolint

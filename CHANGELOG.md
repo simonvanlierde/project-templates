@@ -12,11 +12,20 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
-- **Breaking:** if `.copier-answers.yml` lists `ts` in `docker_stacks`, the update deletes the TypeScript `Dockerfile`, `.dockerignore` and `src/main.ts` stub, and the compose service. Keep them with `git checkout HEAD -- <path>` before you commit.
+- **Breaking:** `docker_stacks` is gone, and copier drops the old answer. If it listed `ts`, the update deletes the TypeScript `Dockerfile`, `.dockerignore` and `src/main.ts` stub, and the compose service: keep them with `git checkout HEAD -- <path>` before you commit. If it was empty in a project with the python stack, update with `copier update --data docker_image=false`, or the update adds the Python image.
+
+### Added
+
+- Compose-only repos: with `docker` in `stacks` and no `python` stack, or with `docker_image=false`, the render has no Dockerfile. It gets a starter `compose.yaml` (an example service pinned by digest, with a healthcheck, bound to `127.0.0.1`), `.env.example`, a `compose.yml` workflow, the `docker-compose` ecosystem in the dependency bot, and a `just check` that runs `docker compose config -q` and lints shell scripts, and a `just docker-fmt` that `just fmt` runs. With `cold_install`, the README's `just check` and `just fmt` are left out of that job, which has no Docker. Projects with the Python image render as before ([Compose-only repos](docs/usage.md#compose-only-repos)).
+
+### Changed
+
+- `.editorconfig` sets a 2-space indent for `*.sh`, matching the scripts the template ships.
+- The `docker_stacks` question is now a yes/no `docker_image`: build the Python package into an image. It is asked only when `stacks` has both `docker` and `python`, and defaults to yes. `app_port` and `publish_to_ghcr` are not asked without an image.
 
 ### Removed
 
-- The `docker_stacks` question and its `ts` choice, with the Node `Dockerfile`, `.dockerignore`, `src/main.ts` health stub and compose service. With `docker` in `stacks`, the image is always the Python one, and a new project with `docker` but not `python` is refused (`copier update --defaults` swaps a refused answer for the default instead). No render used the ts image: TypeScript projects here are web apps on Cloudflare Pages or Workers, and the hand-written Dockerfiles for them serve a static build with Caddy rather than run Node.
+- The TypeScript image: the Node `Dockerfile`, `.dockerignore`, `src/main.ts` health stub and compose service. With `docker` but not `python` in `stacks`, the render is a Compose-only repo. No render used the ts image: TypeScript projects here are web apps on Cloudflare Pages or Workers, and the hand-written Dockerfiles for them serve a static build with Caddy rather than run Node.
 
 ## [0.13.0] - 2026-11-04
 

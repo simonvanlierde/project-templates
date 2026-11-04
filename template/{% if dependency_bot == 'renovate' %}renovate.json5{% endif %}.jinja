@@ -16,8 +16,9 @@
 // updates ignore it and the schedule. They need Dependabot alerts on in the repo settings,
 // and cover only the dependencies a manifest names.
 //
-// No Dockerfile or compose updates: the FROM tags are copier answers, so those PRs
-// would fight the next `copier update`.
+// No Dockerfile updates: the FROM tags are copier answers, so those PRs would fight the
+// next `copier update`. A Compose-only repo has no Dockerfile and its images are its own,
+// so the docker-compose manager is on there.
 {
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   // Conventional Commits titles, `chore(deps): update ...`, which the pr-title workflow checks.
@@ -41,7 +42,7 @@
   // comment; check that the first hooks PR keeps that form.
   'pre-commit': { enabled: true },
   dockerfile: { enabled: false },
-  'docker-compose': { enabled: false },
+  'docker-compose': { enabled: {{ 'true' if 'docker' in stacks and not docker_image else 'false' }} },
   packageRules: [
     // Actions and hook revs are all CI and dev tooling: one PR for both.
     { matchManagers: ['github-actions', 'pre-commit'], groupName: 'actions and hooks' },

@@ -1,12 +1,33 @@
-# `docker compose up --watch` rebuilds on source changes. There is no live reload:
+{%- if docker_image %}# `docker compose up --watch` rebuilds on source changes. There is no live reload:
 # a runtime image ships the built artifact, not ./src.
+{%- else %}# Starter stack: replace the example service with your own. Pin every image by digest
+# (`docker buildx imagetools inspect <image:tag>` prints it); the dependency bot moves the
+# tag and the digest together.
+{%- endif %}
 #
 # Ports bind to loopback because Docker's iptables rules run ahead of the host
-# firewall. A bare "{{ app_port }}:{{ app_port }}" reaches the LAN even on a deny-by-default
+# firewall. A bare "{{ app_port if docker_image else 8080 }}:{{ app_port if docker_image else 80 }}" reaches the LAN even on a deny-by-default
 # machine. Drop the 127.0.0.1 to publish a service.
 name: {{ slug }}
 
 services:
+{%- if not docker_image %}
+  example:
+    image: nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
+    ports:
+      - "127.0.0.1:8080:80"
+    env_file:
+      - path: .env
+        required: false
+    healthcheck:
+      test: [CMD, wget, -q, --spider, "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+{%- else %}
   app:
     build:
       context: {{ python_dir }}
@@ -39,3 +60,4 @@ services:
           path: {{ python_dir }}/src
         - action: rebuild
           path: {{ python_dir }}/uv.lock
+{%- endif %}

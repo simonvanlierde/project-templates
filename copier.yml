@@ -129,8 +129,6 @@ stacks:
   validator: >-
     {% if not stacks %}
     Pick at least one stack: with none, `just check` checks nothing.
-    {% elif 'docker' in stacks and 'python' not in stacks %}
-    The image is built from the Python package: add python to `stacks` too.
     {% endif %}
 
 kind:
@@ -472,6 +470,7 @@ module_name:
 # `flat` is for adopting the template in a repo whose package already sits at the
 # root: no src/ stub, and no starter tests that import it. web-service,
 # data-pipeline and the python image need the starter modules, so they stay `src`.
+# docker_image is asked later, so its validator refuses flat with the python image.
 python_layout:
   type: str
   when: "{{ 'python' in stacks }}"
@@ -482,7 +481,7 @@ python_layout:
     <module>/ at the root (an existing package): flat
   default: src
   validator: >-
-    {% if python_layout == 'flat' and (kind in ('web-service', 'data-pipeline') or 'docker' in stacks) %}
+    {% if python_layout == 'flat' and kind in ('web-service', 'data-pipeline') %}
     The flat layout is for an existing library, app or research package: the web-service
     and data-pipeline kinds and the python image need their starter modules in src/.
     {% endif %}
@@ -770,9 +769,26 @@ howfairis_version:
 
 # --- docker -------------------------------------------------------------------
 
+# Asked even without `customise`: without an image the render is a Compose-only repo.
+# Its validator reads python_layout and kind, so it stays after them.
+docker_image:
+  type: bool
+  when: "{{ 'docker' in stacks and 'python' in stacks }}"
+  help: Build the Python package into an image (a Dockerfile and its compose service); no for a repo that only composes upstream images
+  # Read even when not asked: docker without python is a Compose-only repo. Templates
+  # test `'docker' in stacks and docker_image`.
+  default: "{{ 'python' in stacks }}"
+  validator: >-
+    {% if docker_image and python_layout == 'flat' %}
+    The flat layout is for an existing library, app or research package: the web-service
+    and data-pipeline kinds and the python image need their starter modules in src/.
+    {% elif kind == 'web-service' and not docker_image %}
+    The web-service kind is shipped as the python image: answer yes to `docker_image`.
+    {% endif %}
+
 app_port:
   type: int
-  when: "{{ 'docker' in stacks }}"
+  when: "{{ 'docker' in stacks and docker_image }}"
   ask: "{{ customise }}"
   help: Port the service listens on
   default: 8000
@@ -783,7 +799,7 @@ app_port:
 
 publish_to_ghcr:
   type: bool
-  when: "{{ 'docker' in stacks }}"
+  when: "{{ 'docker' in stacks and docker_image }}"
   ask: "{{ customise }}"
   help: Push the image to GitHub Container Registry (CI builds it either way)
   default: false
