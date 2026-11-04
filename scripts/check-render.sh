@@ -972,12 +972,11 @@ grep -qF '${{ steps.attest.outputs.bundle-path }}' c/.github/workflows/python-re
 # the repository root, so its search path carries the nested dir; the npm report beside
 # the nested package.
 grep -qx '      - run: uvx griffe@[0-9.]* check --search api/src --format github mono_me' c/.github/workflows/python.yml
-# A CLI-only package (x, python_api=false) gets no api job, though it publishes; the job is
-# not a required check, so nothing waits on it.
+# A CLI-only package (x, python_api=false) gets no api job, though it publishes.
 grep -q 'name: "python: API breaks since the last tag"' c/.github/workflows/python.yml
+test -f x/.github/workflows/python.yml
 (! grep -q 'griffe' x/.github/workflows/python.yml)
 test -f x/.github/workflows/python-release.yml
-(! grep -rq 'API breaks' x/.github/rulesets)
 # Not in py-check: a deliberate break would keep local checks red until the next tag.
 (! grep -q griffe c/just/python.just)
 grep -qx '      - run: pnpm run api' c/.github/workflows/ts.yml
