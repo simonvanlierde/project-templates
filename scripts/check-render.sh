@@ -1349,6 +1349,13 @@ printf 'See [the guide](missing.md).\n' >a-hooks/docs/dead.md
 git -C a-hooks add docs/typo.md docs/dead.md
 (cd a-hooks && ! "${prek[@]}" typos >typos.log 2>&1)
 grep -qx 'This is definitely wrong.' a-hooks/docs/typo.md
+# NumPy spells the flag `writeable`; typos must not rewrite the API to `writable`.
+printf 'a.flags.writeable = False\nb = a.flags["WRITEABLE"]\n' >a-hooks/docs/flags.py
+cp a-hooks/docs/flags.py flags.py.orig
+git -C a-hooks add docs/flags.py
+(cd a-hooks && "${prek[@]}" typos >/dev/null)
+cmp a-hooks/docs/flags.py flags.py.orig
+rm -f flags.py.orig
 (cd a-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
 grep -q 'docs/missing.md.*File not found' a-hooks/lychee.log
 # yamlfmt ignores a nested pnpm-lock.yaml passed by prek

@@ -81,6 +81,7 @@ Upgrade steps:
 
 ### Fixed
 
+- `typos` no longer rewrites NumPy's `flags.writeable` and `flags["WRITEABLE"]` to `writable`. A new project gets a `_typos.toml` that accepts both. In an existing project, add `writeable = "writeable"` and `WRITEABLE = "WRITEABLE"` under `[default.extend-words]` in `_typos.toml`.
 - A GPL or AGPL project now stores `copyright_year`, so `REUSE.toml` keeps its year instead of taking the current one on each update.
 - yamlfmt no longer reformats a `pnpm-lock.yaml` in a nested package, such as `web/pnpm-lock.yaml`.
 - The mutation extra needs mutmut 3.8.1: 3.8.0 crashes under pytest 9.2.

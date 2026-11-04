@@ -22,6 +22,7 @@ _skip_if_exists:
   - /docs/accessibility.md
   - /CITATION.cff
   - /codemeta.json
+  - /_typos.toml
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.tsx"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.test.tsx"
