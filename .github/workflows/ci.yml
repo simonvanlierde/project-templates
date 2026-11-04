@@ -506,9 +506,8 @@ jobs:
           cd "$PROJ" && uv lock -q && uv sync -q --locked && just check
 
   typescript:
-    # TS stack, with docker. The image builds nested (monorepo). The root Dockerfile is
-    # the same template, and the render job renders it. publish_to_npm (asked only of a
-    # library) renders the conditionally named ts-release.yml.
+    # TS stack. publish_to_npm (asked only of a library) renders the conditionally named
+    # ts-release.yml.
     name: typescript (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -544,11 +543,10 @@ jobs:
           - name: monorepo
             answers:
               project_name: ci-mono-ts
-              stacks: [ts, docker]
+              stacks: [ts]
               ts_dir: apps/web
               ts_kind: library
               publish_to_npm: true
-              docker_stacks: [ts]
           # Both web frameworks, one at the root and one nested, with the least and the
           # most user_data. Each also runs its Playwright specs; check-render covers browser.
           - name: web-app (react)
@@ -639,15 +637,9 @@ jobs:
             exit 1
           fi
 
-      - if: contains(matrix.answers.stacks, 'docker')
-        name: docker build
-        env:
-          CONTEXT: ${{ runner.temp }}/proj/${{ matrix.answers.ts_dir }}
-        run: docker build "$CONTEXT"
-
   fullstack:
     # Python and ts in one repo, each nested: the root justfile imports both recipe
-    # files, and `check` runs both stacks. Both get an image, on a non-default port.
+    # files, and `check` runs both stacks. The python image listens on a non-default port.
     name: python + ts + docker
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -668,7 +660,7 @@ jobs:
           uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
             --data project_name=ci-fullstack --data 'stacks=[python,ts,docker]' \
             --data python_dir=api --data ts_dir=web \
-            --data 'docker_stacks=[python,ts]' --data app_port=9000 . "$RUNNER_TEMP/proj"
+            --data 'docker_stacks=[python]' --data app_port=9000 . "$RUNNER_TEMP/proj"
 
       - *ts-versions
 
@@ -680,14 +672,12 @@ jobs:
         working-directory: ${{ runner.temp }}/proj
         run: just py-sync ts-sync check
 
-      # --wait holds until both HEALTHCHECKs pass. The second service's host port is
-      # app_port + 1.
+      # --wait holds until the HEALTHCHECK passes.
       - name: compose up
         working-directory: ${{ runner.temp }}/proj
         run: |
           docker compose up -d --build --wait
           curl -fsS http://127.0.0.1:9000/health
-          curl -fsS http://127.0.0.1:9001/health
 
   rust:
     # The rust stack, one row per crate kind: the library flat (rust_dir left at its

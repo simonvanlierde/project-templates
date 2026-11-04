@@ -775,11 +775,9 @@ docker_stacks:
   type: str
   multiselect: true
   when: "{{ 'docker' in stacks }}"
-  help: Which stacks get an image (one Dockerfile each, one compose service each)
-  choices: [python, ts]
+  help: Which stacks get an image (one Dockerfile and one compose service each)
+  choices: [python]
   default: [python]
-  # Each image builds from its stack's package, and two Dockerfiles cannot share a
-  # directory, so two images need a monorepo layout.
   validator: >-
     {% if not docker_stacks %}
     Pick at least one stack to build an image from.
@@ -788,15 +786,8 @@ docker_stacks:
     {% elif 'python' in docker_stacks and python_layout == 'flat' %}
     The flat layout is for an existing library, app or research package: the web-service
     and data-pipeline kinds and the python image need their starter modules in src/.
-    {% elif 'ts' in docker_stacks and ts_kind == 'web-app' %}
-    The ts image is a Node service with /health. A web app is static files that
-    a Cloudflare Worker serves: drop ts from `docker_stacks`.
     {% elif kind == 'web-service' and 'python' not in docker_stacks %}
     The web-service kind is the python image: add python to `docker_stacks`.
-    {% elif docker_stacks | length > 1 and python_dir == ts_dir %}
-    Both images would be written to {{ python_dir }}/Dockerfile. Answer yes to
-    `customise` and give python_dir
-    and ts_dir different values first.
     {% endif %}
 
 app_port:
@@ -805,12 +796,9 @@ app_port:
   ask: "{{ customise }}"
   help: Port the service listens on
   default: 8000
-  # A second image publishes on the next host port up (compose.yaml).
   validator: >-
     {% if app_port < 1 or app_port > 65535 %}
     Give a port from 1 to 65535.
-    {% elif docker_stacks | length > 1 and app_port == 65535 %}
-    The second image publishes on port {{ app_port + 1 }}, which doesn't exist: pick a lower port.
     {% endif %}
 
 publish_to_ghcr:

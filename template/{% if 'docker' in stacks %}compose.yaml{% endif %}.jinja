@@ -9,7 +9,6 @@ name: {{ slug }}
 services:
 {%- for stack, service, dir, lock in [
       ('python', 'api', python_dir, 'uv.lock'),
-      ('ts', 'web', ts_dir, 'pnpm-lock.yaml'),
     ] if stack in docker_stacks %}
   {{ 'app' if docker_stacks | length == 1 else service }}:
     build:

@@ -10,6 +10,14 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+Upgrade steps:
+
+- **Breaking:** if `.copier-answers.yml` has `docker_stacks: [ts]` or lists `ts` in it, copier stops with "Invalid choice for 'docker_stacks'". Remove `ts` from the list (leave `[python]`, or drop the `docker` stack if there is no Python image), then run `copier update`. The update deletes the TypeScript `Dockerfile`, `.dockerignore` and `src/main.ts` stub, and the compose service. Keep them with `git checkout HEAD -- <path>` before you commit.
+
+### Removed
+
+- The `ts` choice of `docker_stacks`, with its Node `Dockerfile`, `.dockerignore`, `src/main.ts` health stub and compose service. No render used it: TypeScript projects here are web apps on Cloudflare Pages or Workers, and the hand-written Dockerfiles for them serve a static build with Caddy rather than run Node.
+
 ## [0.13.0] - 2026-11-04
 
 Upgrade steps:

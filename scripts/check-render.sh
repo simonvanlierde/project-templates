@@ -47,16 +47,14 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'author_name=Ada "X" Lovelace' \
   --data public=false --data openssf_badge=silver --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
-  --data 'docker_stacks=[python,ts]' . "$out/b"
+  --data 'docker_stacks=[python]' . "$out/b"
 # Explicit badge answers cannot add public-policy documents to a private project.
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test ! -e "$out/b/$f"
 done
 # A Dockerfile string has no \u escapes and expands $, so neither may reach a LABEL.
-for f in svc/Dockerfile Dockerfile; do
-  # shellcheck disable=SC1003,SC2016 # the line's literal \$ and trailing \
-  grep -qxF '      org.opencontainers.image.description="A \"quoted\" {{ one }}, naïve \$USD" \' "$out/b/$f"
-done
+# shellcheck disable=SC1003,SC2016 # the line's literal \$ and trailing \
+grep -qxF '      org.opencontainers.image.description="A \"quoted\" {{ one }}, naïve \$USD" \' "$out/b/svc/Dockerfile"
 # shellcheck disable=SC2016 # literal ${...} in docker compose default value
 grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name--co,env=dev}' "$out/b/compose.yaml"
 
@@ -74,7 +72,7 @@ grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name
   --data codspeed=true --data profiling=true \
   --data 'test_extras=[mutation]' \
   --data cold_install=true \
-  --data 'docker_stacks=[python,ts]' --data publish_to_ghcr=true . "$out/c"
+  --data 'docker_stacks=[python]' --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
 # workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, the
@@ -220,15 +218,15 @@ git tag -f check-render-tag >/dev/null
 "${copier[@]}" --vcs-ref=check-render-tag \
   --data project_name=tag-me --data 'stacks=[python]' --data license=AGPL-3.0-or-later . "$out/e"
 
-# A web app is static files, so the ts image (a Node service) is refused for it.
-# The grep checks the render failed for this reason, not for an unrelated break.
+# The ts image is gone. Copier rejects the old answer as an invalid choice. The grep
+# checks the render failed for this reason, not for an unrelated break.
 if "${copier[@]}" --vcs-ref=HEAD --data project_name=web-docker \
   --data 'stacks=[ts,docker]' --data ts_kind=web-app --data user_data=nothing \
   --data 'docker_stacks=[ts]' . "$out/g" >"$out/g.log" 2>&1; then
-  echo "rendered a ts image for a web app: the docker_stacks validator lost its web-app check" >&2
+  echo "rendered a ts image: docker_stacks still accepts ts" >&2
   exit 1
 fi
-grep -q 'A web app is static files' "$out/g.log"
+grep -q "'ts' is not in" "$out/g.log"
 
 # Without the settings file, --defaults must stop at the blank identity answers.
 if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
@@ -295,8 +293,6 @@ refuses 'starting with https://' --data 'stacks=[ts]' --data ts_kind=web-app \
 refuses 'needs its own contact address' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=accounts --data author_email=Code@duinlab.nl
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
-refuses 'second image' --data 'stacks=[python,ts,docker]' --data 'docker_stacks=[python,ts]' \
-  --data python_dir=api --data ts_dir=web --data app_port=65535
 # A binary never uses the Go package name, so a digit-leading project name is fine.
 # Its gitignored build output drops the module path's /v2.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
@@ -307,12 +303,6 @@ for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test ! -e "$out/i/$f"
 done
 (lacks -q '## Tests and code style' "$out/i/.github/CONTRIBUTING.md")
-# l: a flat Python package next to a ts image. Only the python image needs src/.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=flat-ts-image \
-  --data 'stacks=[python,ts,docker]' --data python_layout=flat --data ts_dir=web \
-  --data 'docker_stacks=[ts]' . "$out/l"
-test -f "$out/l/web/Dockerfile"
-test ! -e "$out/l/src"
 # j: a private web app, so its legal pages must not link a repo visitors can't open.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
@@ -435,7 +425,7 @@ for checks in sorted(out.glob("*/.github/rulesets/main*.json")):
             required_by[render].append(required["context"])
 # Every render was checked, and each requires some check: an empty list passes the loop above.
 renders = {answers.parent for answers in out.glob("*/.copier-answers.yml")}
-assert len(renders) >= 19 and set(required_by) == renders, sorted(map(str, renders - set(required_by)))
+assert len(renders) >= 18 and set(required_by) == renders, sorted(map(str, renders - set(required_by)))
 # A pull request saves no cache: only it could read one, and it evicts main's. Each
 # action that caches by default must carry its switch. CodSpeed's instrument cache has
 # no save switch and is left on. A job whose `if` excludes pull requests outright (an
@@ -982,21 +972,19 @@ test ! -e d/.github/dependabot.yml
 # public=false defaults the license to none: no file and no license key.
 test ! -e b/LICENSE
 (lacks -q '"license"' b/package.json)
-(lacks -q 'image.licenses' b/Dockerfile)
 (lacks -q 'image.licenses' b/svc/Dockerfile)
 (lacks -q '^license' b/svc/pyproject.toml)
 # The awkward project name became a valid npm name.
 grep -q '"name": "odd-name--co"' b/package.json
-# Monorepo: packages nested, root files at the root, one Dockerfile each.
+# Monorepo: packages nested, root files at the root, one Dockerfile.
 test -f c/api/pyproject.toml
 test -f c/apps/web/package.json
 test -f c/api/Dockerfile
-test -f c/apps/web/Dockerfile
 test -f c/compose.yaml
 test -f c/.github/workflows/python.yml
 test ! -e c/pyproject.toml
 grep -q 'working-directory: api' c/.github/workflows/python.yml
-grep -q 'context: apps/web' c/compose.yaml
+grep -q 'context: api' c/compose.yaml
 grep -q 'uv --directory api' c/just/python.just
 # rust binary, nested: main.rs, no library-only lints, no doctest step.
 test -f c/crates/cli/Cargo.toml
@@ -1022,11 +1010,10 @@ grep -qx '/services/tool/mono-me' c/.gitignore
 grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/settings.json
 (lacks -q linkedProjects a/.vscode/settings.json)
 # Another stack's secrets stay out of an image's build context.
-grep -qx '\*\*/.env' c/apps/web/.dockerignore
 grep -qx '\*\*/.env' c/api/.dockerignore
 # A local .env stays out of git, and compose publishes each port on loopback only.
 grep -qxF '.env' c/.gitignore
-test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 2
+test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 1
 (lacks -qE '^ +- "[0-9]+:' c/compose.yaml)
 # Every release workflow publishes only a tag whose signature GitHub verified. e renders
 # the last commit, without uncommitted edits.
@@ -1072,9 +1059,9 @@ test ! -e a/render-me.api.md
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
 grep -q 'packages: write' c/.github/workflows/docker.yml
 # docker.yml filters by path only when every build context is nested (c), not with a
-# root context (a, b).
-grep -qF 'paths: ["api/**", "apps/web/**", ".github/workflows/docker.yml"]' c/.github/workflows/docker.yml
-(lacks -q 'paths:' a/.github/workflows/docker.yml b/.github/workflows/docker.yml)
+# root context (a).
+grep -qF 'paths: ["api/**", ".github/workflows/docker.yml"]' c/.github/workflows/docker.yml
+(lacks -q 'paths:' a/.github/workflows/docker.yml)
 # The push job also runs on main, so repo-settings must not limit `ghcr` to tags alone.
 # shellcheck disable=SC2016 # literal $env in the recipe
 grep -qF '"$env" = "ghcr"' c/justfile
@@ -1799,8 +1786,7 @@ grep -q 'func ExampleAdd' h/example_test.go
 test -f i/main.go
 grep -qx '/1tool' i/.gitignore
 
-# PID 1 ignores SIGTERM without a handler, so both image stubs install one.
-grep -q SIGTERM b/src/main.ts
+# PID 1 ignores SIGTERM without a handler, so the image stub installs one.
 grep -q SIGTERM a/src/render_me/__main__.py
 
 # Each kind gets its own tests and no other kind's. Dropping a filename condition

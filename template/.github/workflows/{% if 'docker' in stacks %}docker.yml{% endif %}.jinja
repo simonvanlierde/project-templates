@@ -2,7 +2,6 @@
 {%- macro matrix(push=false) %}
 {%- for stack, name, dir in [
       ('python', 'api', python_dir),
-      ('ts', 'web', ts_dir),
     ] if stack in docker_stacks %}
 {%- set suffix = '' if docker_stacks | length == 1 else name %}
           - stack: {{ stack }}
@@ -54,7 +53,7 @@
 {%- endmacro -%}
 {#- The build contexts. Filtered by path, as python.yml and ts.yml are, only when every
     image builds from a subdirectory: a root context is the whole repo. -#}
-{%- set dirs = ([python_dir] if 'python' in docker_stacks else []) + ([ts_dir] if 'ts' in docker_stacks else []) -%}
+{%- set dirs = ([python_dir] if 'python' in docker_stacks else []) -%}
 {%- macro paths() %}
 {%- if '.' not in dirs %}
     paths: [{% for d in dirs %}"{{ d }}/**", {% endfor %}".github/workflows/docker.yml"]

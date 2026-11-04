@@ -16,7 +16,7 @@ A new project asks at most ten questions for a single stack (eleven for a web ap
 | `github_user`, `author_name`, `author_email` | Always | Repository URLs, badges, licenses, and package metadata |
 | `customise` | Always | `yes` prompts for advanced settings; `no` accepts defaults |
 | `author_orcid` | Licensed `library`, or Python `research`/`data-pipeline` | Citation metadata |
-| `docker_stacks` | `docker` stack selected | Selects which packages receive a Dockerfile and Compose service |
+| `docker_stacks` | `docker` stack selected | Selects which packages receive a Dockerfile and Compose service (only `python`) |
 
 Identity answers have no defaults.
 
@@ -162,7 +162,7 @@ Select any combination of stacks:
 | `ts` | TypeScript package or Vite web app ([kinds](#typescript-kinds)) |
 | `rust` | Rust crate (library or binary) with strict clippy rules |
 | `go` | Go module (library or binary) with golangci-lint |
-| `docker` | Dockerfile for Python or TypeScript packages and root `compose.yaml` |
+| `docker` | Dockerfile for the Python package and root `compose.yaml` |
 
 Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<stack>.just`. All projects receive `README.md`, `CHANGELOG.md`, `.gitignore`, `.editorconfig`, dependency bot configuration, git hooks, and `AGENTS.md`. Projects with a license also get `LICENSE` and `REUSE.toml`. Python projects select a [kind](python-kinds.md).
 
@@ -288,13 +288,13 @@ By default, packages reside at the repository root. To host multiple packages, e
 
 ```text
 apps/api/{pyproject.toml,src,tests,Dockerfile,.dockerignore}
-apps/web/{package.json,tsconfig.json,biome.json,src,Dockerfile,.dockerignore}
+apps/web/{package.json,tsconfig.json,biome.json,src}
 compose.yaml
 .github/workflows/
 justfile, just/, .pre-commit-config.yaml, .copier-answers.yml
 ```
 
-Workflows and configuration files remain at the repository root. Two packages may share the root directory, but two Docker images cannot because both Dockerfiles would collide at `./Dockerfile`.
+Workflows and configuration files remain at the repository root. Two packages may share the root directory.
 
 ## Keeping your project up to date
 
