@@ -758,6 +758,8 @@ jobs:
           git -c user.name=ci -c user.email=ci@example.com commit -qam sub --no-verify
           line=$(grep -n '^    left - right$' src/lib.rs | cut -d: -f1)
           (! just rs-mutation-diff HEAD~1 >"$log" 2>&1) || { cat "$log"; exit 1; }
+          # CARGO_TERM_COLOR=always on the runner colours the MISSED lines.
+          sed -i 's/\x1b\[[0-9;]*m//g' "$log"
           grep -q "^MISSED .*src/lib.rs:$line:.* in sub " "$log" || { cat "$log"; exit 1; }
           if grep -qE '(replace| in) add ' "$log"; then cat "$log"; exit 1; fi
 
