@@ -3,8 +3,10 @@ name: release
 # A pushed version tag becomes a GitHub release whose notes are that version's
 # CHANGELOG.md section. Releases are immutable, so the notes must be right the first
 # time: a tag with no section fails before anything is published. Make the section
-# before you tag. If notes validation fails before publication, fix CHANGELOG.md
-# and recreate the tag. After publication, release a new patch version.
+# before you tag. If notes validation fails before publication, fix CHANGELOG.md,
+# delete the tag (a tags-ruleset bypass is needed) with
+# `git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z`, and tag again. After
+# publication, release a new patch version.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
@@ -27,6 +29,25 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # .github/scripts/tag-release.sh signs the tag. A lightweight or unverified one publishes
+      # nothing.
+      - name: refuse a tag GitHub cannot verify
+        env:
+          TAG: {% raw %}${{ github.ref_name }}{% endraw %}
+          REPO: {% raw %}${{ github.repository }}{% endraw %}
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+        run: |
+          set -euo pipefail
+          read -r type sha < <(gh api "repos/$REPO/git/ref/tags/$TAG" --jq '.object.type + " " + .object.sha')
+          if [ "$type" != tag ]; then
+            echo "$TAG is a lightweight tag; make it with .github/scripts/tag-release.sh" >&2
+            exit 1
+          fi
+          if [ "$(gh api "repos/$REPO/git/tags/$sha" --jq '.verification.verified')" != true ]; then
+            echo "GitHub cannot verify the signature on $TAG" >&2
+            exit 1
+          fi
 
       - name: create the release
         env:
