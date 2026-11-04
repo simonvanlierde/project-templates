@@ -1176,15 +1176,46 @@ grep -qxF '    needs: [check, e2e]' <<<"$prod"
 grep -qxF '      name: production' <<<"$prod"
 grep -qxF '      group: production' <<<"$prod"
 grep -qxF '      cancel-in-progress: false' <<<"$prod"
-grep -qxF "          pnpm exec wrangler deploy 2>&1 | tee deploy.log" <<<"$prod"
-grep -qxF '          set -o pipefail' <<<"$prod"
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production'" <<<"$prod"
 (! grep -q -- '--name\|X-Robots-Tag' <<<"$prod")
 # A newer push to main must not cancel the run whose deploy is in flight.
 grep -qF "cancel-in-progress: \${{ github.event_name == 'pull_request' }}" d/.github/workflows/ts.yml
 grep -q '^ *name: preview$' d/.github/workflows/ts.yml
 # The gate step runs before checkout, so it must not cd into web/.
 grep -A2 -- '- id: gate$' d/.github/workflows/ts.yml | grep -q 'working-directory: \.$'
-grep -qF "pnpm exec wrangler deploy --name \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
+grep -qF "deploy-worker.sh\" Preview \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
+# Both jobs deploy through the one script, which only a web app gets and which runs wrangler.
+test "$(grep -c 'deploy-worker\.sh' d/.github/workflows/ts.yml)" = 2
+(! grep -q 'wrangler deploy' d/.github/workflows/ts.yml)
+test -x d/.github/scripts/deploy-worker.sh
+test ! -e m/.github/scripts/deploy-worker.sh
+test -x s/.github/scripts/deploy-worker.sh
+test ! -e a/.github/scripts/deploy-worker.sh
+# deploy-worker.sh against a stub pnpm: the name goes to wrangler only when given, the
+# address lands in the output and summary, and a deploy that prints none fails.
+deploy_sh=$out/d/.github/scripts/deploy-worker.sh
+dstub=$out/fake-deploy
+mkdir -p "$dstub/work"
+cat >"$dstub/pnpm" <<'STUB'
+#!/usr/bin/env bash
+echo "pnpm $*" >>"$STUB/calls"
+[ -z "${NO_URL:-}" ] || exit 0
+echo "Deployed https://pipe-me.acct.workers.dev"
+STUB
+chmod +x "$dstub/pnpm"
+deploy() {
+  : >"$dstub/calls" && : >"$dstub/gho" && : >"$dstub/sum"
+  (cd "$dstub/work" && env STUB="$dstub" PATH="$dstub:$PATH" GITHUB_OUTPUT="$dstub/gho" \
+    GITHUB_STEP_SUMMARY="$dstub/sum" "$@" "$deploy_sh" Label ${DEPLOY_NAME:+"$DEPLOY_NAME"} >"$dstub/out" 2>&1)
+}
+deploy
+grep -qx 'pnpm exec wrangler deploy' "$dstub/calls"
+grep -qx 'url=https://pipe-me.acct.workers.dev' "$dstub/gho"
+grep -qx '### Label: https://pipe-me.acct.workers.dev' "$dstub/sum"
+DEPLOY_NAME=pipe-me-pr-4 deploy
+grep -qx 'pnpm exec wrangler deploy --name pipe-me-pr-4' "$dstub/calls"
+(! deploy NO_URL=1)
+grep -qF 'wrangler printed no workers.dev address' "$dstub/out"
 # wrangler is an exact devDependency of a web app only, which both deploy jobs install.
 grep -qxF "    \"wrangler\": \"$wrangler_pin\"" d/web/package.json
 (lacks -q 'pnpm dlx' d/.github/workflows/ts.yml)
