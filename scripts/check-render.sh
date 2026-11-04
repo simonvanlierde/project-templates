@@ -1185,7 +1185,9 @@ grep -q '^ *name: preview$' d/.github/workflows/ts.yml
 grep -A2 -- '- id: gate$' d/.github/workflows/ts.yml | grep -q 'working-directory: \.$'
 grep -qF "deploy-worker.sh\" Preview \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
 # Both jobs deploy through the one script, which only a web app gets and which runs wrangler.
-test "$(grep -c 'deploy-worker\.sh' d/.github/workflows/ts.yml)" = 2
+test "$(grep -cE 'deploy-worker\.sh" (Preview|Production)' d/.github/workflows/ts.yml)" = 2
+# A nested app's ts.yml also runs when only the script changes, on push and on PRs.
+test "$(grep -cF 'paths: ["web/**", ".github/workflows/ts.yml", ".github/scripts/deploy-worker.sh"]' d/.github/workflows/ts.yml)" = 2
 (! grep -q 'wrangler deploy' d/.github/workflows/ts.yml)
 test -x d/.github/scripts/deploy-worker.sh
 test ! -e m/.github/scripts/deploy-worker.sh
