@@ -410,7 +410,7 @@ refuses 'at least one stack' --data 'stacks=[]'
 }
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 # A noreply address gets no mail, and these renders give it as a contact on a page.
-refuses 'A GitHub noreply address' --data 'stacks=[ts]' --data ts_kind=web-app \
+refuses 'A GitHub noreply address' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
   --data author_email=1+ada@users.noreply.github.com
 refuses 'A GitHub noreply address' --data 'stacks=[go]' --data go_kind=binary \
   --data author_email=1+ada@users.noreply.github.com
