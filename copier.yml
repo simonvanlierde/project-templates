@@ -682,8 +682,8 @@ copier_version:
   when: false
   default: 9.19.1
 
-# Computed, never asked: the wrangler that a web app's preview jobs run with pnpm dlx.
-# Pinned to an exact version, since it holds a Cloudflare token. Renovate bumps it here.
+# Computed, never asked: the wrangler a web app pins as an exact devDependency, which its
+# production and preview jobs run. Renovate bumps it here and in each project's package.json.
 # renovate: datasource=npm depName=wrangler
 wrangler_version:
   type: str
