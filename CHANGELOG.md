@@ -31,6 +31,7 @@ Upgrade steps:
 - The pull request template asks for `How I know it works:` (the command and its output, or a test that fails without the change) and `What to check:`.
 - A web app's bug form asks for the page URL and the browser, and no longer formats the steps as shell. Other projects keep the command-line form.
 - `just py-mutation-diff`, `rs-mutation-diff` and `go-mutation-diff` run only the mutants of the code changed since the branch left `origin/main`. See [Test extras](docs/usage.md#test-extras).
+- `just py-mutation` takes mutmut patterns to run only those mutants, and now shows mutmut's output, so a failing run says why.
 - Web apps get a preview Worker for each open, ready pull request, deleted again when the pull request closes, merges or turns draft. See [Pull request previews](docs/usage.md#pull-request-previews).
 - `just release X.Y.Z` runs twice. The first run cuts `[Unreleased]` in `CHANGELOG.md` into the new version and commits it; merge that to `main`. The second run, on an up-to-date `main`, signs and pushes the tag. See [Publishing](docs/usage.md#publishing).
 - The PyPI and npm release workflows refuse a tag that differs from the package version.
