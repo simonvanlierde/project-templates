@@ -8,7 +8,11 @@ describes who acts on a generated project and what render and update do. Everyon
 follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 You need [uv](https://docs.astral.sh/uv/) (it runs copier), [just](https://just.systems),
-git, and prek for the hooks (`uv tool install prek`, then `prek install`).
+git, jq, and prek for the hooks (`uv tool install prek`, then `prek install`).
+
+The branch and tag rulesets live in `.github/rulesets/`. After you edit one, apply it with
+`gh api -X PUT repos/simonvanlierde/project-templates/rulesets/<id> --input <file>`
+(`gh api repos/simonvanlierde/project-templates/rulesets` lists the ids).
 
 ## Test an untagged change
 

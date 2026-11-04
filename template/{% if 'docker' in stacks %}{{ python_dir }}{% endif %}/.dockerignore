@@ -1,6 +1,6 @@
 # Keep the build context small: everything here is rebuilt in the image,
-# irrelevant to it, or a secret. Each image has its own file next to its
-# Dockerfile, because Docker reads it from the root of the build context.
+# irrelevant to it, or a secret. It sits next to the Dockerfile, because Docker
+# reads it from the root of the build context.
 
 # VCS / tooling metadata
 .git

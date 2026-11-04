@@ -67,7 +67,7 @@ CI skips hooks that require the local runtime environment (`ruff`, `ty`, `biome`
 | In-workflow Renovate | Requires private GitHub App and secrets; Dependabot works out of the box | When advanced Renovate configuration options are required |
 | release-please | Creates release PR churn on every push; ill-suited for tag-driven research releases | When release frequency justifies automated changelog PR generation |
 | Repository history secret scan | GitHub secret scanning covers public repos; local hooks scan staged commits | For private repositories without GitHub Advanced Security |
-| Docker base images pinned to SHA | Base image tags match Copier answers (`python_version`, `node_version`) | In production deployments requiring byte-exact base images |
+| Docker base images pinned to SHA | The base image tag matches the `python_version` answer | In production deployments requiring byte-exact base images |
 | Unified "CI result" job | Stack-specific workflows are small enough to list directly in branch rules | When workflow matrices expand beyond manual ruleset configuration |
 | `cargo-semver-checks` | Crates.io publication workflow is not yet implemented | When automated Rust crate publishing is added |
 | CODEOWNERS | Unnecessary for single-maintainer repositories | When adding multi-maintainer teams with distinct ownership areas |

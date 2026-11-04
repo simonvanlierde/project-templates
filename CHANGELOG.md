@@ -12,11 +12,11 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
-- **Breaking:** if `.copier-answers.yml` lists `ts` in `docker_stacks`, the update deletes the TypeScript `Dockerfile`, `.dockerignore` and `src/main.ts` stub, and the compose service. Keep them with `git checkout HEAD -- <path>` before you commit. Delete the `docker_stacks` line from `.copier-answers.yml`: copier ignores it now.
+- **Breaking:** if `.copier-answers.yml` lists `ts` in `docker_stacks`, the update deletes the TypeScript `Dockerfile`, `.dockerignore` and `src/main.ts` stub, and the compose service. Keep them with `git checkout HEAD -- <path>` before you commit.
 
 ### Removed
 
-- The `docker_stacks` question and its `ts` choice, with the Node `Dockerfile`, `.dockerignore`, `src/main.ts` health stub and compose service. With `docker` in `stacks`, the image is always the Python one, and `docker` without `python` is refused. No render used the ts image: TypeScript projects here are web apps on Cloudflare Pages or Workers, and the hand-written Dockerfiles for them serve a static build with Caddy rather than run Node.
+- The `docker_stacks` question and its `ts` choice, with the Node `Dockerfile`, `.dockerignore`, `src/main.ts` health stub and compose service. With `docker` in `stacks`, the image is always the Python one, and a new project with `docker` but not `python` is refused (`copier update --defaults` swaps a refused answer for the default instead). No render used the ts image: TypeScript projects here are web apps on Cloudflare Pages or Workers, and the hand-written Dockerfiles for them serve a static build with Caddy rather than run Node.
 
 ## [0.13.0] - 2026-11-04
 

@@ -22,7 +22,8 @@ build with Caddy instead of running Node.
 Chosen: drop it, and the `docker_stacks` question with it. The Dockerfile,
 `.dockerignore`, `src/main.ts` stub, compose service and the CI renders that used it are
 gone. `docker` in `stacks` now means the Python image, and `docker` without `python` is
-refused. An old `docker_stacks` answer is ignored, and the update deletes the ts files,
+refused on copy (`copier update --defaults` swaps in the default instead). Copier drops an old
+`docker_stacks` answer, and the update deletes the ts files,
 so the change is marked **Breaking** in the changelog.
 
 ### Consequences

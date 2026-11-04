@@ -4,18 +4,20 @@
 default:
     @just --list
 
-# What a contributor runs before pushing: the git hooks, then the render checks. CI is
-# the source of truth and also runs zizmor, jactionlint and the generated projects' own
-# checks, which are too slow for here.
+# CI is the source of truth and also runs zizmor, actionlint and the generated
+# projects' own checks, which are too slow for here.
+
+# Run the git hooks, then the render checks (before you push).
 check: hooks render
 
 # Run every git hook over the whole repo, as the `git hooks` job does.
 hooks:
     prek run -a
 
-# Render the answer sets in scripts/check-render.sh into a temp dir and check the output.
 # The render includes uncommitted edits. Its commit tag is shared by every worktree of
 # this repo, so don't run it in two worktrees at once.
+
+# Render the answer sets in scripts/check-render.sh and check the output.
 render:
     #!/usr/bin/env bash
     set -euo pipefail
