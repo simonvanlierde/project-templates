@@ -463,6 +463,8 @@ grep -qF '](https://github.com/example-org/mono-me/tree/main/.github/workflows/)
 # Without publishing, the README keeps its relative links.
 grep -qF '](LICENSE)' d/README.md
 test -x a/.github/scripts/release-notes.sh
+test -x a/.github/scripts/tag-release.sh
+grep -q 'scripts/tag-release.sh' a/justfile
 cat >"$out/sample-changelog.md" <<'MD'
 # Changelog
 
@@ -537,6 +539,14 @@ cp -R k "$rel/w"
   git verify-tag v0.1.0 >/dev/null 2>&1
   test "$(git -C "$rel/origin.git" rev-parse 'v0.1.0^{commit}')" = "$(git rev-parse HEAD)"
   .github/scripts/release-notes.sh v0.1.0 CHANGELOG.md >/dev/null
+  # The tag step refuses a bad version, a version with no changelog section, and a HEAD
+  # that is not origin/main.
+  (! .github/scripts/tag-release.sh 1.2 >/dev/null 2>&1)
+  (! .github/scripts/tag-release.sh 9.9.9 >/dev/null 2>&1)
+  git commit -q -s --allow-empty -m 'chore: local only'
+  (! just release 0.1.0 >/dev/null 2>&1)
+  msg=$(.github/scripts/tag-release.sh 0.1.0 2>&1 || true)
+  grep -q 'HEAD is not origin/main' <<<"$msg"
 )
 # c lists three manifests in citesync.toml. Bumping the two the recipe reads, but not
 # Cargo.toml, stops the release at citesync with CHANGELOG.md unchanged. No remote: the
