@@ -3,7 +3,7 @@
 name: ts
 
 on:
-{{- push_and_pr(ts_dir, 'ts') }}
+{{- push_and_pr(ts_dir, 'ts', ['deploy-worker.sh'] if ts_kind == 'web-app' else []) }}
   workflow_dispatch:
 
 permissions:
