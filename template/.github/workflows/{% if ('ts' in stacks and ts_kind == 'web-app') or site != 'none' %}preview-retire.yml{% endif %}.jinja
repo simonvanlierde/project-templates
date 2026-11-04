@@ -1,5 +1,4 @@
 {%- set slug_ = slug | replace('.', '-') | replace('_', '-') -%}
-{%- set prefixes = ([slug_] if ('ts' in stacks and ts_kind == 'web-app') else []) + ([slug_ ~ '-site'] if site != 'none' else []) -%}
 name: Retire preview
 
 # Deletes the preview Worker of a pull request that closes or turns draft, and sweeps
@@ -18,16 +17,26 @@ on:
 permissions:
   contents: read
 
-# Shares the preview jobs' group, so a retire waits for a deploy in flight.
-concurrency:
-  group: preview-{% raw %}${{ github.event.pull_request.number || github.run_id }}{% endraw %}
-
 jobs:
   retire:
     name: Retire
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     environment: preview
+    # One job per Worker name prefix, each in its preview job's group, so a retire waits for
+    # that deploy in flight and the two kinds never cancel each other's pending runs.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+{%- if 'ts' in stacks and ts_kind == 'web-app' %}
+          - { slug: {{ slug_ }}, group: preview }
+{%- endif %}
+{%- if site != 'none' %}
+          - { slug: {{ slug_ }}-site, group: preview-site }
+{%- endif %}
+    concurrency:
+      group: {% raw %}${{ matrix.group }}-${{ github.event.pull_request.number || github.run_id }}{% endraw %}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -61,10 +70,5 @@ jobs:
           GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
           REPO: {% raw %}${{ github.repository }}{% endraw %}
           PRS: {% raw %}${{ github.event.pull_request.number || inputs.prs }}{% endraw %}
-        # One run per Worker name prefix: {{ prefixes | join('-pr-<n> and ') }}-pr-<n>.
-        run: |-
-          status=0
-          for slug in {{ prefixes | join(' ') }}; do
-            SLUG=$slug .github/scripts/preview-retire.sh || status=1
-          done
-          exit "$status"
+          SLUG: {% raw %}${{ matrix.slug }}{% endraw %}
+        run: .github/scripts/preview-retire.sh
