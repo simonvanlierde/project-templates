@@ -157,7 +157,6 @@ jobs:
               python_dir: apps/api
               kind: library
               publish_to_pypi: true
-              docker_stacks: [python]
           - name: app
             answers:
               project_name: ci-app
@@ -175,14 +174,12 @@ jobs:
               project_name: ci-pipeline
               stacks: [python, docker]
               kind: data-pipeline
-              docker_stacks: [python]
           # Also starts the FastAPI container and probes /health.
           - name: web-service
             answers:
               project_name: ci-web
               stacks: [python, docker]
               kind: web-service
-              docker_stacks: [python]
     steps:
       - *checkout
 
@@ -475,7 +472,7 @@ jobs:
           git init -q "$PROJ"
           uvx "copier@$COPIER_VERSION" copy --vcs-ref="$TAG" --defaults --overwrite \
             --data project_name=update-me --data 'stacks=[python,ts,docker]' \
-            --data python_dir=api --data 'docker_stacks=[python]' . "$PROJ"
+            --data python_dir=api . "$PROJ"
           # The answers name the GitHub source; point the update at the pushed commit.
           sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
           uv add -q --directory "$PROJ/api" 'attrs>=25'
@@ -660,7 +657,7 @@ jobs:
           uvx "copier@$COPIER_VERSION" copy --vcs-ref=HEAD --defaults --overwrite \
             --data project_name=ci-fullstack --data 'stacks=[python,ts,docker]' \
             --data python_dir=api --data ts_dir=web \
-            --data 'docker_stacks=[python]' --data app_port=9000 . "$RUNNER_TEMP/proj"
+            --data app_port=9000 . "$RUNNER_TEMP/proj"
 
       - *ts-versions
 

@@ -34,7 +34,7 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data kind=research --data ts_kind=app \
   --data 'author_name= Ada Lovelace' \
   --data codspeed=true --data profiling=true \
-  --data 'docker_stacks=[python]' . "$out/a"
+  . "$out/a"
 
 # b: public=false, so no SECURITY.md and a license that defaults to none, and a name, description and author name with punctuation that `slug`
 # strips and `to_json` escapes. A nested web-service beside the root ts package,
@@ -47,7 +47,7 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
   --data 'author_name=Ada "X" Lovelace' \
   --data public=false --data openssf_badge=silver --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
-  --data 'docker_stacks=[python]' . "$out/b"
+  . "$out/b"
 # Explicit badge answers cannot add public-policy documents to a private project.
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test ! -e "$out/b/$f"
@@ -72,7 +72,7 @@ grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name
   --data codspeed=true --data profiling=true \
   --data 'test_extras=[mutation]' \
   --data cold_install=true \
-  --data 'docker_stacks=[python]' --data publish_to_ghcr=true . "$out/c"
+  --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
 # workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, the
@@ -84,7 +84,7 @@ d_args=(
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
   --data dependency_bot=renovate --data codecov=true --data cold_install=true
-  --data 'docker_stacks=[python]' --data site=plain
+  --data site=plain
 )
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d"
@@ -218,16 +218,6 @@ git tag -f check-render-tag >/dev/null
 "${copier[@]}" --vcs-ref=check-render-tag \
   --data project_name=tag-me --data 'stacks=[python]' --data license=AGPL-3.0-or-later . "$out/e"
 
-# The ts image is gone. Copier rejects the old answer as an invalid choice. The grep
-# checks the render failed for this reason, not for an unrelated break.
-if "${copier[@]}" --vcs-ref=HEAD --data project_name=web-docker \
-  --data 'stacks=[ts,docker]' --data ts_kind=web-app --data user_data=nothing \
-  --data 'docker_stacks=[ts]' . "$out/g" >"$out/g.log" 2>&1; then
-  echo "rendered a ts image: docker_stacks still accepts ts" >&2
-  exit 1
-fi
-grep -q "'ts' is not in" "$out/g.log"
-
 # Without the settings file, --defaults must stop at the blank identity answers.
 if COPIER_SETTINGS_PATH=$out/no-settings.yml "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=anon-me . "$out/f" >"$out/f.log" 2>&1; then
@@ -281,8 +271,9 @@ refuses 'at least one stack' --data 'stacks=[]'
   refuses 'python_dir is `_site/pkg`, where the static site goes' --data 'stacks=[python]' --data python_dir=_site/pkg --data site=plain
 }
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
-refuses 'The flat layout' --data 'stacks=[python,docker]' --data 'docker_stacks=[python]' \
+refuses 'The flat layout' --data 'stacks=[python,docker]' \
   --data python_layout=flat
+refuses 'built from the Python package' --data 'stacks=[ts,docker]' --data ts_kind=app
 refuses 'edition 2024' --data 'stacks=[rust]' --data rust_version=1.84.0
 # The legal pages are written from user_data, so it has no default to fall back on.
 refuses 'Question "user_data" is required' --data 'stacks=[ts]' --data ts_kind=web-app

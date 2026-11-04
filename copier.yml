@@ -129,6 +129,8 @@ stacks:
   validator: >-
     {% if not stacks %}
     Pick at least one stack: with none, `just check` checks nothing.
+    {% elif 'docker' in stacks and 'python' not in stacks %}
+    The image is built from the Python package: add python to `stacks` too.
     {% endif %}
 
 kind:
@@ -470,7 +472,6 @@ module_name:
 # `flat` is for adopting the template in a repo whose package already sits at the
 # root: no src/ stub, and no starter tests that import it. web-service,
 # data-pipeline and the python image need the starter modules, so they stay `src`.
-# docker_stacks is asked later, so its validator refuses flat with the python image.
 python_layout:
   type: str
   when: "{{ 'python' in stacks }}"
@@ -481,7 +482,7 @@ python_layout:
     <module>/ at the root (an existing package): flat
   default: src
   validator: >-
-    {% if python_layout == 'flat' and kind in ('web-service', 'data-pipeline') %}
+    {% if python_layout == 'flat' and (kind in ('web-service', 'data-pipeline') or 'docker' in stacks) %}
     The flat layout is for an existing library, app or research package: the web-service
     and data-pipeline kinds and the python image need their starter modules in src/.
     {% endif %}
@@ -768,27 +769,6 @@ howfairis_version:
   default: 09f3bea4f13c80f52c59c326b5dd9f93354b40a2 # 0.15.0
 
 # --- docker -------------------------------------------------------------------
-
-# Asked even without `customise`: the right images depend on the stacks, and its
-# validator reads the *_dir answers, so it stays after them.
-docker_stacks:
-  type: str
-  multiselect: true
-  when: "{{ 'docker' in stacks }}"
-  help: Which stacks get an image (one Dockerfile and one compose service each)
-  choices: [python]
-  default: [python]
-  validator: >-
-    {% if not docker_stacks %}
-    Pick at least one stack to build an image from.
-    {% elif docker_stacks | reject('in', stacks) | list %}
-    An image needs its stack: add {{ docker_stacks | reject('in', stacks) | join(' and ') }} to `stacks` too.
-    {% elif 'python' in docker_stacks and python_layout == 'flat' %}
-    The flat layout is for an existing library, app or research package: the web-service
-    and data-pipeline kinds and the python image need their starter modules in src/.
-    {% elif kind == 'web-service' and 'python' not in docker_stacks %}
-    The web-service kind is the python image: add python to `docker_stacks`.
-    {% endif %}
 
 app_port:
   type: int

@@ -16,7 +16,6 @@ A new project asks at most ten questions for a single stack (eleven for a web ap
 | `github_user`, `author_name`, `author_email` | Always | Repository URLs, badges, licenses, and package metadata |
 | `customise` | Always | `yes` prompts for advanced settings; `no` accepts defaults |
 | `author_orcid` | Licensed `library`, or Python `research`/`data-pipeline` | Citation metadata |
-| `docker_stacks` | `docker` stack selected | Selects which packages receive a Dockerfile and Compose service (only `python`) |
 
 Identity answers have no defaults.
 

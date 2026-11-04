@@ -7,7 +7,7 @@ date: 2026-11-04
 
 ## Context and Problem Statement
 
-`docker_stacks` offered a `ts` image: a Node service with a `/health` endpoint. No render
+The `docker_stacks` question offered a `ts` image: a Node service with a `/health` endpoint. No render
 of the template used it. Every TypeScript project is a web app deployed to Cloudflare
 Pages or Workers, and the hand-written TypeScript Dockerfiles elsewhere serve a static
 build with Caddy instead of running Node.
@@ -15,13 +15,15 @@ build with Caddy instead of running Node.
 ## Considered Options
 
 * Keep the `ts` image
-* Drop it and leave `python` as the only choice
+* Drop it, which leaves one image and no question to ask
 
 ## Decision Outcome
 
-Chosen: drop it. The choice, its Dockerfile, `.dockerignore`, `src/main.ts` stub, compose
-service and the CI renders that used it are gone. An existing answer `docker_stacks: [ts]`
-stops validating, so the change is marked **Breaking** in the changelog.
+Chosen: drop it, and the `docker_stacks` question with it. The Dockerfile,
+`.dockerignore`, `src/main.ts` stub, compose service and the CI renders that used it are
+gone. `docker` in `stacks` now means the Python image, and `docker` without `python` is
+refused. An old `docker_stacks` answer is ignored, and the update deletes the ts files,
+so the change is marked **Breaking** in the changelog.
 
 ### Consequences
 
@@ -30,4 +32,5 @@ stops validating, so the change is marked **Breaking** in the changelog.
 
 ### Confirmation
 
-`scripts/check-render.sh` fails if a render with `docker_stacks=[ts]` succeeds.
+`scripts/check-render.sh` fails if `docker` without `python` renders, and renders the
+Python image in several answer sets.
