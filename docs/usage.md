@@ -95,7 +95,7 @@ Licensed projects follow the [REUSE specification](https://reuse.software). `REU
 - Blocks force-pushes and branch deletions.
 - Enforces linear history and squash merges.
 - Requires pull requests. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
-- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root, plus `site: build` when the project has a site. A nested stack's workflow runs only when its folder changes, so its check is not required.
+- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root, `compose` in a Compose-only repo, plus `site: build` when the project has a site. A nested stack's workflow runs only when its folder changes, so its check is not required.
 - With `dependency_bot=renovate`, permits the Renovate app to bypass review for minor and patch updates once required checks pass.
 - Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
 - Enables Dependabot security alerts (`gh api -X PUT repos/OWNER/REPO/vulnerability-alerts`).
@@ -174,14 +174,15 @@ When projects record architectural choices, store them in `docs/decisions/`.
 
 A repo that only composes upstream images, with shell scripts and Compose files but no
 Dockerfile of its own, answers `stacks=[docker]`. Any `stacks` with `docker` but not
-`python` renders one, because the only image the template builds is the Python one. With
+`python` renders a Compose-only repo, because the only image the template builds is the Python one. With
 the python stack, answer no to `docker_image` (`--data docker_image=false`) to keep the
 package without an image.
 
 The render has no Dockerfile, no image build and no `docker.yml`. It gets:
 
 - `compose.yaml`: one example service with its image pinned by digest, a healthcheck and a
-  port bound to `127.0.0.1`. Replace it with your own services.
+  port bound to `127.0.0.1`. Replace it with your own services: it and `.env.example` are
+  yours after the first render, and `copier update` leaves them alone.
 - `.env.example`, which `compose.yaml` reads through an optional `.env`.
 - `just check`, which runs `docker compose --env-file .env.example config -q` (CI has no
   `.env`), then shellcheck and shfmt (2-space indent, from images pinned by digest) over
@@ -210,9 +211,9 @@ asked: there is no image to expose or push.
    copier copy --vcs-ref=<tag> --overwrite --data 'stacks=[docker]' gh:simonvanlierde/project-templates .
    ```
 
-2. The render replaces `compose.yaml`, `.env.example` and the justfile. Restore your own
-   Compose and env files with `git checkout HEAD -- compose.yaml .env.example`. `just check`
-   reads `.env.example` in place of `.env`, so give every variable a `${VAR:?}` needs there.
+2. The render keeps an existing `compose.yaml` and `.env.example`, and replaces the justfile.
+   `just check` reads `.env.example` in place of `.env`, so give every variable a `${VAR:?}`
+   needs there.
 3. Move your own recipes into `just/local.just`, which updates never touch. Name the checks
    you add `local-check`: `just check` runs that recipe last.
 4. The `docker-compose` entry in `.github/dependabot.yml` reads `compose.yaml` and the

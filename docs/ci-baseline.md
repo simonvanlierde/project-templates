@@ -44,7 +44,8 @@ Checks included in repositories generated from this template, their purposes, an
 | Clean state on initial load | `tests/e2e/privacy.spec.ts` (`web-app` kind) | Verifies routes set no cookies, create no storage, and contact only declared origins on load |
 | Bundle size budget enforcement | `scripts/checkBundleBudget.mjs` (`web-app` kind) | Fails builds if gzipped JavaScript bundles exceed declared size limits |
 | Publication provenance | Release workflows | Generates Sigstore attestations and provenance bundles for PyPI, npm, and GHCR artifacts |
-| Container security scans | `docker.yml` (`docker` stack) | Trivy scans images for HIGH/CRITICAL vulnerabilities; weekly scheduled rebuilds check base updates |
+| Container security scans | `docker.yml` (`docker` stack with `docker_image`) | Trivy scans images for HIGH/CRITICAL vulnerabilities; weekly scheduled rebuilds check base updates |
+| Compose and shell lint | `compose.yml` (Compose-only repo) | Validates the Compose files against `.env.example`, then runs shellcheck and shfmt on the tracked shell scripts |
 | Public API break detection | `python.yml` (griffe), `ts.yml` (API Extractor) | Compares public APIs against prior releases to detect breaking changes before publication |
 | Cold-install setup verification | `cold-install.yml` (when `cold_install`) | Executes README development instructions in a minimal Debian container to catch missing prerequisites. Also runs when `pyproject.toml`, `uv.lock` or `.python-version` change |
 | Scheduled dependency audits | `advisories.yml` | Runs weekly scans (`uv audit`, `pnpm audit`, `cargo deny`, `govulncheck`, `zizmor`) without commits |

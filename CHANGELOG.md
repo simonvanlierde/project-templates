@@ -10,13 +10,20 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-04
+
 Upgrade steps:
 
-- **Breaking:** `docker_stacks` is gone, and copier drops the old answer. If it listed `ts`, the update deletes the TypeScript `Dockerfile`, `.dockerignore` and `src/main.ts` stub, and the compose service: keep them with `git checkout HEAD -- <path>` before you commit. If it was empty in a project with the python stack, update with `copier update --data docker_image=false`, or the update adds the Python image.
+- **Breaking:** `docker_stacks` is gone, and copier drops the old answer. What the update does depends on what it listed:
+  - Only `ts`, without the python stack: the project becomes a [Compose-only repo](docs/usage.md#compose-only-repos). The update deletes the TypeScript `Dockerfile`, `.dockerignore`, `src/main.ts` stub and compose service; keep them with `git checkout HEAD -- <path>` before you commit.
+  - Only `ts`, with the python stack: update with `copier update --data docker_image=false`, or the update replaces the TypeScript `Dockerfile` with the Python image.
+  - `python` and `ts`: the Python service is now named `app`, and the `web` service is gone.
+- **Breaking:** a web app or a command-line tool refuses a GitHub noreply `author_email`, because its privacy and accessibility pages give that address as the contact. Update with `copier update --data author_email=<an address that gets mail>`.
 
 ### Added
 
-- Compose-only repos: with `docker` in `stacks` and no `python` stack, or with `docker_image=false`, the render has no Dockerfile. It gets a starter `compose.yaml` (an example service pinned by digest, with a healthcheck, bound to `127.0.0.1`), `.env.example`, a `compose.yml` workflow, the `docker-compose` ecosystem in the dependency bot, and a `just check` that runs `docker compose config -q` and lints shell scripts, and a `just docker-fmt` that `just fmt` runs. With `cold_install`, the README's `just check` and `just fmt` are left out of that job, which has no Docker. Projects with the Python image render as before ([Compose-only repos](docs/usage.md#compose-only-repos)).
+- Compose-only repos: with `docker` in `stacks` and no `python` stack, or with `docker_image=false`, the render has no Dockerfile. It gets a starter `compose.yaml` (an example service pinned by digest, with a healthcheck, bound to `127.0.0.1`) and `.env.example`, which are the project's after the first render; a `compose.yml` workflow, a required check on `main` in a public repo; the `docker-compose` ecosystem in the dependency bot, which with Dependabot also reads the directories one level down, where an `include:` points; a `just check` that runs `docker compose --env-file .env.example config -q` and lints shell scripts; and a `just docker-fmt` that `just fmt` runs. With `cold_install`, that job runs each other stack's own `check` and `fmt` in place of `just check` and `just fmt`, which need Docker. Projects with the Python image render as before ([Compose-only repos](docs/usage.md#compose-only-repos)).
+- `just check` ends with the repo's own `local-check` recipe when `just/local.just` has one.
 
 ### Changed
 
@@ -25,8 +32,6 @@ Upgrade steps:
 
 ### Fixed
 
-- Compose-only repos: `just docker-check` reads `.env.example`, so a Compose file with `${VAR:?}` passes in CI, where there is no `.env`. The Dependabot `docker-compose` entry also covers the directories one level down, where an `include:` points. A fresh render passes its own git hooks, which check-render now runs.
-- `just check` ends with the repo's own `local-check` recipe when `just/local.just` has one.
 - CONTRIBUTING links the README without the `#development` anchor, which a project's own README may not have.
 - With a GitHub noreply `author_email`, SECURITY.md offers only the private advisory and the code of conduct only GitHub's abuse report: that address gets no mail.
 - Files name only the stacks a project has: the `.gitignore` sections, the justfile's imports and recipe prefixes, the `uv` and `pnpm` remarks in the hook and YAML configs, the lockfile steps in the copier-update PR body, the SKIP list in `checks.yml`, and the NumPy words in `_typos.toml`. `just repo-settings` names the dependency bot the project uses.
@@ -34,7 +39,7 @@ Upgrade steps:
 
 ### Removed
 
-- The TypeScript image: the Node `Dockerfile`, `.dockerignore`, `src/main.ts` health stub and compose service. With `docker` but not `python` in `stacks`, the render is a Compose-only repo. No render used the ts image: TypeScript projects here are web apps on Cloudflare Pages or Workers, and the hand-written Dockerfiles for them serve a static build with Caddy rather than run Node.
+- The TypeScript image: the Node `Dockerfile`, `.dockerignore`, `src/main.ts` health stub and compose service. With `docker` but not `python` in `stacks`, the render is a Compose-only repo. No render used the ts image, and the web-app kind deploys to Cloudflare Workers without one.
 
 ## [0.13.0] - 2026-11-04
 
@@ -838,7 +843,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/simonvanlierde/project-templates/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/simonvanlierde/project-templates/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/simonvanlierde/project-templates/compare/v0.10.0...v0.11.0

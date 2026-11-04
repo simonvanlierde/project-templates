@@ -2,7 +2,7 @@
 # Task runner: https://just.systems. `just` lists the recipes, `just <name>` runs one.
 {%- if imports %}
 #
-# Each stack's recipes are in just/, prefixed ({% for _, prefix in imports %}`{{ prefix }}-`{{ ', ' if not loop.last }}{% endfor %}) because
+# Each stack's recipes are in just/, prefixed ({% for stack, prefix in imports if not (stack == 'docker' and docker_image) %}`{{ prefix }}-`{{ ', ' if not loop.last }}{% endfor %}) because
 # imports share one namespace, except the few only one kind has, such as `pipeline` or `up`.
 {%- for stack, _ in imports %}
 import? 'just/{{ stack }}.just'

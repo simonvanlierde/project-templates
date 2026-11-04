@@ -10,7 +10,8 @@ Notes for coding agents working on {{ project_name }}. The `justfile` holds ever
 
 ## Check
 
-Run `just check` before you call a change done. It runs what CI runs for each stack.
+Run `just check` before you call a change done. It runs what CI runs for each stack, then
+the `local-check` recipe in `just/local.just` if that file has one.
 `just fmt` fixes what it can first.
 {%- if tests %}
 

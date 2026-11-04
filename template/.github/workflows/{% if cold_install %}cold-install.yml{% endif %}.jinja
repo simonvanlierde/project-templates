@@ -82,7 +82,13 @@ jobs:
           awk '/^## /{dev = ($0 == "## Development")}
                dev && /^```/{code = !code && /^```(sh|bash|shell)[[:space:]]*$/; next}
                dev && code' README.md |
-            grep -vE '^[[:space:]]*just +(up|{% if 'docker' in stacks and not docker_image %}check|fmt|{% endif %}pipeline|ts-(e2e|shots)|[a-z]+-(mutation(-diff)?|property|matrix))( |$)' >"$RUNNER_TEMP/readme.sh" || true
+{%- set no_image_prefixes = [('python', 'py'), ('ts', 'ts'), ('rust', 'rs'), ('go', 'go')] | selectattr('0', 'in', stacks) | map(attribute='1') | list if 'docker' in stacks and not docker_image else [] %}
+            grep -vE '^[[:space:]]*just +(up|{% if 'docker' in stacks and not docker_image and not no_image_prefixes %}check|fmt|{% endif %}pipeline|ts-(e2e|shots)|[a-z]+-(mutation(-diff)?|property|matrix))( |$)' >"$RUNNER_TEMP/readme.sh" || true
+{%- if no_image_prefixes %}
+          # `just check` and `just fmt` also run docker-check and docker-fmt, which need the
+          # Docker daemon this container lacks: run each stack's own recipes instead.
+          sed -i -E 's/^([[:space:]]*)just +check( |$)/\1{% for p in no_image_prefixes %}just {{ p }}-check{{ ' \\&\\& ' if not loop.last }}{% endfor %}\2/; s/^([[:space:]]*)just +fmt( |$)/\1{% for p in no_image_prefixes %}just {{ p }}-fmt{{ ' \\&\\& ' if not loop.last }}{% endfor %}\2/' "$RUNNER_TEMP/readme.sh"
+{%- endif %}
           if ! test -s "$RUNNER_TEMP/readme.sh"; then
             echo "README.md has no sh block under ## Development to run. Add one with the setup commands, or delete .github/workflows/cold-install.yml." >&2
             exit 1
