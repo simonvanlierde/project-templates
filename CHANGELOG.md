@@ -54,6 +54,9 @@ Upgrade steps:
 
 ### Changed
 
+- With `codecov`, the patch check now fails a pull request when tests cover under 90% of its new and changed lines, and total coverage is shown but no longer enforced.
+- Dependabot and Renovate wait one week for every update, majors included; majors used to wait a month ([dependencies](docs/tooling.md#dependencies)).
+- The setup docs show how to turn on the repo setting that refuses actions not pinned to a full commit SHA ([protecting main](docs/usage.md#protecting-main)).
 - `just release` signs and pushes the tag with `.github/scripts/tag-release.sh X.Y.Z`, which `copier update` adds. The checks are the same. You can run the script on its own.
 - A web app's production and preview jobs call one script, `.github/scripts/deploy-worker.sh`, for the deploy steps they shared. Nothing about what they deploy changes. Existing apps get the script with `copier update`.
 - A web app pins wrangler as an exact devDependency, and the production and preview jobs run that copy instead of `pnpm dlx`, so Renovate bumps it and the lockfile records it. See [Production](docs/usage.md#production).

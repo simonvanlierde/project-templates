@@ -1,20 +1,16 @@
-# Codecov reports coverage; CI's tests are the gate. It fails a pull request only when
-# total coverage drops by more than 2 points, and the new lines' share is shown, not
-# enforced.
+# The patch check fails a pull request when tests cover under 90% of the lines it adds
+# or changes. Total coverage is shown, not enforced: it moves with code the pull
+# request did not touch, so it says little about the change.
 coverage:
   status:
     project:
       default:
-        target: auto
-        threshold: 2%
+        informational: true
     patch:
       default:
-        informational: true
+        target: 90%
 
-# No pull request comment. A drop of over 2 points fails the project check, which links
-# to the report. require_changes cannot express that: its coverage_drop test reads the
-# threshold from coverage.status.project itself, where a valid config has none, so it
-# fires on any drop at all.
+# No pull request comment: the patch check links to the report.
 comment: false
 
 # With both stacks, CI uploads one report per stack. Codecov compares as soon as the

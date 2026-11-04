@@ -47,7 +47,7 @@ Generated projects use Dependabot by default. Setting `dependency_bot=renovate` 
 
 - Weekly version updates grouped into three PRs: actions and hooks, dev tooling, and minor/patch runtime updates.
 - Runtime major versions get separate individual PRs.
-- Updates wait one week before opening (or one month for package major versions).
+- Updates wait one week before opening, majors included.
 - Security updates bypass the cooldown.
 
 Dependabot also combines npm security updates into one PR. Renovate refreshes lockfiles weekly on Monday.
