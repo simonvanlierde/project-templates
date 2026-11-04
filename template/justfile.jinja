@@ -49,6 +49,16 @@ fmt:
 # this can fail where the checks workflow passes.
 hooks:
     {{ prek }} run -a
+{%- if site != 'none' %}
+
+# Build the page in site/ into {{ site_out }}/, which site.yml deploys. Replace the body with the
+# project's own build (for example `uv run site/build.py --out {{ site_out }}`), writing to {{ site_out }}/.
+site:
+{%- if site == 'plain' %}
+    rm -rf {{ site_out }}
+    cp -R site {{ site_out }}
+{%- endif %}
+{%- endif %}
 {% if citable %}
 # Rewrite codemeta.json to agree with CITATION.cff, then check. The writer
 # exits 1 whenever it changes a file, so the check that follows decides the result.
@@ -163,11 +173,13 @@ repo-settings:
         echo "Configured environment '$env'."
     done
 {%- endif %}
-{%- if 'ts' in stacks and ts_kind == 'web-app' %}
-    # The preview job reads the Cloudflare secrets from this environment. It takes no reviewer
+{%- if ('ts' in stacks and ts_kind == 'web-app') or site != 'none' %}
+    # The preview jobs read the Cloudflare secrets from this environment. It takes no reviewer
     # or branch limit: previews run on pull request refs and must start unattended.
     gh api -X PUT "repos/{owner}/{repo}/environments/preview" >/dev/null 2>"$err" || fail
     echo "Configured environment 'preview'."
+{%- endif %}
+{%- if 'ts' in stacks and ts_kind == 'web-app' %}
     # The production job deploys from main only, unattended, so no reviewer.
     gh api -X PUT "repos/{owner}/{repo}/environments/production" \
         -F "deployment_branch_policy[protected_branches]=false" \
@@ -177,6 +189,15 @@ repo-settings:
         gh api -X POST "repos/{owner}/{repo}/environments/production/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
     fi
     echo "Configured environment 'production'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to both environments: see the Deploy section of the README."
+{%- endif %}
+{%- if site != 'none' %}
+    # site.yml deploys to GitHub Pages from the workflow, not from a branch. GitHub answers
+    # 409 when Pages is already on, and then the PUT switches its source instead.
+    if ! gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1; then
+        grep -q 'HTTP 409' "$err" || fail
+        gh api -X PUT repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1 || fail
+    fi
+    echo "GitHub Pages deploys from Actions. For the site's previews, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the 'preview' environment: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site"
 {%- endif %}
 {%- if publish_to_pypi %}
     repo_full_name=$(gh api repos/{owner}/{repo} --jq .full_name 2>"$err") || fail

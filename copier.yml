@@ -6,9 +6,9 @@ _min_copier_version: "9.19.0"
 # from its first real paragraph, so template changes to it never arrive. A release
 # adds its version, date and DOI to the citation files, and an update would then
 # conflict with that edit every time. The web-app entries are its starter files and
-# legal pages, which the project rewrites from day one. go.mod is rewritten by the
-# first `go mod tidy`, and Dependabot bumps its requirements after that; its module
-# path and go version are answers fixed at copy time. The decisions index gains a
+# legal pages, which the project rewrites from day one, as are the site's starter
+# files. go.mod is rewritten by the first `go mod tidy`, and Dependabot bumps its
+# requirements after that; its module path and go version are answers fixed at copy time. The decisions index gains a
 # line with each record the project writes. The silver-badge documents are skeletons
 # the project fills in. Each entry starts with `/`:
 # copier matches these like .gitignore lines, so a bare README.md would also skip
@@ -37,6 +37,9 @@ _skip_if_exists:
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/privacy.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/terms.md"
   - "/{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
+  - /site/index.html
+  - /site/style.css
+  - /site/main.mjs
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
@@ -401,6 +404,26 @@ cold_install:
   help: Verify README setup instructions in a fresh Debian container on setup changes
   default: false
 
+# A static page beside the code (a playground, demo or report) in site/. GitHub Pages
+# serves it from main, and each open, ready pull request gets a preview Worker
+# (docs/usage.md#static-site).
+site:
+  type: str
+  when: "{{ stacks }}"
+  ask: "{{ customise }}"
+  help: A static page (playground, demo or report) in site/, deployed to GitHub Pages from main, with a preview per pull request
+  choices:
+    None: none
+    Plain (HTML, CSS and plain JavaScript modules, no build step or framework): plain
+  default: none
+
+# Computed, never asked: the folder `just site` builds into, which site.yml publishes
+# and previews. Gitignored.
+site_out:
+  type: str
+  when: false
+  default: _site
+
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
 # projects. These documents are starting points for the project to complete.
 openssf_badge:
@@ -695,12 +718,22 @@ copier_version:
   default: 9.19.1
 
 # Computed, never asked: the wrangler a web app pins as an exact devDependency, which its
-# production and preview jobs run. Renovate bumps it here and in each project's package.json.
+# production and preview jobs run, and the one site.yml's preview job runs with `pnpm dlx`.
+# Renovate bumps it here and in each project's package.json.
 # renovate: datasource=npm depName=wrangler
 wrangler_version:
   type: str
   when: false
   default: 4.152.0
+
+# Computed, never asked: the pnpm that site.yml runs wrangler with when the repo has no
+# package.json. Keep it equal to packageManager in package.json.jinja (check-render
+# asserts that).
+# renovate: datasource=npm depName=pnpm
+pnpm_version:
+  type: str
+  when: false
+  default: 12.15.0
 
 # A GitHub commit, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
 # badge URL (fair-software/howfairis#383). A commit, not the tag, because a tag can be

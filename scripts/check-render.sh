@@ -80,12 +80,13 @@ grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name
 # workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, the
 # only one with Renovate, and the only web-app: Preact, nested, so the e2e job's
 # paths are audited with the rest. Its user_data answer is the one that adds terms.md.
+# It also has the static site, so both kinds of preview share one retire workflow.
 d_args=(
   --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
   --data dependency_bot=renovate --data codecov=true --data cold_install=true
-  --data 'docker_stacks=[python]'
+  --data 'docker_stacks=[python]' --data site=plain
 )
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d"
@@ -134,15 +135,17 @@ grep -q 'project edit' "$out/h/go.mod"
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
   --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true . "$out/m"
 # x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
+# x and r have the static site without a package.json.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
-  --data kind=library --data publish_to_pypi=true --data python_api=false . "$out/x"
+  --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
-# only its own manifest beside them, and t's hooks run through pnpm.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=crate-me --data 'stacks=[rust]' . "$out/r"
+# only its own manifest beside them, and t's hooks run through pnpm. Both have the
+# static site, t beside a package at the root.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=crate-me --data 'stacks=[rust]' --data site=plain . "$out/r"
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true . "$out/t"
+  --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true --data site=plain . "$out/t"
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -1265,8 +1268,8 @@ grep -qF 'types: [closed, converted_to_draft]' d/.github/workflows/preview-retir
 grep -qF 'cron: "17 4 * * *"' d/.github/workflows/preview-retire.yml
 grep -q 'pull-requests: read' d/.github/workflows/preview-retire.yml
 grep -q 'environment: preview$' d/.github/workflows/preview-retire.yml
-grep -q 'SLUG: pipe-me$' d/.github/workflows/preview-retire.yml
-grep -q 'run: \.github/scripts/preview-retire\.sh$' d/.github/workflows/preview-retire.yml
+# shellcheck disable=SC2016
+grep -qxF '            SLUG=$slug .github/scripts/preview-retire.sh || status=1' d/.github/workflows/preview-retire.yml
 (lacks -q 'pnpm\|working-directory' d/.github/workflows/preview-retire.yml)
 test -x d/.github/scripts/preview-retire.sh
 # preview-retire.sh against a stub curl and gh. The account holds pipe-me-pr-1 to -3 and
@@ -1325,6 +1328,90 @@ grep -q 'no takedown below is verified' "$stub/out"
 grep -qF 'answers HTTP 000 after the delete' "$stub/out"
 (! retire PRS=1 PROBE_CODE=502)
 grep -qF 'answers HTTP 502 after the delete' "$stub/out"
+# Static site: x (Python), r (Rust) and d (beside a web app) answer site=plain. One build,
+# which only the deploy job may publish to Pages, and a preview Worker per open, ready PR,
+# deployed from that build through the web app's own script.
+pnpm_pin=$(sed -n '/^pnpm_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+grep -qF "\"packageManager\": \"pnpm@$pnpm_pin\"" d/web/package.json
+for r in x r d; do
+  for f in site/index.html site/style.css site/main.mjs wrangler.site.jsonc .github/workflows/site.yml .github/workflows/preview-retire.yml; do
+    test -f "$r/$f"
+  done
+  test -x "$r/.github/scripts/deploy-worker.sh"
+  test -x "$r/.github/scripts/preview-retire.sh"
+  grep -qF '<script type="module" src="main.mjs"></script>' "$r/site/index.html"
+  grep -qx '/_site/' "$r/.gitignore"
+  grep -qx 'site:' "$r/justfile"
+  grep -qF '"directory": "./_site"' "$r/wrangler.site.jsonc"
+  grep -qF '"preview_urls": false,' "$r/wrangler.site.jsonc"
+  grep -qF '"workers_dev": true' "$r/wrangler.site.jsonc"
+  wf=$r/.github/workflows/site.yml
+  # Least privilege: contents: read for the workflow, Pages rights on the deploy job alone.
+  sed -n '1,/^jobs:/p' "$wf" | grep -qx '  contents: read'
+  test "$(grep -c 'pages: write' "$wf")" = 1
+  test "$(grep -c 'id-token: write' "$wf")" = 1
+  deploy_job=$(sed -n '/^  deploy:$/,/^  [a-z]/p' "$wf")
+  grep -q '^      pages: write' <<<"$deploy_job"
+  grep -q '^      id-token: write' <<<"$deploy_job"
+  grep -qx '      name: github-pages' <<<"$deploy_job"
+  grep -qxF "    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'" <<<"$deploy_job"
+  test "$(grep -c '^    timeout-minutes:' "$wf")" = 3
+  test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
+  grep -qx '      - run: just site' "$wf"
+  grep -qx '          path: _site' "$wf"
+  # The preview deploys the build job's artifact: it never runs the build with the token.
+  preview_job=$(sed -n '/^  preview:$/,$p' "$wf")
+  (! grep -q 'just site' <<<"$preview_job")
+  grep -qx '          name: github-pages' <<<"$preview_job"
+  grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !endsWith(github.event.pull_request.user.login, '[bot]')" <<<"$preview_job"
+  # shellcheck disable=SC2016
+  grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostring)'\''' <<<"$preview_job"
+  # shellcheck disable=SC2016
+  grep -qF '[ "$state" != "open false" ]' <<<"$preview_job"
+  # shellcheck disable=SC2016
+  grep -qF 'group: preview-${{ github.event.pull_request.number }}' <<<"$preview_job"
+  grep -qF 'X-Robots-Tag: noindex' <<<"$preview_job"
+  grep -qxF "          WRANGLER: pnpm dlx wrangler@$wrangler_pin" <<<"$preview_job"
+  cmp "$r/.github/scripts/deploy-worker.sh" d/.github/scripts/deploy-worker.sh
+  cmp "$r/.github/scripts/preview-retire.sh" d/.github/scripts/preview-retire.sh
+done
+# Site previews are <slug>-site-pr-<n>, apart from a web app's <slug>-pr-<n>.
+# shellcheck disable=SC2016
+grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.jsonc' x/.github/workflows/site.yml
+# shellcheck disable=SC2016
+grep -qF 'deploy-worker.sh" Preview "crate-me-site-pr-$PR" --config wrangler.site.jsonc' r/.github/workflows/site.yml
+# shellcheck disable=SC2016
+grep -qF 'deploy-worker.sh" Preview "pipe-me-site-pr-$PR" --config wrangler.site.jsonc' d/.github/workflows/site.yml
+grep -qx '          for slug in cli-me-site; do' x/.github/workflows/preview-retire.yml
+grep -qx '          for slug in pipe-me pipe-me-site; do' d/.github/workflows/preview-retire.yml
+grep -qx '          for slug in app; do' s/.github/workflows/preview-retire.yml
+# Without a package.json, the preview job's pnpm comes from the pin; with one, from it.
+grep -qxF "          version: \"$pnpm_pin\"" x/.github/workflows/site.yml
+grep -qx '          package_json_file: web/package.json' d/.github/workflows/site.yml
+# The starter page builds as it is.
+(cd x && just site >/dev/null)
+test -f x/_site/index.html
+test -f x/_site/main.mjs
+# deploy-worker.sh with the site's wrangler command and config.
+(cd "$dstub/work" && env STUB="$dstub" PATH="$dstub:$PATH" GITHUB_OUTPUT="$dstub/gho" GITHUB_STEP_SUMMARY="$dstub/sum" \
+  WRANGLER="pnpm dlx wrangler@$wrangler_pin" "$deploy_sh" Preview cli-me-site-pr-4 --config wrangler.site.jsonc >"$dstub/out" 2>&1)
+test "$(tail -n 1 "$dstub/calls")" = "pnpm dlx wrangler@$wrangler_pin deploy --name cli-me-site-pr-4 --config wrangler.site.jsonc"
+# A root package's knip would report the page's files as unused; a nested one never sees them.
+jq -e '.knip.ignoreFiles == ["site/**"]' t/package.json >/dev/null
+jq -e '.knip | has("ignoreFiles") | not' d/web/package.json >/dev/null
+# A project without the site gets none of it.
+for r in a m w; do
+  test ! -e "$r/site"
+  test ! -e "$r/wrangler.site.jsonc"
+  test ! -e "$r/.github/workflows/site.yml"
+  test ! -e "$r/.github/workflows/preview-retire.yml"
+  test ! -e "$r/.github/scripts/preview-retire.sh"
+  test ! -e "$r/.github/scripts/deploy-worker.sh"
+  (lacks -q '_site' "$r/.gitignore")
+  (lacks -qx 'site:' "$r/justfile")
+  (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile")
+done
+(lacks -q 'app-site' s/.github/workflows/preview-retire.yml)
 # A web app at the repo root builds in place.
 test -f s/wrangler.jsonc
 grep -q '^  production:' s/.github/workflows/ts.yml
@@ -1666,6 +1753,16 @@ case $call in
     [ -f "$pol" ] || echo '{"branch_policies":[]}' >"$pol"
     jq -r "$filter" "$pol" ;;
   *"-X PUT repos/{owner}/{repo}/environments/"*) echo '{}' ;;
+  # Pages is created once; GitHub refuses a second create with 409.
+  *"-X POST repos/{owner}/{repo}/pages "*)
+    if [ -f "$FAKE_DIR/pages" ]; then
+      echo '{"message":"GitHub Pages is already enabled.","status":"409"}'
+      echo 'gh: GitHub Pages is already enabled. (HTTP 409)' >&2
+      exit 1
+    fi
+    : >"$FAKE_DIR/pages"
+    echo '{}' ;;
+  *"-X PUT repos/{owner}/{repo}/pages "*) echo '{}' ;;
   *"repos/{owner}/{repo}"*"--jq .full_name"*) echo "simonvanlierde/project-templates" ;;
 esac
 FAKE
@@ -1769,6 +1866,23 @@ chmod +x "$fake/gh"
   (lacks -q 'environments/production.*reviewers' "$FAKE_LOG")
   grep -q "Configured environment 'production'" "$fake/out-d"
 )
+# The site (x) gets the preview environment and Pages from Actions: created on the first
+# run, switched over on the second, when GitHub answers 409.
+(
+  cd x
+  # shellcheck disable=SC2030,SC2031 # as above
+  export FAKE_LOG="$fake/log-x" FAKE_DIR="$fake/x" PATH="$fake:$PATH"
+  mkdir -p "$FAKE_DIR"
+  cp "$fake/rulesets.json" "$FAKE_DIR/"
+  just repo-settings >"$fake/out-x"
+  just repo-settings >/dev/null
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/preview' "$FAKE_LOG"
+  test "$(grep -cxF -- 'api -X POST repos/{owner}/{repo}/pages -f build_type=workflow' "$FAKE_LOG")" = 2
+  test "$(grep -cxF -- 'api -X PUT repos/{owner}/{repo}/pages -f build_type=workflow' "$FAKE_LOG")" = 1
+  (lacks -q 'environments/production' "$FAKE_LOG")
+  grep -q 'GitHub Pages deploys from Actions' "$fake/out-x"
+)
+(lacks -qF 'repos/{owner}/{repo}/pages' "$fake/log-c")
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
 jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null

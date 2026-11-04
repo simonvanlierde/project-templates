@@ -72,6 +72,12 @@
       "wrangler"
 {%- endif %}
     ]
+{%- if site != 'none' and ts_dir == '.' %},
+{#- site/ is a page of its own: nothing in this package imports it. #}
+    "ignoreFiles": [
+      "site/**"
+    ]
+{%- endif %}
 {%- if web %},
 {#- playwright.config.ts adds tests/shots only when SHOTS is set, so knip, which
     loads the config without it, needs the spec named. The plugin's entry adds to

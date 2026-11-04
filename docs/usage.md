@@ -33,6 +33,7 @@ When `customise` is `no`, advanced questions take these defaults:
 | `codspeed` | Disabled ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
 | `profiling` | Disabled ([Profiling](#profiling)) |
 | `cold_install` | Disabled ([CI baseline](ci-baseline.md)) |
+| `site` | None ([Static site](#static-site)) |
 | `openssf_badge` | None ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
@@ -337,6 +338,22 @@ To add extras to an existing project:
 ```sh
 copier update --data 'test_extras=[property]'
 ```
+
+## Static site
+
+Answer `site` (under `customise`) to give any project a static page beside its code: a playground, a demo or a report. GitHub Pages serves it from `main`, and each pull request gets a preview. The page's readers are the project's users, so it stays small: the tool in the first screen, details in disclosures.
+
+`site=plain` renders:
+
+- `site/index.html`, `site/style.css` and `site/main.mjs`: a starter page with a header, a main area with a TODO for the tool, and a footer with the licence and a privacy line. Plain HTML, CSS and an ES module, no build step or framework. It works at 320 px and in dark mode. These files are yours: an update leaves them alone.
+- A `just site` recipe that builds the page into `_site/`, which is gitignored. It copies `site/` as it is. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
+- `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads `_site/`. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`.
+- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The preview job deploys the build job's artifact, not a fresh build, and sends `X-Robots-Tag: noindex`. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The repo has no `package.json` of its own for the site, so the job runs the wrangler pinned in `copier.yml` with `pnpm dlx`.
+
+One-time setup:
+
+1. Run `just repo-settings`. It creates the `preview` environment and sets GitHub Pages to deploy from Actions (Settings > Pages > Source: GitHub Actions).
+2. Add the Cloudflare API token (Account > Workers Scripts: Edit) to the `preview` environment as `CLOUDFLARE_API_TOKEN`, and your account ID as `CLOUDFLARE_ACCOUNT_ID`. Without them the preview job skips with a notice, and Pages still deploys.
 
 ## Publishing
 

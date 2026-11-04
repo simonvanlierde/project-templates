@@ -450,13 +450,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # A project_name with punctuation that `slug` strips.
+          # A project_name with punctuation that `slug` strips. With the static site, so
+          # biome and knip at the root also meet site/.
           - name: library
             answers:
               project_name: 'Ci "TS" Lib'
               stacks: [ts]
               ts_kind: library
               publish_to_npm: true
+              site: plain
           # Nested, so a report the mutation run writes beside the package must be
           # gitignored there too: ts-check runs again after it.
           - name: library (test extras)
