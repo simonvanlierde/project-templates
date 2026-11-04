@@ -74,6 +74,15 @@ header a,
   left: -100vw;
 }
 
+/* Over the header, so showing it moves nothing. */
 .skip:focus {
-  position: static;
+  left: 1rem;
+  top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+}
+
+/* The skip link focuses <main> to move the reading point, not to show a ring around it. */
+main:focus {
+  outline: none;
 }

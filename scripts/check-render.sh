@@ -153,6 +153,11 @@ y_args=(--data project_name=site-me --data 'stacks=[python]' --data kind=app --d
 echo '<!-- project edit -->' >>"$out/y/site/src/layouts/Base.astro"
 echo 'project edit' >>"$out/y/site/package.json"
 "${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y" >/dev/null 2>&1
+# hush-plain and hush-astro: a site in a private repo.
+for s in plain astro; do
+  "${copier[@]}" --vcs-ref=HEAD --data project_name=hush-me --data 'stacks=[python]' \
+    --data public=false --data site=$s . "$out/hush-$s" >/dev/null
+done
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
 # own README, citation file and package stay; no src/ stub or sample test lands.
 mkdir -p "$out/k/adopt_me"
@@ -266,6 +271,7 @@ refuses 'at least one stack' --data 'stacks=[]'
   refuses 'python_dir is `site`, where the static site goes' --data 'stacks=[python]' --data python_dir=site --data site=plain
   refuses 'ts_dir is `_site`, where the static site goes' --data 'stacks=[ts]' --data ts_dir=_site --data site=plain
   refuses 'go_dir is `site/api`, where the static site goes' --data 'stacks=[go]' --data go_dir=site/api --data site=astro
+  refuses 'python_dir is `_site/pkg`, where the static site goes' --data 'stacks=[python]' --data python_dir=_site/pkg --data site=plain
 }
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 refuses 'The flat layout' --data 'stacks=[python,docker]' --data 'docker_stacks=[python]' \
@@ -1283,17 +1289,16 @@ grep -q 'pull-requests: read' d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
 grep -qF 'group: preview-${{ github.event.pull_request.number }}' d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
-grep -qF 'group: preview-${{ github.event.pull_request.number || github.run_id }}' d/.github/workflows/preview-retire.yml
+grep -qF 'group: ${{ matrix.group }}-${{ github.event.pull_request.number || github.run_id }}' d/.github/workflows/preview-retire.yml
 grep -qF 'types: [closed, converted_to_draft]' d/.github/workflows/preview-retire.yml
 grep -qF 'cron: "17 4 * * *"' d/.github/workflows/preview-retire.yml
 grep -q 'pull-requests: read' d/.github/workflows/preview-retire.yml
 grep -q 'environment: preview$' d/.github/workflows/preview-retire.yml
-# shellcheck disable=SC2016
-grep -qxF '            SLUG=$slug .github/scripts/preview-retire.sh || status=1' d/.github/workflows/preview-retire.yml
+grep -qxF '        run: .github/scripts/preview-retire.sh' d/.github/workflows/preview-retire.yml
 (lacks -q 'pnpm\|working-directory' d/.github/workflows/preview-retire.yml)
 test -x d/.github/scripts/preview-retire.sh
-# preview-retire.sh against a stub curl and gh. The account holds pipe-me-pr-1 to -3 and
-# pipe-me-preview; each test sets the PR states, the DELETE answer and the address answer.
+# preview-retire.sh against a stub curl and gh. The account holds pipe-me-pr-1 to -3,
+# pipe-me-site-pr-1 and pipe-me-preview; each test sets the PR states, the DELETE answer and the address answer.
 retire_sh=$out/d/.github/scripts/preview-retire.sh
 stub=$out/fake-retire
 mkdir -p "$stub"
@@ -1307,7 +1312,7 @@ done
 url=$a
 case $method:$url in
   DELETE:*) echo "${url##*/}" >>"$STUB/deleted"; echo '{}' >"$out"; printf %s "${DELETE_CODE:-200}" ;;
-  *workers/scripts) echo '{"result":[{"id":"pipe-me-pr-1"},{"id":"pipe-me-pr-2"},{"id":"pipe-me-pr-3"},{"id":"pipe-me-preview"}]}' ;;
+  *workers/scripts) echo '{"result":[{"id":"pipe-me-pr-1"},{"id":"pipe-me-pr-2"},{"id":"pipe-me-pr-3"},{"id":"pipe-me-site-pr-1"},{"id":"pipe-me-preview"}]}' ;;
   *workers/subdomain) [ -z "${SUB_FAIL:-}" ] || exit 22; echo '{"result":{"subdomain":"acct"}}' ;;
   *.workers.dev) printf %s "${PROBE_CODE:-404}"; [ "${PROBE_CODE:-404}" != 000 ] || exit 28 ;;
 esac
@@ -1331,6 +1336,10 @@ echo '{"state": "open", "draft": false}' >"$stub/pr-2"
 (! retire)
 test "$(LC_ALL=C sort "$stub/deleted")" = "$(printf 'pipe-me-pr-1?force=true\npipe-me-preview?force=true')"
 grep -q 'Could not read PR 3' "$stub/out"
+# The site's prefix takes only its own Worker.
+retire SLUG=pipe-me-site
+grep -qx 'pipe-me-site-pr-1?force=true' "$stub/deleted"
+(lacks -q '^pipe-me-pr-' "$stub/deleted")
 # Once PR 3 reads as closed, the sweep deletes it and passes.
 echo '{"state": "closed", "draft": false}' >"$stub/pr-3"
 retire
@@ -1389,12 +1398,22 @@ for r in x r d; do
   # shellcheck disable=SC2016
   grep -qF '[ "$state" != "open false" ]' <<<"$preview_job"
   # shellcheck disable=SC2016
-  grep -qF 'group: preview-${{ github.event.pull_request.number }}' <<<"$preview_job"
+  grep -qF 'group: preview-site-${{ github.event.pull_request.number }}' <<<"$preview_job"
   grep -qF 'X-Robots-Tag: noindex' <<<"$preview_job"
   grep -qF "dlx wrangler@$wrangler_pin" <<<"$preview_job"
   cmp "$r/.github/scripts/deploy-worker.sh" d/.github/scripts/deploy-worker.sh
   cmp "$r/.github/scripts/preview-retire.sh" d/.github/scripts/preview-retire.sh
 done
+# The site build is a required check, and `just check` builds an Astro site.
+jq -e '.rules[0].parameters.required_status_checks | any(.context == "site: build")' x/.github/rulesets/main-checks.json >/dev/null
+jq -e '.rules[0].parameters.required_status_checks | any(.context == "site: build")' y/.github/rulesets/main-checks.json >/dev/null
+(lacks -q '"site: build"' c/.github/rulesets/main-checks.json)
+sed -n '/^check:/,/^$/p' y/justfile | grep -qx '    @just site'
+(sed -n '/^check:/,/^$/p' x/justfile | lacks -q 'just site')
+# A private repo's page has no links into the repo, which its readers cannot open.
+(lacks -rq 'github.com/' hush-plain/site hush-astro/site/src)
+grep -q 'href="https://github.com/.*/issues"' x/site/index.html
+grep -q 'Skip to the content' hush-astro/site/src/layouts/Base.astro
 # Site previews are <slug>-site-pr-<n>, apart from a web app's <slug>-pr-<n>.
 # shellcheck disable=SC2016
 grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.jsonc' x/.github/workflows/site.yml
@@ -1402,9 +1421,14 @@ grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.
 grep -qF 'deploy-worker.sh" Preview "crate-me-site-pr-$PR" --config wrangler.site.jsonc' r/.github/workflows/site.yml
 # shellcheck disable=SC2016
 grep -qF 'deploy-worker.sh" Preview "pipe-me-site-pr-$PR" --config wrangler.site.jsonc' d/.github/workflows/site.yml
-grep -qx '          for slug in cli-me-site; do' x/.github/workflows/preview-retire.yml
-grep -qx '          for slug in pipe-me pipe-me-site; do' d/.github/workflows/preview-retire.yml
-grep -qx '          for slug in app; do' s/.github/workflows/preview-retire.yml
+# One retire job per prefix, each in the group of the preview job it retires, so a site
+# preview and a web-app preview of one PR never share a group.
+grep -qx '          - { slug: cli-me-site, group: preview-site }' x/.github/workflows/preview-retire.yml
+test "$(grep -c '^          - { slug: ' x/.github/workflows/preview-retire.yml)" = 1
+grep -qx '          - { slug: pipe-me, group: preview }' d/.github/workflows/preview-retire.yml
+grep -qx '          - { slug: pipe-me-site, group: preview-site }' d/.github/workflows/preview-retire.yml
+grep -qx '          - { slug: app, group: preview }' s/.github/workflows/preview-retire.yml
+test "$(grep -c '^          - { slug: ' s/.github/workflows/preview-retire.yml)" = 1
 # Without a package.json, the preview job's pnpm comes from the pin; with one, from it.
 grep -qxF "          version: \"$pnpm_pin\"" x/.github/workflows/site.yml
 grep -qx '          package_json_file: web/package.json' d/.github/workflows/site.yml

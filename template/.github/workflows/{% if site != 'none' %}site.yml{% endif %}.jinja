@@ -99,9 +99,9 @@ jobs:
     name: "site: preview"
     # Bot pull requests (Renovate, Dependabot) get no preview, so their code never sees the token.
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !endsWith(github.event.pull_request.user.login, '[bot]')
-    # Shares preview-retire.yml's group, so a retire waits for a deploy in flight.
+    # Shares the site job of preview-retire.yml, so a retire waits for a deploy in flight.
     concurrency:
-      group: preview-{% raw %}${{ github.event.pull_request.number }}{% endraw %}
+      group: preview-site-{% raw %}${{ github.event.pull_request.number }}{% endraw %}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

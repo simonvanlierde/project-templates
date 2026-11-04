@@ -34,7 +34,7 @@ Checks included in repositories generated from this template, their purposes, an
 | Pull request benchmarks | `benchmarks.yml` (`codspeed` option) | Runs CodSpeed instruction-count benchmarks on PRs and `main` using OIDC authentication |
 | Production deploy from CI | `ts.yml` (`web-app` kind) | Deploys the build the checks ran on to a Cloudflare Worker on each push to `main`, through a `production` environment limited to `main` |
 | Pull request previews | `ts.yml` and `site.yml` preview jobs, `preview-retire.yml` (`web-app` kind, `site` option) | Deploys each open, ready pull request to its own Worker, and deletes it when the pull request closes, merges or turns draft |
-| Static site on GitHub Pages | `site.yml` (`site` option) | Builds `site/` with `just site` on every pull request and push, and deploys that build to GitHub Pages from `main` |
+| Static site on GitHub Pages | `site.yml` (`site` option) | Builds `site/` with `just site` on every pull request and push to `main`, and deploys that build to GitHub Pages from `main` |
 | Browser tests in Playwright container | `ts.yml` (`web-app` kind) | Runs end-to-end tests against production builds using the pinned Playwright container |
 | Automated accessibility tests (axe) | `tests/e2e/a11y.spec.ts` (`web-app` kind) | Tests routes in light and dark modes against WCAG 2.0–2.2 Levels A and AA |
 | Content-Security-Policy enforcement | `public/_headers`, `tests/e2e/csp.spec.ts` | Validates strict CSP (`script-src 'self'`), HSTS, and frame protection without inline scripts |

@@ -16,17 +16,20 @@
 <a class="skip" href="#main">Skip to the tool</a>
 <header class="wrap">
   <p><b>{{ project_name | e }}</b>{% if project_description %} · {{ project_description | e }}{% endif %}</p>
+{%- if public %}
   <a href="{{ repo }}#readme">Docs</a>
+{%- endif %}
 </header>
 <main id="main" class="wrap" tabindex="-1">
   <h1>{{ project_name | e }}</h1>
   <!-- TODO: the tool goes here, in the first screen: its input, then its result.
        Put settings and how it works in <details> below it. -->
-  <p id="status" role="status">Loading…</p>
+  <p id="status" role="status"></p>
   <noscript><p>This page needs JavaScript.</p></noscript>
 </main>
 <footer class="wrap">
   <p>This page sets no cookies and stores nothing in your browser. Its host keeps the usual server logs.</p>
+{%- if public %}
   <p class="links">
 {%- if license != 'none' %}
     <a href="{{ repo }}/blob/main/LICENSE">{{ license }}</a>
@@ -34,6 +37,7 @@
     <a href="{{ repo }}">Source</a>
     <a href="{{ repo }}/issues">Report a problem</a>
   </p>
+{%- endif %}
 </footer>
 </body>
 </html>

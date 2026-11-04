@@ -95,7 +95,7 @@ Licensed projects follow the [REUSE specification](https://reuse.software). `REU
 - Blocks force-pushes and branch deletions.
 - Enforces linear history and squash merges.
 - Requires pull requests. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
-- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root. A nested stack's workflow runs only when its folder changes, so its check is not required.
+- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root, plus `site: build` when the project has a site. A nested stack's workflow runs only when its folder changes, so its check is not required.
 - With `dependency_bot=renovate`, permits the Renovate app to bypass review for minor and patch updates once required checks pass.
 - Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
 - Enables Dependabot security alerts (`gh api -X PUT repos/OWNER/REPO/vulnerability-alerts`).
@@ -354,7 +354,7 @@ Answer `site` (under `customise`) to give any project a static page beside its c
 The two choices differ only in what is in `site/` and how `just site` builds it:
 
 - `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a starter page with a header, a main area with a TODO for the tool, and a footer with the licence and a privacy line. Plain HTML, CSS and an ES module, no build step or framework. It works at 320 px and in dark mode. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
-- `site=astro`: a small Astro project. `package.json` has astro at the version `copier.yml` pins, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once to write `site/pnpm-lock.yaml`, and commit it. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `astro.config.mjs` sets `site` and `base` to match. With a custom domain, set `site` to it and drop `base`.
+- `site=astro`: a small Astro project. `package.json` has astro at the version `copier.yml` pins, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once to write `site/pnpm-lock.yaml`, and commit it. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. With a custom domain, set `site` to it and drop `base`. The `preview` job still serves the build under `/<repo>/`, so change it to match, or the preview's links break.
 
 The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
 
@@ -364,7 +364,7 @@ The starter files are yours: an update leaves them alone. An Astro site's `packa
 One-time setup:
 
 1. Run `just repo-settings`. It creates the `preview` environment and sets GitHub Pages to deploy from Actions (Settings > Pages > Source: GitHub Actions).
-2. Add the Cloudflare API token (Account > Workers Scripts: Edit) to the `preview` environment as `CLOUDFLARE_API_TOKEN`, and your account ID as `CLOUDFLARE_ACCOUNT_ID`. Without them the preview job skips with a notice, and Pages still deploys.
+2. Add the Cloudflare API token (Account > Workers Scripts: Edit) to the `preview` environment as `CLOUDFLARE_API_TOKEN`, and your account ID as `CLOUDFLARE_ACCOUNT_ID`. Without the token, the preview job skips with a notice, and Pages still deploys.
 
 A GitHub Pages site is public even when the repo is private, and a private repo needs a paid GitHub plan for Pages. Until Pages is on, the `deploy` job skips with a notice, and `just repo-settings` warns and goes on where GitHub refuses Pages.
 

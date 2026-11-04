@@ -346,12 +346,12 @@ jobs:
         run: scripts/check-render.sh "$RUNNER_TEMP"
 
       # No linter can parse the .jinja workflows, so audit the rendered output. Renders a
-      # to d and m together cover every conditional workflow. Scaffolds get the same audit as a
-      # git hook.
+      # to d, m, x and y together cover every conditional workflow. Scaffolds get the same
+      # audit as a git hook.
       - name: zizmor
         env:
           GH_TOKEN: ${{ github.token }}
-        run: uvx "zizmor@$ZIZMOR_VERSION" "$RUNNER_TEMP"/a "$RUNNER_TEMP"/b "$RUNNER_TEMP"/c "$RUNNER_TEMP"/d "$RUNNER_TEMP"/m
+        run: uvx "zizmor@$ZIZMOR_VERSION" "$RUNNER_TEMP"/a "$RUNNER_TEMP"/b "$RUNNER_TEMP"/c "$RUNNER_TEMP"/d "$RUNNER_TEMP"/m "$RUNNER_TEMP"/x "$RUNNER_TEMP"/y
 
       # Render d answers dependency_bot=renovate. The renovate job above checks only this
       # repo's own config.
@@ -376,7 +376,7 @@ jobs:
             -p "$asset" -p "jactionlint_${JACTIONLINT_VERSION}_checksums.txt"
           (cd "$bin" && sha256sum --check --ignore-missing "jactionlint_${JACTIONLINT_VERSION}_checksums.txt")
           tar -xzf "$bin/$asset" -C "$bin" jactionlint
-          "$bin/jactionlint" "$RUNNER_TEMP"/[abcdm]/.github/workflows/*.yml
+          "$bin/jactionlint" "$RUNNER_TEMP"/[abcdmxy]/.github/workflows/*.yml
 
       # The same schema the rendered hook validates against.
       - name: CITATION.cff schema

@@ -426,7 +426,7 @@ site:
   default: none
   # site/ and _site/ belong to the site: a package there would share them with it.
   validator: >-
-    {% if site != 'none' %}{% for q, d in [('python_dir', python_dir), ('ts_dir', ts_dir), ('rust_dir', rust_dir), ('go_dir', go_dir)] if d in ('site', '_site') or d.startswith('site/') %}
+    {% if site != 'none' %}{% for q, d in [('python_dir', python_dir), ('ts_dir', ts_dir), ('rust_dir', rust_dir), ('go_dir', go_dir)] if d in ('site', '_site') or d.startswith(('site/', '_site/')) %}
     {{ q }} is `{{ d }}`, where the static site goes: give {{ q }} another directory, or answer site=none.
     {% endfor %}{% endif %}
 
@@ -756,7 +756,7 @@ astro_version:
 pnpm_version:
   type: str
   when: false
-  default: 12.15.0
+  default: 12.16.1
 
 # A GitHub commit, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
 # badge URL (fair-software/howfairis#383). A commit, not the tag, because a tag can be

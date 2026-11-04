@@ -23,7 +23,7 @@ Upgrade steps:
 - **Breaking:** delete `.zenodo.json` unless you added to it what `CITATION.cff` cannot hold, such as contributors, related records, communities or grants.
 - **Breaking:** with `license` set to `none`, `copier update` deletes `CITATION.cff` and `codemeta.json`. To keep them, run `git checkout HEAD -- CITATION.cff codemeta.json` before you commit the update.
 - **Breaking:** in a public repo, run `prek install`, then commit with `-s`: the `dco-signoff` hook refuses an unsigned commit.
-- In a public repo, run `just repo-settings` after the update, so `main` also requires the checks of each stack at the repo root.
+- In a public repo, run `just repo-settings` after the update, so `main` also requires the checks of each stack at the repo root, and the site build when the project has a site.
 
 ### Added
 

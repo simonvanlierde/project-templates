@@ -27,6 +27,9 @@ check:
 {%- if 'go' in stacks %}
     @just go-check
 {%- endif %}
+{%- if site == 'astro' %}
+    @just site
+{%- endif %}
 
 # Fix and format every stack here, as each stack's `fmt` recipe does.
 fmt:
@@ -51,8 +54,8 @@ hooks:
     {{ prek }} run -a
 {%- if site != 'none' %}
 
-# Build the page in site/ into {{ site_out }}/, which site.yml deploys. Replace the body with the
-# project's own build (for example `uv run site/build.py --out {{ site_out }}`), writing to {{ site_out }}/.
+# Replace the body with the project's own build, such as `uv run site/build.py --out {{ site_out }}`.
+# Build the page in site/ into {{ site_out }}/, which site.yml deploys.
 site:
 {%- if site == 'plain' %}
     rm -rf {{ site_out }}
@@ -64,8 +67,8 @@ site:
 {%- endif %}
 {%- if site == 'astro' %}
 
-# Install the site's node_modules, writing site/pnpm-lock.yaml if it is missing. `just site`
-# and CI use --frozen-lockfile.
+# `just site` and CI install with --frozen-lockfile.
+# Install the site's node_modules, and write site/pnpm-lock.yaml if it is missing.
 site-sync:
     pnpm -C site install
 {%- endif %}
