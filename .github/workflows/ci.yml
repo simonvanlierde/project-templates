@@ -218,7 +218,11 @@ jobs:
 
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
-        run: just py-mutation py-property
+        # Two calls: py-mutation takes mutant patterns, so `just py-mutation py-property`
+        # would hand py-property to mutmut instead of running the recipe.
+        run: |-
+          just py-mutation
+          just py-property
 
       # The run above passes, but so would a gate that ignored mutmut. Each case here must
       # turn it red, and py-mutation-diff must mutate only the function a commit changes.
