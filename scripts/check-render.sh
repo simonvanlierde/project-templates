@@ -1139,7 +1139,7 @@ test ! -e a/docs/privacy.md
 for f in PRODUCT DESIGN; do
   test -f "d/web/$f.md"
   grep -qF 'pipe-me' "d/web/$f.md"
-  (! grep -qiE 'recruit|portfolio|hiring|showcase' "d/web/$f.md")
+  (lacks -iE 'recruit|portfolio|hiring|showcase' "d/web/$f.md")
   test ! -e "t/$f.md"
   test ! -e "w/$f.md"
   test ! -e "a/$f.md"
