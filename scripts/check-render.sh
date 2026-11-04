@@ -1404,6 +1404,12 @@ for r in x r d; do
   cmp "$r/.github/scripts/deploy-worker.sh" d/.github/scripts/deploy-worker.sh
   cmp "$r/.github/scripts/preview-retire.sh" d/.github/scripts/preview-retire.sh
 done
+# The site build is a required check, and `just check` builds an Astro site.
+jq -e '.rules[0].parameters.required_status_checks | any(.context == "site: build")' x/.github/rulesets/main-checks.json >/dev/null
+jq -e '.rules[0].parameters.required_status_checks | any(.context == "site: build")' y/.github/rulesets/main-checks.json >/dev/null
+(lacks -q '"site: build"' c/.github/rulesets/main-checks.json)
+sed -n '/^check:/,/^$/p' y/justfile | grep -qx '    @just site'
+(sed -n '/^check:/,/^$/p' x/justfile | lacks -q 'just site')
 # A private repo's page has no links into the repo, which its readers cannot open.
 (lacks -rq 'github.com/' hush-plain/site hush-astro/site/src)
 grep -q 'href="https://github.com/.*/issues"' x/site/index.html

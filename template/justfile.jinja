@@ -27,6 +27,9 @@ check:
 {%- if 'go' in stacks %}
     @just go-check
 {%- endif %}
+{%- if site == 'astro' %}
+    @just site
+{%- endif %}
 
 # Fix and format every stack here, as each stack's `fmt` recipe does.
 fmt:
