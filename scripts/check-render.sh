@@ -1201,9 +1201,9 @@ test "$(grep -c 'run: pnpm install --frozen-lockfile' d/.github/workflows/ts.yml
 # pnpm refuses the install unless wrangler's esbuild and workerd builds are allowed.
 grep -A2 -x 'allowBuilds:' d/web/pnpm-workspace.yaml | grep -qx '  workerd: true'
 (! grep -q 'allowBuilds' m/web/pnpm-workspace.yaml)
-# knip sees ts.yml's wrangler from a root app only, so a nested one ignores it.
+# knip does not read deploy-worker.sh, the only caller of wrangler, so every web app ignores it.
 jq -e '.knip.ignoreDependencies | index("wrangler")' d/web/package.json >/dev/null
-(! jq -e '.knip.ignoreDependencies | index("wrangler")' s/package.json >/dev/null)
+jq -e '.knip.ignoreDependencies | index("wrangler")' s/package.json >/dev/null
 (! grep -q 'versions upload' d/.github/workflows/ts.yml)
 grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
 (! grep -q '^  X-Robots-Tag' d/web/public/_headers)
