@@ -214,7 +214,7 @@ Each pull request that is open, not a draft and not opened by a bot such as Reno
 
 When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker through the Cloudflare API. It then fetches the address and fails unless it answers 404, which shows the Worker is gone. A daily run lists the account's `<slug>-pr-<number>` Workers and deletes those whose pull request is not open and ready, in case an event was missed. When it cannot read a pull request, it keeps that Worker and fails. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep. The workflow runs `.github/scripts/preview-retire.sh`.
 
-Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` skip the job with a notice. One-time setup:
+Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` skip the job with a notice. One-time setup:
 
 1. Run `just repo-settings`. It creates the `preview` and `production` environments in GitHub (or create them under Settings > Environments, with `production` limited to `main`).
 2. Create a custom Cloudflare API token with the permission Account > Workers Scripts: Edit. Add it to both environments as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
