@@ -374,7 +374,7 @@ The daily sweep finds preview Workers by name alone. In one Cloudflare account, 
 
 To publish a release:
 
-1. Set the version in `pyproject.toml` and `package.json` to `X.Y.Z` (only the one you publish). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`.
+1. Set the version in `pyproject.toml` and `package.json` to `X.Y.Z` (only the one you publish). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts with no `version`, so citesync skips it; once you add one, after the first release, set it there too, or citesync fails with `version-mismatch`.
 2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits.
 3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it with `git verify-tag` and pushes it. The release workflow refuses a tag GitHub cannot verify, so set `user.signingkey` first (an ssh key works with `gpg.format ssh`).
 
