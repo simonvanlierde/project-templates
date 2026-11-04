@@ -818,7 +818,7 @@ grep -qxF '    export LC_ALL=C' m/just/python.just
 grep -qxF '    [ -z "$new$gone" ]' m/just/python.just
 # mutmut's output shows why the gate failed, and the diff recipe reuses the gate. ci.yml's
 # python job runs both against a broken baseline and an untested function.
-(! grep -q 'mutmut run.*/dev/null' m/just/python.just)
+(lacks -q 'mutmut run.*/dev/null' m/just/python.just)
 # shellcheck disable=SC2016 # a literal recipe line
 grep -qF ' py-mutation $patterns' m/just/python.just
 # The per-change recipes: python maps the diff to functions with a script, rust and go use
@@ -993,7 +993,7 @@ grep -qx '      - run: uvx griffe@[0-9.]* check --search api/src --format github
 # A CLI-only package (x, python_api=false) gets no api job, though it publishes.
 grep -q 'name: "python: API breaks since the last tag"' c/.github/workflows/python.yml
 test -f x/.github/workflows/python.yml
-(! grep -q 'griffe' x/.github/workflows/python.yml)
+(lacks -q 'griffe' x/.github/workflows/python.yml)
 test -f x/.github/workflows/python-release.yml
 # Not in py-check: a deliberate break would keep local checks red until the next tag.
 (lacks -q griffe c/just/python.just)
@@ -1188,7 +1188,7 @@ grep -qF "deploy-worker.sh\" Preview \"pipe-me-pr-\$PR\"" d/.github/workflows/ts
 test "$(grep -cE 'deploy-worker\.sh" (Preview|Production)' d/.github/workflows/ts.yml)" = 2
 # A nested app's ts.yml also runs when only the script changes, on push and on PRs.
 test "$(grep -cF 'paths: ["web/**", ".github/workflows/ts.yml", ".github/scripts/deploy-worker.sh"]' d/.github/workflows/ts.yml)" = 2
-(! grep -q 'wrangler deploy' d/.github/workflows/ts.yml)
+(lacks -q 'wrangler deploy' d/.github/workflows/ts.yml)
 test -x d/.github/scripts/deploy-worker.sh
 test ! -e m/.github/scripts/deploy-worker.sh
 test -x s/.github/scripts/deploy-worker.sh
