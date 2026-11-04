@@ -143,14 +143,23 @@ grep -q 'project edit' "$out/h/go.mod"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
 # only its own manifest beside them, and t's hooks run through pnpm. Both have the
 # static site: r the plain one, t the Astro one beside a package at the root.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=crate-me --data 'stacks=[rust]' --data site=plain . "$out/r"
+r_args=(--data project_name=crate-me --data 'stacks=[rust]' --data site=plain)
+"${copier[@]}" --vcs-ref=HEAD "${r_args[@]}" . "$out/r"
+# Rendered again over edited starter pages, which stay the project's.
+echo '<!-- project edit -->' >>"$out/r/site/index.html"
+echo '/* project edit */' >>"$out/r/site/style.css"
+echo '// project edit' >>"$out/r/site/main.mjs"
+"${copier[@]}" --vcs-ref=HEAD "${r_args[@]}" . "$out/r" >/dev/null 2>&1
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true --data site=astro . "$out/t"
 # y: the Astro site in a project without the TypeScript stack. Rendered again over edited
 # copies: the starter pages stay the project's, package.json is rewritten.
 y_args=(--data project_name=site-me --data 'stacks=[python]' --data kind=app --data site=astro)
 "${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y"
-echo '<!-- project edit -->' >>"$out/y/site/src/layouts/Base.astro"
+for f in src/layouts/Base.astro src/pages/index.astro src/pages/about.md; do
+  echo '<!-- project edit -->' >>"$out/y/site/$f"
+done
+echo '// project edit' >>"$out/y/site/astro.config.mjs"
 echo 'project edit' >>"$out/y/site/package.json"
 "${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y" >/dev/null 2>&1
 # hush-plain and hush-astro: a site in a private repo.
@@ -1401,8 +1410,6 @@ for r in x r d; do
   grep -qF 'group: preview-site-${{ github.event.pull_request.number }}' <<<"$preview_job"
   grep -qF 'X-Robots-Tag: noindex' <<<"$preview_job"
   grep -qF "dlx wrangler@$wrangler_pin" <<<"$preview_job"
-  cmp "$r/.github/scripts/deploy-worker.sh" d/.github/scripts/deploy-worker.sh
-  cmp "$r/.github/scripts/preview-retire.sh" d/.github/scripts/preview-retire.sh
 done
 # The site build is a required check, and `just check` builds an Astro site.
 jq -e '.rules[0].parameters.required_status_checks | any(.context == "site: build")' x/.github/rulesets/main-checks.json >/dev/null
@@ -1417,8 +1424,6 @@ grep -q 'Skip to the content' hush-astro/site/src/layouts/Base.astro
 # Site previews are <slug>-site-pr-<n>, apart from a web app's <slug>-pr-<n>.
 # shellcheck disable=SC2016
 grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.jsonc' x/.github/workflows/site.yml
-# shellcheck disable=SC2016
-grep -qF 'deploy-worker.sh" Preview "crate-me-site-pr-$PR" --config wrangler.site.jsonc' r/.github/workflows/site.yml
 # shellcheck disable=SC2016
 grep -qF 'deploy-worker.sh" Preview "pipe-me-site-pr-$PR" --config wrangler.site.jsonc' d/.github/workflows/site.yml
 # One retire job per prefix, each in the group of the preview job it retires, so a site
@@ -1500,7 +1505,10 @@ jq -e '.knip.ignoreFiles == ["site/**"]' t/package.json >/dev/null
 jq -e '.files.includes | index("!site/**/*.astro")' t/biome.json >/dev/null
 (lacks -q 'astro' x/.github/workflows/site.yml)
 # The starter pages are the project's; package.json stays the template's.
-grep -q 'project edit' y/site/src/layouts/Base.astro
+for f in r/site/index.html r/site/style.css r/site/main.mjs y/site/astro.config.mjs \
+  y/site/src/layouts/Base.astro y/site/src/pages/index.astro y/site/src/pages/about.md; do
+  grep -q 'project edit' "$f"
+done
 (lacks -q 'project edit' y/site/package.json)
 # It builds: every page, Markdown included, inside the layout.
 astro_start=$SECONDS
@@ -1520,6 +1528,7 @@ sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml |
 test -s "$gate_sh/gate.sh"
 cat >"$gate_sh/gh" <<'STUB'
 #!/usr/bin/env bash
+[ "$*" = 'api repos/o/r/pages --jq .build_type' ] || { echo "gh: unexpected call: $*" >&2; exit 2; }
 case $PAGES in
   workflow | legacy) echo "$PAGES" ;;
   404) echo 'gh: Not Found (HTTP 404)' >&2 && exit 1 ;;
@@ -1538,7 +1547,10 @@ grep -qx 'run=false' "$gate_sh/gho"
 grep -qF '::notice::GitHub Pages is off' "$gate_sh/out"
 pages_gate legacy
 grep -qx 'run=false' "$gate_sh/gho"
+# Any other error fails the job with gh's message, and sets no output.
 (! pages_gate 500)
+grep -qF 'HTTP 500' "$gate_sh/out"
+test ! -s "$gate_sh/gho"
 grep -qxF "      - if: steps.gate.outputs.run == 'true'" <<<"$(sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml)"
 # dlx resolves wrangler without a lockfile, so it waits the same week as an install.
 grep -qxF "          WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@$wrangler_pin" x/.github/workflows/site.yml

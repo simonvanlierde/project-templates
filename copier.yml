@@ -82,7 +82,8 @@ _message_after_copy: |
   To release, run `just release X.Y.Z` (it cuts the CHANGELOG, then signs and pushes the tag).
   It needs a git signing key GitHub trusts.
   {%- if citable %} Set the version first in every manifest
-  {{ 'citesync.toml lists' if (python_dir != '.' or ts_dir != '.' or rust_dir != '.') else 'at the root' }}: citesync stops the release while they differ.
+  {{ 'citesync.toml lists' if (python_dir != '.' or ts_dir != '.' or rust_dir != '.') else 'at the root' }}, and in CITATION.cff once it has a `version`:
+  citesync stops the release while they differ.
   {%- else %} Set the version in the package manifest first
   when you publish to PyPI or npm.
   {%- endif %}
