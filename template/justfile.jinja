@@ -128,7 +128,7 @@ release version:
     git commit -s -m "chore: release $version" -- CHANGELOG.md
     echo "Merge this commit to main, then run: just release $version"
 
-# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}. Create the `preview` environment for pull request previews and the `production` environment, deployed from `main` only{% endif %}. Safe to rerun.
+# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on secret scanning with push protection, private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}. Create the `preview` environment for pull request previews and the `production` environment, deployed from `main` only{% endif %}. Safe to rerun.
 repo-settings:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -142,8 +142,9 @@ repo-settings:
 {%- endif %}
         exit 1
     }
-    # Merge-method switches live on the repo itself; the ruleset also limits the PR button.
-    gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true{% if public %} -F web_commit_signoff_required=true{% endif %} >/dev/null 2>"$err" || fail
+    # Merge-method switches live on the repo itself; the ruleset also limits the PR button.{% if public %}
+    # Push protection refuses a push that holds a known secret format, before it reaches the repo.{% endif %}
+    gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true{% if public %} -F web_commit_signoff_required=true -f 'security_and_analysis[secret_scanning][status]=enabled' -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'{% endif %} >/dev/null 2>"$err" || fail
     # Adopt an existing ruleset by name, else one with the same target that protects the same
     # refs as the file, updating it in place. The list has no conditions, so each candidate is read.
     for name in main{% if public %} main-checks{% endif %} tags; do

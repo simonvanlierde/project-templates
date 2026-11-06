@@ -10,6 +10,12 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- With `openssf_badge` set, `README.md` gets a `## Usage` section: where to get the software (releases, and PyPI or npm when the project publishes there), and a TODO for what it does and its basic use. The OpenSSF passing criteria and OSPS Baseline level 1 ask for both. The README is the project's after the first render, so `copier update` doesn't add the section to an existing one.
+- `just repo-settings` turns on secret scanning and push protection in a public repo. GitHub then refuses a push that holds a known secret format (OSPS Baseline BR-07.01).
+- The [badge section](docs/usage.md#openssf-best-practices-badge) of the usage docs lists the steps before you register a project on bestpractices.dev, the criteria only you can answer, and which file or setting meets each OSPS Baseline level 1 control.
+
 ### Changed
 
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.

@@ -826,6 +826,15 @@ grep -qx '      id-token: write # to publish the results' a/.github/workflows/sc
 grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md
 test ! -e b/.github/workflows/scorecard.yml
 (lacks -q -i scorecard b/README.md)
+# A badge render's README says how to get the software and leaves a TODO for what it does
+# and its basic use (OpenSSF interact, description_good, documentation_basics; Baseline
+# DO-01.01). m publishes to npm only. a has no badge answer, and b is private.
+grep -qx '## Usage' m/README.md
+grep -qF '<!-- TODO: say what this software does and the problem it solves, then show its basic use.' m/README.md
+# shellcheck disable=SC2016 # literal backticks
+grep -qF 'Get it from the [releases](https://github.com/example-org/mutate-me/releases), from [npm](https://www.npmjs.com/package/mutate-me) (`pnpm add mutate-me`), or clone the repository.' m/README.md
+grep -qx '## Usage' h/README.md
+for r in a b; do (lacks -qx '## Usage' "$r/README.md"); done
 # fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
 # and public. b is private; h, a public Go library, gets both.
 grep -qx "          uvx --exclude-newer \"1 week\" --from git+https://github.com/fair-software/howfairis@$howfairis_pin howfairis $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
@@ -2155,6 +2164,10 @@ chmod +x "$fake/gh"
   done
   # Every public render has the DCO check, so web commits need a sign-off from silver down.
   [[ "$patch " == *" -F web_commit_signoff_required=true "* ]]
+  # OSPS Baseline BR-07.01: push protection refuses a known secret format before it lands.
+  for flag in 'security_and_analysis[secret_scanning][status]=enabled' 'security_and_analysis[secret_scanning_push_protection][status]=enabled'; do
+    [[ "$patch " == *" -f $flag "* ]]
+  done
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
   # CodeQL default setup scans every PR and push on public repos.
@@ -2381,6 +2394,7 @@ done
 test ! -e b/.github/workflows/dco.yml
 (lacks -q 'id: dco-signoff' b/.pre-commit-config.yaml)
 (lacks -q 'web_commit_signoff_required' b/justfile)
+(lacks -q 'security_and_analysis' b/justfile)
 # A fresh clone has only origin, and a pushed branch needs a lease, not a bare force-push.
 for f in "$repo/CONTRIBUTING.md" a/.github/CONTRIBUTING.md h/.github/CONTRIBUTING.md \
   a/.github/workflows/dco.yml; do

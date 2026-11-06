@@ -516,10 +516,56 @@ copier update --data profiling=true
 
 `openssf_badge` configures documentation for the [OpenSSF Best Practices badge](https://www.bestpractices.dev):
 
-- `passing`: adds testing and style sections to `.github/CONTRIBUTING.md`.
+- `passing`: adds testing and style sections to `.github/CONTRIBUTING.md`, and a `## Usage` section to `README.md` that links the releases and the package registry, with a TODO for what the software does and how to use it.
 - `silver`: adds `GOVERNANCE.md`, `docs/roadmap.md`, and `docs/assurance-case.md`, and the `dco` workflow checks every pull request, not only fork ones. The `dco-signoff` commit-msg hook (`git commit -s`) comes with every public render.
 
-Submit the questionnaire on bestpractices.dev and add the resulting markdown badge to `README.md`.
+A public render with `passing` meets every MUST criterion of the passing level that a file or a repository setting can meet. The rest depend on you, or on the project's history.
+
+### Before you register
+
+1. Push the repository to GitHub and run `just repo-settings`. It protects `main` against direct pushes and deletion, and turns on secret scanning with push protection, private vulnerability reporting and CodeQL default setup.
+2. Replace the TODO in the README's `## Usage` section. Say what the software does and the problem it solves, then show its basic use.
+3. Write doc comments for the public API. They are its reference documentation. In Python, ruff's `D` rules ask for them.
+4. Turn on two-factor authentication for your GitHub account. For a repository in an organization, also require it under the organization's Settings > Authentication security.
+5. Make a release with `just release X.Y.Z`. Its notes are the CHANGELOG section for that version.
+
+### Register
+
+1. Open <https://www.bestpractices.dev/en/projects/new> and log in with GitHub.
+2. Under "Select a GitHub repository", pick the repository. Both URL fields take `https://github.com/OWNER/REPO`, unless the project has a home page of its own.
+3. Under "Badge series", pick "metal" for passing and silver, or "baseline" for OSPS Baseline level 1. Then select "Submit Project".
+4. Answer the criteria. bestpractices.dev fills in some from the repository. Give the file as the URL where a criterion asks for one.
+
+The render cannot answer these for you:
+
+- `know_secure_design` and `know_common_errors`: a primary developer knows secure design and the common kinds of vulnerability for this kind of software.
+- `maintained`, `report_responses` and `enhancement_responses`: you reply to issues. `.github/CONTRIBUTING.md` promises a reply within about two weeks.
+- `vulnerability_report_response`: you reply to a vulnerability report within 14 days, as `.github/SECURITY.md` promises.
+- `tests_are_added`, `warnings_fixed`, `static_analysis_fixed`, `vulnerabilities_fixed_60_days` and `dynamic_analysis_fixed`: the project's history shows it.
+- `dynamic_analysis` (suggested): `test_extras=[property]` adds property tests.
+
+Add the badge to `README.md` once bestpractices.dev awards it.
+
+### OSPS Baseline level 1
+
+Where a public render meets each level 1 control of [OSPS Baseline v2026.08.28](https://baseline.openssf.org/versions/2026-08-28) (level 1 is the same set of controls as in v2026.02.19):
+
+| Control | Met by |
+|---|---|
+| AC-01.01 | You: two-factor authentication, step 4 above |
+| AC-02.01 | GitHub: a new collaborator gets the permission you assign |
+| AC-03.01, AC-03.02 | `.github/rulesets/main.json`, applied by `just repo-settings` |
+| BR-01.01, BR-01.03 | No `pull_request_target` workflows; untrusted input reaches `run:` only through `env:`; the zizmor hook checks both |
+| BR-03.01, BR-03.02 | GitHub and the package registries serve HTTPS only |
+| BR-07.01 | The `betterleaks` hook, and push protection from `just repo-settings` |
+| DO-01.01 | You: the README's `## Usage` section, step 2 above |
+| DO-02.01, GV-02.01, GV-03.01 | `.github/CONTRIBUTING.md` and GitHub issues |
+| LE-02.01 to LE-03.02 | `LICENSE` and `LICENSES/` in the repository, so each release's source archive has them too |
+| QA-01.01, QA-01.02 | The public GitHub repository and its git history |
+| QA-02.01 | The stack's manifest and lockfile, such as `pyproject.toml` and `uv.lock` |
+| QA-04.01 | Not applicable to a single repository |
+| QA-05.01, QA-05.02 | `.gitignore` and the `check-added-large-files` hook |
+| VM-02.01 | `.github/SECURITY.md` |
 
 ## Dependency updates
 
