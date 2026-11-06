@@ -64,6 +64,9 @@ Upgrade steps:
   longer warns about it on a fresh render.
 - A data-pipeline at the repo root ends `python.yml` on a `run: |-` block, so yamlfmt no
   longer rewrites it and a fresh render passes its own `prek run --all-files`.
+- `preview-retire.yml` writes its matrix entries as `{slug: ..., group: ...}`, the way yamlfmt
+  spaces flow mappings, so a web app or a site passes its own `prek run --all-files` on a
+  fresh render.
 
 ### Removed
 

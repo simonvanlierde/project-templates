@@ -1769,12 +1769,12 @@ grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.
 grep -qF 'deploy-worker.sh" Preview "pipe-me-site-pr-$PR" --config wrangler.site.jsonc' d/.github/workflows/site.yml
 # One retire job per prefix, each in the group of the preview job it retires, so a site
 # preview and a web-app preview of one PR never share a group.
-grep -qx '          - { slug: cli-me-site, group: preview-site }' x/.github/workflows/preview-retire.yml
-test "$(grep -c '^          - { slug: ' x/.github/workflows/preview-retire.yml)" = 1
-grep -qx '          - { slug: pipe-me, group: preview }' d/.github/workflows/preview-retire.yml
-grep -qx '          - { slug: pipe-me-site, group: preview-site }' d/.github/workflows/preview-retire.yml
-grep -qx '          - { slug: app, group: preview }' s/.github/workflows/preview-retire.yml
-test "$(grep -c '^          - { slug: ' s/.github/workflows/preview-retire.yml)" = 1
+grep -qx '          - {slug: cli-me-site, group: preview-site}' x/.github/workflows/preview-retire.yml
+test "$(grep -c '^          - {slug: ' x/.github/workflows/preview-retire.yml)" = 1
+grep -qx '          - {slug: pipe-me, group: preview}' d/.github/workflows/preview-retire.yml
+grep -qx '          - {slug: pipe-me-site, group: preview-site}' d/.github/workflows/preview-retire.yml
+grep -qx '          - {slug: app, group: preview}' s/.github/workflows/preview-retire.yml
+test "$(grep -c '^          - {slug: ' s/.github/workflows/preview-retire.yml)" = 1
 # Without a package.json, the preview job's pnpm comes from the pin; with one, from it.
 grep -qxF "          version: \"$pnpm_pin\"" x/.github/workflows/site.yml
 grep -qx '          package_json_file: web/package.json' d/.github/workflows/site.yml
@@ -2024,13 +2024,16 @@ done
 prek=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --all-files)
 # yamlfmt leaves a fresh render's workflows as they are, or the project's own first
 # `prek run --all-files` fails: dp ends python.yml on a `run: |` that yamlfmt would turn
-# into `|-`.
-rm -rf dp-yaml
-cp -R dp dp-yaml
-git -C dp-yaml init -q
-git -C dp-yaml add -A
-(cd dp-yaml && "${prek[@]}" yamlfmt >/dev/null)
-rm -rf dp-yaml
+# into `|-`, and preview-retire.yml's matrix (d both entries, s a web app, x a site) is
+# written the way yamlfmt spaces flow mappings.
+for r in dp d s x; do
+  rm -rf "$r-yaml"
+  cp -R "$r" "$r-yaml"
+  git -C "$r-yaml" init -q
+  git -C "$r-yaml" add -A
+  (cd "$r-yaml" && "${prek[@]}" yamlfmt >/dev/null)
+  rm -rf "$r-yaml"
+done
 for r in a b d h; do
   rm -rf "$r-hooks"
   cp -R "$r" "$r-hooks"
