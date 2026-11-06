@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- With `codspeed`, `benchmarks.yml` runs on pull requests that touch benchmarked code only: the stack's source, tests or benches, its manifest and lockfile, or the workflow. Pushes to `main` still run every time, so each pull request has a base result. [CI baseline](docs/ci-baseline.md#path-filters) has the stance on path filters.
+
 ## [0.14.0] - 2026-11-05
 
 Upgrade steps:

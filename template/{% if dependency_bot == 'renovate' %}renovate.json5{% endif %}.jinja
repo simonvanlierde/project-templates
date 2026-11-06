@@ -22,6 +22,8 @@
 {
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   // Conventional Commits titles, `chore(deps): update ...`, which the pr-title workflow checks.
+  // Not config:best-practices: its :pinDevDependencies opens pin PRs the lockfile makes
+  // redundant, and its digest pins duplicate the SHAs the workflows already carry.
   extends: ['config:recommended', ':semanticCommits'],
   schedule: ['before 9am on monday'],
   minimumReleaseAge: '7 days',
