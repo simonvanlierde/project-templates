@@ -12,6 +12,7 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- Renovate also extends `:configMigration` and `abandonments:recommended`, the two presets from `config:best-practices` the template wants without its pin PRs.
 - With `codspeed`, `benchmarks.yml` runs on pull requests that touch benchmarked code only: the stack's source, tests or benches, its manifest, lockfile and `.python-version`, or the workflow. A flat layout watches the package at the root. Pushes to `main` still run every time, so CodSpeed always has a recent main result to compare with. [CI baseline](docs/ci-baseline.md#path-filters) has the stance on path filters.
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
 
