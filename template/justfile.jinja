@@ -110,6 +110,9 @@ release version:
     # changelog bigger than the pipe buffer.
     if git show origin/main:CHANGELOG.md | grep "^## \[$version\] - " >/dev/null; then
         .github/scripts/tag-release.sh "$version"
+{%- if public and citable %}
+        echo "Archive it in Software Heritage: https://archive.softwareheritage.org/save/ (git, $repo). The README badge then links to the SWHID."
+{%- endif %}
         exit 0
     fi
     prev=$(sed -n 's/^## \[\([0-9][0-9.]*\)\].*/\1/p' CHANGELOG.md | head -1)
@@ -248,6 +251,9 @@ repo-settings:
 {%- endif %}
 {%- if public and citable %}
     echo "Zenodo: https://zenodo.org/account/settings/github/"
+{%- endif %}
+{%- if (public and (citable or openssf_badge != 'none')) or publish_to_pypi %}
+    echo "First-release checklist: gh issue create --title 'First release' --body-file .github/first-release.md"
 {%- endif %}
 
 # Set the GitHub About box from your answers: description{% if 'ts' in stacks and ts_kind == 'web-app' %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.

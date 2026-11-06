@@ -1802,6 +1802,57 @@ for r in a b d h; do
   # b is private with no license, so it has no reuse hook.
   [ "$r" = b ] || (cd "$r-hooks" && "${prek[@]}" reuse >/dev/null)
 done
+# Every Python render passes Scientific Python's repo-review, bar the checks its
+# pyproject.toml ignores with a reason. Those depend on the answers: the bot, the
+# license and a nested package each change the list.
+rr_runs=0
+for cfg in */.pre-commit-config.yaml; do
+  r=${cfg%%/*}
+  case $r in *-hooks | rr-*) continue ;; esac
+  grep -q 'id: sp-repo-review$' "$cfg" || continue
+  rm -rf "rr-$r"
+  cp -R "$r" "rr-$r"
+  git -C "rr-$r" init -q
+  git -C "rr-$r" add -A
+  (cd "rr-$r" && "${prek[@]}" sp-repo-review >"../rr-$r.log" 2>&1) || {
+    cat "rr-$r.log" >&2
+    exit 1
+  }
+  rr_runs=$((rr_runs + 1))
+done
+[ "$rr_runs" -ge 10 ]
+# The hook is Python-only, and a nested package points it at its own directory.
+(lacks -q 'sp-repo-review' h/.pre-commit-config.yaml compose/.pre-commit-config.yaml)
+grep -qxF '        args: [--show=err, --package-dir=api]' c/.pre-commit-config.yaml
+(lacks -q 'package-dir' w/.pre-commit-config.yaml)
+# The ignore list follows the answers: the bot, the license and the package path.
+grep -q '^GH212 = ' w/pyproject.toml
+(lacks -q '^GH200 = ' w/pyproject.toml)
+grep -q '^GH200 = ' d/pipe/pyproject.toml
+(lacks -q '^GH212 = ' d/pipe/pyproject.toml)
+grep -q '^PY003 = "no license yet' b/svc/pyproject.toml
+grep -q '^PY003 = "LICENSE sits at the repo root' c/api/pyproject.toml
+grep -q '^PY004 = ' c/api/pyproject.toml
+(lacks -qE '^PY00[34] = ' w/pyproject.toml)
+grep -qx 'strict = true' w/pyproject.toml
+# The first-release checklist holds only the steps the answers need. w is a private-use
+# app: nothing to register, so no checklist, no archive badge and no save link.
+fr=.github/first-release.md
+grep -q 'Zenodo' "a/$fr"
+grep -q 'archive.softwareheritage.org/save/' "a/$fr"
+grep -q 'research-software-directory.org' "a/$fr"
+(lacks -qE 'PyPI|OpenSSF' "a/$fr")
+grep -q 'PyPI trusted publishing' "c/$fr"
+grep -q 'passing first, then silver' "h/$fr"
+grep -q 'OpenSSF' "m/$fr"
+(lacks -q 'then silver' "m/$fr")
+test ! -e "w/$fr"
+test ! -e "b/$fr"
+grep -qF -- "--body-file $fr" a/justfile
+(lacks -q 'first-release' w/justfile)
+grep -qF '(https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/example-org/render-me)' a/README.md
+grep -q 'Archive it in Software Heritage' a/justfile
+(lacks -q 'softwareheritage' w/README.md w/justfile b/README.md b/justfile)
 # The web apps track the shots spec and ignore only the screenshots `just ts-shots` writes.
 rm -rf s-git
 cp -R s s-git

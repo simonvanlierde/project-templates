@@ -1,0 +1,32 @@
+{%- set repo = 'https://github.com/' ~ github_user ~ '/' ~ slug -%}
+# First release
+
+One-time steps around the first `just release`, in order. Open this file as an issue,
+then delete it:
+
+```sh
+gh issue create --title "First release" --body-file .github/first-release.md
+```
+{% if publish_to_pypi %}
+- [ ] **PyPI trusted publishing**, before the first tag: add the pending publisher that
+  `just repo-settings` prints. Without it, `python-release.yml` cannot upload.
+{%- endif %}
+{%- if public and citable %}
+- [ ] **Zenodo**, before the first release: turn this repo on at the Zenodo link that
+  `just repo-settings` prints. Zenodo then archives each GitHub release and mints a DOI.
+  Put the concept DOI (the one for all versions) in `CITATION.cff` as `doi:` and run
+  `just citation`.
+- [ ] **Software Heritage**, after the release: ask it to archive the repo at
+  <https://archive.softwareheritage.org/save/>, with origin type `git` and
+  `{{ repo }}`. When the visit is done, the archive badge in the README
+  turns from "not found" to "archived". Open it and copy the release's SWHID into
+  `CITATION.cff` under `identifiers` (`type: swh`).
+- [ ] **Research Software Directory**: add the project at
+  <https://research-software-directory.org> ("+", then "New Software"). Give it the
+  concept DOI, so it lists each new release and imports the contributors.
+{%- endif %}
+{%- if public and openssf_badge != 'none' %}
+- [ ] **OpenSSF Best Practices badge**: fill in the questionnaire at
+  <https://www.bestpractices.dev/en/projects/new>{{ ', passing first, then silver,' if openssf_badge == 'silver' else '' }}
+  and add the badge it gives you to the README.
+{%- endif %}

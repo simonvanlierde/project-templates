@@ -131,6 +131,12 @@ Two git hooks validate prose:
 
 - `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links.
 
+## Scientific Python repo-review
+
+A project with the python stack runs [sp-repo-review](https://learn.scientific-python.org/development/guides/repo-review/) as a git hook. It checks `pyproject.toml`, the pytest settings, the hooks and the workflows against the Scientific Python development guide, and fails on any check the project has not chosen to skip.
+
+The checks the template skips on purpose are under `[tool.repo-review.ignore]` in `pyproject.toml`, each with its reason: `just` instead of nox, ruff and ty as local hooks, no reStructuredText, no pre-commit.ci. To skip another, add its code and a reason there. Run it on its own with `prek run sp-repo-review --all-files`.
+
 ## How much documentation
 
 The amount of documentation depends on the project's audience, not the size of its codebase:
@@ -458,6 +464,12 @@ Setting up trusted publishing (OIDC):
    ```sh
    copier update --data publish_to_pypi=true
    ```
+
+### First release
+
+A public citable project, a project with `openssf_badge`, and one with `publish_to_pypi` get `.github/first-release.md`: the one-time steps around the first release, only those its answers need. `just repo-settings` prints the command that opens it as an issue. Delete the file once the issue is open.
+
+The steps are PyPI trusted publishing, Zenodo, [Software Heritage](https://archive.softwareheritage.org/save/), the [Research Software Directory](https://research-software-directory.org) and the OpenSSF Best Practices badge. A public citable README gets a Software Heritage badge. It reads "not found" until the archive has visited the repo, then links to the archived copy and its SWHID. After `just release` pushes a tag, it prints the Software Heritage save link.
 
 ## API-break check
 

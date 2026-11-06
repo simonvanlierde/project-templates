@@ -10,6 +10,16 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+Upgrade steps:
+
+- **Breaking:** pytest settings move from `[tool.pytest.ini_options]` to pytest 9's `[tool.pytest]` table, with `strict = true`, `filterwarnings = ["error"]`, `log_level = "INFO"` and `minversion = "9.0"`. A warning in your tests now fails them: fix it, or add an `ignore::` entry to `filterwarnings` with the reason. Merge your own pytest options into the new table during `copier update`.
+
+### Added
+
+- Python projects run Scientific Python's [repo-review](docs/usage.md#scientific-python-repo-review) as a git hook (`sp-repo-review`), so `just hooks` and CI check the packaging, pytest and workflow settings. `[tool.repo-review.ignore]` in `pyproject.toml` lists the checks the template skips, each with its reason.
+- `.github/first-release.md`, a checklist to open as an issue for the [first release](docs/usage.md#first-release): PyPI trusted publishing, Zenodo, Software Heritage, the Research Software Directory and the OpenSSF badge, as far as the answers need them. `just repo-settings` prints the `gh issue create` command.
+- A public citable README gets a Software Heritage archive badge, and `just release` prints the Software Heritage save link after it pushes the tag. The badge lands in new renders only, since `copier update` leaves README.md alone.
+
 ### Changed
 
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
