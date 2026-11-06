@@ -1,5 +1,25 @@
 # Using the template
 
+The [README](../README.md#quick-start) shows how to start a project. This page is the
+reference for what comes after, in the order you are likely to need it:
+
+- **Render:** [the questions](#the-questions) and [presets](#presets), [stacks](#choosing-your-stacks) and
+  [kinds](python-kinds.md), [Compose-only repos](#compose-only-repos),
+  [monorepos](#one-package-or-a-monorepo), [licenses](#licenses) and
+  [public repos](#public-repos).
+- **After the first push:** [protect `main`](#protecting-main) and
+  [fill in the About box](#the-github-about-box).
+- **Later:** [pull in template updates](#keeping-your-project-up-to-date).
+- **Optional features**, which you can turn on at any time with `copier update --data`:
+  [publishing](#publishing), [Codecov](#coverage-on-codecov),
+  [CodSpeed](#benchmarks-on-codspeed), [profiling](#profiling),
+  [test extras](#test-extras), a [static site](#static-site),
+  [Workers hosting](#workers-hosting), the
+  [OpenSSF badge](#openssf-best-practices-badge) and the
+  [dependency bot](#dependency-updates).
+- **Existing code:** [adopt the template](#adopting-the-template-in-an-existing-repo) in a
+  repo you already have.
+
 ## The questions
 
 A new project asks at most ten questions for a single stack (eleven for a web app):
@@ -79,118 +99,6 @@ applied after this one, with `_answers_file: .copier-answers.<name>.yml` in its 
 Update each layer on its own: `copier update --answers-file .copier-answers.<name>.yml`.
 This template stays free of any one organisation's setup.
 
-## Public repos
-
-`public` defaults to `yes`. Choosing `no` for private repositories omits `.github/SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md`, issue forms, and the DCO sign-off check.
-
-Public repositories also receive `.github/workflows/scorecard.yml` to publish [OpenSSF Scorecard](https://scorecard.dev) results for the README badge.
-
-### Making a repo public
-
-Before switching a private repository to public:
-
-1. Scan git history for committed secrets:
-
-   ```sh
-   betterleaks git --log-opts=--all .
-   ```
-
-   Revoke any detected credentials and rewrite history before publishing.
-2. Confirm package name availability on target registries ([PyPI](https://pypi.org/search/), [crates.io](https://crates.io), [npm](https://www.npmjs.com)).
-3. Review open issues and pull requests to ensure internal notes or identifiers are removed.
-4. Verify the status statement in `README.md`.
-
-Update the repository configuration with Copier:
-
-```sh
-copier update --data public=true --data license=MIT
-```
-
-## Licenses
-
-Available code licenses:
-
-- **MIT** (default): permissive reuse with attribution.
-- **Apache-2.0**: permissive reuse with an explicit patent grant.
-- **BSD-3-Clause**: permissive reuse prohibiting endorsement without permission.
-- **GPL-3.0-or-later**: copyleft requiring derivative works to remain GPL-licensed.
-- **AGPL-3.0-or-later**: network copyleft covering hosted network services.
-
-`data-pipeline` and `research` projects configure `data_license` for files under `data/`. Research data defaults to CC-BY-4.0. Data pipelines default to CC0-1.0 because they commit only fetch logs; pipeline outputs inherit their respective source licenses.
-
-Licensed projects follow the [REUSE specification](https://reuse.software). `REUSE.toml` declares copyright and licensing rules, full texts reside in `LICENSES/`, and the `reuse` git hook checks compliance. External files copied into the repository must include `SPDX-FileCopyrightText` and `SPDX-License-Identifier` headers or corresponding entries in `REUSE.toml`.
-
-## Protecting main
-
-`just repo-settings` applies `.github/rulesets/main.json` using the GitHub CLI:
-
-- Blocks force-pushes and branch deletions.
-- Enforces linear history and squash merges.
-- Requires pull requests. A required check blocks every PR that skips CI, because a skipped workflow leaves its check pending. In a repo where agent PRs run no CI (their own pre-push hook is the gate), drop `required_status_checks` from the ruleset or make that check always report. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
-- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root, `compose` in a Compose-only repo, plus `site: build` when the project has a site. A nested stack's workflow runs only when its folder changes, so its check is not required.
-- With `dependency_bot=renovate`, permits the Renovate app to bypass review for minor and patch updates once required checks pass.
-- Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
-- Enables Dependabot security alerts (`gh api -X PUT repos/OWNER/REPO/vulnerability-alerts`).
-
-It leaves one setting to you: refusing any action not pinned to a full commit SHA. The template's workflows pin every action, but the setting also stops a workflow added later from using a tag. Turn it on once the repo's own workflows pin too, since an unpinned action then fails its run:
-
-```sh
-gh api -X PUT repos/OWNER/REPO/actions/permissions -F enabled=true -f allowed_actions=all -F sha_pinning_required=true
-```
-
-This call also resets `allowed_actions` to `all`; check the current value first with `gh api repos/OWNER/REPO/actions/permissions`.
-
-Execute `just repo-settings` once after creating the repository and again whenever ruleset templates change. Requires administrative permissions.
-
-## The GitHub About box
-
-`just repo-about` syncs repository metadata with `gh repo edit`:
-
-- Updates repository description from `project_description`.
-- Sets homepage URL from `site_url` for web apps.
-- Adds stack topics (`python`, `typescript`, `rust`, `go`, `docker`). Existing manual topics are preserved.
-
-## Spelling and link checks
-
-Two git hooks validate prose:
-
-- `typos`: detects spelling errors in code, comments, and documentation. Add project-specific terms to `_typos.toml` at the repository root:
-
-  ```toml
-  [default.extend-words]
-  ue = "ue"
-  ```
-
-- `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links.
-
-## How much documentation
-
-The amount of documentation depends on the project's audience, not the size of its codebase:
-
-| Tier | Audience | What it has |
-| --- | --- | --- |
-| 0: README only | Apps, tools, and experiments with no outside users | What the project is, its status line, and how to run or develop it. |
-| 1: README plus `docs/` | Anything others install: published packages, libraries, or CLIs | A README under about 1,000 words serving as the front page (overview, install, quickstart, and links into `docs/`). `docs/` in Markdown, split following [Diátaxis](https://diataxis.fr/) (tutorials, how-to guides, reference, and explanation). The reference (CLI flags, configuration, schema) is generated or tested against the code. |
-| 2: A documentation site | A tier-1 repository with extensive reference material | A search-indexed site built from the same Markdown files in `docs/`, never maintained as separate copy. |
-
-### Moving up a tier
-
-- **0 to 1:** The first release to a package registry (such as PyPI, npm, or crates.io), or when someone other than the author begins using the project.
-- **1 to 2:** The reference is too large to browse comfortably as repository files; outside users need search or versioned documentation; or outside users file issues requesting documentation improvements. Automatic API documentation on docs.rs does not count toward this trigger.
-
-### Decision records
-
-`decision_records` adds `docs/decisions/`: a [MADR 4.0.0](https://adr.github.io/madr/) index and a
-first record that says the project starts from this template. It is on for kinds whose choices are
-costly to reverse, and off for small tools, which never get an empty folder. The index and the first
-record are the project's after the first render.
-
-### Documentation rules
-
-- **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`). A render with `publish_to_pypi` or `publish_to_npm` writes its README links this way.
-- **Stable links to documentation on `main`:** When documentation or CLI error messages link to rules or guides, point to `main`. Rule identifiers are permanent; if a rule is deprecated or removed, keep a stub heading so historical links continue to resolve.
-- **Single source of truth:** The README holds the overview and quickstart; code comments and docstrings define API contracts; `docs/` holds extended guides and references.
-
 ## Choosing your stacks
 
 Select any combination of stacks:
@@ -208,59 +116,6 @@ Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<
 CLI binaries (Rust, Go, or Python `data-pipeline`) include `docs/accessibility.md`, documenting terminal output standards (`NO_COLOR` support, plain output redirection, error formats). Review and edit these claims to reflect your application.
 
 With `decision_records` on, a project keeps its architectural choices in `docs/decisions/` ([Decision records](#decision-records)).
-
-## Compose-only repos
-
-A repo that only composes upstream images, with shell scripts and Compose files but no
-Dockerfile of its own, answers `stacks=[docker]`. Any `stacks` with `docker` but not
-`python` renders a Compose-only repo, because the only image the template builds is the Python one. With
-the python stack, answer no to `docker_image` (`--data docker_image=false`) to keep the
-package without an image.
-
-The render has no Dockerfile, no image build and no `docker.yml`. It gets:
-
-- `compose.yaml`: one example service with its image pinned by digest, a healthcheck and a
-  port bound to `127.0.0.1`. Replace it with your own services: it and `.env.example` are
-  yours after the first render, and `copier update` leaves them alone.
-- `.env.example`, which `compose.yaml` reads through an optional `.env`.
-- `just check`, which runs `docker compose --env-file .env.example config -q` (CI has no
-  `.env`), then shellcheck and shfmt (2-space indent, from images pinned by digest) over
-  every tracked script that starts with a shell shebang, then the `local-check` recipe if
-  `just/local.just` has one. It needs a Docker daemon.
-- `.github/workflows/compose.yml`, which runs `just docker-check` (not `local-check`) with no token scopes beyond
-  `contents: read`, and is a required check on `main` when `public` is on.
-- The `docker-compose` ecosystem in the dependency bot, so image tags and digests get update
-  pull requests. Image stacks leave it off, because their `FROM` tags are copier answers.
-
-The shellcheck and shfmt images in `just/docker.just` are pinned by digest, and no bot
-bumps them: update the tags and digests by hand now and then. `just docker-fmt` applies
-shfmt's formatting (`.editorconfig` sets 2-space indent for `*.sh`), and `just fmt` runs it.
-Shell files are the `*.sh` files and files whose first line is an sh, bash, dash or ksh
-shebang. A zsh or fish script, or a shebang inside a Markdown code block, is not linted.
-
-The git hooks, license and REUSE files, community files and the other CI workflows come
-from the same questions as in any other project. `app_port` and `publish_to_ghcr` are not
-asked: there is no image to expose or push.
-
-### Adopting the template in an existing Compose-only repo
-
-1. On a clean branch, render over the repo:
-
-   ```sh
-   copier copy --vcs-ref=<tag> --overwrite --data 'stacks=[docker]' gh:simonvanlierde/project-templates .
-   ```
-
-2. The render keeps an existing `compose.yaml` and `.env.example`, and replaces the justfile.
-   `just check` reads `.env.example` in place of `.env`, so give every variable a `${VAR:?}`
-   needs there.
-3. Move your own recipes into `just/local.just`, which updates never touch. Name the checks
-   you add `local-check`: `just check` runs that recipe last.
-4. The `docker-compose` entry in `.github/dependabot.yml` reads `compose.yaml` and the
-   directories one level below it, where an `include:` usually points. A deeper Compose file
-   needs its directory added there. `copier update` keeps that edit unless the template
-   changes the same lines, which shows up as a conflict.
-5. Run `just check` and `just hooks`. Add the words typos flags in your own files to
-   `_typos.toml`, which is yours from then on. Then commit.
 
 ## TypeScript kinds
 
@@ -332,47 +187,38 @@ Legal documents reside in `docs/` and compile to HTML at build time:
 `user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render properly, contain required contact information, and introduce no undeclared storage or network requests. They also check that every route in `LEGAL_LINKED_FROM` links each page and that each page links back to `/`. The starter's `LEGAL_LINKED_FROM` in `tests/e2e/routes.ts` is all of `ROUTES`; an app that links the pages from one screen, such as its settings, sets it to that screen.
 See [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) for compliance guidance.
 
-### Adopting the template in an existing web app
+## Compose-only repos
 
-1. On a clean branch, render over the repository:
+A repo that only composes upstream images, with shell scripts and Compose files but no
+Dockerfile of its own, answers `stacks=[docker]`. Any `stacks` with `docker` but not
+`python` renders a Compose-only repo, because the only image the template builds is the Python one. With
+the python stack, answer no to `docker_image` (`--data docker_image=false`) to keep the
+package without an image.
 
-   ```sh
-   copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .
-   ```
+The render has no Dockerfile, no image build and no `docker.yml`. It gets:
 
-   Select `ts_kind=web-app`, your framework, and your `user_data` setting.
-2. Review `git diff`:
-   - Remove unused starter components.
-   - Integrate the legal page routes and links into your `src/App.tsx`. Add the paths to `tests/e2e/routes.ts`, and set its `LEGAL_LINKED_FROM` to the routes that link the legal pages.
-   - Restore custom configurations in `vite.config.ts` and `vitest.config.ts`. Retain the template's `markdown()` plugin.
-   - Restore custom package names in `package.json` and `wrangler.jsonc`.
-   - Fill in all TODO markers in `docs/`.
-3. Run `pnpm install`. If dependencies are newer than the one-week cooldown, exempt them in `pnpm-workspace.yaml`:
+- `compose.yaml`: one example service with its image pinned by digest, a healthcheck and a
+  port bound to `127.0.0.1`. Replace it with your own services: it and `.env.example` are
+  yours after the first render, and `copier update` leaves them alone.
+- `.env.example`, which `compose.yaml` reads through an optional `.env`.
+- `just check`, which runs `docker compose --env-file .env.example config -q` (CI has no
+  `.env`), then shellcheck and shfmt (2-space indent, from images pinned by digest) over
+  every tracked script that starts with a shell shebang, then the `local-check` recipe if
+  `just/local.just` has one. It needs a Docker daemon.
+- `.github/workflows/compose.yml`, which runs `just docker-check` (not `local-check`) with no token scopes beyond
+  `contents: read`, and is a required check on `main` when `public` is on.
+- The `docker-compose` ecosystem in the dependency bot, so image tags and digests get update
+  pull requests. Image stacks leave it off, because their `FROM` tags are copier answers.
 
-   ```yaml
-   minimumReleaseAgeExclude:
-     - vite@8.3.5
-   ```
+The shellcheck and shfmt images in `just/docker.just` are pinned by digest, and no bot
+bumps them: update the tags and digests by hand now and then. `just docker-fmt` applies
+shfmt's formatting (`.editorconfig` sets 2-space indent for `*.sh`), and `just fmt` runs it.
+Shell files are the `*.sh` files and files whose first line is an sh, bash, dash or ksh
+shebang. A zsh or fish script, or a shebang inside a Markdown code block, is not linted.
 
-4. Move inline scripts from `index.html` into files under `public/` to satisfy `script-src 'self'`.
-5. Run `just check` and `just ts-e2e`. Remove legacy workflows replaced by `ts.yml` and commit.
-
-## Adopting the template in an existing Python package
-
-1. On a clean branch, render the template:
-
-   ```sh
-   copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .
-   ```
-
-   Enable `customise`, specify `module_name`, and select `python_layout=flat` if code resides at repository root rather than under `src/`.
-2. Review `git diff` for `pyproject.toml`. Restore dependencies, authors, and version numbers, then run `just py-sync`.
-3. Format with `uv run ruff format`. For existing lint or type check findings, record baseline exceptions rather than disabling rules:
-   - Ruff: add existing violation codes to `ignore` in `pyproject.toml` under a `# NOTE: baseline at adoption` comment.
-   - ty: configure existing violations as `"warn"` under `[tool.ty.rules]`.
-4. If `uv audit` flags patches under a week old, add temporary exemptions under `[tool.uv]` in `pyproject.toml` ([tooling](tooling.md#dependencies)).
-5. Remove obsolete workflows, run `just check` and `just hooks`, and commit.
-6. Ensure `CHANGELOG.md` contains Keep a Changelog `## [X.Y.Z]` headings for release tagging.
+The git hooks, license and REUSE files, community files and the other CI workflows come
+from the same questions as in any other project. `app_port` and `publish_to_ghcr` are not
+asked: there is no image to expose or push.
 
 ## One package or a monorepo
 
@@ -387,6 +233,77 @@ justfile, just/, .pre-commit-config.yaml, .copier-answers.yml
 ```
 
 Workflows and configuration files remain at the repository root. Two packages may share the root directory.
+
+## Licenses
+
+Available code licenses:
+
+- **MIT** (default): permissive reuse with attribution.
+- **Apache-2.0**: permissive reuse with an explicit patent grant.
+- **BSD-3-Clause**: permissive reuse prohibiting endorsement without permission.
+- **GPL-3.0-or-later**: copyleft requiring derivative works to remain GPL-licensed.
+- **AGPL-3.0-or-later**: network copyleft covering hosted network services.
+
+`data-pipeline` and `research` projects configure `data_license` for files under `data/`. Research data defaults to CC-BY-4.0. Data pipelines default to CC0-1.0 because they commit only fetch logs; pipeline outputs inherit their respective source licenses.
+
+Licensed projects follow the [REUSE specification](https://reuse.software). `REUSE.toml` declares copyright and licensing rules, full texts reside in `LICENSES/`, and the `reuse` git hook checks compliance. External files copied into the repository must include `SPDX-FileCopyrightText` and `SPDX-License-Identifier` headers or corresponding entries in `REUSE.toml`.
+
+## Public repos
+
+`public` defaults to `yes`. Choosing `no` for private repositories omits `.github/SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `pull_request_template.md`, issue forms, and the DCO sign-off check.
+
+Public repositories also receive `.github/workflows/scorecard.yml` to publish [OpenSSF Scorecard](https://scorecard.dev) results for the README badge.
+
+### Making a repo public
+
+Before switching a private repository to public:
+
+1. Scan git history for committed secrets:
+
+   ```sh
+   betterleaks git --log-opts=--all .
+   ```
+
+   Revoke any detected credentials and rewrite history before publishing.
+2. Confirm package name availability on target registries ([PyPI](https://pypi.org/search/), [crates.io](https://crates.io), [npm](https://www.npmjs.com)).
+3. Review open issues and pull requests to ensure internal notes or identifiers are removed.
+4. Verify the status statement in `README.md`.
+
+Update the repository configuration with Copier:
+
+```sh
+copier update --data public=true --data license=MIT
+```
+
+## Protecting main
+
+`just repo-settings` applies `.github/rulesets/main.json` using the GitHub CLI:
+
+- Blocks force-pushes and branch deletions.
+- Enforces linear history and squash merges.
+- Requires pull requests. A required check blocks every PR that skips CI, because a skipped workflow leaves its check pending. In a repo where agent PRs run no CI (their own pre-push hook is the gate), drop `required_status_checks` from the ruleset or make that check always report. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
+- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root, `compose` in a Compose-only repo, plus `site: build` when the project has a site. A nested stack's workflow runs only when its folder changes, so its check is not required.
+- With `dependency_bot=renovate`, permits the Renovate app to bypass review for minor and patch updates once required checks pass.
+- Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
+- Enables Dependabot security alerts (`gh api -X PUT repos/OWNER/REPO/vulnerability-alerts`).
+
+It leaves one setting to you: refusing any action not pinned to a full commit SHA. The template's workflows pin every action, but the setting also stops a workflow added later from using a tag. Turn it on once the repo's own workflows pin too, since an unpinned action then fails its run:
+
+```sh
+gh api -X PUT repos/OWNER/REPO/actions/permissions -F enabled=true -f allowed_actions=all -F sha_pinning_required=true
+```
+
+This call also resets `allowed_actions` to `all`; check the current value first with `gh api repos/OWNER/REPO/actions/permissions`.
+
+Execute `just repo-settings` once after creating the repository and again whenever ruleset templates change. Requires administrative permissions.
+
+## The GitHub About box
+
+`just repo-about` syncs repository metadata with `gh repo edit`:
+
+- Updates repository description from `project_description`.
+- Sets homepage URL from `site_url` for web apps.
+- Adds stack topics (`python`, `typescript`, `rust`, `go`, `docker`). Existing manual topics are preserved.
 
 ## Keeping your project up to date
 
@@ -410,82 +327,6 @@ To allow `copier-update.yml` to update workflow files in `.github/workflows/`, g
 Without this secret, workflow changes open an issue requesting a manual local update.
 
 A PR opened without this secret starts no checks, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so.
-
-## Test extras
-
-Library kinds configure `test_extras` under `customise`:
-
-| Option | Python | TypeScript | Rust | Go |
-| --- | --- | --- | --- | --- |
-| `property` | Hypothesis | fast-check | proptest | Native fuzz test (`FuzzAdd`) |
-| `mutation` | mutmut (`just py-mutation`) | Stryker (`just ts-mutation`) | cargo-mutants (`just rs-mutation`) | gremlins (`just go-mutation`) |
-
-Property tests run fast suites locally and in CI. Weekly scheduled jobs (`.github/workflows/property.yml`) execute extended runs (10,000 cases or 10 minutes of fuzzing).
-
-Mutation testing runs weekly via `.github/workflows/mutation.yml` and on demand via `just <stack>-mutation`. The Python and Rust jobs fail on a surviving mutant. The TypeScript and Go tools exit 0 when a mutant survives, so those jobs only print survivors.
-
-Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change. Mutant numbers shift when their function changes, so recheck the lines then. `copier update` adds the file with no entries; run the recipe once and list what it reports. Give it mutmut patterns, e.g. `just py-mutation 'mypkg.core.x_parse__mutmut_*'`, to run only those mutants; that run skips the check for listed ones that no longer survive.
-
-A full run takes minutes to hours, so check each change with the diff recipe instead and keep the full run for the weekly job and before a release:
-
-| Stack | Per-change recipe | What it runs |
-| --- | --- | --- |
-| Python | `just py-mutation-diff` | the mutants of functions and methods the branch changed since it split off `origin/main`, in the mutated modules (`just/mutation_diff.py` finds them) |
-| Rust | `just rs-mutation-diff` | `cargo mutants --in-diff` on the branch's changes since it split off `origin/main` |
-| Go | `just go-mutation-diff` | `gremlins unleash --diff` against the commit where the branch split off `origin/main` |
-| TypeScript | none | Stryker has no diff mode. Its `--incremental` reuses the results file of an earlier run, which needs a stored file between runs, so the template adds no recipe |
-
-Each takes another git ref, e.g. `just py-mutation-diff main`.
-
-To add extras to an existing project:
-
-```sh
-copier update --data 'test_extras=[property]'
-```
-
-## Static site
-
-Answer `site` (under `customise`) to give any project a static page beside its code: a playground, a demo or a report. GitHub Pages serves it from `main`, or a Cloudflare Worker with `site_host=cloudflare`, and each pull request gets a preview. The page's readers are the project's users, so it stays small: the tool in the first screen, details in disclosures.
-
-The two choices differ only in what is in `site/` and how `just site` builds it:
-
-- `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a starter page with a header, a main area with a TODO for the tool, and a footer with the licence and a privacy line. Plain HTML, CSS and an ES module, no build step or framework. It works at 320 px and in dark mode. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
-- `site=astro`: a small Astro project. `package.json` has astro at the version `copier.yml` pins, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once to write `site/pnpm-lock.yaml`, and commit it. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. On a Worker (`site_host=cloudflare`), the site is served from `/`: `site` is the Worker's address and there is no `base`.
-
-The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
-
-- `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`. [On a Worker](#hosting-on-a-worker), it deploys to the Worker instead.
-- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/` (from `/` itself on a Worker), and sends `X-Robots-Tag: noindex`. It runs the wrangler pinned in `copier.yml` with `pnpm dlx`.
-
-One-time setup:
-
-1. Run `just repo-settings`. It creates the `preview` environment and sets GitHub Pages to deploy from Actions (Settings > Pages > Source: GitHub Actions).
-2. Add the Cloudflare API token (Account > Workers Scripts: Edit) to the `preview` environment as `CLOUDFLARE_API_TOKEN`, and your account ID as `CLOUDFLARE_ACCOUNT_ID`. Without either secret, the preview job skips with a notice, and Pages still deploys.
-
-A GitHub Pages site is public even when the repo is private, and a private repo needs a paid GitHub plan for Pages. Until Pages is on, the `deploy` job skips with a notice, and `just repo-settings` warns and goes on where GitHub refuses Pages.
-
-The daily sweep finds preview Workers by name alone. In one Cloudflare account, a repo `foo` with a site and a repo `foo-site` with a web app would share the names `foo-site-pr-<number>`: rename one of them if that happens.
-
-### Hosting on a Worker
-
-`site_host=cloudflare` replaces Pages with the Worker `<slug>-site`, from the same `wrangler.site.jsonc` the previews use. The `deploy` job deploys the build job's artifact on every push to `main`, in the `production` environment, one at a time, and skips with a notice without the Cloudflare secrets. Previews serve the build from `/`, as production does, with no redirect. `site_url` is the site's address, and can be a custom domain; with `worker`, a Worker script answers `/api/*` ([Workers hosting](#workers-hosting)). A repo with a web app keeps `site_url` for the app, and the site stays at its workers.dev address.
-
-The starter `astro.config.mjs` is the project's, so switching an existing Astro site from Pages leaves it alone: set `site` to the new address and delete `base`.
-
-One-time setup: `just repo-settings` creates the `preview` and `production` environments instead of setting up Pages. Add both Cloudflare secrets to each.
-
-## Workers hosting
-
-What deploys to a Cloudflare Worker (a web app, or a site with `site_host=cloudflare`) shares two answers.
-
-`site_url` is its public address. Give a host alone, without a path: a Worker serves a whole host. When the host is not `*.workers.dev`, it is a custom domain: the production job runs `wrangler deploy --domain <host>`, which attaches it to the Worker and creates its DNS record. The domain needs a zone in the same Cloudflare account, without a CNAME record for that host, and the production token needs Zone > Workers Routes: Edit for that zone. The domain is not in the wrangler config, because previews deploy that config under their own names and must not take it. `just repo-about` sets it as the repo's homepage.
-
-`worker` adds a Worker script in front of the static assets, for server code such as an API. `main` in the wrangler config points at it, the `ASSETS` binding lets it hand a request to the files, and `run_worker_first: ["/api/*"]` sends only `/api/*` to it first. Every other request is served from the files without running the script, so it stays free; each request the script handles counts against the Workers plan. The starter has one route, `/api/health`, answers 404 for the rest of `/api/`, and passes anything else to the files.
-
-- A web app gets `worker/index.ts`, with its own `worker/tsconfig.json` that swaps the DOM types for `@cloudflare/workers-types`. `pnpm run typecheck` checks both, and Vitest runs `worker/index.test.ts` in Node against a stub `ASSETS`. `pnpm dev` runs Vite alone; `pnpm exec wrangler dev` serves the last build and the script together.
-- A site gets `site/worker/index.mjs`, plain JavaScript with no TypeScript stack needed. `just site` runs `site/worker/index.test.mjs` with `node --test` first, and a plain site's build leaves `worker/` out. wrangler bundles the script on every preview and production deploy, so a script that does not bundle fails the pull request's preview.
-
-The script and its test are the project's after the first render. A binding beyond `ASSETS` (KV, D1, a secret) also reaches every preview: read [decision 0001](decisions/0001-pr-previews-use-the-production-cloudflare-account.md) first.
 
 ## Publishing
 
@@ -572,6 +413,82 @@ Enable with:
 copier update --data profiling=true
 ```
 
+## Test extras
+
+Library kinds configure `test_extras` under `customise`:
+
+| Option | Python | TypeScript | Rust | Go |
+| --- | --- | --- | --- | --- |
+| `property` | Hypothesis | fast-check | proptest | Native fuzz test (`FuzzAdd`) |
+| `mutation` | mutmut (`just py-mutation`) | Stryker (`just ts-mutation`) | cargo-mutants (`just rs-mutation`) | gremlins (`just go-mutation`) |
+
+Property tests run fast suites locally and in CI. Weekly scheduled jobs (`.github/workflows/property.yml`) execute extended runs (10,000 cases or 10 minutes of fuzzing).
+
+Mutation testing runs weekly via `.github/workflows/mutation.yml` and on demand via `just <stack>-mutation`. The Python and Rust jobs fail on a surviving mutant. The TypeScript and Go tools exit 0 when a mutant survives, so those jobs only print survivors.
+
+Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change. Mutant numbers shift when their function changes, so recheck the lines then. `copier update` adds the file with no entries; run the recipe once and list what it reports. Give it mutmut patterns, e.g. `just py-mutation 'mypkg.core.x_parse__mutmut_*'`, to run only those mutants; that run skips the check for listed ones that no longer survive.
+
+A full run takes minutes to hours, so check each change with the diff recipe instead and keep the full run for the weekly job and before a release:
+
+| Stack | Per-change recipe | What it runs |
+| --- | --- | --- |
+| Python | `just py-mutation-diff` | the mutants of functions and methods the branch changed since it split off `origin/main`, in the mutated modules (`just/mutation_diff.py` finds them) |
+| Rust | `just rs-mutation-diff` | `cargo mutants --in-diff` on the branch's changes since it split off `origin/main` |
+| Go | `just go-mutation-diff` | `gremlins unleash --diff` against the commit where the branch split off `origin/main` |
+| TypeScript | none | Stryker has no diff mode. Its `--incremental` reuses the results file of an earlier run, which needs a stored file between runs, so the template adds no recipe |
+
+Each takes another git ref, e.g. `just py-mutation-diff main`.
+
+To add extras to an existing project:
+
+```sh
+copier update --data 'test_extras=[property]'
+```
+
+## Static site
+
+Answer `site` (under `customise`) to give any project a static page beside its code: a playground, a demo or a report. GitHub Pages serves it from `main`, or a Cloudflare Worker with `site_host=cloudflare`, and each pull request gets a preview. The page's readers are the project's users, so it stays small: the tool in the first screen, details in disclosures.
+
+The two choices differ only in what is in `site/` and how `just site` builds it:
+
+- `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a starter page with a header, a main area with a TODO for the tool, and a footer with the licence and a privacy line. Plain HTML, CSS and an ES module, no build step or framework. It works at 320 px and in dark mode. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
+- `site=astro`: a small Astro project. `package.json` has astro at the version `copier.yml` pins, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once to write `site/pnpm-lock.yaml`, and commit it. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. On a Worker (`site_host=cloudflare`), the site is served from `/`: `site` is the Worker's address and there is no `base`.
+
+The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
+
+- `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`. [On a Worker](#hosting-on-a-worker), it deploys to the Worker instead.
+- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/` (from `/` itself on a Worker), and sends `X-Robots-Tag: noindex`. It runs the wrangler pinned in `copier.yml` with `pnpm dlx`.
+
+One-time setup:
+
+1. Run `just repo-settings`. It creates the `preview` environment and sets GitHub Pages to deploy from Actions (Settings > Pages > Source: GitHub Actions).
+2. Add the Cloudflare API token (Account > Workers Scripts: Edit) to the `preview` environment as `CLOUDFLARE_API_TOKEN`, and your account ID as `CLOUDFLARE_ACCOUNT_ID`. Without either secret, the preview job skips with a notice, and Pages still deploys.
+
+A GitHub Pages site is public even when the repo is private, and a private repo needs a paid GitHub plan for Pages. Until Pages is on, the `deploy` job skips with a notice, and `just repo-settings` warns and goes on where GitHub refuses Pages.
+
+The daily sweep finds preview Workers by name alone. In one Cloudflare account, a repo `foo` with a site and a repo `foo-site` with a web app would share the names `foo-site-pr-<number>`: rename one of them if that happens.
+
+### Hosting on a Worker
+
+`site_host=cloudflare` replaces Pages with the Worker `<slug>-site`, from the same `wrangler.site.jsonc` the previews use. The `deploy` job deploys the build job's artifact on every push to `main`, in the `production` environment, one at a time, and skips with a notice without the Cloudflare secrets. Previews serve the build from `/`, as production does, with no redirect. `site_url` is the site's address, and can be a custom domain; with `worker`, a Worker script answers `/api/*` ([Workers hosting](#workers-hosting)). A repo with a web app keeps `site_url` for the app, and the site stays at its workers.dev address.
+
+The starter `astro.config.mjs` is the project's, so switching an existing Astro site from Pages leaves it alone: set `site` to the new address and delete `base`.
+
+One-time setup: `just repo-settings` creates the `preview` and `production` environments instead of setting up Pages. Add both Cloudflare secrets to each.
+
+## Workers hosting
+
+What deploys to a Cloudflare Worker (a web app, or a site with `site_host=cloudflare`) shares two answers.
+
+`site_url` is its public address. Give a host alone, without a path: a Worker serves a whole host. When the host is not `*.workers.dev`, it is a custom domain: the production job runs `wrangler deploy --domain <host>`, which attaches it to the Worker and creates its DNS record. The domain needs a zone in the same Cloudflare account, without a CNAME record for that host, and the production token needs Zone > Workers Routes: Edit for that zone. The domain is not in the wrangler config, because previews deploy that config under their own names and must not take it. `just repo-about` sets it as the repo's homepage.
+
+`worker` adds a Worker script in front of the static assets, for server code such as an API. `main` in the wrangler config points at it, the `ASSETS` binding lets it hand a request to the files, and `run_worker_first: ["/api/*"]` sends only `/api/*` to it first. Every other request is served from the files without running the script, so it stays free; each request the script handles counts against the Workers plan. The starter has one route, `/api/health`, answers 404 for the rest of `/api/`, and passes anything else to the files.
+
+- A web app gets `worker/index.ts`, with its own `worker/tsconfig.json` that swaps the DOM types for `@cloudflare/workers-types`. `pnpm run typecheck` checks both, and Vitest runs `worker/index.test.ts` in Node against a stub `ASSETS`. `pnpm dev` runs Vite alone; `pnpm exec wrangler dev` serves the last build and the script together.
+- A site gets `site/worker/index.mjs`, plain JavaScript with no TypeScript stack needed. `just site` runs `site/worker/index.test.mjs` with `node --test` first, and a plain site's build leaves `worker/` out. wrangler bundles the script on every preview and production deploy, so a script that does not bundle fails the pull request's preview.
+
+The script and its test are the project's after the first render. A binding beyond `ASSETS` (KV, D1, a secret) also reaches every preview: read [decision 0001](decisions/0001-pr-previews-use-the-production-cloudflare-account.md) first.
+
 ## OpenSSF Best Practices badge
 
 `openssf_badge` configures documentation for the [OpenSSF Best Practices badge](https://www.bestpractices.dev):
@@ -593,3 +510,111 @@ Submit the questionnaire on bestpractices.dev and add the resulting markdown bad
   ```
 
   Disable Dependabot automated security fixes (`gh api -X DELETE repos/OWNER/REPO/automated-security-fixes`) while leaving security alerts active.
+
+## Spelling and link checks
+
+Two git hooks validate prose:
+
+- `typos`: detects spelling errors in code, comments, and documentation. Add project-specific terms to `_typos.toml` at the repository root:
+
+  ```toml
+  [default.extend-words]
+  ue = "ue"
+  ```
+
+- `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links.
+
+## How much documentation
+
+The amount of documentation depends on the project's audience, not the size of its codebase:
+
+| Tier | Audience | What it has |
+| --- | --- | --- |
+| 0: README only | Apps, tools, and experiments with no outside users | What the project is, its status line, and how to run or develop it. |
+| 1: README plus `docs/` | Anything others install: published packages, libraries, or CLIs | A README under about 1,000 words serving as the front page (overview, install, quickstart, and links into `docs/`). `docs/` in Markdown, split following [Diátaxis](https://diataxis.fr/) (tutorials, how-to guides, reference, and explanation). The reference (CLI flags, configuration, schema) is generated or tested against the code. |
+| 2: A documentation site | A tier-1 repository with extensive reference material | A search-indexed site built from the same Markdown files in `docs/`, never maintained as separate copy. |
+
+### Moving up a tier
+
+- **0 to 1:** The first release to a package registry (such as PyPI, npm, or crates.io), or when someone other than the author begins using the project.
+- **1 to 2:** The reference is too large to browse comfortably as repository files; outside users need search or versioned documentation; or outside users file issues requesting documentation improvements. Automatic API documentation on docs.rs does not count toward this trigger.
+
+### Decision records
+
+`decision_records` adds `docs/decisions/`: a [MADR 4.0.0](https://adr.github.io/madr/) index and a
+first record that says the project starts from this template. It is on for kinds whose choices are
+costly to reverse, and off for small tools, which never get an empty folder. The index and the first
+record are the project's after the first render.
+
+### Documentation rules
+
+- **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`). A render with `publish_to_pypi` or `publish_to_npm` writes its README links this way.
+- **Stable links to documentation on `main`:** When documentation or CLI error messages link to rules or guides, point to `main`. Rule identifiers are permanent; if a rule is deprecated or removed, keep a stub heading so historical links continue to resolve.
+- **Single source of truth:** The README holds the overview and quickstart; code comments and docstrings define API contracts; `docs/` holds extended guides and references.
+
+## Adopting the template in an existing repo
+
+Each guide renders over the repo on a clean branch with `copier copy --overwrite`, then has
+you review `git diff` and restore what was yours.
+
+### Adopting the template in an existing Python package
+
+1. On a clean branch, render the template:
+
+   ```sh
+   copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .
+   ```
+
+   Enable `customise`, specify `module_name`, and select `python_layout=flat` if code resides at repository root rather than under `src/`.
+2. Review `git diff` for `pyproject.toml`. Restore dependencies, authors, and version numbers, then run `just py-sync`.
+3. Format with `uv run ruff format`. For existing lint or type check findings, record baseline exceptions rather than disabling rules:
+   - Ruff: add existing violation codes to `ignore` in `pyproject.toml` under a `# NOTE: baseline at adoption` comment.
+   - ty: configure existing violations as `"warn"` under `[tool.ty.rules]`.
+4. If `uv audit` flags patches under a week old, add temporary exemptions under `[tool.uv]` in `pyproject.toml` ([tooling](tooling.md#dependencies)).
+5. Remove obsolete workflows, run `just check` and `just hooks`, and commit.
+6. Ensure `CHANGELOG.md` contains Keep a Changelog `## [X.Y.Z]` headings for release tagging.
+
+### Adopting the template in an existing web app
+
+1. On a clean branch, render over the repository:
+
+   ```sh
+   copier copy --vcs-ref=<tag> --overwrite gh:simonvanlierde/project-templates .
+   ```
+
+   Select `ts_kind=web-app`, your framework, and your `user_data` setting.
+2. Review `git diff`:
+   - Remove unused starter components.
+   - Integrate the legal page routes and links into your `src/App.tsx`. Add the paths to `tests/e2e/routes.ts`, and set its `LEGAL_LINKED_FROM` to the routes that link the legal pages.
+   - Restore custom configurations in `vite.config.ts` and `vitest.config.ts`. Retain the template's `markdown()` plugin.
+   - Restore custom package names in `package.json` and `wrangler.jsonc`.
+   - Fill in all TODO markers in `docs/`.
+3. Run `pnpm install`. If dependencies are newer than the one-week cooldown, exempt them in `pnpm-workspace.yaml`:
+
+   ```yaml
+   minimumReleaseAgeExclude:
+     - vite@8.3.5
+   ```
+
+4. Move inline scripts from `index.html` into files under `public/` to satisfy `script-src 'self'`.
+5. Run `just check` and `just ts-e2e`. Remove legacy workflows replaced by `ts.yml` and commit.
+
+### Adopting the template in an existing Compose-only repo
+
+1. On a clean branch, render over the repo:
+
+   ```sh
+   copier copy --vcs-ref=<tag> --overwrite --data 'stacks=[docker]' gh:simonvanlierde/project-templates .
+   ```
+
+2. The render keeps an existing `compose.yaml` and `.env.example`, and replaces the justfile.
+   `just check` reads `.env.example` in place of `.env`, so give every variable a `${VAR:?}`
+   needs there.
+3. Move your own recipes into `just/local.just`, which updates never touch. Name the checks
+   you add `local-check`: `just check` runs that recipe last.
+4. The `docker-compose` entry in `.github/dependabot.yml` reads `compose.yaml` and the
+   directories one level below it, where an `include:` usually points. A deeper Compose file
+   needs its directory added there. `copier update` keeps that edit unless the template
+   changes the same lines, which shows up as a conflict.
+5. Run `just check` and `just hooks`. Add the words typos flags in your own files to
+   `_typos.toml`, which is yours from then on. Then commit.
