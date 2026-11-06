@@ -115,6 +115,10 @@ The {{ 'Astro site' if site == 'astro' else 'page' }} in [`site/`]({{ tree }}sit
 ### Pull request previews
 {% endif %}
 Each pull request that is open, not a draft and not from a bot gets a preview of the site on its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-site-pr-<number>`, deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site)). One-time setup: run `just repo-settings`, which creates the `preview` environment and sets Pages to deploy from Actions, then add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to the `preview` environment, and give the Cloudflare account a workers.dev subdomain if it has none yet. Without the token, the previews skip with a notice. Previews are public: anyone with the address can open one.
+{% endif %}{% if docs_site %}
+## Documentation
+
+The documentation is the Markdown in [`docs/`]({{ tree }}docs), published at `https://{{ github_user | lower }}.github.io/{{ slug }}/`{% if docs_api %} with an API reference from the docstrings{% endif %}. `just docs` builds it into `_docs/` and fails on a broken link, `just docs-serve` previews it, and every push to `main` deploys it to GitHub Pages once `just repo-settings` has turned Pages on. A Pages site is public, even when the repo is private.
 {% endif %}
 ## License
 

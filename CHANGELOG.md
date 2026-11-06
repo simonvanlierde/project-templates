@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- `docs_site` (under `customise`): a documentation site that [Zensical](https://zensical.org) builds from the Markdown in `docs/`, with search. It renders `zensical.toml`, a `docs/index.md` home page, `just docs` and `just docs-serve`, and a `docs.yml` workflow. The workflow builds with `--strict` on every pull request and deploys to GitHub Pages from `main`. A Python library with `python_api` also gets `docs/reference.md`, an API reference from the docstrings. The validator refuses it together with `site`, since a repo has one Pages site ([Documentation site](docs/usage.md#documentation-site)).
+
 ### Changed
 
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.

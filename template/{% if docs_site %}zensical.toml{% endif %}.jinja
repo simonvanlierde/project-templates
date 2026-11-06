@@ -1,0 +1,17 @@
+# The documentation site: `just docs` builds the Markdown in docs/ into _docs/, and
+# docs.yml deploys it to GitHub Pages. Without a `nav`, the menu follows the files in docs/.
+# Settings: https://zensical.org/docs/setup/basics/
+[project]
+site_name = {{ project_name | to_json }}
+{%- if project_description %}
+site_description = {{ project_description | to_json }}
+{%- endif %}
+site_url = "https://{{ github_user | lower }}.github.io/{{ slug }}/"
+repo_url = "https://github.com/{{ github_user }}/{{ slug }}"
+site_dir = "_docs"
+{%- if docs_api %}
+
+# docs/reference.md renders the docstrings under this path, read without importing the package.
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["{{ python_dir if python_layout == 'flat' else ('' if python_dir == '.' else python_dir ~ '/') ~ 'src' }}"]
+{%- endif %}

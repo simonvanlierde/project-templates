@@ -46,6 +46,9 @@ _skip_if_exists:
   - /site/src/layouts/Base.astro
   - /site/src/pages/index.astro
   - /site/src/pages/about.md
+  - /zensical.toml
+  - /docs/index.md
+  - /docs/reference.md
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
@@ -442,6 +445,20 @@ site_out:
   when: false
   default: "{{ 'site/dist' if site == 'astro' else '_site' }}"
 
+# A Zensical site built from the Markdown in docs/, deployed to GitHub Pages from main
+# (docs/usage.md#documentation-site). A Python library with python_api also gets an API
+# reference from its docstrings. One repo has one Pages site, so it rules out `site`.
+docs_site:
+  type: bool
+  when: "{{ stacks }}"
+  ask: "{{ customise }}"
+  help: A search-indexed documentation site built from docs/ with Zensical, deployed to GitHub Pages from main (an API reference too for a Python library)
+  default: false
+  validator: >-
+    {% if docs_site and site != 'none' %}
+    The docs site and the `site` page would both deploy to this repo's one GitHub Pages site: answer site=none, or no here.
+    {% endif %}
+
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
 # projects. These documents are starting points for the project to complete.
 openssf_badge:
@@ -536,6 +553,13 @@ python_api:
     Is the package used through its Python API, not only its command line?
     Turns on the griffe API-break check in python.yml (with publish_to_pypi)
   default: true
+
+# Computed, never asked: whether the docs site gets docs/reference.md, an API reference
+# that mkdocstrings reads from the docstrings. A command-line-only library gets none.
+docs_api:
+  type: bool
+  when: false
+  default: "{{ docs_site and 'python' in stacks and kind == 'library' and python_api }}"
 
 # --- ts -----------------------------------------------------------------------
 
@@ -648,6 +672,20 @@ griffe_version:
   type: str
   when: false
   default: 2.4.1
+
+# Computed, never asked: the Zensical that `just docs` and docs.yml run with uvx, and
+# the mkdocstrings-python it runs with for a Python library's API reference.
+# renovate: datasource=pypi depName=zensical
+zensical_version:
+  type: str
+  when: false
+  default: 0.0.73
+
+# renovate: datasource=pypi depName=mkdocstrings-python
+mkdocstrings_python_version:
+  type: str
+  when: false
+  default: 2.0.10
 
 # Computed, never asked: the golangci-lint release that the README and go.yml pin,
 # kept in one place. `just go-check` runs whichever golangci-lint is on PATH. Renovate bumps it from its `# renovate:` line.

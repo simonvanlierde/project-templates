@@ -79,6 +79,17 @@ site:
 site-sync:
     pnpm -C site install
 {%- endif %}
+{%- if docs_site %}
+{%- set zensical = 'uvx --exclude-newer "1 week"' ~ (' --with mkdocstrings-python==' ~ mkdocstrings_python_version if docs_api else '') ~ ' zensical@' ~ zensical_version %}
+
+# Build docs/ into _docs/, which docs.yml deploys. --strict fails on any warning, such as a broken link.
+docs:
+    {{ zensical }} build --strict
+
+# Serve docs/ at http://localhost:8000, rebuilt on each save.
+docs-serve:
+    {{ zensical }} serve
+{%- endif %}
 {% if citable %}
 # Rewrite codemeta.json to agree with CITATION.cff, then check. The writer
 # exits 1 whenever it changes a file, so the check that follows decides the result.
@@ -224,8 +235,8 @@ repo-settings:
     fi
     echo "Configured environment 'production'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to both environments: see the Deploy section of the README."
 {%- endif %}
-{%- if site != 'none' %}
-    # site.yml deploys to GitHub Pages from the workflow, not from a branch. GitHub answers
+{%- if site != 'none' or docs_site %}
+    # {{ 'site.yml' if site != 'none' else 'docs.yml' }} deploys to GitHub Pages from the workflow, not from a branch. GitHub answers
     # 409 when Pages is already on, and then the PUT switches its source instead. A 403 or
     # 422 means this repo cannot have Pages, such as a private repo on the free plan.
     if gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1; then
@@ -234,11 +245,13 @@ repo-settings:
         gh api -X PUT repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1 || fail
         echo "GitHub Pages deploys from Actions."
     elif grep -qE 'HTTP (403|422)' "$err"; then
-        echo "Warning: GitHub Pages is not available for this repo (a private repo needs a paid plan for it), so site.yml's deploy job skips. Previews still run." >&2
+        echo "Warning: GitHub Pages is not available for this repo (a private repo needs a paid plan for it), so {{ 'site.yml' if site != 'none' else 'docs.yml' }}'s deploy job skips.{{ ' Previews still run.' if site != 'none' else '' }}" >&2
     else
         fail
     fi
+{%- if site != 'none' %}
     echo "For the site's previews, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the 'preview' environment: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site"
+{%- endif %}
 {%- endif %}
 {%- if publish_to_pypi %}
     repo_full_name=$(gh api repos/{owner}/{repo} --jq .full_name 2>"$err") || fail
