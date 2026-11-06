@@ -49,6 +49,8 @@
         <h2 id="result-label">Formatted JSON</h2>
         <span id="state" class="state">Sample</span>
       </div>
+      <!-- biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable result must be reachable by keyboard (WCAG 2.1.1). -->
+      <!-- biome-ignore lint/a11y/useAriaPropsSupportedByRole: the label names the region for screen readers. -->
       <pre id="result" tabindex="0" aria-labelledby="result-label"></pre>
       <div class="actions">
         <button type="button" id="copy" class="primary">Copy result</button>

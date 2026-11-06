@@ -10,7 +10,9 @@
   --on-accent: #fff;
   --error: #a8261b;
   --mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
-  font: 1rem/1.5 system-ui, sans-serif;
+  font:
+    1rem / 1.5 system-ui,
+    sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -161,7 +163,7 @@ pre {
   margin: 0;
   padding: 0.75rem;
   overflow: auto;
-  font: 0.875rem/1.55 var(--mono);
+  font: 0.875rem / 1.55 var(--mono);
   tab-size: 2;
   color: var(--ink);
   background: var(--field);
@@ -349,6 +351,7 @@ summary {
 
 @media (prefers-reduced-motion: reduce) {
   * {
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override every transition. */
     transition: none !important;
   }
 }

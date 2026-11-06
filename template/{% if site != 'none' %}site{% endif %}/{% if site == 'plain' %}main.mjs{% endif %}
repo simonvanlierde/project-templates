@@ -6,7 +6,16 @@ const convert = (text, indent) => JSON.stringify(JSON.parse(text), null, indent 
 
 const $ = (id) => document.getElementById(id);
 const [workspace, input, file, error, state, result, copy, copied, said, indent] = [
-  "workspace", "input", "file", "input-error", "state", "result", "copy", "copied", "said", "indent",
+  "workspace",
+  "input",
+  "file",
+  "input-error",
+  "state",
+  "result",
+  "copy",
+  "copied",
+  "said",
+  "indent",
 ].map($);
 const labels = { sample: "Sample", empty: "Empty", invalid: "Needs a fix", ready: "Ready" };
 let edited = false;
