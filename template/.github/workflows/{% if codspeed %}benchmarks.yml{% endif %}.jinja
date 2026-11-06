@@ -1,15 +1,39 @@
 name: benchmarks
 
-# CodSpeed measures the benchmarks on every pull request and compares them with main.
-# Simulation mode counts CPU instructions, so a noisy runner does not move the result.
-# Pushes to main run too, with no path filter: a pull request is compared with its base
-# commit, which needs a result of its own. The upload signs in with the job's OIDC token,
-# so there is no secret.
+# CodSpeed measures the benchmarks on each pull request that touches benchmarked code and
+# compares them with main. Simulation mode counts CPU instructions, so a noisy runner does
+# not move the result. Pushes to main run with no path filter, so the newest main commit,
+# which CodSpeed compares a pull request with, has a result. No ruleset may require this check,
+# since a filtered pull request never reports it. The upload signs in with the job's OIDC
+# token, so there is no secret.
 on:
   push:
     branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+{%- if 'python' in stacks %}
+{%- if python_dir == '.' %}
+      - "{{ 'src' if python_layout == 'src' else module_name }}/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
+{%- else %}
+      - "{{ python_dir }}/**"
+{%- endif %}
+{%- endif %}
+{%- if 'rust' in stacks %}
+{%- if rust_dir == '.' %}
+      - "src/**"
+      - "benches/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+{%- else %}
+      - "{{ rust_dir }}/**"
+{%- endif %}
+{%- endif %}
+      - ".github/workflows/benchmarks.yml"
   workflow_dispatch:
 
 permissions:
