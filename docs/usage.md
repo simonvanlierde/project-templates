@@ -14,7 +14,7 @@ reference for what comes after, in the order you are likely to need it:
   [publishing](#publishing), [Codecov](#coverage-on-codecov),
   [CodSpeed](#benchmarks-on-codspeed), [profiling](#profiling),
   [test extras](#test-extras), a [static site](#static-site),
-  [Workers hosting](#workers-hosting), the
+  [Workers hosting](#workers-hosting), a [documentation site](#documentation-site), the
   [OpenSSF badge](#openssf-best-practices-badge) and the
   [dependency bot](#dependency-updates).
 - **Existing code:** [adopt the template](#adopting-the-template-in-an-existing-repo) in a
@@ -56,6 +56,7 @@ When `customise` is `no`, advanced questions take these defaults:
 | `site` | None ([Static site](#static-site)) |
 | `site_host` | GitHub Pages; `cloudflare` deploys the site to a Worker ([Static site](#static-site)) |
 | `worker` | Disabled; a Worker script for `/api/*` in a web app or a site on Cloudflare ([Workers hosting](#workers-hosting)) |
+| `docs_site` | Disabled ([Documentation site](#documentation-site)) |
 | `openssf_badge` | None ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `decision_records` | On for `web-service`, `data-pipeline`, `web-app`, Compose-only and Silver-badge projects ([Decision records](#decision-records)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
@@ -494,6 +495,23 @@ What deploys to a Cloudflare Worker (a web app, or a site with `site_host=cloudf
 - A site gets `site/worker/index.mjs`, plain JavaScript with no TypeScript stack needed. `just site` runs `site/worker/index.test.mjs` with `node --test` first, and a plain site's build leaves `worker/` out. wrangler bundles the script on every preview and production deploy, so a script that does not bundle fails the pull request's preview.
 
 The script and its test are the project's after the first render. A binding beyond `ASSETS` (KV, D1, a secret) also reaches every preview: read [decision 0001](decisions/0001-pr-previews-use-the-production-cloudflare-account.md) first.
+
+## Documentation site
+
+Answer `docs_site` (under `customise`) when a project reaches documentation tier 2 ([How much documentation](#how-much-documentation)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
+
+A render with `docs_site` gets:
+
+- `zensical.toml` and `docs/index.md`, the home page. Both are yours: an update leaves them alone.
+- `docs/reference.md`, for a Python library with `python_api`. It holds one `::: <module>` line, which mkdocstrings expands into the API reference from the docstrings. It reads the source without importing the package.
+- `just docs`, which builds into `_docs/` (gitignored), and `just docs-serve`, which serves the site on port 8000 and rebuilds it on each save. Both run the Zensical that `copier.yml` pins with `uvx`, so the project needs no docs dependencies. Like the project's own installs, uvx resolves only releases at least a week old. `copier update` brings a newer pin.
+- `.github/workflows/docs.yml`. Every pull request and push to `main` runs `just docs`. In a public repo, `docs: build` is a required check. The `deploy` job publishes the build to Pages on a push to `main`. `just repo-settings` sets Pages to deploy from Actions.
+
+The build is strict: a warning fails it. A link to a page that does not exist is a warning, and so is a link out of `docs/`, such as `../README.md`. Link to files outside `docs/` with their full GitHub URL instead.
+
+TypeScript, Rust and Go projects get the site too, without an API reference. A Rust crate has one on docs.rs and a Go module on pkg.go.dev. The template has none for TypeScript yet.
+
+One repo has one Pages site, so the template refuses `docs_site` together with `site`. A project that needs both a playground page and documentation can put the page in `docs/` as Markdown or HTML.
 
 ## OpenSSF Best Practices badge
 

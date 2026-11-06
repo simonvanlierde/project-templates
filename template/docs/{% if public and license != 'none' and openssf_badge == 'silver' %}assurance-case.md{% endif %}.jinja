@@ -1,6 +1,6 @@
 # Assurance case for {{ project_name }}
 
-Why {{ project_name }} meets its security requirements. [SECURITY.md](../.github/SECURITY.md)
+Why {{ project_name }} meets its security requirements. [SECURITY.md]({{ '../.github/SECURITY.md' if not docs_site else 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/blob/main/.github/SECURITY.md' }})
 says how to report a vulnerability and what is in scope.
 
 <!-- Keep the whole document near 1,000 words. One line per claim, each with a link to

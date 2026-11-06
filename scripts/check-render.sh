@@ -112,24 +112,26 @@ grep -q 'project edit' "$out/d/web/docs/accessibility-assessment.md"
 
 # h: a go library named like the Example file. The unit test must not share its path
 # with example_test.go, which a project_name of `example` would otherwise claim. The
-# only silver-badge render.
+# only silver-badge render, and the docs site without an API reference.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h"
+  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver --data docs_site=true . "$out/h"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
+echo 'project edit' >>"$out/h/docs/index.md"
 # The badge documents are filled in by the project. Rendered first, then kept.
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test -f "$out/h/$f"
   echo 'project edit' >>"$out/h/$f"
 done
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h" >/dev/null 2>&1
+  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver --data docs_site=true . "$out/h" >/dev/null 2>&1
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   grep -q 'project edit' "$out/h/$f"
 done
 grep -q 'project edit' "$out/h/go.mod"
+grep -q 'project edit' "$out/h/docs/index.md"
 
-# m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
+# m: every stack a library, nested, with both extras, and the docs site with an API reference: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
 # only BSD-3-Clause render, and the only npm-only publisher.
 "${copier[@]}" --vcs-ref=HEAD \
@@ -137,13 +139,17 @@ grep -q 'project edit' "$out/h/go.mod"
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true . "$out/m"
+  --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true \
+  --data docs_site=true . "$out/m"
 # x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
 # x and r have the static site without a package.json.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
   --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
+# ds: a command-line-only Python library with the docs site: no API reference.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=docs-me --data 'stacks=[python]' \
+  --data python_api=false --data docs_site=true . "$out/ds"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
 # only its own manifest beside them, and t's hooks run through pnpm. Both have the
 # static site: r the plain one, t the Astro one beside a package at the root.
@@ -180,7 +186,7 @@ echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=adopt-me --data customise=true --data python_layout=flat \
   --data license=GPL-3.0-or-later --data codspeed=true --data 'test_extras=[mutation]' \
-  --data publish_to_pypi=true --data cold_install=true . "$out/k"
+  --data publish_to_pypi=true --data cold_install=true --data docs_site=true . "$out/k"
 grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
 grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
@@ -450,6 +456,8 @@ refuses 'at least one stack' --data 'stacks=[]'
   refuses 'python_dir is `_site/pkg`, where the static site goes' --data 'stacks=[python]' --data python_dir=_site/pkg --data site=plain
 }
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
+# One repo has one GitHub Pages site.
+refuses 'one GitHub Pages site' --data 'stacks=[python]' --data site=plain --data docs_site=true
 # A noreply address gets no mail, and these renders give it as a contact on a page.
 refuses 'A GitHub noreply address' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
   --data author_email=1+ada@users.noreply.github.com
@@ -1693,6 +1701,56 @@ jq -e '.rules[0].parameters.required_status_checks | any(.context == "site: buil
 (lacks -q '"site: build"' c/.github/rulesets/main-checks.json)
 sed -n '/^check:/,/^$/p' y/justfile | grep -qx '    @just site'
 (sed -n '/^check:/,/^$/p' x/justfile | lacks -q 'just site')
+
+# Docs site: m (nested src), k (flat) and h (Go) answer docs_site=true; ds is a library
+# without python_api. Built from docs/ with the pinned Zensical, deployed like the site.
+zensical_pin=$(sed -n '/^zensical_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+mkdocstrings_pin=$(sed -n '/^mkdocstrings_python_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+for r in m k h ds; do
+  for f in zensical.toml docs/index.md .github/workflows/docs.yml; do test -f "$r/$f"; done
+  grep -qx '/_docs/' "$r/.gitignore"
+  grep -qx 'site_dir = "_docs"' "$r/zensical.toml"
+  grep -qF "zensical@$zensical_pin build --strict" "$r/justfile"
+  grep -qF "zensical@$zensical_pin serve" "$r/justfile"
+  wf=$r/.github/workflows/docs.yml
+  test "$(grep -c 'pages: write' "$wf")" = 1
+  grep -qx '      - run: just docs' "$wf"
+  grep -qx '          path: _docs' "$wf"
+  test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
+  sed -n '/^  deploy:$/,$p' "$wf" | grep -qxF "    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
+  grep -q 'build_type=workflow' "$r/justfile"
+done
+# k keeps its own README.
+for r in m h ds; do grep -qx '## Documentation' "$r/README.md"; done
+for r in m h; do
+  jq -e '.rules[0].parameters.required_status_checks | any(.context == "docs: build")' "$r/.github/rulesets/main-checks.json" >/dev/null
+done
+# The API reference only for a Python library used through its API.
+for r in m k; do
+  test -f "$r/docs/reference.md"
+  grep -qF -- "--with mkdocstrings-python==$mkdocstrings_pin" "$r/justfile"
+done
+grep -qx '::: mutate_me' m/docs/reference.md
+grep -qx 'paths = \["py/src"\]' m/zensical.toml
+grep -qx 'paths = \["\."\]' k/zensical.toml
+for r in h ds; do
+  test ! -e "$r/docs/reference.md"
+  (lacks -q 'mkdocstrings' "$r/justfile")
+  (lacks -q 'mkdocstrings' "$r/zensical.toml")
+done
+# The badge page links SECURITY.md outside docs/ by URL, which a strict build accepts.
+grep -qF '[SECURITY.md](https://github.com/example-org/example/blob/main/.github/SECURITY.md)' h/docs/assurance-case.md
+for r in a c x w; do
+  test ! -e "$r/zensical.toml"
+  test ! -e "$r/.github/workflows/docs.yml"
+  (lacks -q '^docs:' "$r/justfile")
+done
+(lacks -q '"docs: build"' c/.github/rulesets/main-checks.json)
+# A real strict build: the API reference from the docstrings, and the badge pages.
+(cd m && just docs >/dev/null 2>&1)
+grep -qF 'Add two numbers' m/_docs/reference/index.html
+(cd h && just docs >/dev/null 2>&1)
+test -f h/_docs/assurance-case/index.html
 # A private repo's page has no links into the repo, which its readers cannot open.
 (lacks -rq 'github.com/' hush-plain/site hush-astro/site/src)
 grep -q 'href="https://github.com/.*/issues"' x/site/index.html
@@ -1736,8 +1794,9 @@ for r in a m w; do
   test ! -e "$r/.github/scripts/deploy-worker.sh"
   (lacks -q '_site' "$r/.gitignore")
   (lacks -qx 'site:' "$r/justfile")
-  (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile")
 done
+# m turns Pages on for its docs site.
+for r in a w; do (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile"); done
 (lacks -q 'app-site' s/.github/workflows/preview-retire.yml)
 # Astro site: y has no TypeScript stack, so the site's node and pnpm come from site.yml and
 # site/package.json alone. t has it beside a TypeScript package at the root.

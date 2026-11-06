@@ -42,6 +42,9 @@
 {%- if site != 'none' %},
           { "context": "site: build", "integration_id": 15368 }
 {%- endif %}
+{%- if docs_site %},
+          { "context": "docs: build", "integration_id": 15368 }
+{%- endif %}
         ]
       }
     }
