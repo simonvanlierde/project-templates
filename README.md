@@ -10,7 +10,8 @@
 
 Build a dataset from public sources where every row says which download it came from.
 
-This is a [Copier](https://copier.readthedocs.io) template. Its `data-pipeline` kind
+This is a [Copier](https://copier.readthedocs.io) template. It starts Python, TypeScript,
+Rust, Go and Docker projects, in any mix ([quick start](#quick-start)). Its `data-pipeline` kind
 writes a Python project around one manifest, `sources.toml`, which lists each input with
 its URL and the publisher's reuse terms. Three steps from the
 [sourceledger](https://github.com/simonvanlierde/sourceledger) library then run over it:
@@ -38,16 +39,16 @@ changed. The raw and processed data stay out of git, so the repository never
 redistributes a source. `CITATION.cff` and `codemeta.json` come from the
 same answers, ready for a Zenodo DOI.
 
-The same template also starts Python libraries, apps, research projects and web
-services, and TypeScript, Rust, Go and Docker projects, in any mix. Each gets a passing
-test on day one, `just check` running the same checks as CI, actions pinned to exact
-commits, and optional releases to PyPI, npm and the GitHub Container Registry with no
-tokens to store. When the template improves, `copier update` pulls the changes in.
+Every project, data pipeline or not, gets a passing test on day one, `just check` running
+the same checks as CI, actions pinned to exact commits, and optional releases to PyPI, npm
+and the GitHub Container Registry with no tokens to store. When the template improves,
+`copier update` pulls the changes in.
 
 ## Quick start
 
 A data pipeline needs [Copier](https://copier.readthedocs.io/en/stable/#installation)
-9.19 or later, [just](https://just.systems) and [uv](https://docs.astral.sh/uv/):
+9.19 or later, [just](https://just.systems) and [uv](https://docs.astral.sh/uv/). Without
+Copier installed, `uvx copier` runs it through uv.
 
 ```sh
 mkdir mydata && cd mydata && git init
@@ -61,21 +62,29 @@ Then replace the example source in `sources.toml` with your own.
 
 ### Any other project
 
-Leave out the `--data` answers and Copier asks which stacks and kinds you want. Each
-language needs its own toolchain: `uv` for Python, `pnpm` for TypeScript, `cargo` for
-Rust, or `go` for Go.
+Leave out the `--data` answers and Copier asks which stacks and kinds you want.
+[The questions](docs/usage.md#the-questions) says what each one does. Each language
+needs its own toolchain: `uv` for Python, `pnpm` for TypeScript, `cargo` for Rust, or `go`
+for Go.
 
 ```sh
 mkdir myproject && cd myproject && git init
 copier copy gh:simonvanlierde/project-templates .
-just py-sync   # run the *-sync line for each stack you picked: py, ts, go, rs
+just py-sync   # Copier prints these steps for the stacks you picked
 just check     # every linter and test; Rust and Go need a few tools first, see the new README
 git add -A && git commit -m "chore: scaffold"
 ```
 
 Commit the lockfiles: CI installs exactly what they list, so it fails without them.
-Later, `copier update` pulls in template changes, and [CHANGELOG.md](CHANGELOG.md)
-lists what each release changes.
+After the first push, `just repo-settings` protects `main`
+([what it sets](docs/usage.md#protecting-main)).
+
+### Updating
+
+`copier update` pulls a new template release into your project as a merge, and a weekly
+workflow opens that pull request for you
+([how](docs/usage.md#keeping-your-project-up-to-date)). [CHANGELOG.md](CHANGELOG.md) lists
+what each release changes and the upgrade steps a breaking one needs.
 
 ### Your details
 
@@ -94,18 +103,23 @@ defaults:
   author_orcid: "0000-0000-0000-0000"
 ```
 
-## More
+## Docs
 
-- [docs/usage.md](docs/usage.md): the stacks, monorepos, updating, publishing, Codecov and
-  the OpenSSF Best Practices badge.
+- [docs/usage.md](docs/usage.md): the questions, stacks, Compose-only repos, monorepos,
+  updating, publishing and the optional features, and adopting the template in an
+  existing repo.
 - [docs/python-kinds.md](docs/python-kinds.md): the Python project kinds.
-- [docs/tooling.md](docs/tooling.md): the tools, lint policies, Docker images,
+- [docs/tooling.md](docs/tooling.md): the tools and lint rules per stack, git hooks,
   dependency updates and release workflows.
 - [docs/ci-baseline.md](docs/ci-baseline.md): every CI check, and what was left out.
-- [docs/design.md](docs/design.md): who can change what, and the workflows that can publish.
 - [docs/web-legal.md](docs/web-legal.md): tips for filling in a web app's legal pages.
-- [docs/decisions/](docs/decisions/README.md): the decisions behind the template's shape.
+
+## About this project
+
 - [CONTRIBUTING.md](CONTRIBUTING.md): how to test a template change before you tag it.
+- [docs/design.md](docs/design.md): who can change what, the workflows that can publish,
+  and the security assurance case.
+- [docs/decisions/](docs/decisions/README.md): the decisions behind the template's shape.
 - [SECURITY.md](SECURITY.md): how to report a vulnerability and verify a release.
 - [GOVERNANCE.md](GOVERNANCE.md): who decides, who can release, and who takes over.
 - [ROADMAP.md](ROADMAP.md): what is planned for the next year.

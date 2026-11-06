@@ -107,7 +107,7 @@ When projects record architectural choices, store them in `docs/decisions/`.
 
 ### Production
 
-Every push to `main` runs the `production` job after the checks pass. It deploys the build the checks ran on to the Worker `<slug>`, with the pinned wrangler, at `https://<slug>.<subdomain>.workers.dev`. Static-asset requests are free and unlimited on the Workers Free plan. The job runs in the `production` GitHub environment, which `just repo-settings` limits to `main`. A preview job that holds the same Cloudflare token can still deploy to `<slug>` (see [Pull request previews](#pull-request-previews)). One deploy runs at a time, and a deploy in flight is never cancelled by the next. Without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID`, the job skips with a notice. For a custom domain, add it under the Worker's Settings > Domains & Routes. The domain needs a zone on Cloudflare.
+Every push to `main` runs the `production` job after the checks pass. It deploys the build the checks ran on to the Worker `<slug>`, with the pinned wrangler, at `https://<slug>.<subdomain>.workers.dev`. Static-asset requests are free and unlimited on the Workers Free plan. The job runs in the `production` GitHub environment, which `just repo-settings` limits to `main`. A preview job that holds the same Cloudflare token can still deploy to `<slug>` (see [Pull request previews](#pull-request-previews)). Without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID`, the job skips with a notice. For a custom domain, add it under the Worker's Settings > Domains & Routes. The domain needs a zone on Cloudflare.
 
 #### Moving an app off Cloudflare Pages
 
@@ -124,9 +124,9 @@ Without a custom domain, the app's address changes: set the new one with `copier
 
 ### Pull request previews
 
-Each pull request that is open, not a draft and not opened by a bot such as Renovate gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`. The `preview` job deploys `wrangler.jsonc` under that name. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. The job adds that header to the deployed copy of the build only, so `public/_headers` and production never carry it. The job reads the pull request again right before deploying, in case it closed while the job was queued.
+Each pull request that is open, not a draft and not opened by a bot such as Renovate gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`. The `preview` job deploys `wrangler.jsonc` under that name. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. Production never sends that header.
 
-When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker through the Cloudflare API. It then fetches the address and fails unless it answers 404, which shows the Worker is gone. A daily run lists the account's `<slug>-pr-<number>` Workers and deletes those whose pull request is not open and ready, in case an event was missed. When it cannot read a pull request, it keeps that Worker and fails. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep. The workflow runs `.github/scripts/preview-retire.sh`.
+When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker through the Cloudflare API. A daily run lists the account's `<slug>-pr-<number>` Workers and deletes those whose pull request is not open and ready, in case an event was missed. When it cannot read a pull request, it keeps that Worker and fails. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep.
 
 Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` skip the job with a notice. One-time setup:
 
@@ -135,7 +135,7 @@ Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOU
 
 The `preview` job runs the pull request's code with the `preview` environment's Cloudflare token. If both environments hold one account-wide token, anyone who can push a branch can deploy over the production Worker. To keep them apart, give previews a token from a second Cloudflare account.
 
-The first deploy creates each Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. wrangler is an exact devDependency in `package.json`, which both jobs install, and Renovate bumps it like any other package.
+The first deploy creates each Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. wrangler is an exact devDependency in `package.json` ([why](decisions/0002-wrangler-is-an-exact-dev-dependency.md)), and the dependency bot bumps it.
 
 Copier updates do not overwrite user-owned starter files: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`, `tests/e2e/routes.ts`, and markdown files in `docs/`.
 
@@ -152,7 +152,7 @@ Legal documents reside in `docs/` and compile to HTML at build time:
 | `docs/terms.md` | `/terms` | `user_data=accounts` |
 
 `user_data` options: `nothing`, `browser` (local storage only), or `accounts` (server-side data). Playwright tests in `tests/e2e/` verify these pages render properly, contain required contact information, and introduce no undeclared storage or network requests. They also check that every route in `LEGAL_LINKED_FROM` links each page and that each page links back to `/`. The starter's `LEGAL_LINKED_FROM` in `tests/e2e/routes.ts` is all of `ROUTES`; an app that links the pages from one screen, such as its settings, sets it to that screen.
-See [`docs/web-legal.md`](https://github.com/simonvanlierde/project-templates/blob/main/docs/web-legal.md) for compliance guidance.
+[Legal pages: tips](web-legal.md) says how to fill them in.
 
 ## Compose-only repos
 
@@ -175,7 +175,7 @@ The render has no Dockerfile, no image build and no `docker.yml`. It gets:
 - `.github/workflows/compose.yml`, which runs `just docker-check` (not `local-check`) with no token scopes beyond
   `contents: read`, and is a required check on `main` when `public` is on.
 - The `docker-compose` ecosystem in the dependency bot, so image tags and digests get update
-  pull requests. Image stacks leave it off, because their `FROM` tags are copier answers.
+  pull requests.
 
 The shellcheck and shfmt images in `just/docker.just` are pinned by digest, and no bot
 bumps them: update the tags and digests by hand now and then. `just docker-fmt` applies
@@ -248,7 +248,7 @@ copier update --data public=true --data license=MIT
 
 - Blocks force-pushes and branch deletions.
 - Enforces linear history and squash merges.
-- Requires pull requests. A required check blocks every PR that skips CI, because a skipped workflow leaves its check pending. In a repo where agent PRs run no CI (their own pre-push hook is the gate), drop `required_status_checks` from the ruleset or make that check always report. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
+- Requires pull requests. A required check blocks every PR that skips CI, because a skipped workflow leaves its check pending. If some PRs in your repo skip CI, drop `required_status_checks` from the ruleset or make that check always report. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
 - In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root, `compose` in a Compose-only repo, plus `site: build` when the project has a site. A nested stack's workflow runs only when its folder changes, so its check is not required.
 - With `dependency_bot=renovate`, permits the Renovate app to bypass review for minor and patch updates once required checks pass.
 - Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
@@ -302,8 +302,6 @@ To publish a release:
 1. Set the version in `pyproject.toml` and `package.json` to `X.Y.Z` (only the one you publish). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts with no `version`, so citesync skips it; once you add one, after the first release, set it there too, or citesync fails with `version-mismatch`.
 2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits.
 3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it with `git verify-tag` and pushes it. The release workflow refuses a tag GitHub cannot verify, so set `user.signingkey` first (an ssh key works with `gpg.format ssh`).
-
-A render has no "Releasing" section in its README: the maintainer is the only reader, so the steps live here and in the rendered CONTRIBUTING.
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
 
@@ -424,7 +422,7 @@ The two choices differ only in what is in `site/` and how `just site` builds it:
 The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
 
 - `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`.
-- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/`, and sends `X-Robots-Tag: noindex`. It runs the wrangler pinned in `copier.yml` with `pnpm dlx`.
+- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/`, and sends `X-Robots-Tag: noindex`.
 
 One-time setup:
 

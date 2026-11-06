@@ -79,7 +79,7 @@ shelf saves data in browser local storage only after you add an item:
 ## Cookies and other storage
 
 - **Scope:** Regulations cover all client-side storage mechanisms (`localStorage`, `sessionStorage`, IndexedDB, and cookies) once data is transmitted off the device.
-- **Consent exemptions:** Storage strictly necessary to deliver a feature explicitly requested by the user—such as form state, shopping carts, or local preferences—does not require consent.
+- **Consent exemptions:** Storage strictly necessary to deliver a feature explicitly requested by the user, such as form state, shopping carts, or local preferences, does not require consent.
 - **No consent banner by default:** Rendered apps set no cookies and write no client storage before user action. The `privacy.spec.ts` test enforces this on initial load.
 - **Analytics:** Privacy-focused first-party analytics (such as self-hosted Plausible or Matomo) that do not track across sites require no consent banner if configured without cookies, but must be documented in the privacy statement.
 - **Third-party origins:** If you integrate external services or analytics, add their domains to `OTHER_ORIGINS` in `tests/e2e/privacy.spec.ts` and update `script-src` and `connect-src` in `public/_headers`. Cross-site tracking or advertising scripts require a consent banner before loading.
