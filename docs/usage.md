@@ -511,7 +511,7 @@ The build is strict: a warning fails it. A link to a page that does not exist is
 
 TypeScript, Rust and Go projects get the site too, without an API reference. A Rust crate has one on docs.rs and a Go module on pkg.go.dev. The template has none for TypeScript yet.
 
-One repo has one Pages site, so the template refuses `docs_site` together with `site`. A project that needs both a playground page and documentation can put the page in `docs/` as Markdown or HTML.
+One repo has one Pages site, so the template refuses `docs_site` together with a `site` on Pages. A `site` [on a Worker](#hosting-on-a-worker) leaves Pages to the docs. Otherwise, a playground page can go in `docs/` as Markdown or HTML.
 
 ## OpenSSF Best Practices badge
 

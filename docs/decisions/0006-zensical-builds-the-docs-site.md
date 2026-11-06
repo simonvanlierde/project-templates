@@ -30,8 +30,10 @@ a working `zensical.toml` is under ten lines. mkdocstrings reads the source with
 so the package needs no install. `just docs` runs both with `uvx` at the versions
 `copier.yml` pins, so it works the same in every stack. The build runs with `--strict`.
 
-The site deploys to GitHub Pages, like the `site` option. A repo has one Pages site, so
-the validator refuses both answers together. Building the docs into a path under the
+The site deploys to GitHub Pages, like the `site` option on its default host. A repo has
+one Pages site, so the validator refuses `docs_site` beside a `site` on Pages. A `site` on
+a Worker (`site_host=cloudflare`, decision 0005) leaves Pages free, so the two can sit
+together. Building the docs into a path under the
 `site` page would share one Pages artifact between two workflows; that waits until a
 project needs both.
 
@@ -50,7 +52,7 @@ pkg.go.dev publish one, and the template has no TypeScript handler.
 ### Confirmation
 
 `scripts/check-render.sh` renders the docs site with and without the API reference,
-refuses it beside `site`, and runs a strict `just docs` on two renders.
+refuses it beside a `site` on Pages, and runs a strict `just docs` on two renders.
 
 ## Pros and Cons of the Options
 

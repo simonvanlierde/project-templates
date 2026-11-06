@@ -458,6 +458,7 @@ refuses 'at least one stack' --data 'stacks=[]'
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 # One repo has one GitHub Pages site.
 refuses 'one GitHub Pages site' --data 'stacks=[python]' --data site=plain --data docs_site=true
+refuses 'one GitHub Pages site' --data 'stacks=[python]' --data site=plain --data site_host=pages --data docs_site=true
 # A noreply address gets no mail, and these renders give it as a contact on a page.
 refuses 'A GitHub noreply address' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
   --data author_email=1+ada@users.noreply.github.com
@@ -511,6 +512,9 @@ grep -qx 'site_url: https://app.example-org.workers.dev' "$out/s/.copier-answers
   --data site_url=https://demo.example.org . "$out/cfp"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cfa-me --data 'stacks=[python]' \
   --data site=astro --data site_host=cloudflare . "$out/cfa"
+# cfd: a site on a Worker leaves GitHub Pages to the docs site.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=cfd-me --data 'stacks=[python]' \
+  --data site=plain --data site_host=cloudflare --data docs_site=true . "$out/cfd"
 
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the
@@ -1968,6 +1972,14 @@ done
 grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --config wrangler.site.jsonc --domain demo.example.org'" cfp/.github/workflows/site.yml
 grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --config wrangler.site.jsonc'" cfa/.github/workflows/site.yml
 grep -qF "printf '\\n/*\\n  X-Robots-Tag: noindex\\n' >> _site/_headers" cfp/.github/workflows/site.yml
+# cfd: the site deploys to its Worker, and repo-settings turns Pages on for docs.yml alone.
+grep -qx '      name: production' <<<"$(sed -n '/^  deploy:$/,/^  [a-z]/p' cfd/.github/workflows/site.yml)"
+(lacks -q 'pages: write' cfd/.github/workflows/site.yml)
+test "$(grep -c 'pages: write' cfd/.github/workflows/docs.yml)" = 1
+test "$(grep -cF 'POST repos/{owner}/{repo}/pages' cfd/justfile)" = 1
+grep -qF "so docs.yml's deploy job skips." cfd/justfile
+(lacks -qF -e "site.yml's deploy job" -e "For the site's previews" cfd/justfile)
+grep -qF 'environments/production"' cfd/justfile
 # The Pages site keeps its deploy and its /<repo>/ previews.
 grep -qx '      name: github-pages' <<<"$(sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml)"
 # Astro on a Worker: `site` is the Worker's address, with no Pages base.

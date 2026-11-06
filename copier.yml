@@ -477,7 +477,7 @@ site_on_workers:
 
 # A Zensical site built from the Markdown in docs/, deployed to GitHub Pages from main
 # (docs/usage.md#documentation-site). A Python library with python_api also gets an API
-# reference from its docstrings. One repo has one Pages site, so it rules out `site`.
+# reference from its docstrings. One repo has one Pages site, so it rules out a `site` on Pages.
 docs_site:
   type: bool
   when: "{{ stacks }}"
@@ -485,8 +485,8 @@ docs_site:
   help: A search-indexed documentation site built from docs/ with Zensical, deployed to GitHub Pages from main (an API reference too for a Python library)
   default: false
   validator: >-
-    {% if docs_site and site != 'none' %}
-    The docs site and the `site` page would both deploy to this repo's one GitHub Pages site: answer site=none, or no here.
+    {% if docs_site and site != 'none' and not site_on_workers %}
+    The docs site and the `site` page would both deploy to this repo's one GitHub Pages site: answer site_host=cloudflare or site=none, or no here.
     {% endif %}
 
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
