@@ -1,8 +1,8 @@
 name: copier update
 
 # Dependabot can't update a Copier template, so this opens the update PR. It runs
-# weekly, finds the newest template tag, and does nothing when `_commit` in
-# .copier-answers.yml already is that tag. The PR lives on one fixed branch.
+# weekly, finds each template's newest tag, and does nothing when `_commit` in every
+# .copier-answers*.yml already is that tag. The PR lives on one fixed branch.
 # GITHUB_TOKEN can't push a change to .github/workflows/, which most template releases
 # make, and its PR starts no CI. A COPIER_UPDATE_TOKEN secret fixes both; without it, an
 # update that touches a workflow opens an issue instead. See "Hearing about new releases"
@@ -48,26 +48,48 @@ jobs:
       - name: Update from the newest template tag
         shell: bash
         run: |-
-          src=$(sed -n "s/^_src_path: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" .copier-answers.yml)
-          url=${src/#gh:/https://github.com/}
-          latest=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' | sed 's|.*refs/tags/||' | sed -n '/-/!{p;q;}')
-          current=$(sed -n "s/^_commit: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" .copier-answers.yml)
-          if [ -z "$latest" ]; then
-            echo "::error::no stable v* tag found at $url (_src_path: $src)"
-            exit 1
-          fi
-          if [ "$current" = "$latest" ]; then
-            echo "Already on $latest."
+          # Each answers file is one template: this one, plus any layered over it
+          # (`.copier-answers.<name>.yml`). Copier refuses to update a dirty tree, so each
+          # layer's update is committed here; the patch is everything since the checkout.
+          base=$(git rev-parse HEAD)
+          titles=()
+          lines=()
+          for answers in .copier-answers.yml .copier-answers.*.yml; do
+            [ -f "$answers" ] || continue
+            src=$(sed -n "s/^_src_path: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" "$answers")
+            url=${src/#gh:/https://github.com/}
+            latest=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' | sed 's|.*refs/tags/||' | sed -n '/-/!{p;q;}')
+            current=$(sed -n "s/^_commit: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" "$answers")
+            if [ -z "$latest" ]; then
+              echo "::error::no stable v* tag found at $url (_src_path: $src in $answers)"
+              exit 1
+            fi
+            if [ "$current" = "$latest" ]; then
+              echo "$answers: already on $latest."
+              continue
+            fi
+            uvx "copier@$COPIER_VERSION" update --answers-file "$answers" --defaults --vcs-ref "$latest"
+            git add -A
+            git -c core.hooksPath=/dev/null -c user.name=copier-update -c user.email=copier-update@localhost \
+              commit -q --allow-empty -m "$answers $latest"
+            layer=${answers#.copier-answers.}
+            layer=${layer%yml}
+            layer=${layer%.}
+            titles+=("${layer:+$layer }$latest")
+            lines+=("- ${layer:-This template}: \`$current\` to \`$latest\`")
+          done
+          if [ ${#titles[@]} -eq 0 ]; then
             exit 0
           fi
-
-          uvx "copier@$COPIER_VERSION" update --defaults --vcs-ref "$latest"
-          git add -A
+          summary=$(printf '%s, ' "${titles[@]}")
+          summary=${summary%, }
 
           # Copier exits 0 on conflicts: inline markers, or .rej files.
-          { git grep --cached -l -e '^<<<<<<< ' || true; git ls-files '*.rej'; } | sort -u >conflicts.txt
+          { git grep -l -e '^<<<<<<< ' HEAD -- . | sed 's/^HEAD://' || true; git ls-files '*.rej'; } | sort -u >conflicts.txt
           {
-            echo "Updates this project from the template: \`$current\` to \`$latest\`."
+            echo "Updates this project from its templates:"
+            echo
+            printf '%s\n' "${lines[@]}"
             echo
             {% endraw %}{% set refresh = [('\\`uv lock\\`', 'python' in stacks), ('\\`pnpm install\\`', 'ts' in stacks), ('\\`just go-sync\\`', 'go' in stacks), ('\\`just site-sync\\`', site == 'astro')] | selectattr('1') | map(attribute='0') | list %}{% if refresh %}echo "Read the diff before merging, then refresh the lockfiles ({{ refresh | join(', ') }})."{% else %}echo "Read the diff before merging."{% endif %}{% raw %}
             if [ -s conflicts.txt ]; then
@@ -79,12 +101,12 @@ jobs:
           } >body.md
           mkdir -p "$RUNNER_TEMP/copier-update"
           mv body.md "$RUNNER_TEMP/copier-update/body.md"
-          git diff --cached --binary >"$RUNNER_TEMP/copier-update/update.patch"
+          git diff --binary "$base" HEAD >"$RUNNER_TEMP/copier-update/update.patch"
 
-          if git diff --cached --name-only --no-renames | grep -q '^\.github/workflows/'; then
+          if git diff --name-only --no-renames "$base" HEAD | grep -q '^\.github/workflows/'; then
             echo "workflows=true" >>"$GITHUB_OUTPUT"
           fi
-          echo "latest=$latest" >>"$GITHUB_OUTPUT"
+          echo "latest=$summary" >>"$GITHUB_OUTPUT"
         id: copier
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -148,7 +170,7 @@ jobs:
             title="Update from template $LATEST by hand"
             {
               echo "Template \`$LATEST\` changes files in \`.github/workflows/\`, and \`GITHUB_TOKEN\` can't push those."
-              echo "Run \`copier update --vcs-ref $LATEST\` locally and open the PR yourself, or add a \`COPIER_UPDATE_TOKEN\` secret (see the template's docs/usage.md) so this workflow can."
+              echo "Run \`copier update --answers-file <file> --vcs-ref <tag>\` locally for each template in it, and open the PR yourself, or add a \`COPIER_UPDATE_TOKEN\` secret (see the template's docs/usage.md) so this workflow can."
             } >issue.md
             # A closed issue counts too, so closing it stops the weekly reminder for this tag.
             if [ -z "$(gh issue list --state all --search "\"$title\" in:title" --json number --jq '.[0].number')" ]; then

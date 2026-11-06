@@ -310,15 +310,20 @@ if [ -n "${CI:-}" ] || { command -v just >/dev/null && docker info >/dev/null 2>
   grep -qF 'EXAMPLE_VAR: ${EXAMPLE_VAR:?}' "$out/compose/compose.yaml"
   # A repo's own local-check runs at the end of just check.
   printf 'local-check:\n    echo local-check-ran\n' >"$out/compose/just/local.just"
+  # A vendored script in another style is left alone by the lint and by fmt.
+  printf '#!/bin/bash\nif true;then\necho a\nfi\n' >"$out/compose/scripts/vendored.sh"
+  echo 'scripts/vendored.sh linguist-vendored' >"$out/compose/.gitattributes"
   git -C "$out/compose" add -A
   (cd "$out/compose" && just check) >"$out/compose-check.log"
   grep -qx 'local-check-ran' "$out/compose-check.log"
+  grep -qx 'if true;then' "$out/compose/scripts/vendored.sh"
   # A badly formatted bash script must still fail it.
   printf '#!/bin/bash\nif true;then\necho a\nfi\n' >"$out/compose/scripts/bad"
   git -C "$out/compose" add -A
   ( ! (cd "$out/compose" && just check) >/dev/null 2>&1)
   # `just fmt` rewrites it to the 2-space style, and the check then passes.
   (cd "$out/compose" && just docker-fmt && just check)
+  grep -qx 'if true;then' "$out/compose/scripts/vendored.sh"
   # With a site the render ships .github/scripts/preview-retire.sh, whose case arms are
   # not indented: docker-check must pass on the template's own scripts.
   git -C "$out/compose-site" init -q
@@ -2519,7 +2524,12 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     if [ "$pr" != - ]; then git -C "$cuh/tpl" push -q "$p.git" HEAD:refs/heads/chore/copier-update; fi
     git init -q -b main "$p"
     printf '_commit: v0.9.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
-    git -C "$p" add .copier-answers.yml
+    # A layered template with its own answers file; this project's own is already current.
+    if [ "$name" = layer ]; then
+      cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"
+      printf '_commit: v0.10.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
+    fi
+    git -C "$p" add -A
     git -C "$p" commit -q -m init
     # The privileged job starts from a clean checkout, not the generator's worktree.
     git clone -q "$p" "$p-clean"
@@ -2559,10 +2569,16 @@ asked false - 3
 push true - -
 edit true 7 -
 plain false - - README.md
+layer true - - README.md
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
-  grep -qx "uvx copier@$copier_pin update --defaults --vcs-ref v0.10.0" issue.log
+  grep -qx "uvx copier@$copier_pin update --answers-file .copier-answers.yml --defaults --vcs-ref v0.10.0" issue.log
+  # Each answers file updates on its own, and the PR names the layer that moved.
+  grep -qx "uvx copier@$copier_pin update --answers-file .copier-answers.cml.yml --defaults --vcs-ref v0.10.0" layer.log
+  (lacks -q 'answers-file .copier-answers.yml' layer.log)
+  grep -q '^pr create --head chore/copier-update --base main --title chore: update from template cml v0.10.0 ' layer.log
+  git -C layer.git show chore/copier-update:README.md | grep -qx '# from the template'
   # No token and a workflow change: one issue, the older PR closed, no push.
   grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
   grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1

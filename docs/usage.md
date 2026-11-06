@@ -401,7 +401,7 @@ After updating, refresh and commit project lockfiles (`uv lock`, `pnpm install`,
 ### Hearing about new releases
 
 - **Renovate:** Automatically opens update PRs using `copier update --skip-answered --defaults`. Inspect PR diffs for conflict markers before merging.
-- **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`.
+- **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`. It updates each `.copier-answers*.yml` in turn, so a [layered template](#layering-another-template) lands in the same PR.
 
 To allow `copier-update.yml` to update workflow files in `.github/workflows/`, generate a fine-grained personal access token with Contents, Pull Requests, and Workflows write access, and save it as secret `COPIER_UPDATE_TOKEN`.
 

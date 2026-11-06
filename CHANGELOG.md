@@ -19,6 +19,8 @@ changes are marked **Breaking**.
 
 - With `codspeed`, `benchmarks.yml` runs on pull requests that touch benchmarked code only: the stack's source, tests or benches, its manifest, lockfile and `.python-version`, or the workflow. A flat layout watches the package at the root. Pushes to `main` still run every time, so CodSpeed always has a recent main result to compare with. [CI baseline](docs/ci-baseline.md#path-filters) has the stance on path filters.
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
+- `copier-update.yml` updates every `.copier-answers*.yml`, one template after another, so a template layered over this one (such as an organisation's own) lands in the same pull request. Its title names each template that moved.
+- The shell lint and `just docker-fmt` skip files marked `linguist-vendored` in `.gitattributes`, so a vendored script keeps its upstream style.
 
 ## [0.14.0] - 2026-11-05
 
