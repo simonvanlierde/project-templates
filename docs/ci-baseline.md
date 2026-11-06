@@ -31,7 +31,7 @@ Checks included in repositories generated from this template, their purposes, an
 | Code coverage reporting | `python.yml`, `ts.yml`, `codecov.yml` (`codecov` option) | Uploads coverage to Codecov; flags PR regressions exceeding 2 percentage points |
 | Scheduled extended property tests | `property.yml` (`property` extra) | Runs 10,000 cases per property (or 10 minutes of Go fuzzing) weekly; excluded from PRs |
 | Scheduled mutation testing | `mutation.yml` (`mutation` extra) | Measures test resilience against injected bugs weekly; excluded from PRs |
-| Pull request benchmarks | `benchmarks.yml` (`codspeed` option) | Runs CodSpeed instruction-count benchmarks on PRs and `main` using OIDC authentication |
+| Pull request benchmarks | `benchmarks.yml` (`codspeed` option) | Runs CodSpeed instruction-count benchmarks on PRs that touch benchmarked code and on every push to `main`, using OIDC authentication |
 | Production deploy from CI | `ts.yml` (`web-app` kind) | Deploys the build the checks ran on to a Cloudflare Worker on each push to `main`, through a `production` environment limited to `main` |
 | Pull request previews | `ts.yml` and `site.yml` preview jobs, `preview-retire.yml` (`web-app` kind, `site` option) | Deploys each open, ready pull request to its own Worker, and deletes it when the pull request closes, merges or turns draft |
 | Static site on GitHub Pages | `site.yml` (`site` option) | Builds `site/` with `just site` on every pull request and push to `main`, and deploys that build to GitHub Pages from `main` |
@@ -72,9 +72,18 @@ CI skips hooks that require the local runtime environment (`ruff`, `ty`, `biome`
 | Unified "CI result" job | Stack-specific workflows are small enough to list directly in branch rules | When workflow matrices expand beyond manual ruleset configuration |
 | `cargo-semver-checks` | Crates.io publication workflow is not yet implemented | When automated Rust crate publishing is added |
 | CODEOWNERS | Unnecessary for single-maintainer repositories | When adding multi-maintainer teams with distinct ownership areas |
-| Multi-browser Playwright matrix | Triples CI test duration; modern engines rarely exhibit isolated rendering bugs | When using browser-specific Web APIs across rendering engines |
+| Multi-browser Playwright matrix | Triples CI test duration; modern engines rarely exhibit isolated rendering bugs | When using browser-specific Web APIs across rendering engines. Run Firefox and WebKit on pushes to `main` and weekly, with the deploy waiting on them, not on PRs: in credit-matrix they took 65% of a PR run's minutes |
 | Dynamic CSP inline script hashing | Template enforces strict `script-src 'self'` without inline scripts | Not needed under current zero-inline-script policy |
 | Offline service workers | Aggressive caching complicates rollback of broken deployments | When offline availability is an explicit user requirement |
+
+## Path filters
+
+A path filter skips work a pull request cannot affect. It never applies to pushes to `main` or to scheduled runs, which refill the caches and give CodSpeed its base results. The one exception is `docker.yml` with a nested `python_dir`, which filters its push trigger too: a push that changes no build context has no image to build.
+
+- **Required checks:** a workflow that a ruleset requires takes no workflow-level `paths:`. A pull request it skips never reports the check, so the merge waits for it ([usage](usage.md), "Requires pull requests").
+- **Optional single-purpose workflows** filter their `pull_request` trigger by path: `benchmarks.yml`, `cold-install.yml`, and `docker.yml` when the image builds from a subdirectory.
+- **Repos with independent parts** (a web app beside a Python pipeline, each with jobs that take minutes) add one `changes` job that lists the PR's files and sets an output per part. Each part's jobs run with `if: ${{ !cancelled() && needs.changes.outputs.<part> != 'false' }}`, so a skipped or failed `changes` job runs everything, and a skipped required job counts as passed. A matrix job is the exception: skipped by its `if`, it reports no check under its legs' names, so the ruleset requires a small non-matrix job that needs it and passes when it succeeded or was skipped. Files outside every part, such as workflows and root config, select all parts. A job further down the chain checks `needs.<job>.result` explicitly: by default a failed `changes` job would skip it, though the jobs between them run.
+- **Single-stack repos** use no filter: the jobs run in parallel and a skip saves little.
 
 ## Caveats
 
