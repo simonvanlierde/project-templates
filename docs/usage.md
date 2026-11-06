@@ -487,7 +487,7 @@ Setup:
 
 ## Benchmarks on CodSpeed
 
-`codspeed` (Python and Rust) adds `.github/workflows/benchmarks.yml` and starter benchmarks (`tests/test_benchmarks.py` or `benches/codspeed.rs`). CodSpeed measures CPU instruction counts in simulation on PRs and pushes to `main`.
+`codspeed` (Python and Rust) adds `.github/workflows/benchmarks.yml` and starter benchmarks (`tests/test_benchmarks.py` or `benches/codspeed.rs`). CodSpeed measures CPU instruction counts in simulation on PRs that touch benchmarked code and on every push to `main`.
 
 Setup:
 

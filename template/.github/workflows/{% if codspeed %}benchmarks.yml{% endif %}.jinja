@@ -2,8 +2,8 @@ name: benchmarks
 
 # CodSpeed measures the benchmarks on each pull request that touches benchmarked code and
 # compares them with main. Simulation mode counts CPU instructions, so a noisy runner does
-# not move the result. Pushes to main run with no path filter: a pull request is compared
-# with its base commit, which needs a result of its own. No ruleset may require this check,
+# not move the result. Pushes to main run with no path filter, so the newest main commit,
+# which CodSpeed compares a pull request with, has a result. No ruleset may require this check,
 # since a filtered pull request never reports it. The upload signs in with the job's OIDC
 # token, so there is no secret.
 on:
@@ -14,10 +14,11 @@ on:
     paths:
 {%- if 'python' in stacks %}
 {%- if python_dir == '.' %}
-      - "src/**"
+      - "{{ 'src' if python_layout == 'src' else module_name }}/**"
       - "tests/**"
       - "pyproject.toml"
       - "uv.lock"
+      - ".python-version"
 {%- else %}
       - "{{ python_dir }}/**"
 {%- endif %}

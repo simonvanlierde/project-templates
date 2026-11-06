@@ -179,6 +179,8 @@ grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
 grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
 test ! -e "$out/k/src"
+# The benchmarks run for a pull request that touches the root package.
+grep -qx '      - "adopt_me/\*\*"' "$out/k/.github/workflows/benchmarks.yml"
 test ! -e "$out/k/tests/test_add.py"
 (lacks -q 'import add' "$out/k/tests/test_benchmarks.py")
 grep -qx 'module-root = ""' "$out/k/pyproject.toml"
