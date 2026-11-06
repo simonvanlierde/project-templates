@@ -27,6 +27,8 @@ _shell-files:
     set -euo pipefail
     git ls-files -z | while IFS= read -r -d '' f; do
         [ -f "$f" ] || continue
+        # A file marked linguist-vendored in .gitattributes is another project's, in its style.
+        case $(git check-attr linguist-vendored -- "$f") in *': set' | *': true') continue ;; esac
         case $f in *.sh) printf '%s\0' "$f"; continue ;; esac
         if head -n1 "$f" | grep -qE '^#!.*/(env +(-S +)?)?(bash|dash|ksh|sh)( |$)'; then printf '%s\0' "$f"; fi
     done
