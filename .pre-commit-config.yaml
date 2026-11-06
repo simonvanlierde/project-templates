@@ -1,7 +1,8 @@
 # Run with prek, a drop-in pre-commit replacement: prek install && prek run -a
 #
 # The local half of CI: hygiene, secrets and workflow audits. ci.yml's git hooks
-# job runs these on every PR, beside scripts/check-render.sh.
+# job runs these on every PR, beside scripts/check-render.sh. A pre-push hook
+# has a 10-30 s budget; anything slower belongs in CI.
 #
 # Revs are commit SHAs, since tags are mutable; Renovate moves each SHA and its
 # `# frozen:` tag together.

@@ -14,7 +14,7 @@ Checks included in repositories generated from this template, their purposes, an
 | Caches saved only from `main` | Caching workflows | PRs restore caches saved on `main` without saving new ones, preventing cache eviction within the 10 GB limit |
 | `persist-credentials: false` on checkout | Every workflow | Prevents subsequent job steps from reusing the runner checkout token |
 | Stack validation checks | `python.yml`, `ts.yml`, `rust.yml`, `go.yml` | Executes lint, format, type-check, test, and dependency audits matching `just check` |
-| Git hooks executed in CI | `checks.yml` | Enforces hook compliance even if local contributors omit `prek install` |
+| Git hooks executed in CI | `checks.yml` | Enforces hook compliance even if local contributors omit `prek install`. A repo that skips CI on agent PRs gets no such check there; its pre-push hook is the gate |
 | Conventional commit and PR title checks | `committed.toml`, commit-msg hook, `pr-title.yml` | Enforces clean git history for squash merges to `main` |
 | zizmor workflow auditor | Git hook and CI | Scans workflows for injection vulnerabilities, leaked secrets, and compromised actions |
 | jactionlint | Git hook and CI | Validates workflow syntax, expressions, and shell commands in `run:` blocks |
