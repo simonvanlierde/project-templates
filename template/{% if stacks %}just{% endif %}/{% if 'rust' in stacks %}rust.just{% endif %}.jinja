@@ -24,6 +24,16 @@ rs-fmt:
 # Tests only; extra arguments reach nextest (`just rs-test name`).
 rs-test *args:
     cargo nextest run{{ mp }} {% raw %}{{ args }}{% endraw %}
+{%- if rust_kind == 'library' %}
+
+# Compare the public API with the last v* tag, as CI's api job does. Not in rs-check: a
+# deliberate break stays red until Cargo.toml's version is bumped to match.
+rs-api:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tag=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null) || { echo "No v* tag yet: nothing to compare against."; exit 0; }
+    cargo semver-checks{{ mp }} --baseline-rev "$tag"
+{%- endif %}
 {%- if rust_kind == 'library' and 'mutation' in test_extras %}
 
 # Plant small bugs in src/ and report each one the tests miss. Slow: CI runs it

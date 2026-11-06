@@ -370,6 +370,8 @@ copier update --data python_api=false
 
 To keep the job and mark a module internal instead, start its name with an underscore (`_check.py`).
 
+A Rust library always gets an `api` job in `rust.yml`, and `just rs-api` runs the same check locally. It runs [cargo-semver-checks](https://github.com/obi1kenobi/cargo-semver-checks) against the last `v*` tag and reads the version in `Cargo.toml`: a break passes only after a major bump, or a minor bump before 1.0. Before the first tag, it passes. `rs-check` leaves it out, so a deliberate break does not hold up the other checks.
+
 ## Coverage on Codecov
 
 `codecov` (Python and TypeScript) uploads coverage reports to [Codecov](https://codecov.io). Pull requests fail only if overall coverage drops by more than 2 percentage points.

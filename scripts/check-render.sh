@@ -1276,6 +1276,15 @@ test -f c/apps/web/mono-me.api.md
 (lacks -q 'run api' a/.github/workflows/ts.yml a/just/ts.just)
 test ! -e a/api-extractor.json
 test ! -e a/render-me.api.md
+# A Rust library gets cargo-semver-checks in CI and as rs-api (m's nested crate through
+# --manifest-path), a binary (c) neither.
+grep -q 'name: "rust: API breaks since the last tag"' m/.github/workflows/rust.yml
+grep -qx '          tool: cargo-semver-checks@[0-9.]*' m/.github/workflows/rust.yml
+# shellcheck disable=SC2016 # literal recipe text
+grep -qx '    cargo semver-checks --manifest-path crates/lib/Cargo.toml --baseline-rev "$tag"' m/just/rust.just
+# shellcheck disable=SC2016 # literal recipe text
+grep -qx '    cargo semver-checks --baseline-rev "$tag"' r/just/rust.just
+(lacks -q semver-checks c/.github/workflows/rust.yml c/just/rust.just)
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
 grep -q 'packages: write' c/.github/workflows/docker.yml
 # docker.yml filters by path only when every build context is nested (c), not with a
