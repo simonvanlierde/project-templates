@@ -1,15 +1,29 @@
 // A Worker that serves the build as static assets. CI deploys it: the production job in
 // .github/workflows/ts.yml on every push to main, and the preview job with
 // --name <slug>-pr-<number> for each pull request. public/_headers sets the response headers.
+{%- if worker %}
+// worker/index.ts runs in front of the files for /api/* (run_worker_first below).
+{%- endif %}
+{%- if custom_domain %}
+// The production job also attaches the custom domain {{ custom_domain }}, with --domain.
+{%- endif %}
 //
 // Keep the slug short: a Worker name can have at most 63 characters, and "-pr-123" takes seven.
 {
   "name": "{{ slug | replace('.', '-') | replace('_', '-') }}",
+{%- if worker %}
+  "main": "./worker/index.ts",
+{%- endif %}
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
+{%- if worker %}
+    "binding": "ASSETS",
+{%- endif %}
     // A single-page app answers every path with index.html.
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application"{% if worker %},
+    // Only these paths reach the Worker before the files.
+    "run_worker_first": ["/api/*"]{% endif %}
   },
   // Off, so the workers.dev address is a Worker's only one, and the retire job can
   // check that one address after the delete.

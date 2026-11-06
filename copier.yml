@@ -7,8 +7,9 @@ _min_copier_version: "9.19.0"
 # adds its version, date and DOI to the citation files, and an update would then
 # conflict with that edit every time. The web-app entries are its starter files and
 # legal pages, which the project rewrites from day one, as are the site's starter
-# files. go.mod is rewritten by the first `go mod tidy`, and Dependabot bumps its
-# requirements after that; its module path and go version are answers fixed at copy time.
+# files and the Worker scripts. go.mod is rewritten by the first `go mod tidy`, and
+# Dependabot bumps its requirements after that; its module path and go version are
+# answers fixed at copy time.
 # The silver-badge documents are skeletons the project fills in. Each entry starts with `/`:
 # copier matches these like .gitignore lines, so a bare README.md would also skip
 # data/README.md.
@@ -29,6 +30,8 @@ _skip_if_exists:
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}worker/index.ts"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}worker/index.test.ts"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}PRODUCT.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}DESIGN.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility.md"
@@ -48,6 +51,8 @@ _skip_if_exists:
   - /site/src/layouts/Base.astro
   - /site/src/pages/index.astro
   - /site/src/pages/about.md
+  - /site/worker/index.mjs
+  - /site/worker/index.test.mjs
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
@@ -444,6 +449,25 @@ site_out:
   when: false
   default: "{{ 'site/dist' if site == 'astro' else '_site' }}"
 
+# Where a push to main deploys the site. Pull request previews are Workers either way.
+# Pages serves it under /<repo>/; a Worker serves it from / at site_url, which can be
+# a custom domain, and can run a Worker script for /api/* (docs/usage.md#static-site).
+site_host:
+  type: str
+  when: "{{ site != 'none' }}"
+  ask: "{{ customise }}"
+  help: Where main deploys the site; pull request previews are Cloudflare Workers either way
+  choices:
+    GitHub Pages (https://<user>.github.io/<repo>/): pages
+    Cloudflare Workers static assets (served from /, a custom domain and a Worker script optional): cloudflare
+  default: pages
+
+# Computed, never asked: the site's production is a Worker, not GitHub Pages.
+site_on_workers:
+  type: bool
+  when: false
+  default: "{{ site != 'none' and site_host == 'cloudflare' }}"
+
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
 # projects. These documents are starting points for the project to complete.
 openssf_badge:
@@ -541,21 +565,48 @@ python_api:
 
 # --- ts -----------------------------------------------------------------------
 
-# The address the accessibility statement and privacy page name. The default is
-# the workers.dev address of the Worker named in wrangler.jsonc, assuming the
-# account's workers.dev subdomain is the GitHub user.
+# The address of whatever production deploys to a Worker: the web app, or else the
+# site with site_host=cloudflare. The legal pages name it. A host other than
+# *.workers.dev becomes the Worker's custom domain on each production deploy. The
+# default is the workers.dev address of the Worker its wrangler config names, assuming
+# the account's workers.dev subdomain is the GitHub user.
 site_url:
   type: str
-  when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+  when: "{{ ('ts' in stacks and ts_kind == 'web-app') or site_on_workers }}"
   ask: "{{ customise }}"
   help: >-
-    The web app's public address, for its accessibility statement and privacy page.
-    Give your custom domain, or your own workers.dev subdomain if it is not the GitHub user.
-  default: "https://{{ slug | replace('.', '-') | replace('_', '-') }}.{{ github_user | lower }}.workers.dev"
+    The public address of the {{ 'web app' if 'ts' in stacks and ts_kind == 'web-app' else 'site' }}: a custom domain
+    (production attaches it to the Worker), or your own workers.dev subdomain if it is not the GitHub user.
+  default: "https://{{ slug | replace('.', '-') | replace('_', '-') }}{{ '' if 'ts' in stacks and ts_kind == 'web-app' else '-site' }}.{{ github_user | lower }}.workers.dev"
   validator: >-
-    {% if not site_url|regex_search('^https://[^/\\s]+(/[^\\s]*)?$') %}
+    {% if not site_url|regex_search('^https://') %}
     Give the full address, starting with https://.
+    {% elif not site_url|regex_search('^https://[a-z0-9.-]+/?$') %}
+    Give the host alone, such as https://example.org: a Worker serves a whole host, so no path, port or capitals.
     {% endif %}
+
+# Computed, never asked: site_url's host when it is a custom domain, else empty. The
+# production deploy passes it to wrangler as --domain; previews never get it.
+custom_domain:
+  type: str
+  when: false
+  default: "{% set h = site_url | regex_replace('^https://', '') | regex_replace('/$', '') %}{{ '' if h.endswith('.workers.dev') else h }}"
+
+# Computed, never asked: the custom domain of the site's Worker. In a repo with a web
+# app, site_url is the app's, and the site keeps its workers.dev address.
+site_domain:
+  type: str
+  when: false
+  default: "{{ custom_domain if site_on_workers and not ('ts' in stacks and ts_kind == 'web-app') else '' }}"
+
+# A Worker script in front of the static assets, for server code. Requests for files
+# stay free; each request the script handles counts against the Workers plan.
+worker:
+  type: bool
+  when: "{{ ('ts' in stacks and ts_kind == 'web-app') or site_on_workers }}"
+  ask: "{{ customise }}"
+  help: Add a Worker script in front of the static assets that handles /api/* (one example route, /api/health)
+  default: false
 
 # Computed, never asked: the date the legal pages start from. They are the
 # project's files from then on (_skip_if_exists), so an update never rewrites it.

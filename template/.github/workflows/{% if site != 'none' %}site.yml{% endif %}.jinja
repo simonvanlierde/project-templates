@@ -1,9 +1,15 @@
-{%- set worker = slug | replace('.', '-') | replace('_', '-') ~ '-site' -%}
+{%- set worker_name = slug | replace('.', '-') | replace('_', '-') ~ '-site' -%}
 name: site
 
 # The static page in site/, which `just site` builds into {{ site_out }}/. Every pull request
+{%- if site_on_workers %}
+# and push builds it. A push to main deploys that build to the Worker {{ worker_name }}{% if site_domain %}
+# at {{ site_domain }}{% endif %}, and an open, ready pull request gets a preview Worker that
+# preview-retire.yml takes down again.
+{%- else %}
 # and push builds it. A push to main deploys that build to GitHub Pages, and an open, ready
 # pull request gets a preview Worker that preview-retire.yml takes down again.
+{%- endif %}
 on:
   push:
     branches: [main]
@@ -42,16 +48,105 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "{{ node_version }}"
+{%- elif site_on_workers and worker %}
+
+      # For the Worker's tests, which `just site` runs.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "{{ node_version }}"
+
+      # Set up here whatever else your own `just site` needs (uv, Rust) before it runs.
 {%- else %}
 
       # Set up here whatever your own `just site` needs (uv, Rust, Node) before it runs.
 {%- endif %}
       - run: just site
 
-      # The deploy and preview jobs both ship this one build.
+      # The deploy and preview jobs both ship this one build{% if site_on_workers %}: a tar in an artifact,
+      # named for Pages by the action but deployed to a Worker{% endif %}.
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: {{ site_out }}
+{%- if site_on_workers %}
+
+  # Production: every push to main deploys the build job's artifact to the Worker. Without
+  # the token, it skips with a notice (docs/usage.md#static-site in the template).
+  deploy:
+    name: "site: deploy"
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    # Never cancelled halfway, so a deploy in flight finishes before the next starts.
+    concurrency:
+      group: site-production
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: {% raw %}${{ steps.deploy.outputs.url }}{% endraw %}
+    steps:
+      - id: gate
+        env:
+          TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
+          ACCOUNT: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
+        run: |
+          missing=""
+          [ -n "$TOKEN" ] || missing=CLOUDFLARE_API_TOKEN
+          [ -n "$ACCOUNT" ] || missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"
+          if [ -n "$missing" ]; then
+            echo "::notice::Production deploy skipped: $missing not set."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # For deploy-worker.sh and wrangler.site.jsonc. The page itself comes from the build job.
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - if: steps.gate.outputs.run == 'true'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+{%- if 'ts' in stacks %}
+          package_json_file: {{ '' if ts_dir == '.' else ts_dir ~ '/' }}package.json
+{%- else %}
+          version: "{{ pnpm_version }}"
+{%- endif %}
+
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "{{ node_version }}"
+
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: github-pages
+          path: {% raw %}${{ runner.temp }}{% endraw %}/pages
+
+      - if: steps.gate.outputs.run == 'true'
+        run: |
+          mkdir -p {{ site_out }}
+          tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C {{ site_out }}
+
+      - if: steps.gate.outputs.run == 'true'
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
+          CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
+          # The same week's wait as a package's own installs: dlx resolves wrangler's
+          # dependencies without a lockfile, here with the token in reach.
+          WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@{{ wrangler_version }}
+{%- if site_domain %}
+        # --domain attaches the custom domain here only: previews deploy the same config.
+        run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production "" --config wrangler.site.jsonc --domain {{ site_domain }}'
+{%- else %}
+        run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production "" --config wrangler.site.jsonc'
+{%- endif %}
+
+{%- else %}
 
   deploy:
     name: "site: deploy"
@@ -91,6 +186,8 @@ jobs:
       - if: steps.gate.outputs.run == 'true'
         id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+{%- endif %}
 
   # The same lifecycle as a web app's previews: docs/usage.md#static-site in the template.
   # Fork pull requests never get the token, so they skip with a notice, as does a repo
@@ -156,6 +253,16 @@ jobs:
         with:
           name: github-pages
           path: {% raw %}${{ runner.temp }}{% endraw %}/pages
+{%- if site_on_workers %}
+
+      # Search engines should index the production site, not the preview copies. The
+      # block is appended to the build's own _headers, if it has one.
+      - if: steps.gate.outputs.run == 'true'
+        run: |
+          mkdir -p {{ site_out }}
+          tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C {{ site_out }}
+          printf '\n/*\n  X-Robots-Tag: noindex\n' >> {{ site_out }}/_headers
+{%- else %}
 
       # GitHub Pages serves the site under /{{ slug }}/, so the preview does too, and its
       # root redirects there. Search engines should index the production site, not the
@@ -166,6 +273,7 @@ jobs:
           tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C {{ site_out }}/{{ slug }}
           printf '/ /{{ slug }}/ 302\n' > {{ site_out }}/_redirects
           printf '/*\n  X-Robots-Tag: noindex\n' > {{ site_out }}/_headers
+{%- endif %}
 
       - if: steps.gate.outputs.run == 'true'
         id: upload
@@ -186,4 +294,4 @@ jobs:
             echo "::notice::Preview skipped: pull request $PR is no longer open and ready ($state)."
             exit 0
           fi
-          "$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Preview "{{ worker }}-pr-$PR" --config wrangler.site.jsonc
+          "$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Preview "{{ worker_name }}-pr-$PR" --config wrangler.site.jsonc

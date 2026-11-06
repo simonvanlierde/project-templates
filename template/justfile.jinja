@@ -62,11 +62,18 @@ hooks:
 {%- if site != 'none' %}
 
 # Replace the body with the project's own build, such as `uv run site/build.py --out {{ site_out }}`.
-# Build the page in site/ into {{ site_out }}/, which site.yml deploys.
+# Build the page in site/ into {{ site_out }}/, which site.yml deploys{% if site_on_workers and worker %}, after the Worker's tests{% endif %}.
 site:
+{%- if site_on_workers and worker %}
+    node --test site/worker/index.test.mjs
+{%- endif %}
 {%- if site == 'plain' %}
     rm -rf {{ site_out }}
     cp -R site {{ site_out }}
+{%- if site_on_workers and worker %}
+    # The Worker script is code, not a page to serve.
+    rm -rf {{ site_out }}/worker
+{%- endif %}
 {%- elif site == 'astro' %}
     pnpm -C site install --frozen-lockfile
     ASTRO_TELEMETRY_DISABLED=1 pnpm -C site run build
@@ -213,8 +220,8 @@ repo-settings:
     gh api -X PUT "repos/{owner}/{repo}/environments/preview" >/dev/null 2>"$err" || fail
     echo "Configured environment 'preview'."
 {%- endif %}
-{%- if 'ts' in stacks and ts_kind == 'web-app' %}
-    # The production job deploys from main only, unattended, so no reviewer.
+{%- if ('ts' in stacks and ts_kind == 'web-app') or site_on_workers %}
+    # The production jobs deploy from main only, unattended, so no reviewer.
     gh api -X PUT "repos/{owner}/{repo}/environments/production" \
         -F "deployment_branch_policy[protected_branches]=false" \
         -F "deployment_branch_policy[custom_branch_policies]=true" >/dev/null 2>"$err" || fail
@@ -222,9 +229,9 @@ repo-settings:
     if ! echo "$policies" | grep -qxF 'main'; then
         gh api -X POST "repos/{owner}/{repo}/environments/production/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
     fi
-    echo "Configured environment 'production'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to both environments: see the Deploy section of the README."
+    echo "Configured environment 'production'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to both environments: see the {{ 'Deploy' if 'ts' in stacks and ts_kind == 'web-app' else 'Site' }} section of the README."
 {%- endif %}
-{%- if site != 'none' %}
+{%- if site != 'none' and not site_on_workers %}
     # site.yml deploys to GitHub Pages from the workflow, not from a branch. GitHub answers
     # 409 when Pages is already on, and then the PUT switches its source instead. A 403 or
     # 422 means this repo cannot have Pages, such as a private repo on the free plan.
@@ -250,12 +257,12 @@ repo-settings:
     echo "Zenodo: https://zenodo.org/account/settings/github/"
 {%- endif %}
 
-# Set the GitHub About box from your answers: description{% if 'ts' in stacks and ts_kind == 'web-app' %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
+# Set the GitHub About box from your answers: description{% if 'ts' in stacks and ts_kind == 'web-app' or site_on_workers %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
 repo-about:
     gh repo edit
 {%- if project_description %} --description {{ "'" ~ project_description | replace("'", "'\\''") | replace("{{", "{{{{") ~ "'" }}
 {%- endif %}
-{%- if 'ts' in stacks and ts_kind == 'web-app' %} --homepage '{{ site_url }}'
+{%- if 'ts' in stacks and ts_kind == 'web-app' or site_on_workers %} --homepage '{{ site_url }}'
 {%- endif %}
 {%- for t in [('python' in stacks, 'python'), ('ts' in stacks, 'typescript'), ('rust' in stacks, 'rust'), ('go' in stacks, 'go'), ('docker' in stacks, 'docker')] if t[0] %} --add-topic {{ t[1] }}
 {%- endfor %}

@@ -457,6 +457,11 @@ refuses 'Question "user_data" is required' --data 'stacks=[ts]' --data ts_kind=w
 refuses "Invalid choice for 'user_data'" --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=some
 refuses 'starting with https://' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=nothing --data site_url=http://example.org
+# A Worker's custom domain is a whole host: no path, and the site on a Worker asks too.
+refuses 'so no path' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data site_url=https://example.org/app
+refuses 'so no path' --data 'stacks=[python]' --data site=plain --data site_host=cloudflare \
+  --data site_url=https://Example.org
 # An app that keeps personal data on a server needs its own contact address.
 refuses 'needs its own contact address' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=accounts --data author_email=Code@duinlab.nl
@@ -481,6 +486,17 @@ done
   --data ts_kind=web-app --data user_data=browser . "$out/s"
 grep -qF '"name": "app",' "$out/s/wrangler.jsonc"
 grep -qx 'site_url: https://app.example-org.workers.dev' "$out/s/.copier-answers.yml"
+# wk: a web app at the root with the Worker script and a custom domain.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=edge-me --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data user_data=nothing --data worker=true \
+  --data site_url=https://app.example.org . "$out/wk"
+# cfp and cfa: the site on a Worker instead of Pages. cfp is the plain one with the Worker
+# script and a custom domain; cfa the Astro one at its default workers.dev address.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=cf-me --data 'stacks=[python]' \
+  --data site=plain --data site_host=cloudflare --data worker=true \
+  --data site_url=https://demo.example.org . "$out/cfp"
+"${copier[@]}" --vcs-ref=HEAD --data project_name=cfa-me --data 'stacks=[python]' \
+  --data site=astro --data site_host=cloudflare . "$out/cfa"
 
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the
@@ -1808,6 +1824,76 @@ sed -n '/^  production:$/,/^  [a-z]/p' s/.github/workflows/ts.yml | grep -xF '  
 test -f s/.github/workflows/preview-retire.yml
 grep -qx '          path: dist' s/.github/workflows/ts.yml
 (lacks -q 'working-directory' s/.github/workflows/preview-retire.yml)
+# Hosting and the Worker script. d, s, x and y keep the defaults: no script, no custom
+# domain, the site on Pages. wk is a web app with both; cfp a plain site on a Worker with
+# both; cfa an Astro site on a Worker at its workers.dev address.
+for f in wk/wrangler.jsonc cfp/wrangler.site.jsonc; do
+  grep -qF '"binding": "ASSETS",' "$f"
+  grep -qF '"run_worker_first": ["/api/*"]' "$f"
+done
+grep -qF '"main": "./worker/index.ts",' wk/wrangler.jsonc
+grep -qF '"main": "./site/worker/index.mjs",' cfp/wrangler.site.jsonc
+for f in d/web/wrangler.jsonc s/wrangler.jsonc x/wrangler.site.jsonc cfa/wrangler.site.jsonc; do
+  (lacks -qE '"main"|"binding"|run_worker_first' "$f")
+done
+for f in index.ts index.test.ts tsconfig.json; do test -f "wk/worker/$f"; done
+test ! -e s/worker
+test ! -e d/web/worker
+grep -qF '"typecheck": "tsc && tsc -p worker"' wk/package.json
+jq -e '.devDependencies["@cloudflare/workers-types"]' wk/package.json >/dev/null
+grep -qF '"typecheck": "tsc"' s/package.json
+(lacks -q 'workers-types' s/package.json d/web/package.json)
+# The site's script: `just site` runs its tests with node, which the build job sets up,
+# and leaves it out of the files it builds.
+test -f cfp/site/worker/index.mjs
+test -f cfp/site/worker/index.test.mjs
+test ! -e x/site/worker
+test ! -e cfa/site/worker
+grep -qx '    node --test site/worker/index.test.mjs' cfp/justfile
+(lacks -q 'node --test' x/justfile cfa/justfile)
+(cd cfp && just site >/dev/null 2>&1)
+test -f cfp/_site/index.html
+test ! -e cfp/_site/worker
+sed -n '/^  build:$/,/^  deploy:$/p' cfp/.github/workflows/site.yml | grep -q 'uses: actions/setup-node@'
+(sed -n '/^  build:$/,/^  deploy:$/p' x/.github/workflows/site.yml | lacks -q 'uses: actions/setup-node@')
+# A custom domain goes to production alone, as --domain: previews deploy the same config.
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --domain app.example.org'" wk/.github/workflows/ts.yml
+(lacks -q 'Preview.*--domain' wk/.github/workflows/ts.yml cfp/.github/workflows/site.yml)
+(lacks -q -- '--domain' d/.github/workflows/ts.yml s/.github/workflows/ts.yml cfa/.github/workflows/site.yml x/.github/workflows/site.yml)
+# shellcheck disable=SC2016 # the backticks are Markdown
+grep -qF 'Zone > Workers Routes: Edit for the zone of `app.example.org`' wk/README.md
+# shellcheck disable=SC2016 # the backticks are Markdown
+grep -qF 'Zone > Workers Routes: Edit for the zone of `demo.example.org`' cfp/README.md
+(lacks -q 'Workers Routes' d/README.md s/README.md cfa/README.md x/README.md)
+# The site on a Worker: production deploys the build job's artifact with the site's
+# config, in the production environment, and neither job touches Pages or serves under /<repo>/.
+for r in cfp cfa; do
+  wf=$r/.github/workflows/site.yml
+  deploy_job=$(sed -n '/^  deploy:$/,/^  [a-z]/p' "$wf")
+  grep -qx '      name: production' <<<"$deploy_job"
+  grep -qx '      group: site-production' <<<"$deploy_job"
+  grep -qxF "    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'" <<<"$deploy_job"
+  grep -qxF "          WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@$wrangler_pin" <<<"$deploy_job"
+  (lacks -qE 'pages: write|id-token|deploy-pages|_redirects' "$wf")
+  (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile")
+  test "$(grep -c '^    timeout-minutes:' "$wf")" = 3
+  test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
+done
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --config wrangler.site.jsonc --domain demo.example.org'" cfp/.github/workflows/site.yml
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --config wrangler.site.jsonc'" cfa/.github/workflows/site.yml
+grep -qF "printf '\\n/*\\n  X-Robots-Tag: noindex\\n' >> _site/_headers" cfp/.github/workflows/site.yml
+# The Pages site keeps its deploy and its /<repo>/ previews.
+grep -qx '      name: github-pages' <<<"$(sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml)"
+# Astro on a Worker: `site` is the Worker's address, with no Pages base.
+grep -qx '  site: "https://cfa-me-site.example-org.workers.dev",' cfa/site/astro.config.mjs
+(lacks -q 'base:' cfa/site/astro.config.mjs)
+# shellcheck disable=SC2016 # the backticks are Markdown
+grep -q 'deploys that build to the Cloudflare Worker `cf-me-site`' cfp/README.md
+grep -q 'deploys that build to GitHub Pages' x/README.md
+# site_url: asked of a site on a Worker, defaulting to the site Worker's address; a Pages
+# site has none.
+grep -qx 'site_url: https://cfa-me-site.example-org.workers.dev' cfa/.copier-answers.yml
+(lacks -q 'site_url' x/.copier-answers.yml y/.copier-answers.yml)
 # Other kinds get none of it.
 test ! -e a/wrangler.jsonc
 (lacks -q 'production' a/.github/workflows/ts.yml)
@@ -2303,6 +2389,19 @@ chmod +x "$fake/gh"
   (! FAKE_PAGES=500 just repo-settings >/dev/null 2>&1)
 )
 (lacks -qF 'repos/{owner}/{repo}/pages' "$fake/log-c")
+# A site on a Worker (cfp) gets the production environment instead of Pages.
+(
+  cd cfp
+  # shellcheck disable=SC2030,SC2031 # as above
+  export FAKE_LOG="$fake/log-cfp" FAKE_DIR="$fake/cfp" PATH="$fake:$PATH"
+  mkdir -p "$FAKE_DIR"
+  cp "$fake/rulesets.json" "$FAKE_DIR/"
+  just repo-settings >"$fake/out-cfp"
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/preview' "$FAKE_LOG"
+  grep -q 'environments/production' "$FAKE_LOG"
+  (lacks -qF 'repos/{owner}/{repo}/pages' "$FAKE_LOG")
+  grep -q 'see the Site section of the README' "$fake/out-cfp"
+)
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
 jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null
@@ -2333,13 +2432,15 @@ jq -e '(.rules[] | select(.type == "pull_request").parameters
 (lacks -q code-scanning b/justfile)
 # repo-about: the About box comes from the answers. No description answer leaves the description alone;
 # a quote in it survives the shell and braces survive just; topics only get added.
-for r in a b d; do
+for r in a b d cfp x; do
   # shellcheck disable=SC2031 # $fake/gh from the repo-settings test, logging every call
   (cd "$r" && FAKE_LOG="$fake/about-$r" PATH="$fake:$PATH" just repo-about >/dev/null)
 done
 grep -qxF -- 'repo edit --add-topic python --add-topic typescript --add-topic rust --add-topic go --add-topic docker' "$fake/about-a"
 grep -qxF -- "repo edit --description A \"quoted\" {{ one }}, naïve \$USD --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
 grep -qxF -- 'repo edit --homepage https://pipe-me.example-org.workers.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
+grep -qxF -- 'repo edit --homepage https://demo.example.org --add-topic python' "$fake/about-cfp"
+grep -qxF -- 'repo edit --add-topic python' "$fake/about-x"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
   r=${answers%%/*}
