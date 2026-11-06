@@ -37,8 +37,10 @@ _skip_if_exists:
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/terms.md"
   - "/{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
   # A Compose-only repo's starter stack: replaced by the project's own services.
-  - "/{{ 'compose.yaml' if 'docker' in stacks and not docker_image else '.no-compose-starter' }}"
-  - "/{{ '.env.example' if 'docker' in stacks and not docker_image else '.no-compose-starter' }}"
+  - "/{{ 'compose.yaml' if compose_only else '.no-compose-starter' }}"
+  - "/{{ '.env.example' if compose_only else '.no-compose-starter' }}"
+  - /docs/decisions/README.md
+  - /docs/decisions/0001-start-from-project-templates.md
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
@@ -791,6 +793,18 @@ docker_image:
     The web-service kind is shipped as the python image: answer yes to `docker_image`.
     {% endif %}
 
+# Computed, not asked: docker without an image is a repo that only composes upstream images.
+compose_only:
+  type: bool
+  when: false
+  default: "{{ 'docker' in stacks and not docker_image }}"
+
+# Computed, not asked: a ts stack or the Astro site installs Node packages with pnpm.
+has_pnpm:
+  type: bool
+  when: false
+  default: "{{ 'ts' in stacks or site == 'astro' }}"
+
 app_port:
   type: int
   when: "{{ 'docker' in stacks and docker_image }}"
@@ -808,3 +822,12 @@ publish_to_ghcr:
   ask: "{{ customise }}"
   help: Push the image to GitHub Container Registry (CI builds it either way)
   default: false
+
+# --- docs ---------------------------------------------------------------------
+
+# docs/decisions/0004: a log only where choices are costly to reverse, and never an empty folder.
+decision_records:
+  type: bool
+  ask: "{{ customise }}"
+  help: Keep architecture decision records in docs/decisions/ (MADR 4.0.0), starting with one that records this template's answers
+  default: "{{ kind in ['web-service', 'data-pipeline'] or ts_kind == 'web-app' or compose_only or (public and license != 'none' and openssf_badge == 'silver') }}"

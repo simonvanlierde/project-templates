@@ -4,7 +4,7 @@
 {%- set tree = blob | replace('/blob/', '/tree/') -%}
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
-{% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}{% set w = 'compose' if s == 'docker' and not docker_image else s %}[![{{ w }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml)
+{% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}{% set w = 'compose' if s == 'docker' and compose_only else s %}[![{{ w }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml)
 {% endfor %}{% if codecov %}[![codecov](https://codecov.io/gh/{{ github_user }}/{{ slug }}/graph/badge.svg)](https://codecov.io/gh/{{ github_user }}/{{ slug }})
 {% endif %}{% if codspeed %}[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/{{ github_user }}/{{ slug }}?utm_source=badge)
 {% endif %}{% if publish_to_pypi %}[![PyPI](https://img.shields.io/pypi/v/{{ slug }})](https://pypi.org/project/{{ slug }}/)
@@ -25,8 +25,8 @@ Questions and bugs: see [CONTRIBUTING.md]({{ blob }}.github/CONTRIBUTING.md).
 {% set tools = [
   ('[uv](https://docs.astral.sh/uv/)', 'python' in stacks or 'ts' not in stacks),
   ('[just](https://just.systems)', true),
-  ('[Node.js](https://nodejs.org)', 'ts' in stacks or site == 'astro'),
-  ('[pnpm](https://pnpm.io)', 'ts' in stacks or site == 'astro'),
+  ('[Node.js](https://nodejs.org)', has_pnpm),
+  ('[pnpm](https://pnpm.io)', has_pnpm),
   ('[cargo](https://rustup.rs)', 'rust' in stacks),
   ('[Go](https://go.dev/dl/)', 'go' in stacks),
   ('Docker', 'docker' in stacks),

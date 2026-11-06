@@ -35,6 +35,7 @@ When `customise` is `no`, advanced questions take these defaults:
 | `cold_install` | Disabled ([CI baseline](ci-baseline.md)) |
 | `site` | None ([Static site](#static-site)) |
 | `openssf_badge` | None ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
+| `decision_records` | On for `web-service`, `data-pipeline`, `web-app`, Compose-only and Silver-badge projects ([Decision records](#decision-records)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
 | `python_api` | Enabled ([API-break check](#api-break-check)) |
@@ -46,6 +47,35 @@ When `customise` is `no`, advanced questions take these defaults:
 During `copier update`, previously configured answers are preserved even when `customise` is `no`. Change an individual setting with `copier update --data <key>=<value>` or prompt for a single setting with `copier update --ask <key>`.
 
 To bypass prompts during initial generation, supply values via `--data-file answers.yml` or pass flags with `--data`.
+
+### Presets
+
+`presets/` holds the answers for repo kinds that come up again and again. A preset fills
+the project-kind questions; Copier still asks the identity ones.
+
+| Preset | Repo |
+| --- | --- |
+| `rust-cli.yml` | A Rust command-line tool |
+| `uv-research.yml` | A Python research package with notebooks, data and citation files |
+| `compose-deploy.yml` | A [Compose-only](#compose-only-repos) deploy repo with decision records |
+
+Pass one with `--data-file`, which reads a local path:
+
+```sh
+curl -fsSLo /tmp/preset.yml https://raw.githubusercontent.com/simonvanlierde/project-templates/main/presets/rust-cli.yml
+copier copy --data-file /tmp/preset.yml gh:simonvanlierde/project-templates my-tool
+```
+
+`--data` flags after it override single answers. A preset is a starting point, not a
+second template: `copier update` reads the answers file, not the preset.
+
+### Layering another template
+
+Copier applies several templates to one repo when each keeps its own answers file. An
+organisation's own files (telemetry, contacts, org defaults) belong in a separate template
+applied after this one, with `_answers_file: .copier-answers.<name>.yml` in its `copier.yml`.
+Update each layer on its own: `copier update --answers-file .copier-answers.<name>.yml`.
+This template stays free of any one organisation's setup.
 
 ## Public repos
 
@@ -146,6 +176,13 @@ The amount of documentation depends on the project's audience, not the size of i
 - **0 to 1:** The first release to a package registry (such as PyPI, npm, or crates.io), or when someone other than the author begins using the project.
 - **1 to 2:** The reference is too large to browse comfortably as repository files; outside users need search or versioned documentation; or outside users file issues requesting documentation improvements. Automatic API documentation on docs.rs does not count toward this trigger.
 
+### Decision records
+
+`decision_records` adds `docs/decisions/`: a [MADR 4.0.0](https://adr.github.io/madr/) index and a
+first record that says the project starts from this template. It is on for kinds whose choices are
+costly to reverse, and off for small tools, which never get an empty folder. The index and the first
+record are the project's after the first render.
+
 ### Documentation rules
 
 - **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`). A render with `publish_to_pypi` or `publish_to_npm` writes its README links this way.
@@ -168,7 +205,7 @@ Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<
 
 CLI binaries (Rust, Go, or Python `data-pipeline`) include `docs/accessibility.md`, documenting terminal output standards (`NO_COLOR` support, plain output redirection, error formats). Review and edit these claims to reflect your application.
 
-When projects record architectural choices, store them in `docs/decisions/`.
+With `decision_records` on, a project keeps its architectural choices in `docs/decisions/` ([Decision records](#decision-records)).
 
 ## Compose-only repos
 

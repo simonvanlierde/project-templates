@@ -10,6 +10,11 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- `decision_records`: `docs/decisions/` with a MADR 4.0.0 index and a first record that the project starts from this template. On by default for the web-service, data-pipeline and web-app kinds, Compose-only repos and Silver-badge projects; AGENTS.md then points at it. An update of an existing project in one of those kinds adds the folder: answer `copier update --data decision_records=false` to skip it ([Decision records](docs/usage.md#decision-records)).
+- `presets/`: answers files for a Rust CLI, a uv research package and a Compose-only deploy repo, passed with `--data-file` ([Presets](docs/usage.md#presets)), and a note on layering an organisation's own template with its own answers file.
+
 ### Changed
 
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.

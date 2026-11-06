@@ -1,0 +1,3 @@
+# A uv research package: src/ layout, notebooks/ and data/, citation files. docs/usage.md#presets
+stacks: [python]
+kind: research
