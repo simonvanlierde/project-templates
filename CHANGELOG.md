@@ -20,6 +20,7 @@ Upgrade steps:
 - An update of a web-service, data-pipeline, web-app, Compose-only or Silver-badge project adds `docs/decisions/` with a first record. Update with `copier update --data decision_records=false` to skip it.
 - **Breaking:** `site_url` takes a host alone, such as `https://example.org`: no path, port or capitals. Update with `copier update --data site_url=https://<host>` if yours has one.
 - **Breaking:** in a web app whose `site_url` is a custom domain (not `*.workers.dev`), the production job now attaches that domain on every deploy. Before you merge the update, give the `production` environment's `CLOUDFLARE_API_TOKEN` the permission Zone > Workers Routes: Edit for that domain's zone, or the deploy fails. A domain already on the Worker stays.
+- **Breaking:** pytest settings move from `[tool.pytest.ini_options]` to pytest 9's `[tool.pytest]` table, with `strict = true`, `filterwarnings = ["error"]`, `log_level = "INFO"` and `minversion = "9.0"`. A warning in your tests now fails them: fix it, or add an `ignore::` entry to `filterwarnings` with the reason. Merge your own pytest options into the new table during `copier update`.
 
 ### Added
 
@@ -34,6 +35,9 @@ Upgrade steps:
 - `just repo-settings` turns on secret scanning and push protection in a public repo. GitHub then refuses a push that holds a known secret format (OSPS Baseline BR-07.01).
 - The [badge section](docs/usage.md#openssf-best-practices-badge) of the usage docs lists the steps before you register a project on bestpractices.dev, the criteria only you can answer, and which file or setting meets each OSPS Baseline level 1 control.
 - A Rust library gets an API-break check: an `api` job in `rust.yml` and a `just rs-api` recipe run `cargo-semver-checks` against the last `v*` tag. A break fails until `Cargo.toml`'s version is bumped to match (major, or minor before 1.0). With no tag yet, it passes ([API-break check](docs/usage.md#api-break-check)).
+- Python projects run Scientific Python's [repo-review](docs/usage.md#scientific-python-repo-review) as a git hook (`sp-repo-review`), so `just hooks` and CI check the packaging, pytest and workflow settings. `[tool.repo-review.ignore]` in `pyproject.toml` lists the checks the template skips, each with its reason.
+- `.github/first-release.md`, a checklist to open as an issue for the [first release](docs/usage.md#first-release): PyPI trusted publishing, Zenodo, Software Heritage, the Research Software Directory and the OpenSSF badge, as far as the answers need them. `just repo-settings` prints the `gh issue create` command.
+- A public citable README gets a Software Heritage archive badge, and `just release` prints the Software Heritage save link after it pushes the tag. The badge lands in new renders only, since `copier update` leaves README.md alone.
 
 ### Changed
 
