@@ -37,7 +37,7 @@ You need {{ tools[:-1] | join(', ') }} and {{ tools[-1] }}.
 {% if 'python' in stacks %}uv sync{% if python_dir != '.' %} --directory {{ python_dir }}{% endif %}
 {% endif %}{% if 'ts' in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} install
 {% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec playwright install chromium   # once per machine, for the e2e tests
-{% endif %}{% if 'rust' in stacks %}cargo install --locked cargo-nextest cargo-deny{% if rust_kind == 'library' and 'mutation' in test_extras %} cargo-mutants{% endif %}   # once per machine
+{% endif %}{% if 'rust' in stacks %}cargo install --locked cargo-nextest cargo-deny{% if rust_kind == 'library' %} cargo-semver-checks{% endif %}{% if rust_kind == 'library' and 'mutation' in test_extras %} cargo-mutants{% endif %}   # once per machine
 {% endif %}{% if 'go' in stacks %}go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{ golangci_lint_version }}   # once per machine, checked against sum.golang.org
 just go-sync     # writes go.sum, which govulncheck needs: commit it
 {% endif %}{% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek install     # git hooks

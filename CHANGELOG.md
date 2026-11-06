@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- A Rust library gets an API-break check: an `api` job in `rust.yml` and a `just rs-api` recipe run `cargo-semver-checks` against the last `v*` tag. A break fails until `Cargo.toml`'s version is bumped to match (major, or minor before 1.0). With no tag yet, it passes ([API-break check](docs/usage.md#api-break-check)).
+
 ### Changed
 
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
