@@ -10,19 +10,6 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
-### Added
-
-- `decision_records`: `docs/decisions/` with a MADR 4.0.0 index and a first record that the project starts from this template. On by default for the web-service, data-pipeline and web-app kinds, Compose-only repos and Silver-badge projects; AGENTS.md then points at it. An update of an existing project in one of those kinds adds the folder: answer `copier update --data decision_records=false` to skip it ([Decision records](docs/usage.md#decision-records)).
-- `presets/`: answers files for a Rust CLI, a uv research package and a Compose-only deploy repo, passed with `--data-file` ([Presets](docs/usage.md#presets)), and a note on layering an organisation's own template with its own answers file.
-
-### Changed
-
-- `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
-- `copier-update.yml` updates every `.copier-answers*.yml`, one template after another, so a template layered over this one (such as an organisation's own) lands in the same pull request. Its title names each template that moved.
-- The shell lint and `just docker-fmt` skip files marked `linguist-vendored` in `.gitattributes`, so a vendored script keeps its upstream style.
-
-## [0.14.0] - 2026-11-05
-
 Upgrade steps:
 
 - **Breaking:** `docker_stacks` is gone, and copier drops the old answer. What the update does depends on what it listed:
@@ -30,16 +17,22 @@ Upgrade steps:
   - Only `ts`, with the python stack: update with `copier update --data docker_image=false`, or the update replaces the TypeScript `Dockerfile` with the Python image.
   - `python` and `ts`: the Python service is now named `app`, and the `web` service is gone.
 - **Breaking:** a web app or a command-line tool refuses a GitHub noreply `author_email`, because its privacy and accessibility pages give that address as the contact. Update with `copier update --data author_email=<an address that gets mail>`.
+- An update of a web-service, data-pipeline, web-app, Compose-only or Silver-badge project adds `docs/decisions/` with a first record. Update with `copier update --data decision_records=false` to skip it.
 
 ### Added
 
 - Compose-only repos: with `docker` in `stacks` and no `python` stack, or with `docker_image=false`, the render has no Dockerfile. It gets a starter `compose.yaml` (an example service pinned by digest, with a healthcheck, bound to `127.0.0.1`) and `.env.example`, which are the project's after the first render; a `compose.yml` workflow, a required check on `main` in a public repo; the `docker-compose` ecosystem in the dependency bot, which with Dependabot also reads the directories one level down, where an `include:` points; a `just check` that runs `docker compose --env-file .env.example config -q` and lints shell scripts; and a `just docker-fmt` that `just fmt` runs. With `cold_install`, that job runs each other stack's own `check` and `fmt` in place of `just check` and `just fmt`, which need Docker. Projects with the Python image render as before ([Compose-only repos](docs/usage.md#compose-only-repos)).
 - `just check` ends with the repo's own `local-check` recipe when `just/local.just` has one.
+- `decision_records`: `docs/decisions/` with a MADR 4.0.0 index and a first record that the project starts from this template. On by default for the web-service, data-pipeline and web-app kinds, Compose-only repos and Silver-badge projects; AGENTS.md then points at it. ([Decision records](docs/usage.md#decision-records)).
+- `presets/`: answers files for a Rust CLI, a uv research package and a Compose-only deploy repo, passed with `--data-file` ([Presets](docs/usage.md#presets)), and a note on layering an organisation's own template with its own answers file.
 
 ### Changed
 
 - `.editorconfig` sets a 2-space indent for `*.sh`, matching the scripts the template ships.
 - The `docker_stacks` question is now a yes/no `docker_image`: build the Python package into an image. It is asked only when `stacks` has both `docker` and `python`, and defaults to yes. `app_port` and `publish_to_ghcr` are not asked without an image.
+- `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
+- `copier-update.yml` updates every `.copier-answers*.yml`, one template after another, so a template layered over this one (such as an organisation's own) lands in the same pull request. Its title names each template that moved.
+- The shell lint and `just docker-fmt` skip files marked `linguist-vendored` in `.gitattributes`, so a vendored script keeps its upstream style.
 
 ### Fixed
 
@@ -854,8 +847,7 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.14.0...HEAD
-[0.14.0]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...v0.14.0
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...HEAD
 [0.13.0]: https://github.com/simonvanlierde/project-templates/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/simonvanlierde/project-templates/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/simonvanlierde/project-templates/compare/v0.10.0...v0.11.0
