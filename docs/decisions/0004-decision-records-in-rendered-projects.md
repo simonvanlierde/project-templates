@@ -1,5 +1,5 @@
 ---
-status: accepted, not built
+status: accepted
 date: 2026-11-04
 ---
 
@@ -21,7 +21,9 @@ clutter. A flagship project does need one, because its choices are costly to rev
 Chosen: a copier question. It defaults on for flagship kinds and off for small tools. A
 rendered project never gets an empty folder: it starts with a first real record.
 
-This lands in a later pull request. Nothing in the template asks the question yet.
+The question is `decision_records`. It defaults on for the web-service, data-pipeline and
+web-app kinds, Compose-only repos and Silver-badge projects. The first record says the
+project starts from this template, with the answers that shaped it.
 
 ### Consequences
 
@@ -30,4 +32,5 @@ This lands in a later pull request. Nothing in the template asks the question ye
 
 ### Confirmation
 
-None yet.
+`scripts/check-render.sh` asserts the folder and its first record in a Compose-only render,
+and no folder in a research render without a badge.

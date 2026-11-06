@@ -27,7 +27,7 @@ check:
 {%- if 'go' in stacks %}
     @just go-check
 {%- endif %}
-{%- if 'docker' in stacks and not docker_image %}
+{%- if compose_only %}
     @just docker-check
 {%- endif %}
 {%- if site == 'astro' %}
@@ -49,7 +49,7 @@ fmt:
 {%- if 'go' in stacks %}
     @just go-fmt
 {%- endif %}
-{%- if 'docker' in stacks and not docker_image %}
+{%- if compose_only %}
     @just docker-fmt
 {%- endif %}
 {%- set prek = ('pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir) ~ ' exec prek' if ('ts' in stacks and 'python' not in stacks) else 'prek' %}

@@ -10,4 +10,4 @@ Confirmation section names the check that enforces it, or says none exists yet.
 | [0001](0001-pr-previews-use-the-production-cloudflare-account.md) Pull request previews use the production Cloudflare account | accepted | 2026-11-03 |
 | [0002](0002-wrangler-is-an-exact-dev-dependency.md) wrangler is an exact dev dependency | accepted | 2026-11-04 |
 | [0003](0003-drop-the-ts-docker-image.md) Drop the TypeScript Docker image | accepted | 2026-11-04 |
-| [0004](0004-decision-records-in-rendered-projects.md) Decision records in rendered projects | accepted, not built | 2026-11-04 |
+| [0004](0004-decision-records-in-rendered-projects.md) Decision records in rendered projects | accepted | 2026-11-04 |

@@ -1,0 +1,37 @@
+---
+status: accepted
+date: {{ '%Y-%m-%d' | strftime }}
+---
+
+# Start from project-templates
+
+## Context and Problem Statement
+
+{{ project_name }} needs a build, checks, CI and release steps for
+{%- if stacks %} {{ stacks | join(', ') }}{% else %} its docs{% endif %}. Writing them by hand
+costs a day and drifts from the other projects that solve the same problems.
+
+## Considered Options
+
+* Write the tooling by hand
+* Render it from [project-templates](https://github.com/simonvanlierde/project-templates) with Copier
+
+## Decision Outcome
+
+Chosen: render it from project-templates. `.copier-answers.yml` records the answers
+{%- if 'python' in stacks %} (Python kind: `{{ kind }}`){% endif %}
+{%- if 'ts' in stacks %} (TypeScript kind: `{{ ts_kind }}`){% endif %}
+{%- if compose_only %} (Compose-only: no image of its own){% endif %}, and `copier update`
+brings later template changes in as a reviewable diff.
+
+### Consequences
+
+* Good: the checks, CI and release steps match the template's other projects, and fixes
+  reach this one as `copier update` pull requests.
+* Bad: a file the template owns is changed in the template, not here, or the next
+  update reverts it. `just/local.just` holds this project's own recipes.
+
+### Confirmation
+
+None: `.copier-answers.yml` names the template version, and `copier update` shows how far
+the project has drifted from it.

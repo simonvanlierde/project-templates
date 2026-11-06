@@ -13,6 +13,12 @@ lacks() {
   grep -q "$@" || rc=$?
   [ "$rc" -eq 1 ]
 }
+# A Compose-only render: no Dockerfile anywhere, the compose workflow, no image workflow.
+no_image() {
+  test -z "$(find "$1" -name 'Dockerfile*' -not -path '*/.git/*')"
+  test -f "$1/.github/workflows/compose.yml"
+  test ! -e "$1/.github/workflows/docker.yml"
+}
 
 bash scripts/check-release-fixtures.sh
 
@@ -258,17 +264,23 @@ grep -q 'Report abuse' "$c/.github/CODE_OF_CONDUCT.md"
 grep -qx '          SKIP: betterleaks,zizmor' "$c/.github/workflows/checks.yml"
 (lacks -q 'NumPy' "$c/_typos.toml")
 (lacks -q 'Renovate' "$c/justfile")
-(lacks -qE 'docs/decisions|release the project' "$c/AGENTS.md")
+(lacks -q 'release the project' "$c/AGENTS.md")
+# Compose-only defaults to decision records: AGENTS.md points at a folder with a first record.
+grep -qF 'docs/decisions/README.md' "$c/AGENTS.md"
+grep -qF '0001-start-from-project-templates.md' "$c/docs/decisions/README.md"
+grep -q 'Compose-only: no image of its own' "$c/docs/decisions/0001-start-from-project-templates.md"
 (lacks -q 'the dependencies' "$c/.github/CONTRIBUTING.md")
 (lacks -qE 'the version you|label: Version$' "$c/.github/SECURITY.md" "$c/.github/CONTRIBUTING.md" "$c/.github/ISSUE_TEMPLATE/bug.yml")
 test -f "$out/compose/compose.yaml"
 test -f "$out/compose/.env.example"
-test -f "$out/compose/.github/workflows/compose.yml"
-test ! -e "$out/compose/.github/workflows/docker.yml"
-find "$out/compose" -name 'Dockerfile*' -not -path '*/.git/*' | grep -q . && {
-  echo "compose-only render wrote a Dockerfile" >&2
-  exit 1
-}
+no_image "$out/compose"
+# The Compose-only answers file records no image settings.
+(lacks -q '^app_port:' "$c/.copier-answers.yml")
+grep -qF 'actions/workflows/compose.yml/badge.svg' "$c/README.md"
+# The wording that replaced other stacks' text.
+grep -q 'release or commit' "$c/.github/SECURITY.md"
+grep -q 'label: Release or commit' "$c/.github/ISSUE_TEMPLATE/bug.yml"
+grep -q 'The README says how to install prek' "$c/.pre-commit-config.yaml"
 grep -q 'image: .*@sha256:' "$out/compose/compose.yaml"
 grep -q '127.0.0.1:' "$out/compose/compose.yaml"
 grep -q 'healthcheck:' "$out/compose/compose.yaml"
@@ -346,14 +358,30 @@ RUNNER_TEMP=$out/mix bash -c "$(grep -E '^ +sed -i -E' "$out/compose-mix/.github
 # image the flat layout is allowed.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=ts-compose --data 'stacks=[ts,docker]' \
   --data ts_kind=app . "$out/ts-compose"
-test ! -e "$out/ts-compose/Dockerfile"
-test -f "$out/ts-compose/.github/workflows/compose.yml"
-test ! -e "$out/ts-compose/.github/workflows/docker.yml"
+no_image "$out/ts-compose"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=py-no-img --data 'stacks=[python,docker]' \
   --data docker_image=false --data python_layout=flat . "$out/py-no-img"
-test ! -e "$out/py-no-img/Dockerfile"
-test -f "$out/py-no-img/.github/workflows/compose.yml"
-test ! -e "$out/py-no-img/.github/workflows/docker.yml"
+no_image "$out/py-no-img"
+# The image side of each Compose-only conditional: a and c build images, d uses Renovate.
+for r in a c; do
+  (lacks -q 'docker-compose' "$out/$r/.github/dependabot.yml")
+  test ! -e "$out/$r/.env.example"
+  test ! -e "$out/$r/.github/workflows/compose.yml"
+  grep -qF 'actions/workflows/docker.yml/badge.svg' "$out/$r/README.md"
+done
+[ "$(find "$out/c" -name 'Dockerfile*' -not -path '*/.git/*' | wc -l)" -eq 1 ]
+grep -qF "'docker-compose': { enabled: false }" "$out/d/renovate.json5"
+grep -q 'the dependencies' "$out/a/.github/CONTRIBUTING.md"
+
+# Each preset renders on its own, with only the identity answers from the settings file.
+for f in presets/*.yml; do
+  p=$(basename "$f" .yml)
+  "${copier[@]}" --vcs-ref=HEAD --data-file "$f" --data "project_name=preset-$p" . "$out/preset-$p"
+done
+test -f "$out/preset-rust-cli/src/main.rs"
+test -d "$out/preset-uv-research/notebooks"
+no_image "$out/preset-compose-deploy"
+test -f "$out/preset-compose-deploy/docs/decisions/0001-start-from-project-templates.md"
 test -f "$out/py-no-img/pyproject.toml"
 grep -q '^  example:' "$out/py-no-img/compose.yaml"
 (lacks -q '^  app:' "$out/py-no-img/compose.yaml")
@@ -875,8 +903,12 @@ grep -q 'cron: "0 6 \* \* 1"' d/.github/workflows/python.yml
 test -f h/.github/workflows/advisories.yml
 (lacks -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
-# Decision records are not scaffolded by default; create docs/decisions/ when choices are made.
-for r in a b c d h i; do
+# Decision records default on for a web service (b), a data pipeline or web app (d) and a
+# Silver badge (h); off for research (a), a monorepo of libraries (c) and an unlicensed tool (i).
+for r in b d h; do
+  test -f "$r/docs/decisions/0001-start-from-project-templates.md"
+done
+for r in a c i; do
   test ! -e "$r/docs/decisions"
 done
 (lacks -rq vale a/.pre-commit-config.yaml a/.gitignore)
