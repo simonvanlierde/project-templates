@@ -172,9 +172,11 @@ done
 echo '// project edit' >>"$out/y/site/astro.config.mjs"
 echo 'project edit' >>"$out/y/site/package.json"
 "${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y" >/dev/null 2>&1
-# hush-plain and hush-astro: a site in a private repo.
+# hush-plain and hush-astro: a site in a private repo, with a description that needs
+# escaping in HTML.
 for s in plain astro; do
   "${copier[@]}" --vcs-ref=HEAD --data project_name=hush-me --data 'stacks=[python]' \
+    --data 'project_description=Tidies <b> tags & more' \
     --data public=false --data site=$s . "$out/hush-$s" >/dev/null
 done
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
@@ -1761,6 +1763,21 @@ test -f h/_docs/assurance-case/index.html
 # A private repo's page has no links into the repo, which its readers cannot open.
 (lacks -rq 'github.com/' hush-plain/site hush-astro/site/src)
 grep -q 'href="https://github.com/.*/issues"' x/site/index.html
+# The plain starter is a tool page: the job under the name, or a TODO without a
+# description; an input, a result and one action; a privacy line its CSP keeps true.
+grep -qxF '    <p class="job">Tidies &lt;b&gt; tags &amp; more</p>' hush-plain/site/index.html
+(lacks -q 'TODO: one sentence' hush-plain/site/index.html)
+grep -qF 'TODO: one sentence naming the job' x/site/index.html
+(lacks -q 'class="job"' x/site/index.html)
+for r in x hush-plain; do
+  grep -qF '<textarea id="input"' "$r/site/index.html"
+  grep -qF '<pre id="result"' "$r/site/index.html"
+  grep -qF '<button type="button" id="copy" class="primary">' "$r/site/index.html"
+  grep -qF "content=\"default-src 'none'; script-src 'self';" "$r/site/index.html"
+  (grep -F 'http-equiv="Content-Security-Policy"' "$r/site/index.html" | lacks -q 'connect-src')
+  grep -qF 'what you type or open never leaves this page' "$r/site/index.html"
+  node --check "$r/site/main.mjs"
+done
 grep -q 'Skip to the content' hush-astro/site/src/layouts/Base.astro
 # Site previews are <slug>-site-pr-<n>, apart from a web app's <slug>-pr-<n>.
 # shellcheck disable=SC2016

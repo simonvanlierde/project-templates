@@ -13,3 +13,4 @@ Confirmation section names the check that enforces it, or says none exists yet.
 | [0004](0004-decision-records-in-rendered-projects.md) Decision records in rendered projects | accepted | 2026-11-04 |
 | [0005](0005-workers-hosting-with-an-optional-script.md) Workers hosting with an optional script | accepted | 2026-11-06 |
 | [0006](0006-zensical-builds-the-docs-site.md) Zensical builds the docs site | accepted | 2026-11-06 |
+| [0007](0007-the-plain-site-is-a-tool-page.md) The plain site is a tool page | accepted | 2026-11-07 |

@@ -440,7 +440,7 @@ site:
   help: A static page (playground, demo or report) in site/, deployed to GitHub Pages from main, with a preview per pull request
   choices:
     None: none
-    Plain (HTML, CSS and plain JavaScript modules, no build step or framework): plain
+    Plain (a one-tool page in HTML, CSS and plain JavaScript modules, no build step or framework): plain
     Astro (for a site with several pages from Markdown, shared layouts and components): astro
   default: none
   # site/ and _site/ belong to the site: a package there would share them with it.
