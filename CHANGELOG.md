@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
+
 ## [0.14.0] - 2026-11-05
 
 Upgrade steps:
