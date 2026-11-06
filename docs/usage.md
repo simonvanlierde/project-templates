@@ -94,7 +94,7 @@ Licensed projects follow the [REUSE specification](https://reuse.software). `REU
 
 - Blocks force-pushes and branch deletions.
 - Enforces linear history and squash merges.
-- Requires pull requests. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
+- Requires pull requests. A required check blocks every PR that skips CI, because a skipped workflow leaves its check pending. In a repo where agent PRs run no CI (their own pre-push hook is the gate), drop `required_status_checks` from the ruleset or make that check always report. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
 - In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root, `compose` in a Compose-only repo, plus `site: build` when the project has a site. A nested stack's workflow runs only when its folder changes, so its check is not required.
 - With `dependency_bot=renovate`, permits the Renovate app to bypass review for minor and patch updates once required checks pass.
 - Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
