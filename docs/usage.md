@@ -449,7 +449,7 @@ Answer `site` (under `customise`) to give any project a static page beside its c
 
 The two choices differ only in what is in `site/` and how `just site` builds it:
 
-- `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a starter page with a header, a main area with a TODO for the tool, and a footer with the licence and a privacy line. Plain HTML, CSS and an ES module, no build step or framework. It works at 320 px and in dark mode. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
+- `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a working [tool page](#the-plain-tool-page). Plain HTML, CSS and an ES module, no build step or framework. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
 - `site=astro`: a small Astro project. `package.json` has astro at the version `copier.yml` pins, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once to write `site/pnpm-lock.yaml`, and commit it. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. On a Worker (`site_host=cloudflare`), the site is served from `/`: `site` is the Worker's address and there is no `base`.
 
 The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
@@ -465,6 +465,21 @@ One-time setup:
 A GitHub Pages site is public even when the repo is private, and a private repo needs a paid GitHub plan for Pages. Until Pages is on, the `deploy` job skips with a notice, and `just repo-settings` warns and goes on where GitHub refuses Pages.
 
 The daily sweep finds preview Workers by name alone. In one Cloudflare account, a repo `foo` with a site and a repo `foo-site` with a web app would share the names `foo-site-pr-<number>`: rename one of them if that happens.
+
+### The plain tool page
+
+`site=plain` starts from a small working tool: it formats JSON. It's there to show the layout and the states, and you replace the job with your own. The page has four parts, top to bottom:
+
+1. A header with the project name, `project_description` as the one sentence that names the job, and a Docs link to the README. Without a description, a TODO marks where the sentence goes.
+2. The workspace: an input with an Open a file button, and beside it the result with one action, Copy result. They sit side by side from 48rem and stack on a phone. The result updates 250 ms after the visitor stops typing. A label beside the result shows its state: Sample, Empty, Needs a fix or Ready. An error shows under the input, and Copy result is off until the input is valid again, so nobody copies a stale result. Screen readers hear a state change or the copy outcome, not every refresh.
+3. Two disclosures: Settings, with an indent choice, and Use it elsewhere, a TODO for the command-line or CI use of the same job.
+4. A footer with one privacy line, then the licence, the source and the issue tracker. A private repo's page has no links into the repo.
+
+To make it your tool, change `convert()` at the top of `main.mjs`, the labels in `index.html`, and the colours at the top of `style.css`. `convert()` returns the result text, or throws an error whose message the page shows under the input.
+
+The privacy line says that what the visitor types never leaves the page. The page's Content-Security-Policy has no `connect-src`, so the browser blocks any request the script makes, and the line stays true. A page that calls an API, such as a `worker` route, adds that origin to `connect-src` and changes the line to say what it sends.
+
+The page has a skip link, labelled controls, a visible focus ring and targets at least 44 px tall. It follows the system's dark mode and reduced-motion setting, and keeps the primary action visible in forced colours.
 
 ### Hosting on a Worker
 

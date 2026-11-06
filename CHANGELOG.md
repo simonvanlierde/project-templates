@@ -33,6 +33,7 @@ Upgrade steps:
 
 ### Changed
 
+- `site=plain` renders a working tool page in place of the empty starter: a compact header with the job, an input and its result with one Copy result action, Settings and Use it elsewhere disclosures, and a footer with a privacy line that the page's Content-Security-Policy keeps true. The stand-in job formats JSON; replace `convert()` in `site/main.mjs`. An existing site keeps its own files ([The plain tool page](docs/usage.md#the-plain-tool-page)).
 - `.editorconfig` sets a 2-space indent for `*.sh`, matching the scripts the template ships.
 - A web app's `vitest.config.ts` also runs `worker/**/*.test.ts`.
 - The `docker_stacks` question is now a yes/no `docker_image`: build the Python package into an image. It is asked only when `stacks` has both `docker` and `python`, and defaults to yes. `app_port` and `publish_to_ghcr` are not asked without an image.

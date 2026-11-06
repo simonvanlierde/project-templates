@@ -1,7 +1,73 @@
 // The page's script, an ES module the browser loads as it is: no build step.
-const status = document.getElementById("status");
 
-// Announce a result to screen readers. The region stays empty until something happens.
-export const say = (message) => {
-  status.textContent = message;
+// TODO: this project's job. Return the result text, or throw an Error whose message
+// names the problem and how to fix it.
+const convert = (text, indent) => JSON.stringify(JSON.parse(text), null, indent === "tab" ? "\t" : Number(indent));
+
+const $ = (id) => document.getElementById(id);
+const [workspace, input, file, error, state, result, copy, copied, said, indent] = [
+  "workspace", "input", "file", "input-error", "state", "result", "copy", "copied", "said", "indent",
+].map($);
+const labels = { sample: "Sample", empty: "Empty", invalid: "Needs a fix", ready: "Ready" };
+let edited = false;
+let timer;
+
+// Announce only what changed for the visitor: a new state or an action's outcome, never
+// each refresh of the result.
+const show = (next, output, problem = "") => {
+  const changed = workspace.dataset.state !== next;
+  workspace.dataset.state = next;
+  state.textContent = labels[next];
+  result.textContent = output;
+  copied.value = "";
+  error.textContent = problem;
+  error.hidden = !problem;
+  input.toggleAttribute("aria-invalid", Boolean(problem));
+  // The result and its action go with the newest input only: a stale result cannot be copied.
+  copy.disabled = next === "empty" || next === "invalid";
+  if (changed && next !== "sample") said.textContent = problem || labels[next];
 };
+
+const update = () => {
+  clearTimeout(timer);
+  const text = input.value;
+  if (!text.trim()) return show("empty", "The result shows here.");
+  try {
+    show(edited ? "ready" : "sample", convert(text, indent.value));
+  } catch (e) {
+    show("invalid", "Fix the input to see the result.", e.message);
+  }
+};
+
+input.addEventListener("input", () => {
+  edited = true;
+  clearTimeout(timer);
+  timer = setTimeout(update, 250);
+});
+indent.addEventListener("change", update);
+
+let reading = 0;
+file.addEventListener("change", async () => {
+  const [picked] = file.files;
+  if (!picked) return;
+  // A file read that finishes after newer typing must not replace it.
+  const mine = ++reading;
+  const typed = input.value;
+  const text = await picked.text();
+  file.value = "";
+  if (mine !== reading || input.value !== typed) return;
+  edited = true;
+  input.value = text;
+  update();
+});
+
+copy.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(result.textContent);
+    copied.value = "Copied the result.";
+  } catch {
+    copied.value = "Could not copy: select the result and copy it yourself.";
+  }
+});
+
+update();
