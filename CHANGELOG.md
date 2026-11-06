@@ -62,6 +62,8 @@ Upgrade steps:
 - A Preact web app's `biome.json` turns on `noDangerouslySetInnerHtml`, which Biome enables
   only with React. The suppression in `src/App.tsx` now has an effect, and `just check` no
   longer warns about it on a fresh render.
+- A data-pipeline at the repo root ends `python.yml` on a `run: |-` block, so yamlfmt no
+  longer rewrites it and a fresh render passes its own `prek run --all-files`.
 
 ### Removed
 

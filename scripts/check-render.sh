@@ -512,6 +512,9 @@ grep -qx 'site_url: https://app.example-org.workers.dev' "$out/s/.copier-answers
   --data site_url=https://demo.example.org . "$out/cfp"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cfa-me --data 'stacks=[python]' \
   --data site=astro --data site_host=cloudflare . "$out/cfa"
+# dp: a data-pipeline at the root, whose python.yml ends on the revisions job's `run:` block.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=dp-me --data 'stacks=[python]' \
+  --data kind=data-pipeline . "$out/dp"
 # cfd: a site on a Worker leaves GitHub Pages to the docs site.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cfd-me --data 'stacks=[python]' \
   --data site=plain --data site_host=cloudflare --data docs_site=true . "$out/cfd"
@@ -2019,6 +2022,15 @@ done
 # word and on a relative link to a missing file. prek needs a git repo, so each check
 # runs in a copy. lychee runs offline in the hook; links.yml checks the web weekly.
 prek=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --all-files)
+# yamlfmt leaves a fresh render's workflows as they are, or the project's own first
+# `prek run --all-files` fails: dp ends python.yml on a `run: |` that yamlfmt would turn
+# into `|-`.
+rm -rf dp-yaml
+cp -R dp dp-yaml
+git -C dp-yaml init -q
+git -C dp-yaml add -A
+(cd dp-yaml && "${prek[@]}" yamlfmt >/dev/null)
+rm -rf dp-yaml
 for r in a b d h; do
   rm -rf "$r-hooks"
   cp -R "$r" "$r-hooks"

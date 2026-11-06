@@ -153,7 +153,7 @@ jobs:
         env:
           GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
           GH_REPO: {% raw %}${{ github.repository }}{% endraw %}
-        run: |
+        run: |-
           report="$RUNNER_TEMP/revisions/revisions.md"
           [ -s "$report" ] || exit 0
           title="Source data revised upstream"
