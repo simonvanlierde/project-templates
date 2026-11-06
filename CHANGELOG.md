@@ -40,6 +40,9 @@ Upgrade steps:
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
 - `copier-update.yml` updates every `.copier-answers*.yml`, one template after another, so a template layered over this one (such as an organisation's own) lands in the same pull request. Its title names each template that moved.
 - The shell lint and `just docker-fmt` skip files marked `linguist-vendored` in `.gitattributes`, so a vendored script keeps its upstream style.
+- The message at the end of `copier copy` mentions lockfiles only when the project has
+  them, and the package version only when it publishes to PyPI or npm. It ends by saying
+  that `copier update` pulls in new template releases.
 
 ### Fixed
 
@@ -47,6 +50,9 @@ Upgrade steps:
 - With a GitHub noreply `author_email`, SECURITY.md offers only the private advisory and the code of conduct only GitHub's abuse report: that address gets no mail.
 - Files name only the stacks a project has: the `.gitignore` sections, the justfile's imports and recipe prefixes, the `uv` and `pnpm` remarks in the hook and YAML configs, the lockfile steps in the copier-update PR body, the SKIP list in `checks.yml`, and the NumPy words in `_typos.toml`. `just repo-settings` names the dependency bot the project uses.
 - AGENTS.md no longer points at a README release section or a `docs/decisions/` folder the render does not have. SECURITY.md, CONTRIBUTING and the bug form ask for the release or commit, which works before the first release.
+- A Preact web app's `biome.json` turns on `noDangerouslySetInnerHtml`, which Biome enables
+  only with React. The suppression in `src/App.tsx` now has an effect, and `just check` no
+  longer warns about it on a fresh render.
 
 ### Removed
 

@@ -82,7 +82,11 @@ _message_after_copy: |
     just site-sync
   {%- endif %}
     just check
+  {%- if stacks | reject('equalto', 'docker') | list or site == 'astro' %}
   Then commit, lockfiles included: CI installs exactly what they list.
+  {%- else %}
+  Then commit.
+  {%- endif %}
   After the first push, run `just repo-settings` to protect main.
   {%- for reg, on in [('PyPI', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('ghcr', publish_to_ghcr | default(false))] if on %}
   Before the first {{ reg }} release, set up the trusted publisher and the protected environment:
@@ -93,9 +97,9 @@ _message_after_copy: |
   {%- if citable %} Set the version first in every manifest
   {{ 'citesync.toml lists' if (python_dir != '.' or ts_dir != '.' or rust_dir != '.') else 'at the root' }}, and in CITATION.cff once it has a `version`:
   citesync stops the release while they differ.
-  {%- else %} Set the version in the package manifest first
-  when you publish to PyPI or npm.
+  {%- elif publish_to_pypi | default(false) or publish_to_npm | default(false) %} Set the version in the package manifest first.
   {%- endif %}
+  Later, `copier update` pulls in new template releases.
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
