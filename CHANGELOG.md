@@ -12,6 +12,7 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- Web apps: the e2e job starts beside `check` instead of after it. A small `playwright` job reads the locked Playwright version for the container tag, which `check` used to output.
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
 
 ## [0.14.0] - 2026-11-05

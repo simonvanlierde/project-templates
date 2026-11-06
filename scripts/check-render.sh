@@ -1368,7 +1368,10 @@ grep -q 'script-src .self.;' d/web/public/_headers
 grep -q '"budget": "node scripts/checkBundleBudget.mjs"' d/web/package.json
 grep -q 'pnpm -C web run budget' d/just/ts.just
 grep -qF 'image: mcr.microsoft.com/playwright:v' d/.github/workflows/ts.yml
-grep -qF 'needs.check.outputs.playwright }}-noble' d/.github/workflows/ts.yml
+grep -qF 'needs.playwright.outputs.version }}-noble' d/.github/workflows/ts.yml
+# e2e waits for the version job only, which reads the nested lockfile.
+grep -qx '    needs: playwright' d/.github/workflows/ts.yml
+grep -qx '          sparse-checkout: web/pnpm-lock.yaml' d/.github/workflows/ts.yml
 grep -q 'fonts-dejavu-core' d/.github/workflows/ts.yml
 grep -qx '          path: web/playwright-report/' d/.github/workflows/ts.yml
 # Deploys: web-app renders get one Worker config for production and previews, the
