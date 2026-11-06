@@ -30,6 +30,9 @@ Upgrade steps:
 - A custom domain from `site_url`: a host other than `*.workers.dev` is attached to the production Worker of the web app, or of a site on Cloudflare, by `wrangler deploy --domain` in the production job. Previews deploy without it. `site_url` is asked of a site on Cloudflare too ([Workers hosting](docs/usage.md#workers-hosting)).
 - `worker`, asked of a web app or a site on Cloudflare: a Worker script in front of the static assets, with the `ASSETS` binding and `run_worker_first` for `/api/*`, and an example `/api/health` route. A web app gets `worker/index.ts`, typed with `@cloudflare/workers-types` and tested by Vitest; a site gets `site/worker/index.mjs`, tested with `node --test` by `just site` ([Workers hosting](docs/usage.md#workers-hosting)).
 - `presets/`: answers files for a Rust CLI, a uv research package and a Compose-only deploy repo, passed with `--data-file` ([Presets](docs/usage.md#presets)), and a note on layering an organisation's own template with its own answers file.
+- With `openssf_badge` set, `README.md` gets a `## Usage` section: where to get the software (releases, and PyPI or npm when the project publishes there), and a TODO for what it does and its basic use. The OpenSSF passing criteria and OSPS Baseline level 1 ask for both. The README is the project's after the first render, so `copier update` doesn't add the section to an existing one.
+- `just repo-settings` turns on secret scanning and push protection in a public repo. GitHub then refuses a push that holds a known secret format (OSPS Baseline BR-07.01).
+- The [badge section](docs/usage.md#openssf-best-practices-badge) of the usage docs lists the steps before you register a project on bestpractices.dev, the criteria only you can answer, and which file or setting meets each OSPS Baseline level 1 control.
 
 ### Changed
 
