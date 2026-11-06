@@ -47,18 +47,4 @@ A `web-service` project includes:
 - `just serve` and a `<slug>` console script to run outside Docker.
 - Tests for `/health` with telemetry enabled and disabled.
 
-## Telemetry scope across kinds
-
-Only the Python `web-service` kind includes OpenTelemetry. Other kinds omit it intentionally:
-
-- **`library`**: provides importable APIs. Applications that consume the library configure telemetry if required.
-- **`app` (CLI)**: short-lived commands exit before background span exporters flush.
-- **`research`**: exploratory notebook analysis does not need tracing overhead.
-- **`data-pipeline`**: batch runs use heartbeat monitoring or dead-man alerts on failure rather than distributed tracing spans.
-- **`web-app` (TypeScript)**: client-side tracing is out of scope for the static hosting baseline.
-
-Service kinds for TypeScript, Go, and Rust are not scaffolded yet. A service you write in one of them follows the same pattern: telemetry starts only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, and everything else comes from the standard `OTEL_*` variables. Each SDK exports to `localhost` by default when started, so check the variable before starting it:
-
-- **Go**: `go.opentelemetry.io/contrib/exporters/autoexport` picks the exporter from the `OTEL_*` variables, OTLP by default. Wrap handlers with `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
-- **TypeScript / Node**: `@opentelemetry/auto-instrumentations-node` starts from `NODE_OPTIONS="--require @opentelemetry/auto-instrumentations-node/register"`. The register hook always starts the SDK, so add that option only where the endpoint is set, for example in the container entrypoint.
-- **Rust**: `opentelemetry-otlp` with `tracing-opentelemetry` and `tracing-subscriber`. Install the OTLP layer only when the endpoint is set; otherwise keep plain log output.
+No other kind, in any stack, includes OpenTelemetry.

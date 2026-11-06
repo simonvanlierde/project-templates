@@ -7,8 +7,6 @@ This is a short view of what is planned for the template over the next year, to 
 
 ## Planned
 
-- Move the `data-pipeline` kind to sourceledger 0.3.1 from PyPI once it is a week old,
-  so the one-week release-age cutoff lets it in.
 - Add a `just release` recipe and its CI checks to the `data-pipeline` kind, once
   sourceledger has a release step.
 - Add a release path for Rust: a `publish_to_crates` answer, crates.io trusted publishing,
@@ -20,6 +18,6 @@ This is a short view of what is planned for the template over the next year, to 
 
 - A docs-site starter (such as Astro Starlight), until a project needs more than its README and a `site` page.
 - A CODEOWNERS file, until other people start contributing.
-- CodeQL, Renovate from Actions, release-please and the other pieces generated projects
-  leave out, as [docs/ci-baseline.md](docs/ci-baseline.md#what-is-left-out-and-why) explains,
+- Renovate from Actions, release-please and the other pieces generated projects leave
+  out, as [docs/ci-baseline.md](docs/ci-baseline.md#what-is-left-out-and-why) explains,
   until the reason given there no longer holds.
