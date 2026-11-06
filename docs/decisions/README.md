@@ -11,3 +11,4 @@ Confirmation section names the check that enforces it, or says none exists yet.
 | [0002](0002-wrangler-is-an-exact-dev-dependency.md) wrangler is an exact dev dependency | accepted | 2026-11-04 |
 | [0003](0003-drop-the-ts-docker-image.md) Drop the TypeScript Docker image | accepted | 2026-11-04 |
 | [0004](0004-decision-records-in-rendered-projects.md) Decision records in rendered projects | accepted | 2026-11-04 |
+| [0005](0005-workers-hosting-with-an-optional-script.md) Workers hosting with an optional script | accepted | 2026-11-06 |

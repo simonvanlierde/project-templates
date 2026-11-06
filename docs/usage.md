@@ -34,6 +34,8 @@ When `customise` is `no`, advanced questions take these defaults:
 | `profiling` | Disabled ([Profiling](#profiling)) |
 | `cold_install` | Disabled ([CI baseline](ci-baseline.md)) |
 | `site` | None ([Static site](#static-site)) |
+| `site_host` | GitHub Pages; `cloudflare` deploys the site to a Worker ([Static site](#static-site)) |
+| `worker` | Disabled; a Worker script for `/api/*` in a web app or a site on Cloudflare ([Workers hosting](#workers-hosting)) |
 | `openssf_badge` | None ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `decision_records` | On for `web-service`, `data-pipeline`, `web-app`, Compose-only and Silver-badge projects ([Decision records](#decision-records)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
@@ -42,7 +44,7 @@ When `customise` is `no`, advanced questions take these defaults:
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](#publishing)) |
 | `test_extras` | None ([Test extras](#test-extras)) |
 | `app_port` | 8000 |
-| `site_url` | `https://<project>.<github_user>.workers.dev` (the Worker's workers.dev address, if the account's subdomain is the GitHub user) |
+| `site_url` | `https://<project>.<github_user>.workers.dev`, or `<project>-site` for a site on Cloudflare (the Worker's workers.dev address, if the account's subdomain is the GitHub user). Another host is a custom domain ([Workers hosting](#workers-hosting)) |
 
 During `copier update`, previously configured answers are preserved even when `customise` is `no`. Change an individual setting with `copier update --data <key>=<value>` or prompt for a single setting with `copier update --ask <key>`.
 
@@ -275,7 +277,7 @@ asked: there is no image to expose or push.
 - Single-page application entry points (`index.html`, `src/main.tsx`, `src/App.tsx`) and Vitest setup.
 - Playwright end-to-end tests in `tests/e2e/`: axe accessibility scans in light/dark modes and Content-Security-Policy enforcement.
 - Mandatory legal pages, linked from the footer in the starter app.
-- Cloudflare Worker configuration: `public/_headers` (security headers) and `wrangler.jsonc` (static assets, no Worker script).
+- Cloudflare Worker configuration: `public/_headers` (security headers) and `wrangler.jsonc` (static assets, and with `worker` a Worker script for `/api/*`: [Workers hosting](#workers-hosting)).
 - A `production` job in `.github/workflows/ts.yml` that deploys `main`.
 - `just ts-shots`: full-page screenshots of every route at 390 and 1440 px, light and dark, in `shots/`, to attach to a pull request that changes the UI.
 - Pull request previews: a `preview` job in `.github/workflows/ts.yml`, `.github/workflows/preview-retire.yml` and `.github/scripts/preview-retire.sh`.
@@ -283,7 +285,7 @@ asked: there is no image to expose or push.
 
 ### Production
 
-Every push to `main` runs the `production` job after the checks pass. It deploys the build the checks ran on to the Worker `<slug>`, with the pinned wrangler, at `https://<slug>.<subdomain>.workers.dev`. Static-asset requests are free and unlimited on the Workers Free plan. The job runs in the `production` GitHub environment, which `just repo-settings` limits to `main`. A preview job that holds the same Cloudflare token can still deploy to `<slug>` (see [Pull request previews](#pull-request-previews)). One deploy runs at a time, and a deploy in flight is never cancelled by the next. Without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID`, the job skips with a notice. For a custom domain, add it under the Worker's Settings > Domains & Routes. The domain needs a zone on Cloudflare.
+Every push to `main` runs the `production` job after the checks pass. It deploys the build the checks ran on to the Worker `<slug>`, with the pinned wrangler, at `https://<slug>.<subdomain>.workers.dev`. Static-asset requests are free and unlimited on the Workers Free plan. The job runs in the `production` GitHub environment, which `just repo-settings` limits to `main`. A preview job that holds the same Cloudflare token can still deploy to `<slug>` (see [Pull request previews](#pull-request-previews)). One deploy runs at a time, and a deploy in flight is never cancelled by the next. Without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID`, the job skips with a notice. For a custom domain, set `site_url` to it ([Workers hosting](#workers-hosting)).
 
 #### Moving an app off Cloudflare Pages
 
@@ -291,7 +293,7 @@ An app made before this template deployed from CI was deployed by Cloudflare Pag
 
 1. Merge the `copier update`, then run `just repo-settings` and add both secrets to the new `production` environment.
 2. The next push to `main` deploys the Worker. Check the app at its workers.dev address.
-3. Move the custom domain from the Pages project to the Worker (Worker > Settings > Domains & Routes).
+3. Remove the custom domain from the Pages project. With `site_url` set to it, the next production deploy attaches it to the Worker.
 4. Delete the Pages project, now that the Worker serves production.
 
 Before step 2, check that the account has no Worker named `<slug>`: the first deploy overwrites it. Expect a short gap while the domain moves from Pages to the Worker.
@@ -443,17 +445,17 @@ copier update --data 'test_extras=[property]'
 
 ## Static site
 
-Answer `site` (under `customise`) to give any project a static page beside its code: a playground, a demo or a report. GitHub Pages serves it from `main`, and each pull request gets a preview. The page's readers are the project's users, so it stays small: the tool in the first screen, details in disclosures.
+Answer `site` (under `customise`) to give any project a static page beside its code: a playground, a demo or a report. GitHub Pages serves it from `main`, or a Cloudflare Worker with `site_host=cloudflare`, and each pull request gets a preview. The page's readers are the project's users, so it stays small: the tool in the first screen, details in disclosures.
 
 The two choices differ only in what is in `site/` and how `just site` builds it:
 
 - `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a starter page with a header, a main area with a TODO for the tool, and a footer with the licence and a privacy line. Plain HTML, CSS and an ES module, no build step or framework. It works at 320 px and in dark mode. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
-- `site=astro`: a small Astro project. `package.json` has astro at the version `copier.yml` pins, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once to write `site/pnpm-lock.yaml`, and commit it. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. With a custom domain, set `site` to it and drop `base`. The `preview` job still serves the build under `/<repo>/`, so change it to match, or the preview's links break.
+- `site=astro`: a small Astro project. `package.json` has astro at the version `copier.yml` pins, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once to write `site/pnpm-lock.yaml`, and commit it. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. On a Worker (`site_host=cloudflare`), the site is served from `/`: `site` is the Worker's address and there is no `base`.
 
 The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
 
-- `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`.
-- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/`, and sends `X-Robots-Tag: noindex`. It runs the wrangler pinned in `copier.yml` with `pnpm dlx`.
+- `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`. [On a Worker](#hosting-on-a-worker), it deploys to the Worker instead.
+- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/` (from `/` itself on a Worker), and sends `X-Robots-Tag: noindex`. It runs the wrangler pinned in `copier.yml` with `pnpm dlx`.
 
 One-time setup:
 
@@ -463,6 +465,27 @@ One-time setup:
 A GitHub Pages site is public even when the repo is private, and a private repo needs a paid GitHub plan for Pages. Until Pages is on, the `deploy` job skips with a notice, and `just repo-settings` warns and goes on where GitHub refuses Pages.
 
 The daily sweep finds preview Workers by name alone. In one Cloudflare account, a repo `foo` with a site and a repo `foo-site` with a web app would share the names `foo-site-pr-<number>`: rename one of them if that happens.
+
+### Hosting on a Worker
+
+`site_host=cloudflare` replaces Pages with the Worker `<slug>-site`, from the same `wrangler.site.jsonc` the previews use. The `deploy` job deploys the build job's artifact on every push to `main`, in the `production` environment, one at a time, and skips with a notice without the Cloudflare secrets. Previews serve the build from `/`, as production does, with no redirect. `site_url` is the site's address, and can be a custom domain; with `worker`, a Worker script answers `/api/*` ([Workers hosting](#workers-hosting)). A repo with a web app keeps `site_url` for the app, and the site stays at its workers.dev address.
+
+The starter `astro.config.mjs` is the project's, so switching an existing Astro site from Pages leaves it alone: set `site` to the new address and delete `base`.
+
+One-time setup: `just repo-settings` creates the `preview` and `production` environments instead of setting up Pages. Add both Cloudflare secrets to each.
+
+## Workers hosting
+
+What deploys to a Cloudflare Worker (a web app, or a site with `site_host=cloudflare`) shares two answers.
+
+`site_url` is its public address. Give a host alone, without a path: a Worker serves a whole host. When the host is not `*.workers.dev`, it is a custom domain: the production job runs `wrangler deploy --domain <host>`, which attaches it to the Worker and creates its DNS record. The domain needs a zone in the same Cloudflare account, without a CNAME record for that host, and the production token needs Zone > Workers Routes: Edit for that zone. The domain is not in the wrangler config, because previews deploy that config under their own names and must not take it. `just repo-about` sets it as the repo's homepage.
+
+`worker` adds a Worker script in front of the static assets, for server code such as an API. `main` in the wrangler config points at it, the `ASSETS` binding lets it hand a request to the files, and `run_worker_first: ["/api/*"]` sends only `/api/*` to it first. Every other request is served from the files without running the script, so it stays free; each request the script handles counts against the Workers plan. The starter has one route, `/api/health`, answers 404 for the rest of `/api/`, and passes anything else to the files.
+
+- A web app gets `worker/index.ts`, with its own `worker/tsconfig.json` that swaps the DOM types for `@cloudflare/workers-types`. `pnpm run typecheck` checks both, and Vitest runs `worker/index.test.ts` in Node against a stub `ASSETS`. `pnpm dev` runs Vite alone; `pnpm exec wrangler dev` serves the last build and the script together.
+- A site gets `site/worker/index.mjs`, plain JavaScript with no TypeScript stack needed. `just site` runs `site/worker/index.test.mjs` with `node --test` first, and a plain site's build leaves `worker/` out. wrangler bundles the script on every preview and production deploy, so a script that does not bundle fails the pull request's preview.
+
+The script and its test are the project's after the first render. A binding beyond `ASSETS` (KV, D1, a secret) also reaches every preview: read [decision 0001](decisions/0001-pr-previews-use-the-production-cloudflare-account.md) first.
 
 ## Publishing
 

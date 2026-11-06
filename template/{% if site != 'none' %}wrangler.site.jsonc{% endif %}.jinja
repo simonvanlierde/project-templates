@@ -1,13 +1,32 @@
+{%- set worker_name = slug | replace('.', '-') | replace('_', '-') ~ '-site' -%}
+{%- if site_on_workers -%}
+// The site's Worker: .github/workflows/site.yml deploys {{ site_out }}/ with it, the deploy
+// job to {{ worker_name }} on every push to main, and the preview job with
+// --name {{ worker_name }}-pr-<number> for each pull request.
+{%- if worker %}
+// site/worker/index.mjs runs in front of the files for /api/* (run_worker_first below).
+{%- endif %}
+{%- if site_domain %}
+// The deploy job also attaches the custom domain {{ site_domain }}, with --domain.
+{%- endif %}
+{%- else -%}
 // The Worker config of the site's pull request previews: the preview job in
 // .github/workflows/site.yml deploys {{ site_out }}/ with --name <slug>-site-pr-<number>.
 // Production is GitHub Pages, not a Worker.
+{%- endif %}
 //
 // Keep the slug short: a Worker name can have at most 63 characters, and "-site-pr-123" takes 12.
 {
-  "name": "{{ slug | replace('.', '-') | replace('_', '-') }}-site",
+  "name": "{{ worker_name }}",
+{%- if worker and site_on_workers %}
+  "main": "./site/worker/index.mjs",
+{%- endif %}
   "compatibility_date": "2026-10-01",
   "assets": {
-    "directory": "./{{ site_out }}"
+    "directory": "./{{ site_out }}"{% if worker and site_on_workers %},
+    "binding": "ASSETS",
+    // Only these paths reach the Worker before the files.
+    "run_worker_first": ["/api/*"]{% endif %}
   },
   // Off, so the workers.dev address is a Worker's only one, and the retire job can
   // check that one address after the delete.
