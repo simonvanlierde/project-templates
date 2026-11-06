@@ -227,7 +227,13 @@ git tag -f check-render-tag >/dev/null
   --data author_email=1+ada@users.noreply.github.com . "$out/compose"
 c=$out/compose
 "${copier[@]}" --vcs-ref=HEAD --data project_name=compose-site --data 'stacks=[docker]' \
-  --data site=plain . "$out/compose-site"
+  --data site=plain . "$out/compose-site" 2>"$out/compose-site.log" || {
+  cat "$out/compose-site.log" >&2
+  exit 1
+}
+# The closing message names no lockfiles and no package version: this repo has neither.
+grep -qx ' *Then commit\.' "$out/compose-site.log"
+(lacks -e 'lockfiles' -e 'package manifest' "$out/compose-site.log")
 test -f "$out/compose-site/.github/scripts/preview-retire.sh"
 # A fresh render passes its own git hooks.
 git -C "$c" init -q
@@ -1362,6 +1368,9 @@ grep -q 'stub for a data pipeline' d/pipe/Dockerfile
 test ! -e a/index.html
 grep -q '"react": \["./node_modules/preact/compat/"\]' d/web/tsconfig.json
 grep -q 'react: "preact/compat"' d/web/vite.config.ts
+# Biome's React rules run only with react in package.json: Preact turns on the one App.tsx suppresses.
+grep -qF '"noDangerouslySetInnerHtml": "error"' d/web/biome.json
+(lacks -q 'noDangerouslySetInnerHtml' j/biome.json)
 (lacks -q '"react":' d/web/package.json)
 grep -q 'script-src .self.;' d/web/public/_headers
 (lacks -q "'unsafe-inline'" d/web/public/_headers)

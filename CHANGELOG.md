@@ -13,6 +13,15 @@ changes are marked **Breaking**.
 ### Changed
 
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
+- The message at the end of `copier copy` mentions lockfiles only when the project has
+  them, and the package version only when it publishes to PyPI or npm. It ends by saying
+  that `copier update` pulls in new template releases.
+
+### Fixed
+
+- A Preact web app's `biome.json` turns on `noDangerouslySetInnerHtml`, which Biome enables
+  only with React. The suppression in `src/App.tsx` now has an effect, and `just check` no
+  longer warns about it on a fresh render.
 
 ## [0.14.0] - 2026-11-05
 
