@@ -2211,7 +2211,8 @@ done
 (lacks -q -- '--exclude' a/.github/workflows/links.yml)
 grep -qF -- "--exclude '^https://github\\.com/example-org/odd-name--co([/#?]|\$)'" b/.github/workflows/links.yml
 test "$(grep -c 'commit-message: {prefix: chore, include: scope}' a/.github/dependabot.yml)" -eq 5
-grep -q "extends: \['config:recommended', ':semanticCommits', ':configMigration', 'abandonments:recommended'\]" d/renovate.json5
+grep -q "extends: \['config:best-practices', ':semanticCommits'\]" d/renovate.json5
+grep -q "ignorePresets: \[':pinDevDependencies', 'security:minimumReleaseAgeNpm'\]" d/renovate.json5
 grep -qx 'playwright-report/' d/.gitignore
 # Outside CI, reusing a server on the preview port would test whichever app holds it.
 (lacks -q reuseExistingServer d/web/playwright.config.ts)
