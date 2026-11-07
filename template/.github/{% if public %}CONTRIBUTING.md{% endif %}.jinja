@@ -47,9 +47,9 @@ and remove it a week later ([how](https://github.com/simonvanlierde/project-temp
   `Revert "..."` title that GitHub's Revert button writes.
 - **The pull request body** has the shape of
   [the pull request template](pull_request_template.md): what it fixes and why, three or
-  four bullets, a `Tests:` line, and a `How I know it works:` line with the proof (the
-  command and its output, or a test that fails without the change). Add a `What to check:` line for
-  what only a person can judge.
+  four bullets, a `Tested:` line with the proof (the command and its result, or a test
+  that fails without the change), and a `Not checked:` line with what did not run and why,
+  and any design choice or security path that only a person can judge. "Nothing" is fine.
 - **The changelog** ([CHANGELOG.md](../CHANGELOG.md)) follows
   [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/). Write each entry for
   the people who use the project, not as a commit subject. Mark breaking changes

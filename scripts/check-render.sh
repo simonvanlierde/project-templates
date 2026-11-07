@@ -144,7 +144,8 @@ grep -q 'project edit' "$out/h/docs/index.md"
 # x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
 # x and r have the static site without a package.json.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
-  --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain . "$out/x"
+  --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain \
+  --data 'test_extras=[property]' . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # ds: a command-line-only Python library with the docs site: no API reference.
@@ -391,6 +392,11 @@ done
 [ "$(find "$out/c" -name 'Dockerfile*' -not -path '*/.git/*' | wc -l)" -eq 1 ]
 grep -qF "'docker-compose': { enabled: false }" "$out/d/renovate.json5"
 grep -q 'the dependencies' "$out/a/.github/CONTRIBUTING.md"
+# CONTRIBUTING describes the two lines pull_request_template.md asks for.
+grep -q 'Tested:' "$out/a/.github/CONTRIBUTING.md"
+grep -q 'Not checked:' "$out/a/.github/CONTRIBUTING.md"
+# The citesync hook's Python dependencies are exact pins.
+grep -q 'additional_dependencies: \[packaging==' "$out/a/.pre-commit-config.yaml"
 
 # Each preset renders on its own, with only the identity answers from the settings file.
 for f in presets/*.yml; do
@@ -1127,8 +1133,18 @@ mkdir -p "$mutdiff/src/pkg" && cp m/just/mutation_diff.py "$mutdiff/"
   git init -q && git add -A && git -c user.name=t -c user.email=t@t.test commit -qm base --no-verify
   sed -i 's/return 1/return 2/' src/pkg/b.py
   sed -i -e '7s/1/2/' -e '14s/1/2/' -e '19s/1/2/' src/pkg/a.py
-  test "$(python3 -I mutation_diff.py HEAD)" = "$(printf 'pkg.a.xǁCǁm__mutmut_*\npkg.a.xǁCǁs__mutmut_*')"
+  test "$(python3 -I mutation_diff.py HEAD 2>stderr.txt)" = "$(printf 'pkg.a.xǁCǁm__mutmut_*\npkg.a.xǁCǁs__mutmut_*')"
+  test "$(cat stderr.txt)" = 'skipped (decorated): pkg.a.g'
 )
+# just --list shows only the comment line directly above a recipe: a block of two or more
+# lines there would show its last line alone, so the detail sits behind a blank line.
+for f in m/justfile m/just/*.just; do
+  (lacks -q 'multi-line doc comment' <(awk '/^#/ { n++; next } /^[{a-z]/ && /:/ && n > 1 { print "multi-line doc comment: " FILENAME ": " $0 } { n = 0 }' "$f"))
+done
+# property.yml names Go's FuzzAdd only when the project has the Go library (m does, x is Python only).
+grep -q 'FuzzAdd' m/.github/workflows/property.yml
+test -f x/.github/workflows/property.yml
+(lacks -q 'FuzzAdd' x/.github/workflows/property.yml)
 # go-mutation-diff reads the diff relative to go_dir, or gremlins finds no changed lines there.
 grep -qF 'GIT_CONFIG_KEY_0=diff.relative' m/just/go.just
 # property.yml: the same shape, running each stack's property or fuzz recipe.
@@ -2287,8 +2303,9 @@ recipe_has() {
     exit 1
   }
 }
-for cmd in 'uv run ruff check' 'uv run ruff format --check' 'uv run ty check' 'uv run pytest' \
-  'uv audit --locked --preview-features audit-command'; do
+# --locked: CI's uv sync --locked fails on a stale uv.lock, so py-check must not rewrite it.
+for cmd in 'uv run --locked ruff check' 'uv run --locked ruff format --check' 'uv run --locked ty check' \
+  'uv run --locked pytest' 'uv audit --locked --preview-features audit-command'; do
   recipe_has a/just/python.just py-check "    $cmd"
 done
 for cmd in check typecheck test build; do recipe_has a/just/ts.just ts-check "    pnpm run $cmd"; done
@@ -2320,7 +2337,8 @@ recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
 # Whitespace control around the fmt recipe's last line must not glue the next comment onto it.
 for r in a h t; do
-  grep -qx '# Run every git hook over the whole repo, not just staged files. The checks workflow skips' "$r/justfile"
+  test "$(grep -B1 -x '# The checks workflow skips the hooks in its SKIP list, which the stack workflows run' "$r/justfile" | head -1)" = ''
+  grep -qx '# Run every git hook over the whole repo, not just staged files.' "$r/justfile"
 done
 
 # AGENTS.md names the check and test recipes, so each must be one the justfile has.

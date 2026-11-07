@@ -23,6 +23,9 @@ Upgrade steps:
 - Python projects: an update adds the `sp-repo-review` hook. Run `prek run sp-repo-review --all-files`, then fix each check that fails or skip it under `[tool.repo-review.ignore]` in `pyproject.toml` with its reason ([Scientific Python repo-review](docs/usage.md#scientific-python-repo-review)).
 - An update of a public project with a citation or an OpenSSF badge, or of one that publishes to PyPI, adds `.github/first-release.md`. Delete it if the project has already released.
 - **Breaking:** pytest settings move from `[tool.pytest.ini_options]` to pytest 9's `[tool.pytest]` table, with `strict = true`, `filterwarnings = ["error"]`, `log_level = "INFO"` and `minversion = "9.0"`. A warning in your tests now fails them: fix it, or add an `ignore::` entry to `filterwarnings` with the reason. Merge your own pytest options into the new table during `copier update`.
+- Updating from before v0.13.0, check three files for a block the update added a second time beside your own, and delete the extra:
+  - `pyproject.toml` with `keywords` or `classifiers` already set: TOML refuses the duplicate key, so delete the second of each.
+  - `.pre-commit-config.yaml` with a citesync block from v0.12: delete the older one, or citesync runs twice.
 
 ### Added
 
@@ -60,6 +63,12 @@ Upgrade steps:
 
 ### Fixed
 
+- CONTRIBUTING describes the two lines of the pull request template, `Tested:` and `Not checked:`, not the three it used to ask for.
+- `property.yml` mentions Go's `FuzzAdd` only in a project with the Go library.
+- A comment of several lines above a recipe showed only its last line in `just --list`. Each recipe now has one summary line directly above it, and the detail sits behind a blank line (`hooks`, `citation`, `py-mutation`, `py-property` and the other recipes that had a block).
+- `just py-check` runs `uv run --locked`, so a stale `uv.lock` fails locally the way CI's `uv sync --locked` does, in place of being rewritten.
+- The citesync hook's Python dependencies (`packaging`, `ruamel-yaml`, `tomlkit`) are pinned exactly in `additional_dependencies`, so the dependency bot can bump them.
+- `just/mutation_diff.py` prints `skipped (decorated): <name>` to stderr for each changed function mutmut leaves alone for its decorator.
 - CONTRIBUTING links the README without the `#development` anchor, which a project's own README may not have.
 - With a GitHub noreply `author_email`, SECURITY.md offers only the private advisory and the code of conduct only GitHub's abuse report: that address gets no mail.
 - Files name only the stacks a project has: the `.gitignore` sections, the justfile's imports and recipe prefixes, the `uv` and `pnpm` remarks in the hook and YAML configs, the lockfile steps in the copier-update PR body, the SKIP list in `checks.yml`, and the NumPy words in `_typos.toml`. `just repo-settings` names the dependency bot the project uses.

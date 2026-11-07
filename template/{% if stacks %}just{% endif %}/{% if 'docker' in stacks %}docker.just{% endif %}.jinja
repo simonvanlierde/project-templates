@@ -33,8 +33,9 @@ _shell-files:
         if head -n1 "$f" | grep -qE '^#!.*/(env +(-S +)?)?(bash|dash|ksh|sh)( |$)'; then printf '%s\0' "$f"; fi
     done
 
-# Validate compose.yaml, then shellcheck and shfmt-check every shell script (needs Docker).
-# The linters run from the pinned images above.
+# Needs Docker. The linters run from the pinned images above.
+
+# Validate compose.yaml, then shellcheck and shfmt-check every shell script.
 docker-check:
     #!/usr/bin/env bash
     set -euo pipefail

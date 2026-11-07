@@ -8,10 +8,10 @@ py-sync:
 
 # What CI runs: lint, format check, types, tests, dependency audit{% if kind == 'data-pipeline' %}. CI also runs the `just pipeline` stages{% endif %}.
 py-check:
-    {{ uv }} run ruff check
-    {{ uv }} run ruff format --check
-    {{ uv }} run ty check
-    {{ uv }} run pytest
+    {{ uv }} run --locked ruff check
+    {{ uv }} run --locked ruff format --check
+    {{ uv }} run --locked ty check
+    {{ uv }} run --locked pytest
     {{ uv }} audit --locked --preview-features audit-command
 
 # Fix what ruff can fix, then format.
@@ -35,11 +35,13 @@ py-matrix:
 {%- if kind == 'library' and 'mutation' in test_extras %}
 {%- set cd = '' if python_dir == '.' else 'cd ' ~ python_dir ~ '\n    ' %}
 
-# Plant small bugs in the package. Fails on a mutant the tests miss (or that no test
-# reaches) unless tests/mutation-baseline.txt lists it, and on a listed one that no longer
-# survives. Slow: CI runs it weekly (mutation.yml); run it by hand after writing tests.
-# Give mutmut patterns (`just py-mutation 'pkg.mod.x_name__mutmut_*'`) to mutate only
-# those; that run skips the check for listed ones. `mutmut browse` shows survivors.
+# A mutant that no test reaches counts as missed, unless tests/mutation-baseline.txt
+# lists it. A listed one that no longer survives fails too. Slow: CI runs it weekly
+# (mutation.yml); run it by hand after writing tests. Give mutmut patterns
+# (`just py-mutation 'pkg.mod.x_name__mutmut_*'`) to mutate only those; that run skips
+# the check for listed ones. `mutmut browse` shows survivors.
+
+# Plant small bugs in the package; fail on a mutant the tests miss.
 py-mutation *names:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -63,10 +65,11 @@ py-mutation *names:
     fi
     [ -z "$new$gone" ]
 
-# The same check for the functions this branch changed since it split off a git ref
-# (origin/main unless you give one): fast enough to run on each change. Fails on a
-# survivor not in the baseline.
-# Run `just py-mutation` before a release, since it also finds the listed ones to drop.
+# The ref is origin/main unless you give one: fast enough to run on each change. Fails
+# on a survivor not in the baseline. Run `just py-mutation` before a release, since it
+# also finds the listed ones to drop.
+
+# The same check for the functions this branch changed since it split off a git ref.
 py-mutation-diff base='origin/main':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -77,15 +80,18 @@ py-mutation-diff base='origin/main':
 {%- endif %}
 {%- if profiling %}
 
-# Profile a script or module with pyinstrument and print the call tree, e.g.
-# `just py-profile -m mypackage.cli <args>`. Needs no perf events, so it runs on any host.
+# E.g. `just py-profile -m mypackage.cli <args>`. Needs no perf events, so it runs on
+# any host.
+
+# Profile a script or module with pyinstrument and print the call tree.
 py-profile *args:
     {{ uv }} run --with pyinstrument pyinstrument {% raw %}{{ args }}{% endraw %}
 {%- endif %}
 {%- if kind == 'library' and 'property' in test_extras %}
 
-# The tests under Hypothesis's "long" profile (tests/conftest.py): 10,000 examples a
-# property instead of 100. CI runs it weekly (property.yml).
+# The profile is in tests/conftest.py. CI runs it weekly (property.yml).
+
+# The tests under Hypothesis's "long" profile: 10,000 examples a property instead of 100.
 py-property:
     {{ uv }} run pytest --hypothesis-profile=long
 {%- endif %}
