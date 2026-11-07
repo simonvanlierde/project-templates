@@ -367,7 +367,7 @@ Every workflow that publishes from a tag (`release.yml`, `python-release.yml`, `
 The file renders with a comment and no keys, so the first release fails until you add yours. Sign with an SSH key (`git config gpg.format ssh` and `git config user.signingkey ~/.ssh/id_ed25519.pub`), then add it and commit to `main`:
 
 ```sh
-echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config user.signingkey)")" >>.github/allowed_signers
+echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config --type=path user.signingkey | sed 's/\.pub$//').pub")" >>.github/allowed_signers
 ```
 
 A GPG-signed tag fails the check: `git tag -v` reads an allowed signers file for SSH signatures only. `allowed_signers` is the project's file after the first render, and `copier update` leaves it alone. To check a tag yourself: `git -c gpg.ssh.allowedSignersFile=.github/allowed_signers tag -v vX.Y.Z`.

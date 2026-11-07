@@ -44,7 +44,11 @@ else
 fi
 # A refused tag made here is deleted, so a rerun after the key is added signs afresh.
 "$(dirname "$0")/verify-tag.sh" "$tag" origin/main || {
-  [ -z "${created:-}" ] || git tag -d "$tag" >/dev/null
+  if [ -n "${created:-}" ]; then
+    git tag -d "$tag" >/dev/null
+  else
+    echo "the refused tag $tag was already here; delete it, then run this again: git tag -d $tag" >&2
+  fi
   exit 1
 }
 git push origin "refs/tags/$tag"

@@ -12,7 +12,7 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
-- **Breaking:** a release workflow publishes only a tag signed with an SSH key listed in `.github/allowed_signers` on `main`, which the update adds with no keys in it. Before your next release, add your signing key and commit the file to `main`: `echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config user.signingkey)")" >>.github/allowed_signers`. A GPG-signed tag no longer publishes: switch to an SSH signing key (`git config gpg.format ssh`).
+- **Breaking:** a release workflow publishes only a tag signed with an SSH key listed in `.github/allowed_signers` on `main`, which the update adds with no keys in it. Before your next release, add your signing key and commit the file to `main`: `echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config --type=path user.signingkey | sed 's/\.pub$//').pub")" >>.github/allowed_signers`. A GPG-signed tag no longer publishes: switch to an SSH signing key (`git config gpg.format ssh`).
 - **Breaking:** `docker_stacks` is gone, and copier drops the old answer. What the update does depends on what it listed:
   - Only `ts`, without the python stack: the project becomes a [Compose-only repo](docs/usage.md#compose-only-repos). The update deletes the TypeScript `Dockerfile`, `.dockerignore`, `src/main.ts` stub and compose service; keep them with `git checkout HEAD -- <path>` before you commit.
   - Only `ts`, with the python stack: update with `copier update --data docker_image=false`, or the update replaces the TypeScript `Dockerfile` with the Python image.
@@ -68,6 +68,7 @@ Upgrade steps:
 
 ### Fixed
 
+- `site=astro`: a `"` in `project_description` ended the layout's quoted `content` attribute and failed `astro build`. The layout now passes the description as an expression.
 - CONTRIBUTING describes the two lines of the pull request template, `Tested:` and `Not checked:`, not the three it used to ask for.
 - `property.yml` mentions Go's `FuzzAdd` only in a project with the Go library.
 - A comment of several lines above a recipe showed only its last line in `just --list`. Each recipe now has one summary line directly above it, and the detail sits behind a blank line (`hooks`, `citation`, `py-mutation`, `py-property` and the other recipes that had a block).

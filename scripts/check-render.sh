@@ -189,7 +189,7 @@ echo 'project edit' >>"$out/y/site/package.json"
 # escaping in HTML.
 for s in plain astro; do
   "${copier[@]}" --vcs-ref=HEAD --data project_name=hush-me --data 'stacks=[python]' \
-    --data 'project_description=Tidies <b> tags & more' \
+    --data 'project_description=Tidies "<b>" tags & more' \
     --data public=false --data site=$s . "$out/hush-$s" >/dev/null
 done
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
@@ -778,8 +778,9 @@ cp -R k "$rel/w"
   git config gpg.format ssh
   git config user.signingkey "$rel/key.pub"
   # The release check reads the key from .github/allowed_signers on origin/main, with the
-  # command that file's comment gives.
-  echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config user.signingkey)")" >>.github/allowed_signers
+  # command that file's comment gives. The file as rendered is kept for a case below.
+  cp .github/allowed_signers "$rel/rendered_signers"
+  echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config --type=path user.signingkey | sed 's/\.pub$//').pub")" >>.github/allowed_signers
   git add -A
   git commit -q -s -m 'chore: init'
   git push -q origin main
@@ -817,8 +818,27 @@ cp -R k "$rel/w"
   grep -q 'HEAD is not origin/main' release.log
   # verify-tag.sh, which every release workflow runs, refuses a lightweight tag and a tag
   # signed with a key that is not in .github/allowed_signers on origin/main. Adding the
-  # key to the tagged commit's own copy of the file counts for nothing.
+  # key to the tagged commit's own copy of the file counts for nothing. GITHUB_SHA is set
+  # when this script runs in CI, and the script compares the tag with it.
+  unset GITHUB_SHA
   .github/scripts/verify-tag.sh v0.1.0 origin/main 2>/dev/null
+  (! GITHUB_SHA=0000000000000000000000000000000000000000 .github/scripts/verify-tag.sh v0.1.0 origin/main >release.log 2>&1)
+  grep -qxF 'v0.1.0 moved after this run started: it no longer marks 0000000000000000000000000000000000000000' release.log
+  # A ref renamed to point at an older signed tag object, and an unsigned annotated tag.
+  git update-ref refs/tags/v9.9.9 "$(git rev-parse refs/tags/v0.1.0)"
+  (! .github/scripts/verify-tag.sh v9.9.9 origin/main >release.log 2>&1)
+  grep -qxF 'refs/tags/v9.9.9 points at a tag object made for another name' release.log
+  git tag -d v9.9.9 >/dev/null
+  git tag --no-sign -a -m plain plain
+  (! .github/scripts/verify-tag.sh plain origin/main >release.log 2>&1)
+  grep -qF 'plain has no SSH signature' release.log
+  # The file as rendered lists no key, so a release before you add yours refuses.
+  git checkout -q -b rendered
+  cp "$rel/rendered_signers" .github/allowed_signers
+  git commit -q -s -am 'chore: no keys'
+  (! .github/scripts/verify-tag.sh v0.1.0 rendered >release.log 2>&1)
+  grep -qxF 'v0.1.0 is not signed with a key in .github/allowed_signers on rendered.' release.log
+  git checkout -q main
   git tag light
   (! .github/scripts/verify-tag.sh light origin/main >release.log 2>&1)
   grep -qxF 'light is a lightweight tag; make it with .github/scripts/tag-release.sh' release.log
@@ -836,6 +856,11 @@ cp -R k "$rel/w"
   (! .github/scripts/tag-release.sh 0.1.0 >release.log 2>&1)
   grep -qxF 'v0.1.0 is not signed with a key in .github/allowed_signers on origin/main.' release.log
   (! git rev-parse -q --verify refs/tags/v0.1.0 >/dev/null)
+  # A refused tag that was already here stays, and the message says how to delete it.
+  git tag -s -m v0.1.0 v0.1.0
+  (! .github/scripts/tag-release.sh 0.1.0 >release.log 2>&1)
+  grep -qxF 'the refused tag v0.1.0 was already here; delete it, then run this again: git tag -d v0.1.0' release.log
+  git rev-parse -q --verify refs/tags/v0.1.0 >/dev/null
 )
 # c lists three manifests in citesync.toml. Bumping the two the recipe reads, but not
 # Cargo.toml, stops the release at citesync with CHANGELOG.md unchanged. No remote: the
@@ -1841,7 +1866,7 @@ test -f h/_docs/assurance-case/index.html
 grep -q 'href="https://github.com/.*/issues"' x/site/index.html
 # The plain starter is a tool page: the job under the name, or a TODO without a
 # description; an input, a result and one action; a privacy line its CSP keeps true.
-grep -qxF '    <p class="job">Tidies &lt;b&gt; tags &amp; more</p>' hush-plain/site/index.html
+grep -qxF '    <p class="job">Tidies &#34;&lt;b&gt;&#34; tags &amp; more</p>' hush-plain/site/index.html
 (lacks -q 'TODO: one sentence' hush-plain/site/index.html)
 grep -qF 'TODO: one sentence naming the job' x/site/index.html
 (lacks -q 'class="job"' x/site/index.html)
@@ -1855,8 +1880,9 @@ for r in x hush-plain; do
   node --check "$r/site/main.mjs"
 done
 grep -q 'Skip to the content' hush-astro/site/src/layouts/Base.astro
-# The Astro layout holds the description as a quoted attribute, which Astro escapes at build.
-grep -qxF '    <meta name="description" content="Tidies <b> tags & more" />' hush-astro/site/src/layouts/Base.astro
+# The Astro layout holds the description as an expression, which Astro escapes at build. A
+# quoted attribute would end at the description's first quote and fail the build.
+grep -qxF '    <meta name="description" content={ "Tidies \"<b>\" tags & more" } />' hush-astro/site/src/layouts/Base.astro
 # Site previews are <slug>-site-pr-<n>, apart from a web app's <slug>-pr-<n>.
 # shellcheck disable=SC2016
 grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.jsonc' x/.github/workflows/site.yml
@@ -3093,9 +3119,13 @@ test ! -e "$sample_up/tests/test_add.py"
 # install-action falls back to cargo-binstall for a tool past its manifest, which
 # installs an unchecked binary: every step says fallback: none, but cargo-codspeed,
 # which the manifest does not list.
+# The sweep counts the steps it saw, so a changed `uses:` spelling cannot pass it by
+# matching nothing.
 unpinned=$(find . -path '*/.github/workflows/*.yml' -exec awk '
-  /uses: taiki-e\/install-action@/ { n = 3; step = ""; next }
-  n > 0 { step = step $0 "\n"; if (--n == 0 && step !~ /fallback: none/ && step !~ /tool: cargo-codspeed/) print FILENAME }
+  FNR == 1 { n = 0 }
+  /uses: taiki-e\/install-action@/ { n = 3; step = ""; seen++; next }
+  n > 0 { step = step $0 "\n"; if (--n == 0 && step !~ /fallback: none/ && step !~ /tool: cargo-codspeed@/) print FILENAME }
+  END { if (!seen) print "no install-action step found" }
 ' {} +)
 test -z "$unpinned" || {
   echo "install-action without fallback: none: $unpinned" >&2
