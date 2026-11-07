@@ -24,6 +24,9 @@
 {%- else %},
           { "context": "python: lint, types, {% if kind == 'data-pipeline' %}pipeline, {% endif %}tests", "integration_id": 15368 }
 {%- endif %}
+{%- if python_windows %},
+          { "context": "python: tests (windows)", "integration_id": 15368 }
+{%- endif %}
 {%- endif %}
 {%- if 'ts' in stacks and ts_dir == '.' %},
           { "context": "ts: lint, types, tests", "integration_id": 15368 }

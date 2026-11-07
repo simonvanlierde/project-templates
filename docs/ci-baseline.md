@@ -28,6 +28,7 @@ What CI and the git hooks check in a generated project, why, and what the templa
 | `CITATION.cff`, `codemeta.json` | Licensed `library` kinds, plus licensed Python `research` and `data-pipeline` | Maintained for Zenodo, Software Heritage, and GitHub citation. `citesync` verifies consistency |
 | REUSE licensing check | `reuse` git hook (when licensed) | Fails while a file has no copyright and license in `REUSE.toml` or `LICENSES/` |
 | Multi-version Python testing | `python.yml` (`library` kind) | Tests packages across all supported minor versions from `python_min` to `python_version` |
+| Python tests on Windows | `python.yml` (`python_windows` option) | Runs the tests on `windows-latest` with `python_version`, without lint or type checks |
 | Code coverage reporting | `python.yml`, `ts.yml`, `codecov.yml` (`codecov` option) | Uploads coverage to Codecov; flags PR regressions exceeding 2 percentage points |
 | Scheduled extended property tests | `property.yml` (`property` extra) | Runs 10,000 cases per property (or 10 minutes of Go fuzzing) weekly; excluded from PRs |
 | Scheduled mutation testing | `mutation.yml` (`mutation` extra) | Measures test resilience against injected bugs weekly; excluded from PRs |

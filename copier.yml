@@ -588,6 +588,16 @@ python_api:
     Turns on the griffe API-break check in python.yml (with publish_to_pypi)
   default: true
 
+python_windows:
+  type: bool
+  when: "{{ 'python' in stacks }}"
+  ask: "{{ customise }}"
+  help: >-
+    Run the tests on Windows too, on python_version only, to catch a missing encoding="utf-8",
+    a hardcoded / in a path and other Windows-only failures. Costs one extra CI job per push
+    and pull request
+  default: false
+
 # Computed, never asked: whether the docs site gets docs/reference.md, an API reference
 # that mkdocstrings reads from the docstrings. A command-line-only library gets none.
 docs_api:

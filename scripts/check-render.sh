@@ -101,7 +101,7 @@ d_args=(
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
   --data dependency_bot=renovate --data codecov=true --data cold_install=true
-  --data site=plain
+  --data site=plain --data python_windows=true
 )
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d"
@@ -154,10 +154,10 @@ grep -q 'project edit' "$out/h/docs/index.md"
   --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true \
   --data docs_site=true . "$out/m"
 # x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
-# x and r have the static site without a package.json.
+# x and r have the static site without a package.json. x and d run the tests on Windows.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
   --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain \
-  --data 'test_extras=[property]' . "$out/x"
+  --data 'test_extras=[property]' --data python_windows=true . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # ds: a command-line-only Python library with the docs site: no API reference.
@@ -1340,6 +1340,19 @@ grep -q 'name: "python: API breaks since the last tag"' c/.github/workflows/pyth
 test -f x/.github/workflows/python.yml
 (lacks -q 'griffe' x/.github/workflows/python.yml)
 test -f x/.github/workflows/python-release.yml
+# python_windows: one job on windows-latest that runs the tests without ty, a required
+# check like the Linux ones. Off by default.
+sed -n '/^  windows:/,/^  [a-z]/p' x/.github/workflows/python.yml >windows-job.yml
+grep -qx '    name: "python: tests (windows)"' windows-job.yml
+grep -qx '    runs-on: windows-latest' windows-job.yml
+grep -qx "          python-version: \"$(cat x/.python-version)\"" windows-job.yml
+grep -qx '      - run: uv run pytest' windows-job.yml
+(lacks -q 'ty check' windows-job.yml)
+jq -e '.rules[0].parameters.required_status_checks | any(.context == "python: tests (windows)")' x/.github/rulesets/main-checks.json >/dev/null
+# Nested: the git config step runs before checkout creates the folder.
+sed -n '/^  windows:/,/^  [a-z]/p' d/.github/workflows/python.yml | grep -A2 'core.autocrlf false' | grep -qx '        working-directory: \.'
+(lacks -q 'windows' e/.github/workflows/python.yml a/.github/workflows/python.yml)
+(lacks -q 'windows' e/.github/rulesets/main-checks.json)
 # Not in py-check: a deliberate break would keep local checks red until the next tag.
 (lacks -q griffe c/just/python.just)
 grep -qx '      - run: pnpm run api' c/.github/workflows/ts.yml

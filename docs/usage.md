@@ -11,7 +11,7 @@ reference for what comes after, in the order you are likely to need it:
   [fill in the About box](#the-github-about-box).
 - **Later:** [pull in template updates](#keeping-your-project-up-to-date).
 - **Optional features**, which you can turn on at any time with `copier update --data`:
-  [publishing](#publishing), [Codecov](#coverage-on-codecov),
+  [publishing](#publishing), [tests on Windows](#tests-on-windows), [Codecov](#coverage-on-codecov),
   [CodSpeed](#benchmarks-on-codspeed), [profiling](#profiling),
   [test extras](#test-extras), a [static site](#static-site),
   [Workers hosting](#workers-hosting), a [documentation site](#documentation-site), the
@@ -62,6 +62,7 @@ When `customise` is `no`, advanced questions take these defaults:
 | `module_name`, `go_module` | Derived from project name and GitHub user |
 | `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
 | `python_api` | Enabled ([API-break check](#api-break-check)) |
+| `python_windows` | Disabled ([Tests on Windows](#tests-on-windows)) |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](#publishing)) |
 | `test_extras` | None ([Test extras](#test-extras)) |
 | `app_port` | 8000 |
@@ -283,7 +284,7 @@ copier update --data public=true --data license=MIT
 - Blocks force-pushes and branch deletions.
 - Enforces linear history and squash merges.
 - Requires pull requests. A required check blocks every PR that skips CI, because a skipped workflow leaves its check pending. If some PRs in your repo skip CI, drop `required_status_checks` from the ruleset or make that check always report. In private repositories, the checks `git hooks`, `pull request title` and `dependency review` must pass.
-- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on) for a stack at the repo root, `compose` in a Compose-only repo, plus `site: build` when the project has a site. A nested stack's workflow runs only when its folder changes, so its check is not required.
+- In public repositories, requires one approving review submitted after the latest push. Required checks reside in `.github/rulesets/main-checks.json`, which requires the same three, `DCO sign-off`, and each stack's own check (`ts: lint, types, tests` and so on, with `python: tests (windows)` under `python_windows`) for a stack at the repo root, `compose` in a Compose-only repo, plus `site: build` when the project has a site. A nested stack's workflow runs only when its folder changes, so its check is not required.
 - With `dependency_bot=renovate`, permits the Renovate app to bypass review for minor and patch updates once required checks pass.
 - Applies `.github/rulesets/tags.json` to restrict `v*` tag creation to repository administrators.
 - Enables Dependabot security alerts (`gh api -X PUT repos/OWNER/REPO/vulnerability-alerts`).
@@ -390,6 +391,16 @@ copier update --data python_api=false
 To keep the job and mark a module internal instead, start its name with an underscore (`_check.py`).
 
 A Rust library always gets an `api` job in `rust.yml`, and `just rs-api` runs the same check locally. It runs [cargo-semver-checks](https://github.com/obi1kenobi/cargo-semver-checks) against the last `v*` tag and reads the version in `Cargo.toml`: a break passes only after a major bump, or a minor bump before 1.0. Before the first tag, it passes. `rs-check` leaves it out, so a deliberate break does not hold up the other checks.
+
+## Tests on Windows
+
+`python_windows` adds a `windows` job to `python.yml`. It runs `uv run pytest` on `windows-latest` with `python_version`, so a text file opened without `encoding="utf-8"`, a path built with `/`, or a POSIX-only module such as `fcntl` fails CI instead of a Windows user. Ruff and ty read the same code on every OS, so the job skips them, and it checks out the committed bytes (no CRLF conversion) so a test that hashes a committed file passes. It costs one more job on every push and pull request; Windows runners are also slower to start. With the Python package at the repo root, its check `python: tests (windows)` is required like the Linux ones.
+
+```sh
+copier update --data python_windows=true
+```
+
+Run `just repo-settings` after the update, so a public repo requires the new check.
 
 ## Coverage on Codecov
 

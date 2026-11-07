@@ -171,6 +171,43 @@ jobs:
             gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md"
           fi
 {%- endif %}
+{%- if python_windows %}
+
+  windows:
+    # The tests alone, on the newest Python: a missing encoding="utf-8", a hardcoded /
+    # in a path or a POSIX-only module fails here and nowhere else. Lint and types read
+    # the same code on every OS, so the check job's run covers them.
+    name: "python: tests (windows)"
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: windows-latest
+    timeout-minutes: 15
+{%- if python_dir != '.' %}
+    defaults:
+      run:
+        working-directory: {{ python_dir }}
+{%- endif %}
+    steps:
+      # The runner's git turns LF into CRLF on checkout, so a test that hashes or compares
+      # a committed file would fail here alone. Check out the committed bytes.
+      - run: git config --global core.autocrlf false
+{%- if python_dir != '.' %}
+        # {{ python_dir }} does not exist before checkout.
+        working-directory: .
+{%- endif %}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          enable-cache: true
+          save-cache: {% raw %}${{ github.event_name != 'pull_request' }}{% endraw %}
+          version: "{{ uv_version }}"
+          python-version: "{{ python_version }}"
+
+      - run: uv sync --locked
+      - run: uv run pytest
+{%- endif %}
 {%- if publish_to_pypi and python_api | default(true) %}
 
   api:
