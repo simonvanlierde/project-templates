@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Exit 0 only when TAG is an annotated tag named TAG, with an SSH signature from a key
-# listed in .github/allowed_signers as committed at REF. In Actions, the tag must also
-# mark GITHUB_SHA, the commit the workflow builds. REF is the default branch, never the tag:
+# listed in .github/allowed_signers as committed at REF. In the run that the tag's push
+# started, the tag must also still mark GITHUB_SHA, the commit the workflow builds. REF is the default branch, never the tag:
 # the tagged commit's copy of the list is whatever the tag's pusher wrote. GitHub's
 # "Verified" mark is no substitute, since it accepts a key registered to any account.
 # Usage: verify-tag.sh TAG REF
@@ -19,7 +19,7 @@ if [ "$(git cat-file tag "refs/tags/$tag" | sed -n '/^$/q; s/^tag //p')" != "$ta
   echo "refs/tags/$tag points at a tag object made for another name" >&2
   exit 1
 fi
-if [ -n "${GITHUB_SHA:-}" ] && [ "$(git rev-parse "refs/tags/$tag^{commit}")" != "$GITHUB_SHA" ]; then
+if [ "${GITHUB_REF:-}" = "refs/tags/$tag" ] && [ "$(git rev-parse "refs/tags/$tag^{commit}")" != "$GITHUB_SHA" ]; then
   echo "$tag moved after this run started: it no longer marks $GITHUB_SHA" >&2
   exit 1
 fi

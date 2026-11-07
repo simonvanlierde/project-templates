@@ -818,11 +818,10 @@ cp -R k "$rel/w"
   grep -q 'HEAD is not origin/main' release.log
   # verify-tag.sh, which every release workflow runs, refuses a lightweight tag and a tag
   # signed with a key that is not in .github/allowed_signers on origin/main. Adding the
-  # key to the tagged commit's own copy of the file counts for nothing. GITHUB_SHA is set
-  # when this script runs in CI, and the script compares the tag with it.
-  unset GITHUB_SHA
+  # key to the tagged commit's own copy of the file counts for nothing. In the run a tag
+  # push starts, the tag must still mark the commit being built.
   .github/scripts/verify-tag.sh v0.1.0 origin/main 2>/dev/null
-  (! GITHUB_SHA=0000000000000000000000000000000000000000 .github/scripts/verify-tag.sh v0.1.0 origin/main >release.log 2>&1)
+  (! GITHUB_REF=refs/tags/v0.1.0 GITHUB_SHA=0000000000000000000000000000000000000000 .github/scripts/verify-tag.sh v0.1.0 origin/main >release.log 2>&1)
   grep -qxF 'v0.1.0 moved after this run started: it no longer marks 0000000000000000000000000000000000000000' release.log
   # A ref renamed to point at an older signed tag object, and an unsigned annotated tag.
   git update-ref refs/tags/v9.9.9 "$(git rev-parse refs/tags/v0.1.0)"
