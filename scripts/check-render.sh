@@ -1814,6 +1814,8 @@ for r in x hush-plain; do
   node --check "$r/site/main.mjs"
 done
 grep -q 'Skip to the content' hush-astro/site/src/layouts/Base.astro
+# The Astro layout holds the description as a quoted attribute, which Astro escapes at build.
+grep -qxF '    <meta name="description" content="Tidies <b> tags & more" />' hush-astro/site/src/layouts/Base.astro
 # Site previews are <slug>-site-pr-<n>, apart from a web app's <slug>-pr-<n>.
 # shellcheck disable=SC2016
 grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.jsonc' x/.github/workflows/site.yml
