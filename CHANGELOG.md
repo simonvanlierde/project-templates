@@ -20,6 +20,8 @@ Upgrade steps:
 - An update of a web-service, data-pipeline, web-app, Compose-only or Silver-badge project adds `docs/decisions/` with a first record. Update with `copier update --data decision_records=false` to skip it.
 - **Breaking:** `site_url` takes a host alone, such as `https://example.org`: no path, port or capitals. Update with `copier update --data site_url=https://<host>` if yours has one.
 - **Breaking:** in a web app whose `site_url` is a custom domain (not `*.workers.dev`), the production job now attaches that domain on every deploy. Before you merge the update, give the `production` environment's `CLOUDFLARE_API_TOKEN` the permission Zone > Workers Routes: Edit for that domain's zone, or the deploy fails. A domain already on the Worker stays.
+- Python projects: an update adds the `sp-repo-review` hook. Run `prek run sp-repo-review --all-files`, then fix each check that fails or skip it under `[tool.repo-review.ignore]` in `pyproject.toml` with its reason ([Scientific Python repo-review](docs/usage.md#scientific-python-repo-review)).
+- An update of a public project with a citation or an OpenSSF badge, or of one that publishes to PyPI, adds `.github/first-release.md`. Delete it if the project has already released.
 - **Breaking:** pytest settings move from `[tool.pytest.ini_options]` to pytest 9's `[tool.pytest]` table, with `strict = true`, `filterwarnings = ["error"]`, `log_level = "INFO"` and `minversion = "9.0"`. A warning in your tests now fails them: fix it, or add an `ignore::` entry to `filterwarnings` with the reason. Merge your own pytest options into the new table during `copier update`.
 
 ### Added

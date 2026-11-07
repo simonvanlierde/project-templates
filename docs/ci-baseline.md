@@ -46,7 +46,8 @@ What CI and the git hooks check in a generated project, why, and what the templa
 | Publication provenance | Release workflows | Generates Sigstore attestations and provenance bundles for PyPI, npm, and GHCR artifacts |
 | Container security scans | `docker.yml` (`docker` stack with `docker_image`) | Trivy scans images for HIGH/CRITICAL vulnerabilities; weekly scheduled rebuilds check base updates |
 | Compose and shell lint | `compose.yml` (Compose-only repo) | Validates the Compose files against `.env.example`, then runs shellcheck and shfmt on the tracked shell scripts |
-| Public API break detection | `python.yml` (griffe), `ts.yml` (API Extractor) | Compares public APIs against prior releases to detect breaking changes before publication |
+| Public API break detection | `python.yml` (griffe), `ts.yml` (API Extractor), `rust.yml` (cargo-semver-checks) | Compares public APIs against prior releases to detect breaking changes before publication |
+| Documentation site build | `docs.yml` (`docs_site` option) | Builds `docs/` with Zensical in `--strict` mode on every pull request and push to `main`, and deploys that build from `main` to GitHub Pages |
 | Cold-install setup verification | `cold-install.yml` (when `cold_install`) | Executes README development instructions in a minimal Debian container to catch missing prerequisites. Also runs when `pyproject.toml`, `uv.lock` or `.python-version` change |
 | Scheduled dependency audits | `advisories.yml` | Runs weekly scans (`uv audit`, `pnpm audit`, `cargo deny`, `govulncheck`, `zizmor`) without commits |
 | Scheduled link validation | `links.yml` | Validates internal and external links weekly via lychee and reports broken URLs |
@@ -70,7 +71,6 @@ CI skips hooks that require the local runtime environment (`ruff`, `ty`, `biome`
 | Repository history secret scan | GitHub secret scanning covers public repos; local hooks scan staged commits | For private repositories without GitHub Advanced Security |
 | Docker base images pinned to SHA | The base image tag matches the `python_version` answer | In production deployments requiring byte-exact base images |
 | Unified "CI result" job | Stack-specific workflows are small enough to list directly in branch rules | When workflow matrices expand beyond manual ruleset configuration |
-| `cargo-semver-checks` | Crates.io publication workflow is not yet implemented | When automated Rust crate publishing is added |
 | CODEOWNERS | Unnecessary for single-maintainer repositories | When adding multi-maintainer teams with distinct ownership areas |
 | Multi-browser Playwright matrix | Triples CI test duration; modern engines rarely exhibit isolated rendering bugs | When using browser-specific Web APIs across rendering engines. Run Firefox and WebKit on pushes to `main` and weekly, with the deploy waiting on them, not on PRs: in credit-matrix they took 65% of a PR run's minutes |
 | Dynamic CSP inline script hashing | Template enforces strict `script-src 'self'` without inline scripts | Not needed under current zero-inline-script policy |

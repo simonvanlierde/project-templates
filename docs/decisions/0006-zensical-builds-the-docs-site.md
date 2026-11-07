@@ -32,7 +32,7 @@ so the package needs no install. `just docs` runs both with `uvx` at the version
 
 The site deploys to GitHub Pages, like the `site` option on its default host. A repo has
 one Pages site, so the validator refuses `docs_site` beside a `site` on Pages. A `site` on
-a Worker (`site_host=cloudflare`, decision 0005) leaves Pages free, so the two can sit
+a Worker (`site_host=cloudflare`, [decision 0005](0005-workers-hosting-with-an-optional-script.md)) leaves Pages free, so the two can sit
 together. Building the docs into a path under the
 `site` page would share one Pages artifact between two workflows; that waits until a
 project needs both.
