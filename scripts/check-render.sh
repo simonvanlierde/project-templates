@@ -2381,6 +2381,12 @@ done
 list=$FAKE_DIR/rulesets.json
 case $call in
   *"api user"*) echo "90462640" ;;
+  *"security_and_analysis"*)
+    if [ -n "${FAKE_SECRET:-}" ]; then
+      echo "gh: Secret scanning is not available for this repository. (HTTP $FAKE_SECRET)" >&2
+      exit 1
+    fi
+    echo '{}' ;;
   *"code-scanning/default-setup"*)
     if [ -n "${FAKE_CODEQL:-}" ]; then
       echo '{"message":"Code Security must be enabled for this repository to use code scanning.","status":"403"}'
@@ -2465,8 +2471,11 @@ chmod +x "$fake/gh"
   # Every public render has the DCO check, so web commits need a sign-off from silver down.
   [[ "$patch " == *" -F web_commit_signoff_required=true "* ]]
   # OSPS Baseline BR-07.01: push protection refuses a known secret format before it lands.
+  # It has a PATCH of its own, so a repo without Secret Protection still gets the rest.
+  (lacks -q 'security_and_analysis' <<<"$patch")
+  secret=$(grep -F -- 'api -X PATCH repos/{owner}/{repo} -f security_and_analysis' "$FAKE_LOG" | head -1)
   for flag in 'security_and_analysis[secret_scanning][status]=enabled' 'security_and_analysis[secret_scanning_push_protection][status]=enabled'; do
-    [[ "$patch " == *" -f $flag "* ]]
+    [[ "$secret " == *" -f $flag "* ]]
   done
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
@@ -2505,6 +2514,11 @@ chmod +x "$fake/gh"
   FAKE_CODEQL=403 just repo-settings >/dev/null 2>"$fake/err"
   grep -q 'Warning: CodeQL default setup could not be turned on.*Code Security must be enabled' "$fake/err"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/vulnerability-alerts' "$FAKE_LOG"
+  # So does a refused secret scanning setup.
+  : >"$FAKE_LOG"
+  FAKE_SECRET=422 just repo-settings >/dev/null 2>"$fake/err"
+  grep -q 'Warning: secret scanning could not be turned on.*not available' "$fake/err"
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/vulnerability-alerts' "$FAKE_LOG"
 )
 (cd b && ! grep -q 'DCO sign-off' .github/rulesets/main.json)
 # Silver: the DCO check needs commits made in GitHub's web UI to carry a sign-off.
@@ -2535,6 +2549,12 @@ chmod +x "$fake/gh"
   (lacks -q 'environments/production' "$fake/log-c")
   grep -q 'https://pypi.org/manage/account/publishing/?provider=github&project_name=mono-me&owner=simonvanlierde&repository=project-templates&workflow_filename=python-release.yml&environment=pypi' "$fake/out-c"
   grep -q 'https://zenodo.org/account/settings/github/' "$fake/out-c"
+  # A released project deletes the checklist, and the hint goes with it.
+  grep -q 'First-release checklist' "$fake/out-c"
+  mv .github/first-release.md "$fake/first-release.md"
+  just repo-settings >"$fake/out-c"
+  mv "$fake/first-release.md" .github/first-release.md
+  (lacks -q 'First-release checklist' "$fake/out-c")
 )
 # The web app (d) gets the preview environment, with no reviewer or branch limit.
 (

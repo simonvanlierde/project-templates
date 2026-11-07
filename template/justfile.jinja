@@ -163,9 +163,17 @@ repo-settings:
 {%- endif %}
         exit 1
     }
-    # Merge-method switches live on the repo itself; the ruleset also limits the PR button.{% if public %}
-    # Push protection refuses a push that holds a known secret format, before it reaches the repo.{% endif %}
-    gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true{% if public %} -F web_commit_signoff_required=true -f 'security_and_analysis[secret_scanning][status]=enabled' -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'{% endif %} >/dev/null 2>"$err" || fail
+    # Merge-method switches live on the repo itself; the ruleset also limits the PR button.
+    gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true{% if public %} -F web_commit_signoff_required=true{% endif %} >/dev/null 2>"$err" || fail
+{%- if public %}
+    # Push protection refuses a push that holds a known secret format, before it reaches the repo.
+    # A private repo without Secret Protection refuses this, so it warns instead of failing.
+    if gh api -X PATCH repos/{owner}/{repo} -f 'security_and_analysis[secret_scanning][status]=enabled' -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled' >/dev/null 2>"$err"; then
+        echo "Turned on secret scanning and push protection."
+    else
+        echo "Warning: secret scanning could not be turned on (a private repo needs Secret Protection): $(cat "$err")" >&2
+    fi
+{%- endif %}
     # Adopt an existing ruleset by name, else one with the same target that protects the same
     # refs as the file, updating it in place. The list has no conditions, so each candidate is read.
     for name in main{% if public %} main-checks{% endif %} tags; do
@@ -275,7 +283,7 @@ repo-settings:
     echo "Zenodo: https://zenodo.org/account/settings/github/"
 {%- endif %}
 {%- if (public and (citable or openssf_badge != 'none')) or publish_to_pypi %}
-    echo "First-release checklist: gh issue create --title 'First release' --body-file .github/first-release.md"
+    if [ -f .github/first-release.md ]; then echo "First-release checklist: gh issue create --title 'First release' --body-file .github/first-release.md"; fi
 {%- endif %}
 
 # Set the GitHub About box from your answers: description{% if 'ts' in stacks and ts_kind == 'web-app' or site_on_workers %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
