@@ -460,6 +460,9 @@ refuses 'at least one stack' --data 'stacks=[]'
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 # One repo has one GitHub Pages site.
 refuses 'one GitHub Pages site' --data 'stacks=[python]' --data site=plain --data docs_site=true
+# A root web app's legal pages are in docs/, which the docs site would publish again.
+refuses 'A web app at the repo root' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
+  --data docs_site=true
 # A noreply address gets no mail, and these renders give it as a contact on a page.
 refuses 'A GitHub noreply address' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
   --data author_email=1+ada@users.noreply.github.com

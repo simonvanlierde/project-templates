@@ -478,6 +478,7 @@ site_on_workers:
 # A Zensical site built from the Markdown in docs/, deployed to GitHub Pages from main
 # (docs/usage.md#documentation-site). A Python library with python_api also gets an API
 # reference from its docstrings. One repo has one Pages site, so it rules out a `site` on Pages.
+# A web app at the root is ruled out too: its legal pages live in docs/.
 docs_site:
   type: bool
   when: "{{ stacks }}"
@@ -487,6 +488,8 @@ docs_site:
   validator: >-
     {% if docs_site and site != 'none' and not site_on_workers %}
     The docs site and the `site` page would both deploy to this repo's one GitHub Pages site: answer site_host=cloudflare or site=none, or no here.
+    {% elif docs_site and 'ts' in stacks and ts_kind == 'web-app' and ts_dir == '.' %}
+    A web app at the repo root keeps its privacy and accessibility pages in docs/, and the docs site would publish a second copy: answer a ts_dir such as web, or no here.
     {% endif %}
 
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source

@@ -528,6 +528,8 @@ TypeScript, Rust and Go projects get the site too, without an API reference. A R
 
 One repo has one Pages site, so the template refuses `docs_site` together with a `site` on Pages. A `site` [on a Worker](#hosting-on-a-worker) leaves Pages to the docs. Otherwise, a playground page can go in `docs/` as Markdown or HTML.
 
+The template also refuses `docs_site` for a web app at the repo root (`ts_dir` is `.`). The app keeps its privacy, terms and accessibility pages in `docs/`, so the docs site would publish a second copy that can drift from the one the app serves. A web app in a subfolder, such as `ts_dir=web` beside a Python package, keeps them in `web/docs/` and can have the site.
+
 ## OpenSSF Best Practices badge
 
 `openssf_badge` configures documentation for the [OpenSSF Best Practices badge](https://www.bestpractices.dev):
