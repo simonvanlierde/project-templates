@@ -166,7 +166,8 @@ jobs:
     # The only job that may write issues.
     name: "mutation: report failure"
     needs: {{ stack_jobs }}
-    if: failure() && github.event_name == 'schedule'
+    # A job that runs past timeout-minutes ends cancelled, not failed.
+    if: always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

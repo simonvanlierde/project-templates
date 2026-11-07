@@ -1148,7 +1148,7 @@ assert all("timeout-minutes" in j for j in wf["jobs"].values())
 # A failed scheduled run reports itself, and only that job may write issues.
 n = wf["jobs"]["notify"]
 assert set(n["needs"]) == {"python", "ts", "rust", "go"}, n["needs"]
-assert n["if"] == "failure() && github.event_name == 'schedule'", n["if"]
+assert n["if"] == "always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))", n["if"]
 assert n["permissions"] == {"issues": "write"}, n["permissions"]
 for stack in ("py", "ts", "rs", "go"):
     assert any(f"just {stack}-mutation" in s.get("run", "") for j in wf["jobs"].values() for s in j["steps"]), stack
@@ -1221,7 +1221,7 @@ assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
 assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
 n = wf["jobs"].pop("notify")
 assert set(n["needs"]) == {"python", "ts", "rust", "go"}, n["needs"]
-assert n["if"] == "failure() && github.event_name == 'schedule'", n["if"]
+assert n["if"] == "always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))", n["if"]
 assert n["permissions"] == {"issues": "write"}, n["permissions"]
 assert all(j["timeout-minutes"] == 60 for j in wf["jobs"].values())
 for job, recipe in (("python", "py-property"), ("ts", "ts-property"), ("rust", "rs-property"), ("go", "go-property")):
