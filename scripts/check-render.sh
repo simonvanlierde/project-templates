@@ -1470,7 +1470,10 @@ grep -q 'script-src .self.;' d/web/public/_headers
 grep -q '"budget": "node scripts/checkBundleBudget.mjs"' d/web/package.json
 grep -q 'pnpm -C web run budget' d/just/ts.just
 grep -qF 'image: mcr.microsoft.com/playwright:v' d/.github/workflows/ts.yml
-grep -qF 'needs.check.outputs.playwright }}-noble' d/.github/workflows/ts.yml
+grep -qF 'needs.playwright.outputs.version }}-noble' d/.github/workflows/ts.yml
+# e2e waits for the version job only, which reads the nested lockfile.
+grep -qx '    needs: playwright' d/.github/workflows/ts.yml
+grep -qx '          sparse-checkout: web/pnpm-lock.yaml' d/.github/workflows/ts.yml
 grep -q 'fonts-dejavu-core' d/.github/workflows/ts.yml
 grep -qx '          path: web/playwright-report/' d/.github/workflows/ts.yml
 # Deploys: web-app renders get one Worker config for production and previews, the
@@ -2208,7 +2211,7 @@ done
 (lacks -q -- '--exclude' a/.github/workflows/links.yml)
 grep -qF -- "--exclude '^https://github\\.com/example-org/odd-name--co([/#?]|\$)'" b/.github/workflows/links.yml
 test "$(grep -c 'commit-message: {prefix: chore, include: scope}' a/.github/dependabot.yml)" -eq 5
-grep -q "extends: \['config:recommended', ':semanticCommits'\]" d/renovate.json5
+grep -q "extends: \['config:recommended', ':semanticCommits', ':configMigration', 'abandonments:recommended'\]" d/renovate.json5
 grep -qx 'playwright-report/' d/.gitignore
 # Outside CI, reusing a server on the preview port would test whichever app holds it.
 (lacks -q reuseExistingServer d/web/playwright.config.ts)

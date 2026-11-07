@@ -23,8 +23,10 @@
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   // Conventional Commits titles, `chore(deps): update ...`, which the pr-title workflow checks.
   // Not config:best-practices: its :pinDevDependencies opens pin PRs the lockfile makes
-  // redundant, and its digest pins duplicate the SHAs the workflows already carry.
-  extends: ['config:recommended', ':semanticCommits'],
+  // redundant, and its digest pins duplicate the SHAs the workflows already carry. Its two
+  // presets worth having are added by name: a PR when this config uses a deprecated option,
+  // and a note on the dependency dashboard when a package looks abandoned.
+  extends: ['config:recommended', ':semanticCommits', ':configMigration', 'abandonments:recommended'],
   schedule: ['before 9am on monday'],
   minimumReleaseAge: '7 days',
   // Renovate merges the PR itself. GitHub's own auto-merge may not use the bypass, and

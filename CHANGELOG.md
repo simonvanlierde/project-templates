@@ -50,6 +50,8 @@ Upgrade steps:
 - The `docker_stacks` question is now a yes/no `docker_image`: build the Python package into an image. It is asked only when `stacks` has both `docker` and `python`, and defaults to yes. `app_port` and `publish_to_ghcr` are not asked without an image.
 - With `codspeed`, `benchmarks.yml` runs on pull requests that touch benchmarked code only: the stack's source, tests or benches, its manifest, lockfile and `.python-version`, or the workflow. A flat layout watches the package at the root. Pushes to `main` still run every time, so CodSpeed always has a recent main result to compare with. [CI baseline](docs/ci-baseline.md#path-filters) has the stance on path filters.
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
+- Web apps: the e2e job starts beside `check` instead of after it. A small `playwright` job reads the locked Playwright version for the container tag, which `check` used to output.
+- Renovate extends `config:best-practices` in place of `config:recommended`, without its `:pinDevDependencies` (the lockfile already pins them) and its 3-day npm wait (the config waits 7 days). New presets in it reach projects with the next Renovate release.
 - `copier-update.yml` updates every `.copier-answers*.yml`, one template after another, so a template layered over this one (such as an organisation's own) lands in the same pull request. Its title names each template that moved.
 - The shell lint and `just docker-fmt` skip files marked `linguist-vendored` in `.gitattributes`, so a vendored script keeps its upstream style.
 - The message at the end of `copier copy` mentions lockfiles only when the project has
