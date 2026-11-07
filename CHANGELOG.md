@@ -13,6 +13,7 @@ changes are marked **Breaking**.
 ### Changed
 
 - With `codspeed`, `benchmarks.yml` runs on pull requests that touch benchmarked code only: the stack's source, tests or benches, its manifest, lockfile and `.python-version`, or the workflow. A flat layout watches the package at the root. Pushes to `main` still run every time, so CodSpeed always has a recent main result to compare with. [CI baseline](docs/ci-baseline.md#path-filters) has the stance on path filters.
+- Web apps: the e2e job starts beside `check` instead of after it. A small `playwright` job reads the locked Playwright version for the container tag, which `check` used to output.
 - `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
 
 ## [0.14.0] - 2026-11-05
