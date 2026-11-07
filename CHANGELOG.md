@@ -47,6 +47,7 @@ Upgrade steps:
 
 ### Changed
 
+- A `site=plain` page on a Cloudflare Worker (`site_host=cloudflare`) ships `site/_headers`: the page's Content-Security-Policy plus `frame-ancestors 'none'`, `X-Frame-Options`, `X-Content-Type-Options: nosniff`, HSTS and the web app's other security headers. It had none, and a meta tag cannot set `frame-ancestors`. The update adds the file; keep it in step with the CSP in `site/index.html`.
 - `site=plain` renders a working tool page in place of the empty starter: a compact header with the job, an input and its result with one Copy result action, Settings and Use it elsewhere disclosures, and a footer with a privacy line that the page's Content-Security-Policy keeps true. The stand-in job formats JSON; replace `convert()` in `site/main.mjs`. An existing site keeps its own files ([The plain tool page](docs/usage.md#the-plain-tool-page)).
 - `.editorconfig` sets a 2-space indent for `*.sh`, matching the scripts the template ships.
 - A web app's `vitest.config.ts` also runs `worker/**/*.test.ts`.

@@ -1991,6 +1991,14 @@ grep -qF '"typecheck": "tsc"' s/package.json
 # The site's script: `just site` runs its tests with node, which the build job sets up,
 # and leaves it out of the files it builds.
 test -f cfp/site/worker/index.mjs
+# A plain site on a Worker ships _headers, which a meta tag cannot replace for
+# frame-ancestors; Pages and Astro get none. Its policy is the page's plus frame-ancestors.
+test -f cfp/site/_headers
+grep -qF 'X-Content-Type-Options: nosniff' cfp/site/_headers
+grep -qF 'Strict-Transport-Security:' cfp/site/_headers
+meta_csp=$(sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' cfp/site/index.html)
+grep -qxF "  Content-Security-Policy: $meta_csp; frame-ancestors 'none'" cfp/site/_headers
+for r in x cfa; do test ! -e "$r/site/_headers"; done
 test -f cfp/site/worker/index.test.mjs
 test ! -e x/site/worker
 test ! -e cfa/site/worker

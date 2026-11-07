@@ -509,6 +509,8 @@ What deploys to a Cloudflare Worker (a web app, or a site with `site_host=cloudf
 - A web app gets `worker/index.ts`, with its own `worker/tsconfig.json` that swaps the DOM types for `@cloudflare/workers-types`. `pnpm run typecheck` checks both, and Vitest runs `worker/index.test.ts` in Node against a stub `ASSETS`. `pnpm dev` runs Vite alone; `pnpm exec wrangler dev` serves the last build and the script together.
 - A site gets `site/worker/index.mjs`, plain JavaScript with no TypeScript stack needed. `just site` runs `site/worker/index.test.mjs` with `node --test` first, and a plain site's build leaves `worker/` out. wrangler bundles the script on every preview and production deploy, so a script that does not bundle fails the pull request's preview.
 
+A plain site on a Worker also gets `site/_headers`, with the same security headers as a web app's `public/_headers` (a Content-Security-Policy with `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff` and HSTS). The page's meta tag cannot set `frame-ancestors`, so keep the header's policy in step with it; a site on Pages cannot send headers.
+
 The script and its test are the project's after the first render. A binding beyond `ASSETS` (KV, D1, a secret) also reaches every preview: read [decision 0001](decisions/0001-pr-previews-use-the-production-cloudflare-account.md) first.
 
 ## Documentation site

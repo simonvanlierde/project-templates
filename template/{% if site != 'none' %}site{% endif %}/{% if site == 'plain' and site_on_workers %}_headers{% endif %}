@@ -1,0 +1,16 @@
+# Response headers for the Cloudflare Worker, which reads this file from the build output.
+# These apply to production. The preview job in site.yml appends X-Robots-Tag: noindex to
+# its own copy of the build, so previews stay out of search results and this site does not.
+# The Content-Security-Policy repeats the one in index.html's meta tag, which cannot set
+# frame-ancestors: keep the two in step. A response from the Worker script (/api/*) does
+# not pass through this file.
+# HSTS leaves out includeSubDomains: other subdomains may not be served from here.
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Strict-Transport-Security: max-age=31536000

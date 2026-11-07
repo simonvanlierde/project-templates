@@ -8,6 +8,7 @@
 <!-- The page makes no requests of its own, and connect-src stays 'none' to keep the
      privacy line in the footer true. A page that calls an API adds it here and says so
      in that line. -->
+<!-- Keep site/_headers' Content-Security-Policy in step with this one. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
 <title>{{ project_name | e }}</title>
 {%- if project_description %}
