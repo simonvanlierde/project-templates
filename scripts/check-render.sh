@@ -1971,9 +1971,9 @@ grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\"
 (lacks -q 'Preview.*--domain' wk/.github/workflows/ts.yml cfp/.github/workflows/site.yml)
 (lacks -q -- '--domain' d/.github/workflows/ts.yml s/.github/workflows/ts.yml cfa/.github/workflows/site.yml x/.github/workflows/site.yml)
 # shellcheck disable=SC2016 # the backticks are Markdown
-grep -qF 'Zone > Workers Routes: Edit for the zone of `app.example.org`' wk/README.md
+grep -qF 'Only `production`'"'"'s token also needs Zone > Workers Routes: Edit for the zone of `app.example.org`' wk/README.md
 # shellcheck disable=SC2016 # the backticks are Markdown
-grep -qF 'Zone > Workers Routes: Edit for the zone of `demo.example.org`' cfp/README.md
+grep -qF 'only `production`'"'"'s token also gets Zone > Workers Routes: Edit for the zone of `demo.example.org`' cfp/README.md
 (lacks -q 'Workers Routes' d/README.md s/README.md cfa/README.md x/README.md)
 # The site on a Worker: production deploys the build job's artifact with the site's
 # config, in the production environment, and neither job touches Pages or serves under /<repo>/.

@@ -466,7 +466,7 @@ The starter files are yours: an update leaves them alone. An Astro site's `packa
 - `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`. [On a Worker](#hosting-on-a-worker), it deploys to the Worker instead.
 - The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/` (from `/` itself on a Worker), and sends `X-Robots-Tag: noindex`.
 
-One-time setup:
+On GitHub Pages, the one-time setup is below; on a Worker, see [Hosting on a Worker](#hosting-on-a-worker).
 
 1. Run `just repo-settings`. It creates the `preview` environment and sets GitHub Pages to deploy from Actions (Settings > Pages > Source: GitHub Actions).
 2. Add the Cloudflare API token (Account > Workers Scripts: Edit) to the `preview` environment as `CLOUDFLARE_API_TOKEN`, and your account ID as `CLOUDFLARE_ACCOUNT_ID`. Without either secret, the preview job skips with a notice, and Pages still deploys.
