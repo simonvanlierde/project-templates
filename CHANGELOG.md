@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- `mutation.yml` and `property.yml` open an issue, or comment on the open one, when a weekly run fails, so a failure no longer reaches only whoever last edited the cron. GitHub pauses schedules after 60 days without repository activity; re-enable them from the Actions tab.
+
 ### Changed
 
 - With `codspeed`, `benchmarks.yml` runs on pull requests that touch benchmarked code only: the stack's source, tests or benches, its manifest, lockfile and `.python-version`, or the workflow. A flat layout watches the package at the root. Pushes to `main` still run every time, so CodSpeed always has a recent main result to compare with. [CI baseline](docs/ci-baseline.md#path-filters) has the stance on path filters.
