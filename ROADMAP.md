@@ -7,10 +7,10 @@ This is a short view of what is planned for the template over the next year, to 
 
 ## Planned
 
-- Add a `just release` recipe and its CI checks to the `data-pipeline` kind, once
-  sourceledger has a release step.
+- Let the `data-pipeline` kind release its data: a `just release` recipe that publishes
+  the pipeline's outputs, with CI checks, once sourceledger has a release step.
 - Add a release path for Rust: a `publish_to_crates` answer, crates.io trusted publishing,
-  binaries that `cargo binstall` can find, attestations, and a `cargo-semver-checks` step.
+  binaries that `cargo binstall` can find, and attestations.
 - Register one generated project for the OpenSSF Best Practices badge before the README
   says a fresh render meets it.
 - Give this repo's own `docs/` a site with the `docs_site` option.
