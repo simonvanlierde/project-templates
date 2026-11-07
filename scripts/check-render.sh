@@ -460,7 +460,6 @@ refuses 'at least one stack' --data 'stacks=[]'
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 # One repo has one GitHub Pages site.
 refuses 'one GitHub Pages site' --data 'stacks=[python]' --data site=plain --data docs_site=true
-refuses 'one GitHub Pages site' --data 'stacks=[python]' --data site=plain --data site_host=pages --data docs_site=true
 # A noreply address gets no mail, and these renders give it as a contact on a page.
 refuses 'A GitHub noreply address' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
   --data author_email=1+ada@users.noreply.github.com
@@ -506,7 +505,7 @@ grep -qx 'site_url: https://app.example-org.workers.dev' "$out/s/.copier-answers
 # wk: a web app at the root with the Worker script and a custom domain.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=edge-me --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=nothing --data worker=true \
-  --data site_url=https://app.example.org . "$out/wk"
+  --data site_url=https://app.example.org/ . "$out/wk"
 # cfp and cfa: the site on a Worker instead of Pages. cfp is the plain one with the Worker
 # script and a custom domain; cfa the Astro one at its default workers.dev address.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cf-me --data 'stacks=[python]' \
@@ -1296,7 +1295,8 @@ test ! -e a/render-me.api.md
 # A Rust library gets cargo-semver-checks in CI and as rs-api (m's nested crate through
 # --manifest-path), a binary (c) neither.
 grep -q 'name: "rust: API breaks since the last tag"' m/.github/workflows/rust.yml
-grep -qx '          tool: cargo-semver-checks@[0-9.]*' m/.github/workflows/rust.yml
+semver_pin=$(sed -n '/^cargo_semver_checks_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+grep -qxF "          tool: cargo-semver-checks@$semver_pin" m/.github/workflows/rust.yml
 # shellcheck disable=SC2016 # literal recipe text
 grep -qx '    cargo semver-checks --manifest-path crates/lib/Cargo.toml --baseline-rev "$tag"' m/just/rust.just
 # shellcheck disable=SC2016 # literal recipe text
@@ -1760,6 +1760,8 @@ done
 grep -qF 'Add two numbers' m/_docs/reference/index.html
 (cd h && just docs >/dev/null 2>&1)
 test -f h/_docs/assurance-case/index.html
+# k's flat package: mkdocstrings finds the module at the root, through paths = ["."].
+(cd k && just docs >/dev/null 2>&1)
 # A private repo's page has no links into the repo, which its readers cannot open.
 (lacks -rq 'github.com/' hush-plain/site hush-astro/site/src)
 grep -q 'href="https://github.com/.*/issues"' x/site/index.html
@@ -2809,7 +2811,7 @@ cat >"$cuh/uvx" <<'FAKE'
 #!/usr/bin/env bash
 echo "uvx $*" >>"$FAKE_LOG"
 mkdir -p "$(dirname "$FAKE_FILE")"
-echo "# from the template" >>"$FAKE_FILE"
+echo "${FAKE_TEXT:-# from the template}" >>"$FAKE_FILE"
 FAKE
 chmod +x "$cuh/gh" "$cuh/uvx"
 (
@@ -2836,6 +2838,8 @@ chmod +x "$cuh/gh" "$cuh/uvx"
       cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"
       printf '_commit: v0.10.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
     fi
+    # Both answers files behind, and an update that leaves a conflict marker.
+    if [ "$name" = both ]; then cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"; fi
     git -C "$p" add -A
     git -C "$p" commit -q -m init
     # The privileged job starts from a clean checkout, not the generator's worktree.
@@ -2849,6 +2853,9 @@ chmod +x "$cuh/gh" "$cuh/uvx"
         RUNNER_TEMP="$p-runner"
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
         GIT_CONFIG_VALUE_0="https://x-access-token:$GH_TOKEN@github.com/$REPO.git"
+      FAKE_TEXT=''
+      if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
+      export FAKE_TEXT
       : >"$p.gho"
       # The copier step gets neither token variable.
       env -u GH_TOKEN -u HAS_TOKEN GITHUB_OUTPUT="$p.gho" bash --noprofile --norc -eo pipefail "$cuh/copier.sh" >"$p.out" 2>&1 || {
@@ -2877,6 +2884,7 @@ push true - -
 edit true 7 -
 plain false - - README.md
 layer true - - README.md
+both true - - README.md
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
@@ -2886,6 +2894,11 @@ CASES
   (lacks -q 'answers-file .copier-answers.yml' layer.log)
   grep -q '^pr create --head chore/copier-update --base main --title chore: update from template cml v0.10.0 ' layer.log
   git -C layer.git show chore/copier-update:README.md | grep -qx '# from the template'
+  # Two templates that both moved share one title, and a conflict marker is named in the body.
+  grep -q '^pr create --head chore/copier-update --base main --title chore: update from template v0.10.0, cml v0.10.0 ' both.log
+  # shellcheck disable=SC2016 # the backticks are Markdown
+  grep -qx -- '- `README.md`' both-runner/copier-update/body.md
+  (lacks -q 'merge conflicts' layer-runner/copier-update/body.md)
   # No token and a workflow change: one issue, the older PR closed, no push.
   grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
   grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
