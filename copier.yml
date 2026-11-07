@@ -15,6 +15,7 @@ _min_copier_version: "9.19.0"
 # data/README.md.
 _skip_if_exists:
   - /README.md
+  - /.github/allowed_signers
   - /CHANGELOG.md
   - /GOVERNANCE.md
   - /docs/roadmap.md
@@ -96,7 +97,7 @@ _message_after_copy: |
   https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing
   {%- endfor %}
   To release, run `just release X.Y.Z` (it cuts the CHANGELOG, then signs and pushes the tag).
-  It needs a git signing key GitHub trusts.
+  It needs an SSH signing key listed in .github/allowed_signers: that file says how to add yours.
   {%- if citable %} Set the version first in every manifest
   {{ 'citesync.toml lists' if (python_dir != '.' or ts_dir != '.' or rust_dir != '.') else 'at the root' }}, and in CITATION.cff once it has a `version`:
   citesync stops the release while they differ.

@@ -129,14 +129,15 @@ grep -q 'project edit' "$out/d/web/docs/accessibility-assessment.md"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
 echo 'project edit' >>"$out/h/docs/index.md"
-# The badge documents are filled in by the project. Rendered first, then kept.
-for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
+# The badge documents and the release signing keys are filled in by the project.
+# Rendered first, then kept.
+for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md .github/allowed_signers; do
   test -f "$out/h/$f"
   echo 'project edit' >>"$out/h/$f"
 done
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver --data docs_site=true . "$out/h" >/dev/null 2>&1
-for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
+for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md .github/allowed_signers; do
   grep -q 'project edit' "$out/h/$f"
 done
 grep -q 'project edit' "$out/h/go.mod"
@@ -776,8 +777,9 @@ cp -R k "$rel/w"
   git config user.email curie@example.org
   git config gpg.format ssh
   git config user.signingkey "$rel/key.pub"
-  git config gpg.ssh.allowedSignersFile "$rel/signers"
-  echo "curie@example.org $(cat "$rel/key.pub")" >"$rel/signers"
+  # The release check reads the key from .github/allowed_signers on origin/main, with the
+  # command that file's comment gives.
+  echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config user.signingkey)")" >>.github/allowed_signers
   git add -A
   git commit -q -s -m 'chore: init'
   git push -q origin main
@@ -797,7 +799,6 @@ cp -R k "$rel/w"
   git push -q origin main
   just release 0.1.0 >/dev/null
   test "$(git cat-file -t v0.1.0)" = tag
-  git verify-tag v0.1.0 >/dev/null 2>&1
   test "$(git -C "$rel/origin.git" rev-parse 'v0.1.0^{commit}')" = "$(git rev-parse HEAD)"
   .github/scripts/release-notes.sh v0.1.0 CHANGELOG.md >/dev/null
   # The tag step refuses a bad version, a version with no changelog section, and a HEAD
@@ -814,6 +815,27 @@ cp -R k "$rel/w"
   git commit -q -s --allow-empty -m 'chore: local only'
   (! just release 0.1.0 >release.log 2>&1)
   grep -q 'HEAD is not origin/main' release.log
+  # verify-tag.sh, which every release workflow runs, refuses a lightweight tag and a tag
+  # signed with a key that is not in .github/allowed_signers on origin/main. Adding the
+  # key to the tagged commit's own copy of the file counts for nothing.
+  .github/scripts/verify-tag.sh v0.1.0 origin/main 2>/dev/null
+  git tag light
+  (! .github/scripts/verify-tag.sh light origin/main >release.log 2>&1)
+  grep -qxF 'light is a lightweight tag; make it with .github/scripts/tag-release.sh' release.log
+  ssh-keygen -q -t ed25519 -N '' -f "$rel/other"
+  echo "mallory@example.org namespaces=\"git\" $(cat "$rel/other.pub")" >>.github/allowed_signers
+  git commit -q -s -am 'chore: trust another key'
+  git -c user.signingkey="$rel/other.pub" tag -s -m other other
+  git -c gpg.ssh.allowedSignersFile=.github/allowed_signers verify-tag other 2>/dev/null
+  (! .github/scripts/verify-tag.sh other origin/main >release.log 2>&1)
+  grep -qxF 'other is not signed with a key in .github/allowed_signers on origin/main.' release.log
+  # tag-release.sh refuses the same tag before the push and deletes the tag it made.
+  git reset -q --hard origin/main
+  git tag -d v0.1.0 >/dev/null
+  git config user.signingkey "$rel/other.pub"
+  (! .github/scripts/tag-release.sh 0.1.0 >release.log 2>&1)
+  grep -qxF 'v0.1.0 is not signed with a key in .github/allowed_signers on origin/main.' release.log
+  (! git rev-parse -q --verify refs/tags/v0.1.0 >/dev/null)
 )
 # c lists three manifests in citesync.toml. Bumping the two the recipe reads, but not
 # Cargo.toml, stops the release at citesync with CHANGELOG.md unchanged. No remote: the
@@ -1281,15 +1303,21 @@ grep -qx '\*\*/.env' c/api/.dockerignore
 grep -qxF '.env' c/.gitignore
 test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 1
 (lacks -qE '^ +- "[0-9]+:' c/compose.yaml)
-# Every release workflow publishes only a tag whose signature GitHub verified. e renders
-# the last commit, without uncommitted edits.
+# Every workflow that publishes from a tag checks it against .github/allowed_signers on the
+# default branch, and every render that has one gets that file. e renders the last commit,
+# without uncommitted edits.
 n=0
-for wf in */.github/workflows/{release,python-release,ts-release}.yml; do
+for wf in */.github/workflows/{release,python-release,ts-release}.yml c/.github/workflows/docker.yml; do
   [ -e "$wf" ] && [ "${wf%%/*}" != e ] || continue
-  grep -qF '.verification.verified' "$wf"
+  # shellcheck disable=SC2016 # literal workflow text
+  grep -qF '/.github/scripts/verify-tag.sh" "$TAG" "origin/$DEFAULT_BRANCH"' "$wf"
+  (lacks -qF '.verification.verified' "$wf")
+  test -x "${wf%%/*}/.github/scripts/verify-tag.sh"
+  test -f "${wf%%/*}/.github/allowed_signers"
   n=$((n + 1))
 done
-test -f c/.github/workflows/python-release.yml && test -f c/.github/workflows/ts-release.yml && test "$n" -ge 10
+test -f c/.github/workflows/python-release.yml && test -f c/.github/workflows/ts-release.yml && test "$n" -ge 11
+grep -qxF "        if: startsWith(github.ref, 'refs/tags/')" c/.github/workflows/docker.yml
 # Both package workflows exist; Python creates the GitHub release after PyPI.
 test ! -e c/.github/workflows/release.yml
 test -f c/.github/workflows/ts-release.yml
@@ -2142,6 +2170,7 @@ grep -qx 'strict = true' w/pyproject.toml
 # app: nothing to register, so no checklist, no archive badge and no save link.
 fr=.github/first-release.md
 grep -q 'Zenodo' "a/$fr"
+grep -qF '.github/allowed_signers' "a/$fr"
 grep -q 'archive.softwareheritage.org/save/' "a/$fr"
 grep -q 'research-software-directory.org' "a/$fr"
 (lacks -qE 'PyPI|OpenSSF' "a/$fr")

@@ -67,7 +67,7 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 | --- | --- | --- |
 | User machine | Remote template and user answers | No Copier tasks or migrations in [`copier.yml`](../copier.yml); validator rules check answers ([Render](#render)) |
 | Template repo CI | PR code and metadata | `pull_request` trigger only; `contents: read` in [`ci.yml`](../.github/workflows/ci.yml), [`dco.yml`](../.github/workflows/dco.yml), and [`pr-title.yml`](../.github/workflows/pr-title.yml); `ci ok` required check |
-| Template releases | Pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, requires signed tags, runs only release script and `gh release create` |
+| Template releases | Pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, requires a tag signed with a key in `.github/allowed_signers` on `main`, runs only release script and `gh release create` |
 | Generated project CI | PR code and metadata | Workflows use `contents: read` or `{}`; no `pull_request_target` or `workflow_run`; `persist-credentials: false` on checkouts |
 | Release jobs with OIDC | Built artifacts | OIDC tokens isolated to upload jobs without project code execution ([Workflows that can publish](#workflows-that-can-publish)); ruleset limits `v*` tags to admins |
 | Weekly update workflow | New template releases | `copier-update.yml` runs Copier read-only and applies patches in a separate job holding push credentials ([Update](#update)) |

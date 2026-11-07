@@ -335,7 +335,7 @@ To publish a release:
 
 1. Set the version in `pyproject.toml` and `package.json` to `X.Y.Z` (only the one you publish). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts with no `version`, so citesync skips it; once you add one, after the first release, set it there too, or citesync fails with `version-mismatch`.
 2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits.
-3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it with `git verify-tag` and pushes it. The release workflow refuses a tag GitHub cannot verify, so set `user.signingkey` first (an ssh key works with `gpg.format ssh`).
+3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it against `.github/allowed_signers` on `origin/main` and pushes it. See [Signed release tags](#signed-release-tags) for the key it needs.
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
 
@@ -359,11 +359,23 @@ Setting up trusted publishing (OIDC):
    copier update --data publish_to_pypi=true
    ```
 
+### Signed release tags
+
+Every workflow that publishes from a tag (`release.yml`, `python-release.yml`, `ts-release.yml`, and the tag push in `docker.yml`) first runs `.github/scripts/verify-tag.sh`. It passes only an annotated tag with an SSH signature from a key listed in `.github/allowed_signers`, read from the default branch rather than from the tag, so a tag cannot bring its own key. GitHub's "Verified" mark is not enough: it accepts a key registered to any GitHub account. `tag-release.sh` runs the same check before it pushes.
+
+The file renders with a comment and no keys, so the first release fails until you add yours. Sign with an SSH key (`git config gpg.format ssh` and `git config user.signingkey ~/.ssh/id_ed25519.pub`), then add it and commit to `main`:
+
+```sh
+echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config user.signingkey)")" >>.github/allowed_signers
+```
+
+A GPG-signed tag fails the check: `git tag -v` reads an allowed signers file for SSH signatures only. `allowed_signers` is the project's file after the first render, and `copier update` leaves it alone. To check a tag yourself: `git -c gpg.ssh.allowedSignersFile=.github/allowed_signers tag -v vX.Y.Z`.
+
 ### First release
 
 A public citable project, a project with `openssf_badge`, and one with `publish_to_pypi` get `.github/first-release.md`: the one-time steps around the first release, only those its answers need. `just repo-settings` prints the command that opens it as an issue. Delete the file once the issue is open.
 
-The steps are PyPI trusted publishing, Zenodo, [Software Heritage](https://archive.softwareheritage.org/save/), the [Research Software Directory](https://research-software-directory.org) and the OpenSSF Best Practices badge. A public citable README gets a Software Heritage badge. It reads "not found" until the archive has visited the repo, then links to the archived copy and its SWHID. After `just release` pushes a tag, it prints the Software Heritage save link.
+The steps are the release signing key, PyPI trusted publishing, Zenodo, [Software Heritage](https://archive.softwareheritage.org/save/), the [Research Software Directory](https://research-software-directory.org) and the OpenSSF Best Practices badge. A public citable README gets a Software Heritage badge. It reads "not found" until the archive has visited the repo, then links to the archived copy and its SWHID. After `just release` pushes a tag, it prints the Software Heritage save link.
 
 ## API-break check
 

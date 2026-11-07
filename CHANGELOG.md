@@ -12,6 +12,7 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
+- **Breaking:** a release workflow publishes only a tag signed with an SSH key listed in `.github/allowed_signers` on `main`, which the update adds with no keys in it. Before your next release, add your signing key and commit the file to `main`: `echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config user.signingkey)")" >>.github/allowed_signers`. A GPG-signed tag no longer publishes: switch to an SSH signing key (`git config gpg.format ssh`).
 - **Breaking:** `docker_stacks` is gone, and copier drops the old answer. What the update does depends on what it listed:
   - Only `ts`, without the python stack: the project becomes a [Compose-only repo](docs/usage.md#compose-only-repos). The update deletes the TypeScript `Dockerfile`, `.dockerignore`, `src/main.ts` stub and compose service; keep them with `git checkout HEAD -- <path>` before you commit.
   - Only `ts`, with the python stack: update with `copier update --data docker_image=false`, or the update replaces the TypeScript `Dockerfile` with the Python image.
@@ -48,6 +49,7 @@ Upgrade steps:
 ### Changed
 
 - A `site=plain` page on a Cloudflare Worker (`site_host=cloudflare`) ships `site/_headers`: the page's Content-Security-Policy plus `frame-ancestors 'none'`, `X-Frame-Options`, `X-Content-Type-Options: nosniff`, HSTS and the web app's other security headers. It had none, and a meta tag cannot set `frame-ancestors`. The update adds the file; keep it in step with the CSP in `site/index.html`.
+- **Breaking:** `release.yml`, `python-release.yml`, `ts-release.yml`, and `docker.yml` on a tag publish only a tag signed with an SSH key in `.github/allowed_signers`, read from the default branch so a tag cannot bring its own key. Before, they accepted any tag GitHub marked Verified, which a key registered to any GitHub account passes, and `docker.yml` checked no signature at all. `tag-release.sh` runs the same check, `.github/scripts/verify-tag.sh`, before it pushes, and deletes a tag it made that fails ([Signed release tags](docs/usage.md#signed-release-tags)).
 - `site=plain` renders a working tool page in place of the empty starter: a compact header with the job, an input and its result with one Copy result action, Settings and Use it elsewhere disclosures, and a footer with a privacy line that the page's Content-Security-Policy keeps true. The stand-in job formats JSON; replace `convert()` in `site/main.mjs`. An existing site keeps its own files ([The plain tool page](docs/usage.md#the-plain-tool-page)).
 - `.editorconfig` sets a 2-space indent for `*.sh`, matching the scripts the template ships.
 - A web app's `vitest.config.ts` also runs `worker/**/*.test.ts`.

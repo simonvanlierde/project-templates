@@ -7,7 +7,11 @@ then delete it:
 ```sh
 gh issue create --title "First release" --body-file .github/first-release.md
 ```
-{% if publish_to_pypi %}
+
+- [ ] **Signing key**, before the first tag: add your SSH signing key to
+  `.github/allowed_signers` and commit it to `main`. The comment in that file has the
+  command. The release workflow publishes nothing for a tag signed with another key.
+{%- if publish_to_pypi %}
 - [ ] **PyPI trusted publishing**, before the first tag: add the pending publisher that
   `just repo-settings` prints. Without it, `python-release.yml` cannot upload.
 {%- endif %}

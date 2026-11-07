@@ -53,7 +53,7 @@ What CI and the git hooks check in a generated project, why, and what the templa
 | Scheduled link validation | `links.yml` | Validates internal and external links weekly via lychee and reports broken URLs |
 | OpenSSF Scorecard | `scorecard.yml` (when `public`) | Evaluates supply-chain security practices and generates README status badges |
 | FAIR software checks | `fair.yml` (when `public` with citation) | Validates repo compliance against fair-software.eu recommendations |
-| Tag-based release publishing | Release workflows | Restricts publishing to signed version tags (`vX.Y.Z`); disables manual workflow dispatch |
+| Tag-based release publishing | Release workflows | Restricts publishing to version tags (`vX.Y.Z`) signed with a key in `.github/allowed_signers` on the default branch; disables manual workflow dispatch |
 
 Rendered workflows default to `contents: read` or `{}`. Docker containers execute as non-root users ([Docker images](tooling.md#docker-images)).
 
