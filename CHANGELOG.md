@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- `mutation.yml` and `property.yml` open an issue, or comment on the open one, when a weekly run fails, so a failure no longer reaches only whoever last edited the cron. GitHub pauses schedules after 60 days without repository activity; re-enable them from the Actions tab.
+
 ### Changed
 
 - Renovate also extends `:configMigration` and `abandonments:recommended`, the two presets from `config:best-practices` the template wants without its pin PRs.
