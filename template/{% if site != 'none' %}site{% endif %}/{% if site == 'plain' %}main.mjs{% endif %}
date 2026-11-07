@@ -50,6 +50,8 @@ const update = () => {
 
 input.addEventListener("input", () => {
   edited = true;
+  // update() turns it back on once the newest input is valid.
+  copy.disabled = true;
   clearTimeout(timer);
   timer = setTimeout(update, 250);
 });
@@ -62,8 +64,15 @@ file.addEventListener("change", async () => {
   // A file read that finishes after newer typing must not replace it.
   const mine = ++reading;
   const typed = input.value;
-  const text = await picked.text();
+  // Cleared first, so picking the same file again fires change even after a failed read.
   file.value = "";
+  let text;
+  try {
+    text = await picked.text();
+  } catch {
+    said.textContent = "Could not read that file.";
+    return;
+  }
   if (mine !== reading || input.value !== typed) return;
   edited = true;
   input.value = text;
