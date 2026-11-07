@@ -157,7 +157,7 @@ grep -q 'project edit' "$out/h/docs/index.md"
 # x and r have the static site without a package.json. x and d run the tests on Windows.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
   --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain \
-  --data 'test_extras=[property]' --data python_windows=true . "$out/x"
+  --data 'test_extras=[property,mutation]' --data python_windows=true . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # ds: a command-line-only Python library with the docs site: no API reference.

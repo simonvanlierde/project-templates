@@ -178,7 +178,7 @@ jobs:
           GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
           GH_REPO: {% raw %}${{ github.repository }}{% endraw %}
           RUN_URL: {% raw %}${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}{% endraw %}
-        run: |
+        run: |-
           title="Weekly mutation run failed"
           body="The scheduled run failed: $RUN_URL"
           issue=$(gh issue list --state open --author app/github-actions --search "in:title \"$title\"" --json number -q '.[0].number')
