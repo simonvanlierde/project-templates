@@ -71,10 +71,10 @@ after each change you want projects to receive, and add an entry to
 
 Before you tag, move the `[Unreleased]` entries under a `## [X.Y.Z] - YYYY-MM-DD`
 heading and add its compare link, and merge that. Then run `template/.github/scripts/tag-release.sh X.Y.Z`.
-It signs the tag `vX.Y.Z` on `origin/main` with your git signing key and pushes it, which
+It signs the tag `vX.Y.Z` on `origin/main` with your SSH signing key and pushes it, which
 runs the release workflow. The workflow publishes a GitHub release with that version's
-section as its notes. It refuses a tag GitHub can't verify as signed, or one with no
-CHANGELOG section, and then publishes nothing. Releases here are immutable, so don't create
+section as its notes. It refuses a tag not signed with a key in `.github/allowed_signers` on
+`main`, or one with no CHANGELOG section, and then publishes nothing. Releases here are immutable, so don't create
 one by hand first: the workflow leaves an existing release as it is.
 
 ## Write pull requests for any reader
