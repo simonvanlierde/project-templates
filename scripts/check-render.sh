@@ -22,6 +22,17 @@ no_image() {
 
 bash scripts/check-release-fixtures.sh
 
+# Copier ignores a data-file key it has no question for, so a misspelt preset key
+# would fail nothing: every key must be a top-level question in copier.yml.
+for f in presets/*.yml; do
+  while read -r k; do
+    grep -qx "$k:" copier.yml || {
+      echo "check-render: $f sets $k, which is not a question" >&2
+      exit 1
+    }
+  done < <(sed -n 's/^\([a-z_][a-z_0-9]*\):.*/\1/p' "$f")
+done
+
 out=${1:?usage: scripts/check-render.sh OUT_DIR}
 # The identity answers have no defaults. CI's settings file fills them, and
 # replaces your own copier settings for this run.
