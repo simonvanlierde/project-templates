@@ -2,12 +2,15 @@
 {%- set ts = 'ts' in stacks and ts_kind == 'library' -%}
 {%- set rs = 'rust' in stacks and rust_kind == 'library' -%}
 {%- set go = 'go' in stacks and go_kind == 'library' -%}
+{%- set stack_jobs = (['python'] if py else []) + (['ts'] if ts else []) + (['rust'] if rs else []) + (['go'] if go else []) -%}
 name: property
 
 # The property tests at length once a week, with the same `just <stack>-property`
 # recipes you run by hand. The test job runs them briefly on every change; this run
 # tries far more inputs{% if go %}, and fuzzes Go's FuzzAdd{% endif %}. A failing input fails the job.
 # Run it from the Actions tab with "Run workflow" after you change the tests.
+# A failed scheduled run opens one issue (or comments on the open one). GitHub pauses
+# schedules after 60 days without repository activity: re-enable from the Actions tab.
 on:
   schedule:
     - cron: "17 4 * * 1"
@@ -155,3 +158,29 @@ jobs:
           name: fuzz-inputs
           path: {{ go_dir ~ '/' if go_dir != '.' else '' }}testdata/fuzz/
 {%- endif %}
+
+  notify:
+    # Weekly only. Opens one issue, or comments on the open one, when a job above fails.
+    # The only job that may write issues.
+    name: "property: report failure"
+    needs: {{ stack_jobs }}
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: open or update the issue
+        env:
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          GH_REPO: {% raw %}${{ github.repository }}{% endraw %}
+          RUN_URL: {% raw %}${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}{% endraw %}
+        run: |
+          title="Weekly property run failed"
+          body="The scheduled run failed: $RUN_URL"
+          issue=$(gh issue list --state open --author app/github-actions --search "in:title \"$title\"" --json number -q '.[0].number')
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

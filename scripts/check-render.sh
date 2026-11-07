@@ -1141,10 +1141,15 @@ test ! -e a/.github/workflows/mutation.yml
 uv run --no-project --with pyyaml python - <<'PY'
 import yaml
 wf = yaml.safe_load(open("m/.github/workflows/mutation.yml"))
-assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
+assert set(wf["jobs"]) == {"python", "ts", "rust", "go", "notify"}, wf["jobs"].keys()
 assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
 assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
 assert all("timeout-minutes" in j for j in wf["jobs"].values())
+# A failed scheduled run reports itself, and only that job may write issues.
+n = wf["jobs"]["notify"]
+assert set(n["needs"]) == {"python", "ts", "rust", "go"}, n["needs"]
+assert n["if"] == "failure() && github.event_name == 'schedule'", n["if"]
+assert n["permissions"] == {"issues": "write"}, n["permissions"]
 for stack in ("py", "ts", "rs", "go"):
     assert any(f"just {stack}-mutation" in s.get("run", "") for j in wf["jobs"].values() for s in j["steps"]), stack
 # cargo mutants --dir writes mutants.out inside rust_dir: the check and the upload follow it.
@@ -1211,9 +1216,13 @@ test ! -e a/.github/workflows/property.yml
 uv run --no-project --with pyyaml python - <<'PY'
 import yaml
 wf = yaml.safe_load(open("m/.github/workflows/property.yml"))
-assert set(wf["jobs"]) == {"python", "ts", "rust", "go"}, wf["jobs"].keys()
+assert set(wf["jobs"]) == {"python", "ts", "rust", "go", "notify"}, wf["jobs"].keys()
 assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
 assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
+n = wf["jobs"].pop("notify")
+assert set(n["needs"]) == {"python", "ts", "rust", "go"}, n["needs"]
+assert n["if"] == "failure() && github.event_name == 'schedule'", n["if"]
+assert n["permissions"] == {"issues": "write"}, n["permissions"]
 assert all(j["timeout-minutes"] == 60 for j in wf["jobs"].values())
 for job, recipe in (("python", "py-property"), ("ts", "ts-property"), ("rust", "rs-property"), ("go", "go-property")):
     assert any(s.get("run") == f"just {recipe}" for s in wf["jobs"][job]["steps"]), job
