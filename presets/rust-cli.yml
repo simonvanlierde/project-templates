@@ -1,0 +1,3 @@
+# A Rust command-line tool: one binary crate. docs/usage.md#presets
+stacks: [rust]
+rust_kind: binary

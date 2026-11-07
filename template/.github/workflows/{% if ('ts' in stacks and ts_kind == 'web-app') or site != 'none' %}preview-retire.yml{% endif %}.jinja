@@ -30,10 +30,10 @@ jobs:
       matrix:
         include:
 {%- if 'ts' in stacks and ts_kind == 'web-app' %}
-          - { slug: {{ slug_ }}, group: preview }
+          - {slug: {{ slug_ }}, group: preview}
 {%- endif %}
 {%- if site != 'none' %}
-          - { slug: {{ slug_ }}-site, group: preview-site }
+          - {slug: {{ slug_ }}-site, group: preview-site}
 {%- endif %}
     concurrency:
       group: {% raw %}${{ matrix.group }}-${{ github.event.pull_request.number || github.run_id }}{% endraw %}

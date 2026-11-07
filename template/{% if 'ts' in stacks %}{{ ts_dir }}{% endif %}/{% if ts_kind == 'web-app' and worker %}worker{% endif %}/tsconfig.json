@@ -1,0 +1,10 @@
+// The Worker runs on Cloudflare's runtime, not in a browser: the Workers types replace
+// the DOM ones of ../tsconfig.json. `pnpm run typecheck` checks both.
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2024"],
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["."]
+}

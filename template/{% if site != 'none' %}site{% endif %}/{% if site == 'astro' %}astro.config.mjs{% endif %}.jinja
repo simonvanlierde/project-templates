@@ -1,5 +1,12 @@
 import { defineConfig } from "astro/config";
-
+{% if site_on_workers %}
+// Static output: `astro build` writes plain files to dist/, which site.yml deploys to a
+// Cloudflare Worker. It serves them from the root of `site`, as do the previews.
+export default defineConfig({
+  output: "static",
+  site: "{{ site_url if not ('ts' in stacks and ts_kind == 'web-app') else 'https://' ~ slug | replace('.', '-') | replace('_', '-') ~ '-site.' ~ github_user | lower ~ '.workers.dev' }}",
+});
+{%- else %}
 // Static output: `astro build` writes plain files to dist/, which site.yml deploys.
 // GitHub Pages serves a project's site at https://<user>.github.io/<repo>/, so links
 // start from `base`. With a custom domain, set `site` to it and drop `base`, and change
@@ -9,3 +16,4 @@ export default defineConfig({
   site: "https://{{ github_user | lower }}.github.io",
   base: "/{{ slug }}",
 });
+{%- endif %}

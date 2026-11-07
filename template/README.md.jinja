@@ -4,13 +4,14 @@
 {%- set tree = blob | replace('/blob/', '/tree/') -%}
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
-{% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}{% set w = 'compose' if s == 'docker' and not docker_image else s %}[![{{ w }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml)
+{% for s in ['python', 'ts', 'rust', 'go', 'docker'] if s in stacks %}{% set w = 'compose' if s == 'docker' and compose_only else s %}[![{{ w }}](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml/badge.svg)](https://github.com/{{ github_user }}/{{ slug }}/actions/workflows/{{ w }}.yml)
 {% endfor %}{% if codecov %}[![codecov](https://codecov.io/gh/{{ github_user }}/{{ slug }}/graph/badge.svg)](https://codecov.io/gh/{{ github_user }}/{{ slug }})
 {% endif %}{% if codspeed %}[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/{{ github_user }}/{{ slug }}?utm_source=badge)
 {% endif %}{% if publish_to_pypi %}[![PyPI](https://img.shields.io/pypi/v/{{ slug }})](https://pypi.org/project/{{ slug }}/)
 [![Python versions](https://img.shields.io/pypi/pyversions/{{ slug }})](https://pypi.org/project/{{ slug }}/)
 {% endif %}{% if publish_to_npm %}[![npm](https://img.shields.io/npm/v/{{ slug }})](https://www.npmjs.com/package/{{ slug }})
 {% endif %}{% if public %}[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/{{ github_user }}/{{ slug }}/badge)](https://scorecard.dev/viewer/?uri=github.com/{{ github_user }}/{{ slug }})
+{% endif %}{% if public and citable %}[![Software Heritage](https://archive.softwareheritage.org/badge/origin/https://github.com/{{ github_user }}/{{ slug }}/)](https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/{{ github_user }}/{{ slug }})
 {% endif %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license | replace('-', '--') }}-blue.svg)]({{ blob }}LICENSE)
 {% endif %}
 Status: experimental. It may change in ways that break your code, without notice.
@@ -18,6 +19,12 @@ Status: experimental. It may change in ways that break your code, without notice
 Questions and bugs: see [CONTRIBUTING.md]({{ blob }}.github/CONTRIBUTING.md).
 {% endif %}{% if project_description %}
 {{ project_description }}
+{% endif %}{% if public and license != 'none' and openssf_badge | default('none') != 'none' %}
+## Usage
+
+<!-- TODO: {% if not project_description %}say what this software does and the problem it solves, then {% endif %}show its basic use. The OpenSSF Best Practices badge asks for {{ 'both' if not project_description else 'it' }}. -->
+
+Get it from the [releases](https://github.com/{{ github_user }}/{{ slug }}/releases){% if publish_to_pypi %}, from [PyPI](https://pypi.org/project/{{ slug }}/) (`uv add {{ slug }}`){% endif %}{% if publish_to_npm %}, from [npm](https://www.npmjs.com/package/{{ slug }}) (`pnpm add {{ slug }}`){% endif %}, or clone the repository.
 {% endif %}
 ## Development
 
@@ -25,8 +32,8 @@ Questions and bugs: see [CONTRIBUTING.md]({{ blob }}.github/CONTRIBUTING.md).
 {% set tools = [
   ('[uv](https://docs.astral.sh/uv/)', 'python' in stacks or 'ts' not in stacks),
   ('[just](https://just.systems)', true),
-  ('[Node.js](https://nodejs.org)', 'ts' in stacks or site == 'astro'),
-  ('[pnpm](https://pnpm.io)', 'ts' in stacks or site == 'astro'),
+  ('[Node.js](https://nodejs.org)', has_pnpm),
+  ('[pnpm](https://pnpm.io)', has_pnpm),
   ('[cargo](https://rustup.rs)', 'rust' in stacks),
   ('[Go](https://go.dev/dl/)', 'go' in stacks),
   ('Docker', 'docker' in stacks),
@@ -37,7 +44,7 @@ You need {{ tools[:-1] | join(', ') }} and {{ tools[-1] }}.
 {% if 'python' in stacks %}uv sync{% if python_dir != '.' %} --directory {{ python_dir }}{% endif %}
 {% endif %}{% if 'ts' in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} install
 {% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec playwright install chromium   # once per machine, for the e2e tests
-{% endif %}{% if 'rust' in stacks %}cargo install --locked cargo-nextest cargo-deny{% if rust_kind == 'library' and 'mutation' in test_extras %} cargo-mutants{% endif %}   # once per machine
+{% endif %}{% if 'rust' in stacks %}cargo install --locked cargo-nextest cargo-deny{% if rust_kind == 'library' %} cargo-semver-checks{% endif %}{% if rust_kind == 'library' and 'mutation' in test_extras %} cargo-mutants{% endif %}   # once per machine
 {% endif %}{% if 'go' in stacks %}go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{ golangci_lint_version }}   # once per machine, checked against sum.golang.org
 just go-sync     # writes go.sum, which govulncheck needs: commit it
 {% endif %}{% if 'ts' in stacks and 'python' not in stacks %}pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec prek install     # git hooks
@@ -80,7 +87,7 @@ Issues turned on for this repository.
 ## Deploy
 
 `pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} dev` serves the app with live reload. The app runs on a Cloudflare Worker
-that serves the build as static assets, configured in [`{{ d }}wrangler.jsonc`]({{ blob }}{{ d }}wrangler.jsonc). CI deploys it: every
+that serves the build as static assets{% if worker %}, with [`{{ d }}worker/index.ts`]({{ blob }}{{ d }}worker/index.ts) in front of `/api/*`{% endif %}, configured in [`{{ d }}wrangler.jsonc`]({{ blob }}{{ d }}wrangler.jsonc). CI deploys it: every
 push to `main` deploys the build the checks ran on, at `{{ site_url }}`. Every pull request that is
 neither a draft nor from a bot gets a preview URL (see below). [`{{ d }}public/_headers`]({{ blob }}{{ d }}public/_headers) sets the
 response headers, including the Content-Security-Policy that the e2e tests run under.
@@ -88,10 +95,10 @@ response headers, including the Content-Security-Policy that the e2e tests run u
 One-time setup, for production and previews alike:
 
 1. Run `just repo-settings` to create the `production` and `preview` environments, or create them under Settings > Environments, with `production` limited to `main`.
-2. Add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to both environments.
+2. Add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to both environments.{% if custom_domain %} Only `production`'s token also needs Zone > Workers Routes: Edit for the zone of `{{ custom_domain }}`: previews run pull request code, so theirs gets no zone access.{% endif %}
 3. Give the Cloudflare account a workers.dev subdomain, if it has none yet.
 
-Without the token, the deploy jobs skip with a notice. For a custom domain, add it under the Worker's Settings > Domains & Routes. It needs a zone on Cloudflare.
+Without the token, the deploy jobs skip with a notice. {% if custom_domain %}The production job attaches the custom domain `{{ custom_domain }}`, whose zone must be in the same Cloudflare account. {% endif %}For {% if custom_domain %}another{% else %}a{% endif %} custom domain, set `site_url` with `copier update --data site_url=https://<domain>`.{% if worker %} `pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} exec wrangler dev` serves the last build and the Worker together.{% endif %}
 
 {% if user_data == 'accounts' -%}
 The footer links the [accessibility statement]({{ blob }}{{ d }}docs/accessibility.md), the
@@ -110,11 +117,15 @@ Each pull request that is open, not a draft and not from a bot gets its own Clou
 {% endif %}{% if site != 'none' %}
 ## Site
 
-The {{ 'Astro site' if site == 'astro' else 'page' }} in [`site/`]({{ tree }}site) is for the people who use this project. `just site` builds it into `{{ site_out }}/`{% if site == 'astro' %}, from the lockfile that `just site-sync` writes{% endif %}. Every push to `main` deploys that build to GitHub Pages, at `https://{{ github_user | lower }}.github.io/{{ slug }}/`. A Pages site is public, even when the repo is private.
+The {{ 'Astro site' if site == 'astro' else 'page' }} in [`site/`]({{ tree }}site) is for the people who use this project. `just site` builds it into `{{ site_out }}/`{% if site == 'astro' %}, from the lockfile that `just site-sync` writes{% endif %}. {% if site_on_workers %}Every push to `main` deploys that build to the Cloudflare Worker `{{ slug | replace('.', '-') | replace('_', '-') }}-site`, configured in [`wrangler.site.jsonc`]({{ blob }}wrangler.site.jsonc){% if site_domain %}, at `{{ site_url }}`{% endif %}.{% if worker %} [`site/worker/index.mjs`]({{ blob }}site/worker/index.mjs) answers `/api/*` in front of the files, and `just site` runs its tests first.{% endif %} The site is public, even when the repo is private.{% else %}Every push to `main` deploys that build to GitHub Pages, at `https://{{ github_user | lower }}.github.io/{{ slug }}/`. A Pages site is public, even when the repo is private.{% endif %}
 {% if not ('ts' in stacks and ts_kind == 'web-app') %}
 ### Pull request previews
 {% endif %}
-Each pull request that is open, not a draft and not from a bot gets a preview of the site on its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-site-pr-<number>`, deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site)). One-time setup: run `just repo-settings`, which creates the `preview` environment and sets Pages to deploy from Actions, then add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to the `preview` environment, and give the Cloudflare account a workers.dev subdomain if it has none yet. Without the token, the previews skip with a notice. Previews are public: anyone with the address can open one.
+Each pull request that is open, not a draft and not from a bot gets a preview of the site on its own Cloudflare Worker, `{{ slug | replace('.', '-') | replace('_', '-') }}-site-pr-<number>`, deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site)). {% if site_on_workers %}One-time setup: run `just repo-settings`, which creates the `preview` and `production` environments, then add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit{% if site_domain %}; only `production`'s token also gets Zone > Workers Routes: Edit for the zone of `{{ site_domain }}`, as previews run pull request code{% endif %}) and `CLOUDFLARE_ACCOUNT_ID` to both, and give the Cloudflare account a workers.dev subdomain if it has none yet. Without the token, the deploy and the previews skip with a notice.{% else %}One-time setup: run `just repo-settings`, which creates the `preview` environment and sets Pages to deploy from Actions, then add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to the `preview` environment, and give the Cloudflare account a workers.dev subdomain if it has none yet. Without the token, the previews skip with a notice.{% endif %} Previews are public: anyone with the address can open one.
+{% endif %}{% if docs_site %}
+## Documentation
+
+The documentation is the Markdown in [`docs/`]({{ tree }}docs), published at `https://{{ github_user | lower }}.github.io/{{ slug }}/`{% if docs_api %} with an API reference from the docstrings{% endif %}. `just docs` builds it into `_docs/` and fails on a broken link, `just docs-serve` previews it, and every push to `main` deploys it to GitHub Pages once `just repo-settings` has turned Pages on. A Pages site is public, even when the repo is private.
 {% endif %}
 ## License
 

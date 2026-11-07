@@ -5,6 +5,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
+<!-- The page makes no requests of its own, and connect-src stays 'none' to keep the
+     privacy line in the footer true. A page that calls an API adds it here and says so
+     in that line. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
 <title>{{ project_name | e }}</title>
 {%- if project_description %}
 <meta name="description" content="{{ project_description | e }}">
@@ -14,21 +18,69 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to the tool</a>
-<header class="wrap">
-  <p><b>{{ project_name | e }}</b>{% if project_description %} · {{ project_description | e }}{% endif %}</p>
+<header class="wrap masthead">
+  <div>
+    <h1>{{ project_name | e }}</h1>
+{%- if project_description %}
+    <p class="job">{{ project_description | e }}</p>
+{%- else %}
+    <!-- TODO: one sentence naming the job this page does. -->
+{%- endif %}
+  </div>
 {%- if public %}
   <a href="{{ repo }}#readme">Docs</a>
 {%- endif %}
 </header>
 <main id="main" class="wrap" tabindex="-1">
-  <h1>{{ project_name | e }}</h1>
-  <!-- TODO: the tool goes here, in the first screen: its input, then its result.
-       Put settings and how it works in <details> below it. -->
-  <p id="status" role="status"></p>
+  <!-- TODO: the sample tool formats JSON. Replace its labels here and convert() in
+       main.mjs with this project's own job; keep the input, the result and its one action. -->
+  <div class="workspace" id="workspace" data-state="sample">
+    <section class="pane" aria-labelledby="input-label">
+      <div class="pane-head">
+        <label id="input-label" for="input">JSON to format</label>
+        <label class="file">Open a file<input type="file" id="file" accept=".json,application/json,text/plain"></label>
+      </div>
+      <textarea id="input" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="input-hint input-error">{"name": "sample", "tags": ["one", "two"], "count": 3}</textarea>
+      <p id="input-hint" class="hint">Type, paste or open a file. The result updates when you pause.</p>
+      <p id="input-error" class="error" hidden></p>
+    </section>
+    <section class="pane" aria-labelledby="result-label">
+      <div class="pane-head">
+        <h2 id="result-label">Formatted JSON</h2>
+        <span id="state" class="state">Sample</span>
+      </div>
+      <!-- biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable result must be reachable by keyboard (WCAG 2.1.1). -->
+      <!-- biome-ignore lint/a11y/useAriaPropsSupportedByRole: the label names the region for screen readers. -->
+      <pre id="result" tabindex="0" aria-labelledby="result-label"></pre>
+      <div class="actions">
+        <button type="button" id="copy" class="primary">Copy result</button>
+        <output id="copied"></output>
+      </div>
+      <p id="said" class="vh" role="status"></p>
+    </section>
+  </div>
+  <details>
+    <summary>Settings</summary>
+    <div class="detail">
+      <label for="indent">Indent</label>
+      <select id="indent">
+        <option value="2">2 spaces</option>
+        <option value="4">4 spaces</option>
+        <option value="tab">Tab</option>
+      </select>
+    </div>
+  </details>
+  <details>
+    <summary>Use it elsewhere</summary>
+    <div class="detail">
+      <!-- TODO: how to run the same job from the command line, a hook or CI, or delete this disclosure. -->
+      <p>TODO: the same job from the command line.</p>
+    </div>
+  </details>
   <noscript><p>This page needs JavaScript.</p></noscript>
 </main>
-<footer class="wrap">
-  <p>This page sets no cookies and stores nothing in your browser. Its host keeps the usual server logs.</p>
+<footer class="wrap colophon">
+  <p>Everything runs in your browser: what you type or open never leaves this page. It sets no cookies and stores nothing. Its host keeps the usual server logs.</p>
 {%- if public %}
   <p class="links">
 {%- if license != 'none' %}

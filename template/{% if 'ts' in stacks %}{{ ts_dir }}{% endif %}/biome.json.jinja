@@ -2,12 +2,17 @@
     vcs.root: biome looks for .gitignore beside biome.json, and the only .gitignore
     is at the repository root, so nested packages point back up at it.
     .astro files: biome reads only their frontmatter, so it reports every name the
-    template uses as unused. -#}
+    template uses as unused.
+    noDangerouslySetInnerHtml: a React-domain rule, on only with react in package.json.
+    Preact turns it on here, so the app's one suppression of it has an effect. -#}
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": { "includes": ["**", "!.vscode"{% if site == 'astro' and ts_dir == '.' %}, "!site/**/*.astro"{% endif %}] },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "formatter": { "indentStyle": "space", "lineWidth": 120 },
+{%- if ts_kind == 'web-app' and web_framework == 'preact' %}
+  "linter": { "rules": { "security": { "noDangerouslySetInnerHtml": "error" } } },
+{%- endif %}
   "markdown": { "formatter": { "enabled": false } },
   "yaml": { "formatter": { "enabled": false } },
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true{% if ts_dir != '.' %}, "root": "{{ (['..'] * ts_dir.split('/') | length) | join('/') }}"{% endif %} }

@@ -1,6 +1,6 @@
 # CI baseline
 
-Checks included in repositories generated from this template, their purposes, and omitted alternatives.
+What CI and the git hooks check in a generated project, why, and what the template leaves out.
 
 ## What every scaffold gets
 
@@ -14,7 +14,7 @@ Checks included in repositories generated from this template, their purposes, an
 | Caches saved only from `main` | Caching workflows | PRs restore caches saved on `main` without saving new ones, preventing cache eviction within the 10 GB limit |
 | `persist-credentials: false` on checkout | Every workflow | Prevents subsequent job steps from reusing the runner checkout token |
 | Stack validation checks | `python.yml`, `ts.yml`, `rust.yml`, `go.yml` | Executes lint, format, type-check, test, and dependency audits matching `just check` |
-| Git hooks executed in CI | `checks.yml` | Enforces hook compliance even if local contributors omit `prek install`. A repo that skips CI on agent PRs gets no such check there; its pre-push hook is the gate |
+| Git hooks executed in CI | `checks.yml` | Enforces hook compliance even if local contributors omit `prek install`. |
 | Conventional commit and PR title checks | `committed.toml`, commit-msg hook, `pr-title.yml` | Enforces clean git history for squash merges to `main` |
 | zizmor workflow auditor | Git hook and CI | Scans workflows for injection vulnerabilities, leaked secrets, and compromised actions |
 | jactionlint | Git hook and CI | Validates workflow syntax, expressions, and shell commands in `run:` blocks |
@@ -34,7 +34,7 @@ Checks included in repositories generated from this template, their purposes, an
 | Pull request benchmarks | `benchmarks.yml` (`codspeed` option) | Runs CodSpeed instruction-count benchmarks on PRs that touch benchmarked code and on every push to `main`, using OIDC authentication |
 | Production deploy from CI | `ts.yml` (`web-app` kind) | Deploys the build the checks ran on to a Cloudflare Worker on each push to `main`, through a `production` environment limited to `main` |
 | Pull request previews | `ts.yml` and `site.yml` preview jobs, `preview-retire.yml` (`web-app` kind, `site` option) | Deploys each open, ready pull request to its own Worker, and deletes it when the pull request closes, merges or turns draft |
-| Static site on GitHub Pages | `site.yml` (`site` option) | Builds `site/` with `just site` on every pull request and push to `main`, and deploys that build to GitHub Pages from `main` |
+| Static site on GitHub Pages or a Worker | `site.yml` (`site` option) | Builds `site/` with `just site` on every pull request and push to `main`, and deploys that build from `main` to GitHub Pages, or to a Cloudflare Worker with `site_host=cloudflare` |
 | Browser tests in Playwright container | `ts.yml` (`web-app` kind) | Runs end-to-end tests against production builds using the pinned Playwright container |
 | Automated accessibility tests (axe) | `tests/e2e/a11y.spec.ts` (`web-app` kind) | Tests routes in light and dark modes against WCAG 2.0–2.2 Levels A and AA |
 | Content-Security-Policy enforcement | `public/_headers`, `tests/e2e/csp.spec.ts` | Validates strict CSP (`script-src 'self'`), HSTS, and frame protection without inline scripts |
@@ -46,7 +46,8 @@ Checks included in repositories generated from this template, their purposes, an
 | Publication provenance | Release workflows | Generates Sigstore attestations and provenance bundles for PyPI, npm, and GHCR artifacts |
 | Container security scans | `docker.yml` (`docker` stack with `docker_image`) | Trivy scans images for HIGH/CRITICAL vulnerabilities; weekly scheduled rebuilds check base updates |
 | Compose and shell lint | `compose.yml` (Compose-only repo) | Validates the Compose files against `.env.example`, then runs shellcheck and shfmt on the tracked shell scripts |
-| Public API break detection | `python.yml` (griffe), `ts.yml` (API Extractor) | Compares public APIs against prior releases to detect breaking changes before publication |
+| Public API break detection | `python.yml` (griffe), `ts.yml` (API Extractor), `rust.yml` (cargo-semver-checks) | Compares public APIs against prior releases to detect breaking changes before publication |
+| Documentation site build | `docs.yml` (`docs_site` option) | Builds `docs/` with Zensical in `--strict` mode on every pull request and push to `main`, and deploys that build from `main` to GitHub Pages |
 | Cold-install setup verification | `cold-install.yml` (when `cold_install`) | Executes README development instructions in a minimal Debian container to catch missing prerequisites. Also runs when `pyproject.toml`, `uv.lock` or `.python-version` change |
 | Scheduled dependency audits | `advisories.yml` | Runs weekly scans (`uv audit`, `pnpm audit`, `cargo deny`, `govulncheck`, `zizmor`) without commits |
 | Scheduled link validation | `links.yml` | Validates internal and external links weekly via lychee and reports broken URLs |
@@ -70,7 +71,6 @@ CI skips hooks that require the local runtime environment (`ruff`, `ty`, `biome`
 | Repository history secret scan | GitHub secret scanning covers public repos; local hooks scan staged commits | For private repositories without GitHub Advanced Security |
 | Docker base images pinned to SHA | The base image tag matches the `python_version` answer | In production deployments requiring byte-exact base images |
 | Unified "CI result" job | Stack-specific workflows are small enough to list directly in branch rules | When workflow matrices expand beyond manual ruleset configuration |
-| `cargo-semver-checks` | Crates.io publication workflow is not yet implemented | When automated Rust crate publishing is added |
 | CODEOWNERS | Unnecessary for single-maintainer repositories | When adding multi-maintainer teams with distinct ownership areas |
 | Multi-browser Playwright matrix | Triples CI test duration; modern engines rarely exhibit isolated rendering bugs | When using browser-specific Web APIs across rendering engines. Run Firefox and WebKit on pushes to `main` and weekly, with the deploy waiting on them, not on PRs: in credit-matrix they took 65% of a PR run's minutes |
 | Dynamic CSP inline script hashing | Template enforces strict `script-src 'self'` without inline scripts | Not needed under current zero-inline-script policy |

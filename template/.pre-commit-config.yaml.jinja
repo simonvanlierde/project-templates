@@ -5,7 +5,6 @@
 {%- set uv_project = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --project ' ~ python_dir %}
 {%- set uv_cd = 'uv run --frozen' if python_dir == '.' else 'uv run --frozen --directory ' ~ python_dir %}
 {%- set pnpm = 'pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir %}
-{%- set has_pnpm = 'ts' in stacks or site == 'astro' %}
 {%- set mp = '' if rust_dir == '.' else ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' %}
 {#- golangci-lint fmt takes a path. run loads packages from the cwd's module and
     has no flag to name another, so it is the one hook that cds into a nested module. #}
@@ -155,6 +154,19 @@ repos:
     hooks:
       - id: nbstripout
         exclude: {{ data_exclude }}
+
+  # Scientific Python's repo-review: packaging, pytest and CI config against their
+  # development guide. Checks this project skips on purpose are listed, each with its
+  # reason, under [tool.repo-review.ignore] in {{ 'pyproject.toml' if python_dir == '.' else python_dir ~ '/pyproject.toml' }}.
+  - repo: https://github.com/scientific-python/cookie
+    rev: 1589a99867d6cac494ac7545fe6a83108580a3ee # frozen: 2026.08.14
+    hooks:
+      - id: sp-repo-review
+{%- if python_dir != '.' %}
+        args: [--show=err, --package-dir={{ python_dir }}]
+{%- endif %}
+        # Upstream leaves repo-review unpinned.
+        additional_dependencies: ["repo-review[cli]==1.3.0"]
 {%- endif %}
   - repo: https://github.com/rvben/rumdl-pre-commit
     rev: eaeb8abc646954face3eb41726f085385410f761 # frozen: v0.3.1

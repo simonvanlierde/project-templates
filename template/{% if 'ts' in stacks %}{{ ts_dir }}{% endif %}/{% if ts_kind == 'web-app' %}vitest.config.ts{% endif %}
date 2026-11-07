@@ -1,13 +1,14 @@
 import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config.ts";
 
-// Unit tests only: Playwright runs tests/e2e/ against the built app.
+// Unit tests only: Playwright runs tests/e2e/ against the built app. A Worker script's
+// tests, in worker/, set the node environment themselves.
 export default mergeConfig(
   viteConfig,
   defineConfig({
     test: {
       environment: "jsdom",
-      include: ["src/**/*.test.{ts,tsx}"],
+      include: ["src/**/*.test.{ts,tsx}", "worker/**/*.test.ts"],
     },
   }),
 );
