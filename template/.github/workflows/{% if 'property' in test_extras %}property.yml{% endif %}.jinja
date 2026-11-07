@@ -45,6 +45,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: just@{{ just_version }}
+          fallback: none
 
       - run: uv sync --locked
       - run: just py-property
@@ -84,6 +85,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: just@{{ just_version }}
+          fallback: none
 
       - run: just ts-property
 {%- endif %}
@@ -110,6 +112,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: just@{{ just_version }}
+          fallback: none
 
       - run: just rs-property
 {%- endif %}
@@ -131,6 +134,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: just@{{ just_version }}
+          fallback: none
 
       - name: Locate the fuzz cache
         id: fuzz-cache

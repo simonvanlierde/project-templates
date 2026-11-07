@@ -60,6 +60,7 @@ Upgrade steps:
 - The message at the end of `copier copy` mentions lockfiles only when the project has
   them, and the package version only when it publishes to PyPI or npm. It ends by saying
   that `copier update` pulls in new template releases.
+- Every `taiki-e/install-action` step sets `fallback: none`, so a tool past the action's manifest fails the step instead of installing an unchecked binary through cargo-binstall. The `cargo-codspeed` step in `benchmarks.yml` keeps the fallback: the manifest does not list it.
 
 ### Fixed
 

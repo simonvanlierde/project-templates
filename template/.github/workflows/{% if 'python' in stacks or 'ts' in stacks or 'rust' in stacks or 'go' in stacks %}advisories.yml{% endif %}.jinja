@@ -92,6 +92,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: cargo-deny
+          fallback: none
       - run: cargo deny check advisories
 {%- endif %}
 {%- if 'go' in stacks %}

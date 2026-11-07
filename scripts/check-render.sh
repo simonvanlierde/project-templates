@@ -3038,4 +3038,16 @@ grep -q 'Updating to template version' "$out/sample-up.log"
 (lacks -q 'def add(' "$sample_up/src/sample_me/__init__.py")
 test ! -e "$sample_up/tests/test_add.py"
 
+# install-action falls back to cargo-binstall for a tool past its manifest, which
+# installs an unchecked binary: every step says fallback: none, but cargo-codspeed,
+# which the manifest does not list.
+unpinned=$(find . -path '*/.github/workflows/*.yml' -exec awk '
+  /uses: taiki-e\/install-action@/ { n = 3; step = ""; next }
+  n > 0 { step = step $0 "\n"; if (--n == 0 && step !~ /fallback: none/ && step !~ /tool: cargo-codspeed/) print FILENAME }
+' {} +)
+test -z "$unpinned" || {
+  echo "install-action without fallback: none: $unpinned" >&2
+  exit 1
+}
+
 echo "all render checks passed"
