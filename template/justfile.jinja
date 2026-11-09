@@ -27,7 +27,7 @@ check:
 {%- if 'go' in stacks %}
     @just go-check
 {%- endif %}
-{%- if 'docker' in stacks and not docker_image %}
+{%- if compose_only %}
     @just docker-check
 {%- endif %}
 {%- if site == 'astro' %}
@@ -49,24 +49,33 @@ fmt:
 {%- if 'go' in stacks %}
     @just go-fmt
 {%- endif %}
-{%- if 'docker' in stacks and not docker_image %}
+{%- if compose_only %}
     @just docker-fmt
 {%- endif %}
 {%- set prek = ('pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir) ~ ' exec prek' if ('ts' in stacks and 'python' not in stacks) else 'prek' %}
 
-# Run every git hook over the whole repo, not just staged files. The checks workflow skips
-# the hooks in its SKIP list, which the stack workflows run instead. Here they all run, so
-# this can fail where the checks workflow passes.
+# The checks workflow skips the hooks in its SKIP list, which the stack workflows run
+# instead. Here they all run, so this can fail where the checks workflow passes.
+
+# Run every git hook over the whole repo, not just staged files.
 hooks:
     {{ prek }} run -a
 {%- if site != 'none' %}
 
 # Replace the body with the project's own build, such as `uv run site/build.py --out {{ site_out }}`.
-# Build the page in site/ into {{ site_out }}/, which site.yml deploys.
+
+# Build the page in site/ into {{ site_out }}/, which site.yml deploys{% if site_on_workers and worker %}, after the Worker's tests{% endif %}.
 site:
+{%- if site_on_workers and worker %}
+    node --test site/worker/index.test.mjs
+{%- endif %}
 {%- if site == 'plain' %}
     rm -rf {{ site_out }}
     cp -R site {{ site_out }}
+{%- if site_on_workers and worker %}
+    # The Worker script is code, not a page to serve.
+    rm -rf {{ site_out }}/worker
+{%- endif %}
 {%- elif site == 'astro' %}
     pnpm -C site install --frozen-lockfile
     ASTRO_TELEMETRY_DISABLED=1 pnpm -C site run build
@@ -75,13 +84,27 @@ site:
 {%- if site == 'astro' %}
 
 # `just site` and CI install with --frozen-lockfile.
+
 # Install the site's node_modules, and write site/pnpm-lock.yaml if it is missing.
 site-sync:
     pnpm -C site install
 {%- endif %}
+{%- if docs_site %}
+{%- set zensical = 'uvx --exclude-newer "1 week"' ~ (' --with mkdocstrings-python==' ~ mkdocstrings_python_version if docs_api else '') ~ ' zensical@' ~ zensical_version %}
+
+# Build docs/ into _docs/, which docs.yml deploys. --strict fails on any warning, such as a broken link.
+docs:
+    {{ zensical }} build --strict
+
+# Serve docs/ at http://localhost:8000, rebuilt on each save.
+docs-serve:
+    {{ zensical }} serve
+{%- endif %}
 {% if citable %}
-# Rewrite codemeta.json to agree with CITATION.cff, then check. The writer
-# exits 1 whenever it changes a file, so the check that follows decides the result.
+# The writer exits 1 whenever it changes a file, so the check that follows decides
+# the result.
+
+# Rewrite codemeta.json to agree with CITATION.cff, then check.
 citation:
     -{{ prek }} run citesync-write --hook-stage manual --all-files
     {{ prek }} run citesync --all-files
@@ -110,6 +133,9 @@ release version:
     # changelog bigger than the pipe buffer.
     if git show origin/main:CHANGELOG.md | grep "^## \[$version\] - " >/dev/null; then
         .github/scripts/tag-release.sh "$version"
+{%- if public and citable %}
+        echo "Archive it in Software Heritage: https://archive.softwareheritage.org/save/ (git, $repo). The README badge then links to the SWHID."
+{%- endif %}
         exit 0
     fi
     prev=$(sed -n 's/^## \[\([0-9][0-9.]*\)\].*/\1/p' CHANGELOG.md | head -1)
@@ -128,7 +154,7 @@ release version:
     git commit -s -m "chore: release $version" -- CHANGELOG.md
     echo "Merge this commit to main, then run: just release $version"
 
-# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}. Create the `preview` environment for pull request previews and the `production` environment, deployed from `main` only{% endif %}. Safe to rerun.
+# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on secret scanning with push protection, private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}. Create the `preview` environment for pull request previews and the `production` environment, deployed from `main` only{% endif %}. Safe to rerun.
 repo-settings:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -144,6 +170,15 @@ repo-settings:
     }
     # Merge-method switches live on the repo itself; the ruleset also limits the PR button.
     gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=true -F allow_merge_commit=false -F allow_rebase_merge=false -F delete_branch_on_merge=true{% if public %} -F web_commit_signoff_required=true{% endif %} >/dev/null 2>"$err" || fail
+{%- if public %}
+    # Push protection refuses a push that holds a known secret format, before it reaches the repo.
+    # A private repo without Secret Protection refuses this, so it warns instead of failing.
+    if gh api -X PATCH repos/{owner}/{repo} -f 'security_and_analysis[secret_scanning][status]=enabled' -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled' >/dev/null 2>"$err"; then
+        echo "Turned on secret scanning and push protection."
+    else
+        echo "Warning: secret scanning could not be turned on (a private repo needs Secret Protection): $(cat "$err")" >&2
+    fi
+{%- endif %}
     # Adopt an existing ruleset by name, else one with the same target that protects the same
     # refs as the file, updating it in place. The list has no conditions, so each candidate is read.
     for name in main{% if public %} main-checks{% endif %} tags; do
@@ -213,8 +248,8 @@ repo-settings:
     gh api -X PUT "repos/{owner}/{repo}/environments/preview" >/dev/null 2>"$err" || fail
     echo "Configured environment 'preview'."
 {%- endif %}
-{%- if 'ts' in stacks and ts_kind == 'web-app' %}
-    # The production job deploys from main only, unattended, so no reviewer.
+{%- if ('ts' in stacks and ts_kind == 'web-app') or site_on_workers %}
+    # The production jobs deploy from main only, unattended, so no reviewer.
     gh api -X PUT "repos/{owner}/{repo}/environments/production" \
         -F "deployment_branch_policy[protected_branches]=false" \
         -F "deployment_branch_policy[custom_branch_policies]=true" >/dev/null 2>"$err" || fail
@@ -222,10 +257,11 @@ repo-settings:
     if ! echo "$policies" | grep -qxF 'main'; then
         gh api -X POST "repos/{owner}/{repo}/environments/production/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
     fi
-    echo "Configured environment 'production'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to both environments: see the Deploy section of the README."
+    echo "Configured environment 'production'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to both environments: see the {{ 'Deploy' if 'ts' in stacks and ts_kind == 'web-app' else 'Site' }} section of the README."
 {%- endif %}
-{%- if site != 'none' %}
-    # site.yml deploys to GitHub Pages from the workflow, not from a branch. GitHub answers
+{%- set site_on_pages = site != 'none' and not site_on_workers %}
+{%- if site_on_pages or docs_site %}
+    # {{ 'site.yml' if site_on_pages else 'docs.yml' }} deploys to GitHub Pages from the workflow, not from a branch. GitHub answers
     # 409 when Pages is already on, and then the PUT switches its source instead. A 403 or
     # 422 means this repo cannot have Pages, such as a private repo on the free plan.
     if gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1; then
@@ -234,11 +270,13 @@ repo-settings:
         gh api -X PUT repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1 || fail
         echo "GitHub Pages deploys from Actions."
     elif grep -qE 'HTTP (403|422)' "$err"; then
-        echo "Warning: GitHub Pages is not available for this repo (a private repo needs a paid plan for it), so site.yml's deploy job skips. Previews still run." >&2
+        echo "Warning: GitHub Pages is not available for this repo (a private repo needs a paid plan for it), so {{ 'site.yml' if site_on_pages else 'docs.yml' }}'s deploy job skips.{{ ' Previews still run.' if site_on_pages else '' }}" >&2
     else
         fail
     fi
+{%- if site_on_pages %}
     echo "For the site's previews, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the 'preview' environment: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site"
+{%- endif %}
 {%- endif %}
 {%- if publish_to_pypi %}
     repo_full_name=$(gh api repos/{owner}/{repo} --jq .full_name 2>"$err") || fail
@@ -249,13 +287,16 @@ repo-settings:
 {%- if public and citable %}
     echo "Zenodo: https://zenodo.org/account/settings/github/"
 {%- endif %}
+{%- if (public and (citable or openssf_badge != 'none')) or publish_to_pypi %}
+    if [ -f .github/first-release.md ]; then echo "First-release checklist: gh issue create --title 'First release' --body-file .github/first-release.md"; fi
+{%- endif %}
 
-# Set the GitHub About box from your answers: description{% if 'ts' in stacks and ts_kind == 'web-app' %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
+# Set the GitHub About box from your answers: description{% if 'ts' in stacks and ts_kind == 'web-app' or site_on_workers %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
 repo-about:
     gh repo edit
 {%- if project_description %} --description {{ "'" ~ project_description | replace("'", "'\\''") | replace("{{", "{{{{") ~ "'" }}
 {%- endif %}
-{%- if 'ts' in stacks and ts_kind == 'web-app' %} --homepage '{{ site_url }}'
+{%- if 'ts' in stacks and ts_kind == 'web-app' or site_on_workers %} --homepage '{{ site_url }}'
 {%- endif %}
 {%- for t in [('python' in stacks, 'python'), ('ts' in stacks, 'typescript'), ('rust' in stacks, 'rust'), ('go' in stacks, 'go'), ('docker' in stacks, 'docker')] if t[0] %} --add-topic {{ t[1] }}
 {%- endfor %}

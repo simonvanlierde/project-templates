@@ -19,7 +19,7 @@ Who acts on a project made from this template, what each actor can change, and w
 
 ## Update
 
-`copier update` performs a three-way merge between the recorded commit in `.copier-answers.yml`, the latest template release, and the local project tree. Conflicting changes leave standard git conflict markers. Files listed in `_skip_if_exists` are never modified by updates ([usage.md](usage.md)). Running with `--defaults` accepts default values for newly added questions.
+`copier update` performs a three-way merge between the recorded commit in `.copier-answers.yml`, the latest template release, and the local project tree. Conflicting changes leave standard git conflict markers. Files listed in `_skip_if_exists` are never modified by updates ([which files](usage.md#keeping-your-project-up-to-date)). Running with `--defaults` accepts default values for newly added questions.
 
 The weekly CI update workflow runs Copier in a read-only job, generates a binary patch, and applies it in a fresh job that holds the push token. This push job runs no template code or git hooks. The split has to be across jobs, not steps: steps in one job share the runner's state, `GITHUB_PATH` included, so a template step could change what a later step runs. Only the patch crosses between the jobs, never configuration or scripts.
 
@@ -36,7 +36,8 @@ These rendered workflows publish. Most request `id-token: write` to exchange Ope
 | `ts.yml` (`preview` job) | `ts_kind=web-app` | Ready, non-bot pull requests from this repo | `CLOUDFLARE_API_TOKEN` in the `preview` environment: deploys a `<slug>-pr-<n>` Worker through `deploy-worker.sh` | Fork and bot pull requests get no token. **Runs the branch's own code with the token**: see the threat table |
 | `ts.yml` (`production` job) | `ts_kind=web-app` | Pushes to `main` | `CLOUDFLARE_API_TOKEN` in the `production` environment: deploys the Worker through `deploy-worker.sh` | Deploys the build the checks ran on; only `main` can deploy to the environment |
 | `preview-retire.yml` | `ts_kind=web-app` or `site` | Pull request closed, merged or turned draft; daily; manual dispatch | `CLOUDFLARE_API_TOKEN` in the `preview` environment: deletes preview Workers | Checks out the base branch, not the pull request; skips fork pull requests |
-| `site.yml` (`deploy` job) | `site` | Pushes to `main`, manual dispatch on `main` | `pages: write` and `id-token: write`, on this job only: publishes to GitHub Pages | Deploys the build job's artifact and runs no repository code |
+| `site.yml` (`deploy` job) | `site`, `site_host=pages` | Pushes to `main`, manual dispatch on `main` | `pages: write` and `id-token: write`, on this job only: publishes to GitHub Pages | Deploys the build job's artifact and runs no repository code |
+| `site.yml` (`deploy` job) | `site`, `site_host=cloudflare` | Pushes to `main`, manual dispatch on `main` | `CLOUDFLARE_API_TOKEN` in the `production` environment: deploys the `<slug>-site` Worker through `deploy-worker.sh`, with `--domain` for a custom domain | Deploys the build job's artifact; only `main` can deploy to the environment |
 | `site.yml` (`preview` job) | `site` | Ready, non-bot pull requests from this repo | `CLOUDFLARE_API_TOKEN` in the `preview` environment: deploys a `<slug>-site-pr-<n>` Worker through `deploy-worker.sh` | Fork and bot pull requests get no token. Deploys the build job's artifact, but runs the branch's own `deploy-worker.sh` with the token, as the web app's preview does |
 | `scorecard.yml` | `public` | Pushes to `main`, weekly, branch rule changes | Publish OpenSSF Scorecard results | Runs approved actions on `main`; never triggered by pull requests |
 
@@ -66,7 +67,7 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 | --- | --- | --- |
 | User machine | Remote template and user answers | No Copier tasks or migrations in [`copier.yml`](../copier.yml); validator rules check answers ([Render](#render)) |
 | Template repo CI | PR code and metadata | `pull_request` trigger only; `contents: read` in [`ci.yml`](../.github/workflows/ci.yml), [`dco.yml`](../.github/workflows/dco.yml), and [`pr-title.yml`](../.github/workflows/pr-title.yml); `ci ok` required check |
-| Template releases | Pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, requires signed tags, runs only release script and `gh release create` |
+| Template releases | Pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, requires a tag signed with a key in `.github/allowed_signers` on `main`, runs only release script and `gh release create` |
 | Generated project CI | PR code and metadata | Workflows use `contents: read` or `{}`; no `pull_request_target` or `workflow_run`; `persist-credentials: false` on checkouts |
 | Release jobs with OIDC | Built artifacts | OIDC tokens isolated to upload jobs without project code execution ([Workflows that can publish](#workflows-that-can-publish)); ruleset limits `v*` tags to admins |
 | Weekly update workflow | New template releases | `copier-update.yml` runs Copier read-only and applies patches in a separate job holding push credentials ([Update](#update)) |

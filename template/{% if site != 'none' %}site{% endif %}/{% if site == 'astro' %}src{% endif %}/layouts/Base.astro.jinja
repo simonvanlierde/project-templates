@@ -22,7 +22,7 @@ const repo = "{{ repo }}";
     <meta name="color-scheme" content="light dark" />
     <title>{title ? `${title} · ${name}` : name}</title>
 {%- if project_description %}
-    <meta name="description" content={{ project_description | to_json }} />
+    <meta name="description" content={ {{ project_description | to_json }} } />
 {%- endif %}
   </head>
   <body>

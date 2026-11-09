@@ -551,6 +551,7 @@ jobs:
               publish_to_npm: true
           # Both web frameworks, one at the root and one nested, with the least and the
           # most user_data. Each also runs its Playwright specs; check-render covers browser.
+          # The nested one has the Worker script, whose types and tests `check` runs.
           - name: web-app (react)
             answers:
               project_name: ci-ts-web
@@ -566,6 +567,7 @@ jobs:
               ts_kind: web-app
               web_framework: preact
               user_data: accounts
+              worker: true
     env:
       TS_DIR: ${{ matrix.answers.ts_dir }}
     steps:
@@ -724,6 +726,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: cargo-nextest,cargo-deny${{ matrix.answers.test_extras && ',cargo-mutants' || '' }}
+          fallback: none
 
       - *just
 

@@ -24,6 +24,9 @@
 {%- else %},
           { "context": "python: lint, types, {% if kind == 'data-pipeline' %}pipeline, {% endif %}tests", "integration_id": 15368 }
 {%- endif %}
+{%- if python_windows %},
+          { "context": "python: tests (windows)", "integration_id": 15368 }
+{%- endif %}
 {%- endif %}
 {%- if 'ts' in stacks and ts_dir == '.' %},
           { "context": "ts: lint, types, tests", "integration_id": 15368 }
@@ -35,12 +38,15 @@
           { "context": "golangci-lint, tests, govulncheck", "integration_id": 15368 }
 {%- endif %}
 {#- compose.yml has no path filter either. #}
-{%- if 'docker' in stacks and not docker_image %},
+{%- if compose_only %},
           { "context": "compose", "integration_id": 15368 }
 {%- endif %}
 {#- site.yml has no path filter, so its build runs on every pull request. #}
 {%- if site != 'none' %},
           { "context": "site: build", "integration_id": 15368 }
+{%- endif %}
+{%- if docs_site %},
+          { "context": "docs: build", "integration_id": 15368 }
 {%- endif %}
         ]
       }

@@ -24,14 +24,16 @@
     go test ./... {% raw %}{{ args }}{% endraw %}
 {%- if go_kind == 'library' and 'mutation' in test_extras %}
 
-# Plant small bugs in the package and report each one the tests miss. Slow: CI runs
-# it weekly (mutation.yml); run it by hand after writing tests. `go run` keeps
-# gremlins out of go.mod; `copier update` moves its version.
+# Slow: CI runs it weekly (mutation.yml); run it by hand after writing tests. `go run`
+# keeps gremlins out of go.mod; `copier update` moves its version.
+
+# Plant small bugs in the package and report each one the tests miss.
 {{ wd }}go-mutation:
     go run github.com/go-gremlins/gremlins/cmd/gremlins@{{ gremlins_version }} unleash
 
-# The same for the code this branch changed since it split off a git ref (origin/main
-# unless you give one): fast enough to run on each change.
+# The ref is origin/main unless you give one: fast enough to run on each change.
+
+# The same check for the code this branch changed since it split off a git ref.
 {{ wd }}go-mutation-diff base='origin/main':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -41,9 +43,10 @@
 {%- endif %}
 {%- if go_kind == 'library' and 'property' in test_extras %}
 
-# Fuzz FuzzAdd for 10 minutes; a later -fuzztime wins (`just go-property
-# -fuzztime=30s`). A failing input is saved under testdata/fuzz/FuzzAdd/. CI runs it
-# weekly (property.yml).
+# A later -fuzztime wins (`just go-property -fuzztime=30s`). A failing input is saved
+# under testdata/fuzz/FuzzAdd/. CI runs it weekly (property.yml).
+
+# Fuzz FuzzAdd for 10 minutes.
 {{ wd }}go-property *args:
     go test -run='^$' -fuzz='^FuzzAdd$' -fuzztime=10m . {% raw %}{{ args }}{% endraw %}
 {%- endif %}

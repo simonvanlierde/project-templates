@@ -1,0 +1,2 @@
+# A deploy repo that only composes upstream images, with a decision log. docs/usage.md#presets
+stacks: [docker]

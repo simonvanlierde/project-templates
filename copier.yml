@@ -7,13 +7,15 @@ _min_copier_version: "9.19.0"
 # adds its version, date and DOI to the citation files, and an update would then
 # conflict with that edit every time. The web-app entries are its starter files and
 # legal pages, which the project rewrites from day one, as are the site's starter
-# files. go.mod is rewritten by the first `go mod tidy`, and Dependabot bumps its
-# requirements after that; its module path and go version are answers fixed at copy time.
+# files and the Worker scripts. go.mod is rewritten by the first `go mod tidy`, and
+# Dependabot bumps its requirements after that; its module path and go version are
+# answers fixed at copy time.
 # The silver-badge documents are skeletons the project fills in. Each entry starts with `/`:
 # copier matches these like .gitignore lines, so a bare README.md would also skip
 # data/README.md.
 _skip_if_exists:
   - /README.md
+  - /.github/allowed_signers
   - /CHANGELOG.md
   - /GOVERNANCE.md
   - /docs/roadmap.md
@@ -29,6 +31,8 @@ _skip_if_exists:
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}worker/index.ts"
+  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}worker/index.test.ts"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}PRODUCT.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}DESIGN.md"
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility.md"
@@ -37,8 +41,10 @@ _skip_if_exists:
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/terms.md"
   - "/{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
   # A Compose-only repo's starter stack: replaced by the project's own services.
-  - "/{{ 'compose.yaml' if 'docker' in stacks and not docker_image else '.no-compose-starter' }}"
-  - "/{{ '.env.example' if 'docker' in stacks and not docker_image else '.no-compose-starter' }}"
+  - "/{{ 'compose.yaml' if compose_only else '.no-compose-starter' }}"
+  - "/{{ '.env.example' if compose_only else '.no-compose-starter' }}"
+  - /docs/decisions/README.md
+  - /docs/decisions/0001-start-from-project-templates.md
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
@@ -46,6 +52,11 @@ _skip_if_exists:
   - /site/src/layouts/Base.astro
   - /site/src/pages/index.astro
   - /site/src/pages/about.md
+  - /site/worker/index.mjs
+  - /site/worker/index.test.mjs
+  - /zensical.toml
+  - /docs/index.md
+  - /docs/reference.md
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
   - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
@@ -75,20 +86,24 @@ _message_after_copy: |
     just site-sync
   {%- endif %}
     just check
+  {%- if stacks | reject('equalto', 'docker') | list or site == 'astro' %}
   Then commit, lockfiles included: CI installs exactly what they list.
+  {%- else %}
+  Then commit.
+  {%- endif %}
   After the first push, run `just repo-settings` to protect main.
   {%- for reg, on in [('PyPI', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('ghcr', publish_to_ghcr | default(false))] if on %}
   Before the first {{ reg }} release, set up the trusted publisher and the protected environment:
   https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing
   {%- endfor %}
   To release, run `just release X.Y.Z` (it cuts the CHANGELOG, then signs and pushes the tag).
-  It needs a git signing key GitHub trusts.
+  It needs an SSH signing key listed in .github/allowed_signers: that file says how to add yours.
   {%- if citable %} Set the version first in every manifest
   {{ 'citesync.toml lists' if (python_dir != '.' or ts_dir != '.' or rust_dir != '.') else 'at the root' }}, and in CITATION.cff once it has a `version`:
   citesync stops the release while they differ.
-  {%- else %} Set the version in the package manifest first
-  when you publish to PyPI or npm.
+  {%- elif publish_to_pypi | default(false) or publish_to_npm | default(false) %} Set the version in the package manifest first.
   {%- endif %}
+  Later, `copier update` pulls in new template releases.
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
@@ -426,7 +441,7 @@ site:
   help: A static page (playground, demo or report) in site/, deployed to GitHub Pages from main, with a preview per pull request
   choices:
     None: none
-    Plain (HTML, CSS and plain JavaScript modules, no build step or framework): plain
+    Plain (a one-tool page in HTML, CSS and plain JavaScript modules, no build step or framework): plain
     Astro (for a site with several pages from Markdown, shared layouts and components): astro
   default: none
   # site/ and _site/ belong to the site: a package there would share them with it.
@@ -441,6 +456,42 @@ site_out:
   type: str
   when: false
   default: "{{ 'site/dist' if site == 'astro' else '_site' }}"
+
+# Where a push to main deploys the site. Pull request previews are Workers either way.
+# Pages serves it under /<repo>/; a Worker serves it from / at site_url, which can be
+# a custom domain, and can run a Worker script for /api/* (docs/usage.md#static-site).
+site_host:
+  type: str
+  when: "{{ site != 'none' }}"
+  ask: "{{ customise }}"
+  help: Where main deploys the site; pull request previews are Cloudflare Workers either way
+  choices:
+    GitHub Pages (https://<user>.github.io/<repo>/): pages
+    Cloudflare Workers static assets (served from /, a custom domain and a Worker script optional): cloudflare
+  default: pages
+
+# Computed, never asked: the site's production is a Worker, not GitHub Pages.
+site_on_workers:
+  type: bool
+  when: false
+  default: "{{ site != 'none' and site_host == 'cloudflare' }}"
+
+# A Zensical site built from the Markdown in docs/, deployed to GitHub Pages from main
+# (docs/usage.md#documentation-site). A Python library with python_api also gets an API
+# reference from its docstrings. One repo has one Pages site, so it rules out a `site` on Pages.
+# A web app at the root is ruled out too: its legal pages live in docs/.
+docs_site:
+  type: bool
+  when: "{{ stacks }}"
+  ask: "{{ customise }}"
+  help: A search-indexed documentation site built from docs/ with Zensical, deployed to GitHub Pages from main (an API reference too for a Python library)
+  default: false
+  validator: >-
+    {% if docs_site and site != 'none' and not site_on_workers %}
+    The docs site and the `site` page would both deploy to this repo's one GitHub Pages site: answer site_host=cloudflare or site=none, or no here.
+    {% elif docs_site and 'ts' in stacks and ts_kind == 'web-app' and ts_dir == '.' %}
+    A web app at the repo root keeps its privacy and accessibility pages in docs/, and the docs site would publish a second copy: answer a ts_dir such as web, or no here.
+    {% endif %}
 
 # The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
 # projects. These documents are starting points for the project to complete.
@@ -537,23 +588,67 @@ python_api:
     Turns on the griffe API-break check in python.yml (with publish_to_pypi)
   default: true
 
-# --- ts -----------------------------------------------------------------------
-
-# The address the accessibility statement and privacy page name. The default is
-# the workers.dev address of the Worker named in wrangler.jsonc, assuming the
-# account's workers.dev subdomain is the GitHub user.
-site_url:
-  type: str
-  when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+python_windows:
+  type: bool
+  when: "{{ 'python' in stacks }}"
   ask: "{{ customise }}"
   help: >-
-    The web app's public address, for its accessibility statement and privacy page.
-    Give your custom domain, or your own workers.dev subdomain if it is not the GitHub user.
-  default: "https://{{ slug | replace('.', '-') | replace('_', '-') }}.{{ github_user | lower }}.workers.dev"
+    Run the tests on Windows too, on python_version only, to catch a missing encoding="utf-8",
+    a hardcoded / in a path and other Windows-only failures. Costs one extra CI job per push
+    and pull request
+  default: false
+
+# Computed, never asked: whether the docs site gets docs/reference.md, an API reference
+# that mkdocstrings reads from the docstrings. A command-line-only library gets none.
+docs_api:
+  type: bool
+  when: false
+  default: "{{ docs_site and 'python' in stacks and kind == 'library' and python_api }}"
+
+# --- ts -----------------------------------------------------------------------
+
+# The address of whatever production deploys to a Worker: the web app, or else the
+# site with site_host=cloudflare. The legal pages name it. A host other than
+# *.workers.dev becomes the Worker's custom domain on each production deploy. The
+# default is the workers.dev address of the Worker its wrangler config names, assuming
+# the account's workers.dev subdomain is the GitHub user.
+site_url:
+  type: str
+  when: "{{ ('ts' in stacks and ts_kind == 'web-app') or site_on_workers }}"
+  ask: "{{ customise }}"
+  help: >-
+    The public address of the {{ 'web app' if 'ts' in stacks and ts_kind == 'web-app' else 'site' }}: a custom domain
+    (production attaches it to the Worker), or your own workers.dev subdomain if it is not the GitHub user.
+  default: "https://{{ slug | replace('.', '-') | replace('_', '-') }}{{ '' if 'ts' in stacks and ts_kind == 'web-app' else '-site' }}.{{ github_user | lower }}.workers.dev"
   validator: >-
-    {% if not site_url|regex_search('^https://[^/\\s]+(/[^\\s]*)?$') %}
+    {% if not site_url|regex_search('^https://') %}
     Give the full address, starting with https://.
+    {% elif not site_url|regex_search('^https://[a-z0-9.-]+/?$') %}
+    Give the host alone, such as https://example.org: a Worker serves a whole host, so no path, port or capitals.
     {% endif %}
+
+# Computed, never asked: site_url's host when it is a custom domain, else empty. The
+# production deploy passes it to wrangler as --domain; previews never get it.
+custom_domain:
+  type: str
+  when: false
+  default: "{% set h = site_url | regex_replace('^https://', '') | regex_replace('/$', '') %}{{ '' if h.endswith('.workers.dev') else h }}"
+
+# Computed, never asked: the custom domain of the site's Worker. In a repo with a web
+# app, site_url is the app's, and the site keeps its workers.dev address.
+site_domain:
+  type: str
+  when: false
+  default: "{{ custom_domain if site_on_workers and not ('ts' in stacks and ts_kind == 'web-app') else '' }}"
+
+# A Worker script in front of the static assets, for server code. Requests for files
+# stay free; each request the script handles counts against the Workers plan.
+worker:
+  type: bool
+  when: "{{ ('ts' in stacks and ts_kind == 'web-app') or site_on_workers }}"
+  ask: "{{ customise }}"
+  help: Add a Worker script in front of the static assets that handles /api/* (one example route, /api/health)
+  default: false
 
 # Computed, never asked: the date the legal pages start from. They are the
 # project's files from then on (_skip_if_exists), so an update never rewrites it.
@@ -649,6 +744,20 @@ griffe_version:
   when: false
   default: 2.4.1
 
+# Computed, never asked: the Zensical that `just docs` and docs.yml run with uvx, and
+# the mkdocstrings-python it runs with for a Python library's API reference.
+# renovate: datasource=pypi depName=zensical
+zensical_version:
+  type: str
+  when: false
+  default: 0.0.73
+
+# renovate: datasource=pypi depName=mkdocstrings-python
+mkdocstrings_python_version:
+  type: str
+  when: false
+  default: 2.0.10
+
 # Computed, never asked: the golangci-lint release that the README and go.yml pin,
 # kept in one place. `just go-check` runs whichever golangci-lint is on PATH. Renovate bumps it from its `# renovate:` line.
 # renovate: datasource=github-releases depName=golangci/golangci-lint
@@ -728,6 +837,14 @@ cargo_mutants_version:
   when: false
   default: 27.1.0
 
+# Computed, never asked: the cargo-semver-checks that rust.yml's api job installs for a
+# Rust library. It compares the public API with the last git tag.
+# renovate: datasource=crate depName=cargo-semver-checks
+cargo_semver_checks_version:
+  type: str
+  when: false
+  default: 0.51.0
+
 # Computed workflow tools follow template updates; Dependabot cannot read uvx pins.
 # renovate: datasource=pypi depName=copier
 copier_version:
@@ -791,6 +908,18 @@ docker_image:
     The web-service kind is shipped as the python image: answer yes to `docker_image`.
     {% endif %}
 
+# Computed, not asked: docker without an image is a repo that only composes upstream images.
+compose_only:
+  type: bool
+  when: false
+  default: "{{ 'docker' in stacks and not docker_image }}"
+
+# Computed, not asked: a ts stack or the Astro site installs Node packages with pnpm.
+has_pnpm:
+  type: bool
+  when: false
+  default: "{{ 'ts' in stacks or site == 'astro' }}"
+
 app_port:
   type: int
   when: "{{ 'docker' in stacks and docker_image }}"
@@ -808,3 +937,12 @@ publish_to_ghcr:
   ask: "{{ customise }}"
   help: Push the image to GitHub Container Registry (CI builds it either way)
   default: false
+
+# --- docs ---------------------------------------------------------------------
+
+# docs/decisions/0004: a log only where choices are costly to reverse, and never an empty folder.
+decision_records:
+  type: bool
+  ask: "{{ customise }}"
+  help: Keep architecture decision records in docs/decisions/ (MADR 4.0.0), starting with one that records this template's answers
+  default: "{{ kind in ['web-service', 'data-pipeline'] or ts_kind == 'web-app' or compose_only or (public and license != 'none' and openssf_badge == 'silver') }}"

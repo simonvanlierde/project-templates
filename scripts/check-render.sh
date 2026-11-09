@@ -13,8 +13,25 @@ lacks() {
   grep -q "$@" || rc=$?
   [ "$rc" -eq 1 ]
 }
+# A Compose-only render: no Dockerfile anywhere, the compose workflow, no image workflow.
+no_image() {
+  test -z "$(find "$1" -name 'Dockerfile*' -not -path '*/.git/*')"
+  test -f "$1/.github/workflows/compose.yml"
+  test ! -e "$1/.github/workflows/docker.yml"
+}
 
 bash scripts/check-release-fixtures.sh
+
+# Copier ignores a data-file key it has no question for, so a misspelt preset key
+# would fail nothing: every key must be a top-level question in copier.yml.
+for f in presets/*.yml; do
+  while read -r k; do
+    grep -qx "$k:" copier.yml || {
+      echo "check-render: $f sets $k, which is not a question" >&2
+      exit 1
+    }
+  done < <(sed -n 's/^\([a-z_][a-z_0-9]*\):.*/\1/p' "$f")
+done
 
 out=${1:?usage: scripts/check-render.sh OUT_DIR}
 # The identity answers have no defaults. CI's settings file fills them, and
@@ -84,7 +101,7 @@ d_args=(
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
   --data dependency_bot=renovate --data codecov=true --data cold_install=true
-  --data site=plain
+  --data site=plain --data python_windows=true
 )
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d"
@@ -106,24 +123,27 @@ grep -q 'project edit' "$out/d/web/docs/accessibility-assessment.md"
 
 # h: a go library named like the Example file. The unit test must not share its path
 # with example_test.go, which a project_name of `example` would otherwise claim. The
-# only silver-badge render.
+# only silver-badge render, and the docs site without an API reference.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h"
+  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver --data docs_site=true . "$out/h"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
-# The badge documents are filled in by the project. Rendered first, then kept.
-for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
+echo 'project edit' >>"$out/h/docs/index.md"
+# The badge documents and the release signing keys are filled in by the project.
+# Rendered first, then kept.
+for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md .github/allowed_signers; do
   test -f "$out/h/$f"
   echo 'project edit' >>"$out/h/$f"
 done
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver . "$out/h" >/dev/null 2>&1
-for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
+  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver --data docs_site=true . "$out/h" >/dev/null 2>&1
+for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md .github/allowed_signers; do
   grep -q 'project edit' "$out/h/$f"
 done
 grep -q 'project edit' "$out/h/go.mod"
+grep -q 'project edit' "$out/h/docs/index.md"
 
-# m: every stack a library, nested, with both extras: mutation.yml and property.yml get a
+# m: every stack a library, nested, with both extras, and the docs site with an API reference: mutation.yml and property.yml get a
 # job for each. a has libraries too but no extras, so it must render neither. Also the
 # only BSD-3-Clause render, and the only npm-only publisher.
 "${copier[@]}" --vcs-ref=HEAD \
@@ -131,13 +151,18 @@ grep -q 'project edit' "$out/h/go.mod"
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
-  --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true . "$out/m"
+  --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true \
+  --data docs_site=true . "$out/m"
 # x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
-# x and r have the static site without a package.json.
+# x and r have the static site without a package.json. x and d run the tests on Windows.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
-  --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain . "$out/x"
+  --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain \
+  --data 'test_extras=[property,mutation]' --data python_windows=true . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
+# ds: a command-line-only Python library with the docs site: no API reference.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=docs-me --data 'stacks=[python]' \
+  --data python_api=false --data docs_site=true . "$out/ds"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
 # only its own manifest beside them, and t's hooks run through pnpm. Both have the
 # static site: r the plain one, t the Astro one beside a package at the root.
@@ -160,9 +185,11 @@ done
 echo '// project edit' >>"$out/y/site/astro.config.mjs"
 echo 'project edit' >>"$out/y/site/package.json"
 "${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y" >/dev/null 2>&1
-# hush-plain and hush-astro: a site in a private repo.
+# hush-plain and hush-astro: a site in a private repo, with a description that needs
+# escaping in HTML.
 for s in plain astro; do
   "${copier[@]}" --vcs-ref=HEAD --data project_name=hush-me --data 'stacks=[python]' \
+    --data 'project_description=Tidies "<b>" tags & more' \
     --data public=false --data site=$s . "$out/hush-$s" >/dev/null
 done
 # k: adopting the template in an existing flat Python package under the GPL. The repo's
@@ -174,7 +201,7 @@ echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=adopt-me --data customise=true --data python_layout=flat \
   --data license=GPL-3.0-or-later --data codspeed=true --data 'test_extras=[mutation]' \
-  --data publish_to_pypi=true --data cold_install=true . "$out/k"
+  --data publish_to_pypi=true --data cold_install=true --data docs_site=true . "$out/k"
 grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
 grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
@@ -229,7 +256,13 @@ git tag -f check-render-tag >/dev/null
   --data author_email=1+ada@users.noreply.github.com . "$out/compose"
 c=$out/compose
 "${copier[@]}" --vcs-ref=HEAD --data project_name=compose-site --data 'stacks=[docker]' \
-  --data site=plain . "$out/compose-site"
+  --data site=plain . "$out/compose-site" 2>"$out/compose-site.log" || {
+  cat "$out/compose-site.log" >&2
+  exit 1
+}
+# The closing message names no lockfiles and no package version: this repo has neither.
+grep -qx ' *Then commit\.' "$out/compose-site.log"
+(lacks -e 'lockfiles' -e 'package manifest' "$out/compose-site.log")
 test -f "$out/compose-site/.github/scripts/preview-retire.sh"
 # A fresh render passes its own git hooks.
 git -C "$c" init -q
@@ -258,17 +291,23 @@ grep -q 'Report abuse' "$c/.github/CODE_OF_CONDUCT.md"
 grep -qx '          SKIP: betterleaks,zizmor' "$c/.github/workflows/checks.yml"
 (lacks -q 'NumPy' "$c/_typos.toml")
 (lacks -q 'Renovate' "$c/justfile")
-(lacks -qE 'docs/decisions|release the project' "$c/AGENTS.md")
+(lacks -q 'release the project' "$c/AGENTS.md")
+# Compose-only defaults to decision records: AGENTS.md points at a folder with a first record.
+grep -qF 'docs/decisions/README.md' "$c/AGENTS.md"
+grep -qF '0001-start-from-project-templates.md' "$c/docs/decisions/README.md"
+grep -q 'Compose-only: no image of its own' "$c/docs/decisions/0001-start-from-project-templates.md"
 (lacks -q 'the dependencies' "$c/.github/CONTRIBUTING.md")
 (lacks -qE 'the version you|label: Version$' "$c/.github/SECURITY.md" "$c/.github/CONTRIBUTING.md" "$c/.github/ISSUE_TEMPLATE/bug.yml")
 test -f "$out/compose/compose.yaml"
 test -f "$out/compose/.env.example"
-test -f "$out/compose/.github/workflows/compose.yml"
-test ! -e "$out/compose/.github/workflows/docker.yml"
-find "$out/compose" -name 'Dockerfile*' -not -path '*/.git/*' | grep -q . && {
-  echo "compose-only render wrote a Dockerfile" >&2
-  exit 1
-}
+no_image "$out/compose"
+# The Compose-only answers file records no image settings.
+(lacks -q '^app_port:' "$c/.copier-answers.yml")
+grep -qF 'actions/workflows/compose.yml/badge.svg' "$c/README.md"
+# The wording that replaced other stacks' text.
+grep -q 'release or commit' "$c/.github/SECURITY.md"
+grep -q 'label: Release or commit' "$c/.github/ISSUE_TEMPLATE/bug.yml"
+grep -q 'The README says how to install prek' "$c/.pre-commit-config.yaml"
 grep -q 'image: .*@sha256:' "$out/compose/compose.yaml"
 grep -q '127.0.0.1:' "$out/compose/compose.yaml"
 grep -q 'healthcheck:' "$out/compose/compose.yaml"
@@ -298,15 +337,20 @@ if [ -n "${CI:-}" ] || { command -v just >/dev/null && docker info >/dev/null 2>
   grep -qF 'EXAMPLE_VAR: ${EXAMPLE_VAR:?}' "$out/compose/compose.yaml"
   # A repo's own local-check runs at the end of just check.
   printf 'local-check:\n    echo local-check-ran\n' >"$out/compose/just/local.just"
+  # A vendored script in another style is left alone by the lint and by fmt.
+  printf '#!/bin/bash\nif true;then\necho a\nfi\n' >"$out/compose/scripts/vendored.sh"
+  echo 'scripts/vendored.sh linguist-vendored' >"$out/compose/.gitattributes"
   git -C "$out/compose" add -A
   (cd "$out/compose" && just check) >"$out/compose-check.log"
   grep -qx 'local-check-ran' "$out/compose-check.log"
+  grep -qx 'if true;then' "$out/compose/scripts/vendored.sh"
   # A badly formatted bash script must still fail it.
   printf '#!/bin/bash\nif true;then\necho a\nfi\n' >"$out/compose/scripts/bad"
   git -C "$out/compose" add -A
   ( ! (cd "$out/compose" && just check) >/dev/null 2>&1)
   # `just fmt` rewrites it to the 2-space style, and the check then passes.
   (cd "$out/compose" && just docker-fmt && just check)
+  grep -qx 'if true;then' "$out/compose/scripts/vendored.sh"
   # With a site the render ships .github/scripts/preview-retire.sh, whose case arms are
   # not indented: docker-check must pass on the template's own scripts.
   git -C "$out/compose-site" init -q
@@ -346,14 +390,35 @@ RUNNER_TEMP=$out/mix bash -c "$(grep -E '^ +sed -i -E' "$out/compose-mix/.github
 # image the flat layout is allowed.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=ts-compose --data 'stacks=[ts,docker]' \
   --data ts_kind=app . "$out/ts-compose"
-test ! -e "$out/ts-compose/Dockerfile"
-test -f "$out/ts-compose/.github/workflows/compose.yml"
-test ! -e "$out/ts-compose/.github/workflows/docker.yml"
+no_image "$out/ts-compose"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=py-no-img --data 'stacks=[python,docker]' \
   --data docker_image=false --data python_layout=flat . "$out/py-no-img"
-test ! -e "$out/py-no-img/Dockerfile"
-test -f "$out/py-no-img/.github/workflows/compose.yml"
-test ! -e "$out/py-no-img/.github/workflows/docker.yml"
+no_image "$out/py-no-img"
+# The image side of each Compose-only conditional: a and c build images, d uses Renovate.
+for r in a c; do
+  (lacks -q 'docker-compose' "$out/$r/.github/dependabot.yml")
+  test ! -e "$out/$r/.env.example"
+  test ! -e "$out/$r/.github/workflows/compose.yml"
+  grep -qF 'actions/workflows/docker.yml/badge.svg' "$out/$r/README.md"
+done
+[ "$(find "$out/c" -name 'Dockerfile*' -not -path '*/.git/*' | wc -l)" -eq 1 ]
+grep -qF "'docker-compose': { enabled: false }" "$out/d/renovate.json5"
+grep -q 'the dependencies' "$out/a/.github/CONTRIBUTING.md"
+# CONTRIBUTING describes the two lines pull_request_template.md asks for.
+grep -q 'Tested:' "$out/a/.github/CONTRIBUTING.md"
+grep -q 'Not checked:' "$out/a/.github/CONTRIBUTING.md"
+# The citesync hook's Python dependencies are exact pins.
+grep -q 'additional_dependencies: \[packaging==' "$out/a/.pre-commit-config.yaml"
+
+# Each preset renders on its own, with only the identity answers from the settings file.
+for f in presets/*.yml; do
+  p=$(basename "$f" .yml)
+  "${copier[@]}" --vcs-ref=HEAD --data-file "$f" --data "project_name=preset-$p" . "$out/preset-$p"
+done
+test -f "$out/preset-rust-cli/src/main.rs"
+test -d "$out/preset-uv-research/notebooks"
+no_image "$out/preset-compose-deploy"
+test -f "$out/preset-compose-deploy/docs/decisions/0001-start-from-project-templates.md"
 test -f "$out/py-no-img/pyproject.toml"
 grep -q '^  example:' "$out/py-no-img/compose.yaml"
 (lacks -q '^  app:' "$out/py-no-img/compose.yaml")
@@ -411,6 +476,11 @@ refuses 'at least one stack' --data 'stacks=[]'
   refuses 'python_dir is `_site/pkg`, where the static site goes' --data 'stacks=[python]' --data python_dir=_site/pkg --data site=plain
 }
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
+# One repo has one GitHub Pages site.
+refuses 'one GitHub Pages site' --data 'stacks=[python]' --data site=plain --data docs_site=true
+# A root web app's legal pages are in docs/, which the docs site would publish again.
+refuses 'A web app at the repo root' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
+  --data docs_site=true
 # A noreply address gets no mail, and these renders give it as a contact on a page.
 refuses 'A GitHub noreply address' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
   --data author_email=1+ada@users.noreply.github.com
@@ -424,6 +494,11 @@ refuses 'Question "user_data" is required' --data 'stacks=[ts]' --data ts_kind=w
 refuses "Invalid choice for 'user_data'" --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=some
 refuses 'starting with https://' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=nothing --data site_url=http://example.org
+# A Worker's custom domain is a whole host: no path, and the site on a Worker asks too.
+refuses 'so no path' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data site_url=https://example.org/app
+refuses 'so no path' --data 'stacks=[python]' --data site=plain --data site_host=cloudflare \
+  --data site_url=https://Example.org
 # An app that keeps personal data on a server needs its own contact address.
 refuses 'needs its own contact address' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=accounts --data author_email=Code@duinlab.nl
@@ -448,6 +523,23 @@ done
   --data ts_kind=web-app --data user_data=browser . "$out/s"
 grep -qF '"name": "app",' "$out/s/wrangler.jsonc"
 grep -qx 'site_url: https://app.example-org.workers.dev' "$out/s/.copier-answers.yml"
+# wk: a web app at the root with the Worker script and a custom domain.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=edge-me --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data user_data=nothing --data worker=true \
+  --data site_url=https://app.example.org/ . "$out/wk"
+# cfp and cfa: the site on a Worker instead of Pages. cfp is the plain one with the Worker
+# script and a custom domain; cfa the Astro one at its default workers.dev address.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=cf-me --data 'stacks=[python]' \
+  --data site=plain --data site_host=cloudflare --data worker=true \
+  --data site_url=https://demo.example.org . "$out/cfp"
+"${copier[@]}" --vcs-ref=HEAD --data project_name=cfa-me --data 'stacks=[python]' \
+  --data site=astro --data site_host=cloudflare . "$out/cfa"
+# dp: a data-pipeline at the root, whose python.yml ends on the revisions job's `run:` block.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=dp-me --data 'stacks=[python]' \
+  --data kind=data-pipeline . "$out/dp"
+# cfd: a site on a Worker leaves GitHub Pages to the docs site.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=cfd-me --data 'stacks=[python]' \
+  --data site=plain --data site_host=cloudflare --data docs_site=true . "$out/cfd"
 
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the
@@ -685,8 +777,10 @@ cp -R k "$rel/w"
   git config user.email curie@example.org
   git config gpg.format ssh
   git config user.signingkey "$rel/key.pub"
-  git config gpg.ssh.allowedSignersFile "$rel/signers"
-  echo "curie@example.org $(cat "$rel/key.pub")" >"$rel/signers"
+  # The release check reads the key from .github/allowed_signers on origin/main, with the
+  # command that file's comment gives. The file as rendered is kept for a case below.
+  cp .github/allowed_signers "$rel/rendered_signers"
+  echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config --type=path user.signingkey | sed 's/\.pub$//').pub")" >>.github/allowed_signers
   git add -A
   git commit -q -s -m 'chore: init'
   git push -q origin main
@@ -706,7 +800,6 @@ cp -R k "$rel/w"
   git push -q origin main
   just release 0.1.0 >/dev/null
   test "$(git cat-file -t v0.1.0)" = tag
-  git verify-tag v0.1.0 >/dev/null 2>&1
   test "$(git -C "$rel/origin.git" rev-parse 'v0.1.0^{commit}')" = "$(git rev-parse HEAD)"
   .github/scripts/release-notes.sh v0.1.0 CHANGELOG.md >/dev/null
   # The tag step refuses a bad version, a version with no changelog section, and a HEAD
@@ -723,6 +816,50 @@ cp -R k "$rel/w"
   git commit -q -s --allow-empty -m 'chore: local only'
   (! just release 0.1.0 >release.log 2>&1)
   grep -q 'HEAD is not origin/main' release.log
+  # verify-tag.sh, which every release workflow runs, refuses a lightweight tag and a tag
+  # signed with a key that is not in .github/allowed_signers on origin/main. Adding the
+  # key to the tagged commit's own copy of the file counts for nothing. In the run a tag
+  # push starts, the tag must still mark the commit being built.
+  .github/scripts/verify-tag.sh v0.1.0 origin/main 2>/dev/null
+  (! GITHUB_REF=refs/tags/v0.1.0 GITHUB_SHA=0000000000000000000000000000000000000000 .github/scripts/verify-tag.sh v0.1.0 origin/main >release.log 2>&1)
+  grep -qxF 'v0.1.0 moved after this run started: it no longer marks 0000000000000000000000000000000000000000' release.log
+  # A ref renamed to point at an older signed tag object, and an unsigned annotated tag.
+  git update-ref refs/tags/v9.9.9 "$(git rev-parse refs/tags/v0.1.0)"
+  (! .github/scripts/verify-tag.sh v9.9.9 origin/main >release.log 2>&1)
+  grep -qxF 'refs/tags/v9.9.9 points at a tag object made for another name' release.log
+  git tag -d v9.9.9 >/dev/null
+  git tag --no-sign -a -m plain plain
+  (! .github/scripts/verify-tag.sh plain origin/main >release.log 2>&1)
+  grep -qF 'plain has no SSH signature' release.log
+  # The file as rendered lists no key, so a release before you add yours refuses.
+  git checkout -q -b rendered
+  cp "$rel/rendered_signers" .github/allowed_signers
+  git commit -q -s -am 'chore: no keys'
+  (! .github/scripts/verify-tag.sh v0.1.0 rendered >release.log 2>&1)
+  grep -qxF 'v0.1.0 is not signed with a key in .github/allowed_signers on rendered.' release.log
+  git checkout -q main
+  git tag light
+  (! .github/scripts/verify-tag.sh light origin/main >release.log 2>&1)
+  grep -qxF 'light is a lightweight tag; make it with .github/scripts/tag-release.sh' release.log
+  ssh-keygen -q -t ed25519 -N '' -f "$rel/other"
+  echo "mallory@example.org namespaces=\"git\" $(cat "$rel/other.pub")" >>.github/allowed_signers
+  git commit -q -s -am 'chore: trust another key'
+  git -c user.signingkey="$rel/other.pub" tag -s -m other other
+  git -c gpg.ssh.allowedSignersFile=.github/allowed_signers verify-tag other 2>/dev/null
+  (! .github/scripts/verify-tag.sh other origin/main >release.log 2>&1)
+  grep -qxF 'other is not signed with a key in .github/allowed_signers on origin/main.' release.log
+  # tag-release.sh refuses the same tag before the push and deletes the tag it made.
+  git reset -q --hard origin/main
+  git tag -d v0.1.0 >/dev/null
+  git config user.signingkey "$rel/other.pub"
+  (! .github/scripts/tag-release.sh 0.1.0 >release.log 2>&1)
+  grep -qxF 'v0.1.0 is not signed with a key in .github/allowed_signers on origin/main.' release.log
+  (! git rev-parse -q --verify refs/tags/v0.1.0 >/dev/null)
+  # A refused tag that was already here stays, and the message says how to delete it.
+  git tag -s -m v0.1.0 v0.1.0
+  (! .github/scripts/tag-release.sh 0.1.0 >release.log 2>&1)
+  grep -qxF 'the refused tag v0.1.0 was already here; delete it, then run this again: git tag -d v0.1.0' release.log
+  git rev-parse -q --verify refs/tags/v0.1.0 >/dev/null
 )
 # c lists three manifests in citesync.toml. Bumping the two the recipe reads, but not
 # Cargo.toml, stops the release at citesync with CHANGELOG.md unchanged. No remote: the
@@ -828,6 +965,15 @@ grep -qx '      id-token: write # to publish the results' a/.github/workflows/sc
 grep -q 'scorecard.dev/viewer/?uri=github.com/' a/README.md
 test ! -e b/.github/workflows/scorecard.yml
 (lacks -q -i scorecard b/README.md)
+# A badge render's README says how to get the software and leaves a TODO for what it does
+# and its basic use (OpenSSF interact, description_good, documentation_basics; Baseline
+# DO-01.01). m publishes to npm only. a has no badge answer, and b is private.
+grep -qx '## Usage' m/README.md
+grep -qF '<!-- TODO: say what this software does and the problem it solves, then show its basic use.' m/README.md
+# shellcheck disable=SC2016 # literal backticks
+grep -qF 'Get it from the [releases](https://github.com/example-org/mutate-me/releases), from [npm](https://www.npmjs.com/package/mutate-me) (`pnpm add mutate-me`), or clone the repository.' m/README.md
+grep -qx '## Usage' h/README.md
+for r in a b; do (lacks -qx '## Usage' "$r/README.md"); done
 # fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
 # and public. b is private; h, a public Go library, gets both.
 grep -qx "          uvx --exclude-newer \"1 week\" --from git+https://github.com/fair-software/howfairis@$howfairis_pin howfairis $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml
@@ -875,8 +1021,12 @@ grep -q 'cron: "0 6 \* \* 1"' d/.github/workflows/python.yml
 test -f h/.github/workflows/advisories.yml
 (lacks -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
-# Decision records are not scaffolded by default; create docs/decisions/ when choices are made.
-for r in a b c d h i; do
+# Decision records default on for a web service (b), a data pipeline or web app (d) and a
+# Silver badge (h); off for research (a), a monorepo of libraries (c) and an unlicensed tool (i).
+for r in b d h; do
+  test -f "$r/docs/decisions/0001-start-from-project-templates.md"
+done
+for r in a c i; do
   test ! -e "$r/docs/decisions"
 done
 (lacks -rq vale a/.pre-commit-config.yaml a/.gitignore)
@@ -997,7 +1147,7 @@ assert all("timeout-minutes" in j for j in wf["jobs"].values())
 # A failed scheduled run reports itself, and only that job may write issues.
 n = wf["jobs"]["notify"]
 assert set(n["needs"]) == {"python", "ts", "rust", "go"}, n["needs"]
-assert n["if"] == "failure() && github.event_name == 'schedule'", n["if"]
+assert n["if"] == "always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))", n["if"]
 assert n["permissions"] == {"issues": "write"}, n["permissions"]
 for stack in ("py", "ts", "rs", "go"):
     assert any(f"just {stack}-mutation" in s.get("run", "") for j in wf["jobs"].values() for s in j["steps"]), stack
@@ -1045,8 +1195,18 @@ mkdir -p "$mutdiff/src/pkg" && cp m/just/mutation_diff.py "$mutdiff/"
   git init -q && git add -A && git -c user.name=t -c user.email=t@t.test commit -qm base --no-verify
   sed -i 's/return 1/return 2/' src/pkg/b.py
   sed -i -e '7s/1/2/' -e '14s/1/2/' -e '19s/1/2/' src/pkg/a.py
-  test "$(python3 -I mutation_diff.py HEAD)" = "$(printf 'pkg.a.xǁCǁm__mutmut_*\npkg.a.xǁCǁs__mutmut_*')"
+  test "$(python3 -I mutation_diff.py HEAD 2>stderr.txt)" = "$(printf 'pkg.a.xǁCǁm__mutmut_*\npkg.a.xǁCǁs__mutmut_*')"
+  test "$(cat stderr.txt)" = 'skipped (decorated): pkg.a.g'
 )
+# just --list shows only the comment line directly above a recipe: a block of two or more
+# lines there would show its last line alone, so the detail sits behind a blank line.
+for f in m/justfile m/just/*.just; do
+  (lacks -q 'multi-line doc comment' <(awk '/^#/ { n++; next } /^[{a-z]/ && /:/ && n > 1 { print "multi-line doc comment: " FILENAME ": " $0 } { n = 0 }' "$f"))
+done
+# property.yml names Go's FuzzAdd only when the project has the Go library (m does, x is Python only).
+grep -q 'FuzzAdd' m/.github/workflows/property.yml
+test -f x/.github/workflows/property.yml
+(lacks -q 'FuzzAdd' x/.github/workflows/property.yml)
 # go-mutation-diff reads the diff relative to go_dir, or gremlins finds no changed lines there.
 grep -qF 'GIT_CONFIG_KEY_0=diff.relative' m/just/go.just
 # property.yml: the same shape, running each stack's property or fuzz recipe.
@@ -1060,7 +1220,7 @@ assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
 assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
 n = wf["jobs"].pop("notify")
 assert set(n["needs"]) == {"python", "ts", "rust", "go"}, n["needs"]
-assert n["if"] == "failure() && github.event_name == 'schedule'", n["if"]
+assert n["if"] == "always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))", n["if"]
 assert n["permissions"] == {"issues": "write"}, n["permissions"]
 assert all(j["timeout-minutes"] == 60 for j in wf["jobs"].values())
 for job, recipe in (("python", "py-property"), ("ts", "ts-property"), ("rust", "rs-property"), ("go", "go-property")):
@@ -1176,15 +1336,21 @@ grep -qx '\*\*/.env' c/api/.dockerignore
 grep -qxF '.env' c/.gitignore
 test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 1
 (lacks -qE '^ +- "[0-9]+:' c/compose.yaml)
-# Every release workflow publishes only a tag whose signature GitHub verified. e renders
-# the last commit, without uncommitted edits.
+# Every workflow that publishes from a tag checks it against .github/allowed_signers on the
+# default branch, and every render that has one gets that file. e renders the last commit,
+# without uncommitted edits.
 n=0
-for wf in */.github/workflows/{release,python-release,ts-release}.yml; do
+for wf in */.github/workflows/{release,python-release,ts-release}.yml c/.github/workflows/docker.yml; do
   [ -e "$wf" ] && [ "${wf%%/*}" != e ] || continue
-  grep -qF '.verification.verified' "$wf"
+  # shellcheck disable=SC2016 # literal workflow text
+  grep -qF '/.github/scripts/verify-tag.sh" "$TAG" "origin/$DEFAULT_BRANCH"' "$wf"
+  (lacks -qF '.verification.verified' "$wf")
+  test -x "${wf%%/*}/.github/scripts/verify-tag.sh"
+  test -f "${wf%%/*}/.github/allowed_signers"
   n=$((n + 1))
 done
-test -f c/.github/workflows/python-release.yml && test -f c/.github/workflows/ts-release.yml && test "$n" -ge 10
+test -f c/.github/workflows/python-release.yml && test -f c/.github/workflows/ts-release.yml && test "$n" -ge 11
+grep -qxF "        if: startsWith(github.ref, 'refs/tags/')" c/.github/workflows/docker.yml
 # Both package workflows exist; Python creates the GitHub release after PyPI.
 test ! -e c/.github/workflows/release.yml
 test -f c/.github/workflows/ts-release.yml
@@ -1207,6 +1373,19 @@ grep -q 'name: "python: API breaks since the last tag"' c/.github/workflows/pyth
 test -f x/.github/workflows/python.yml
 (lacks -q 'griffe' x/.github/workflows/python.yml)
 test -f x/.github/workflows/python-release.yml
+# python_windows: one job on windows-latest that runs the tests without ty, a required
+# check like the Linux ones. Off by default.
+sed -n '/^  windows:/,/^  [a-z]/p' x/.github/workflows/python.yml >windows-job.yml
+grep -qx '    name: "python: tests (windows)"' windows-job.yml
+grep -qx '    runs-on: windows-latest' windows-job.yml
+grep -qx "          python-version: \"$(cat x/.python-version)\"" windows-job.yml
+grep -qx '      - run: uv run pytest' windows-job.yml
+(lacks -q 'ty check' windows-job.yml)
+jq -e '.rules[0].parameters.required_status_checks | any(.context == "python: tests (windows)")' x/.github/rulesets/main-checks.json >/dev/null
+# Nested: the git config step runs before checkout creates the folder.
+sed -n '/^  windows:/,/^  [a-z]/p' d/.github/workflows/python.yml | grep -A2 'core.autocrlf false' | grep -qx '        working-directory: \.'
+(lacks -q 'windows' e/.github/workflows/python.yml a/.github/workflows/python.yml)
+(lacks -q 'windows' e/.github/rulesets/main-checks.json)
 # Not in py-check: a deliberate break would keep local checks red until the next tag.
 (lacks -q griffe c/just/python.just)
 grep -qx '      - run: pnpm run api' c/.github/workflows/ts.yml
@@ -1217,6 +1396,16 @@ test -f c/apps/web/mono-me.api.md
 (lacks -q 'run api' a/.github/workflows/ts.yml a/just/ts.just)
 test ! -e a/api-extractor.json
 test ! -e a/render-me.api.md
+# A Rust library gets cargo-semver-checks in CI and as rs-api (m's nested crate through
+# --manifest-path), a binary (c) neither.
+grep -q 'name: "rust: API breaks since the last tag"' m/.github/workflows/rust.yml
+semver_pin=$(sed -n '/^cargo_semver_checks_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+grep -qxF "          tool: cargo-semver-checks@$semver_pin" m/.github/workflows/rust.yml
+# shellcheck disable=SC2016 # literal recipe text
+grep -qx '    cargo semver-checks --manifest-path crates/lib/Cargo.toml --baseline-rev "$tag"' m/just/rust.just
+# shellcheck disable=SC2016 # literal recipe text
+grep -qx '    cargo semver-checks --baseline-rev "$tag"' r/just/rust.just
+(lacks -q semver-checks c/.github/workflows/rust.yml c/just/rust.just)
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
 grep -q 'packages: write' c/.github/workflows/docker.yml
 # docker.yml filters by path only when every build context is nested (c), not with a
@@ -1244,6 +1433,7 @@ grep -qF '"root": "../.."' c/apps/web/biome.json
 test -f d/pipe/sources.toml
 test -f d/pipe/src/pipe_me/pipeline.py
 test -f d/pipe/data/raw/.gitkeep
+test ! -e d/pipe/data/processed/.gitkeep
 grep -qF '](pipe/sources.toml)' d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/README.md
 # The week-old-release escape hatch names each nested lockfile owner, and only those.
@@ -1376,6 +1566,9 @@ grep -q 'stub for a data pipeline' d/pipe/Dockerfile
 test ! -e a/index.html
 grep -q '"react": \["./node_modules/preact/compat/"\]' d/web/tsconfig.json
 grep -q 'react: "preact/compat"' d/web/vite.config.ts
+# Biome's React rules run only with react in package.json: Preact turns on the one App.tsx suppresses.
+grep -qF '"noDangerouslySetInnerHtml": "error"' d/web/biome.json
+(lacks -q 'noDangerouslySetInnerHtml' j/biome.json)
 (lacks -q '"react":' d/web/package.json)
 grep -q 'script-src .self.;' d/web/public/_headers
 (lacks -q "'unsafe-inline'" d/web/public/_headers)
@@ -1625,10 +1818,80 @@ jq -e '.rules[0].parameters.required_status_checks | any(.context == "site: buil
 (lacks -q '"site: build"' c/.github/rulesets/main-checks.json)
 sed -n '/^check:/,/^$/p' y/justfile | grep -qx '    @just site'
 (sed -n '/^check:/,/^$/p' x/justfile | lacks -q 'just site')
+
+# Docs site: m (nested src), k (flat) and h (Go) answer docs_site=true; ds is a library
+# without python_api. Built from docs/ with the pinned Zensical, deployed like the site.
+zensical_pin=$(sed -n '/^zensical_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+mkdocstrings_pin=$(sed -n '/^mkdocstrings_python_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+for r in m k h ds; do
+  for f in zensical.toml docs/index.md .github/workflows/docs.yml; do test -f "$r/$f"; done
+  grep -qx '/_docs/' "$r/.gitignore"
+  grep -qx 'site_dir = "_docs"' "$r/zensical.toml"
+  grep -qF "zensical@$zensical_pin build --strict" "$r/justfile"
+  grep -qF "zensical@$zensical_pin serve" "$r/justfile"
+  wf=$r/.github/workflows/docs.yml
+  test "$(grep -c 'pages: write' "$wf")" = 1
+  grep -qx '      - run: just docs' "$wf"
+  grep -qx '          path: _docs' "$wf"
+  test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
+  sed -n '/^  deploy:$/,$p' "$wf" | grep -qxF "    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
+  grep -q 'build_type=workflow' "$r/justfile"
+done
+# k keeps its own README.
+for r in m h ds; do grep -qx '## Documentation' "$r/README.md"; done
+for r in m h; do
+  jq -e '.rules[0].parameters.required_status_checks | any(.context == "docs: build")' "$r/.github/rulesets/main-checks.json" >/dev/null
+done
+# The API reference only for a Python library used through its API.
+for r in m k; do
+  test -f "$r/docs/reference.md"
+  grep -qF -- "--with mkdocstrings-python==$mkdocstrings_pin" "$r/justfile"
+done
+grep -qx '::: mutate_me' m/docs/reference.md
+grep -qx 'paths = \["py/src"\]' m/zensical.toml
+grep -qx 'paths = \["\."\]' k/zensical.toml
+for r in h ds; do
+  test ! -e "$r/docs/reference.md"
+  (lacks -q 'mkdocstrings' "$r/justfile")
+  (lacks -q 'mkdocstrings' "$r/zensical.toml")
+done
+# The badge page links SECURITY.md outside docs/ by URL, which a strict build accepts.
+grep -qF '[SECURITY.md](https://github.com/example-org/example/blob/main/.github/SECURITY.md)' h/docs/assurance-case.md
+for r in a c x w; do
+  test ! -e "$r/zensical.toml"
+  test ! -e "$r/.github/workflows/docs.yml"
+  (lacks -q '^docs:' "$r/justfile")
+done
+(lacks -q '"docs: build"' c/.github/rulesets/main-checks.json)
+# A real strict build: the API reference from the docstrings, and the badge pages.
+(cd m && just docs >/dev/null 2>&1)
+grep -qF 'Add two numbers' m/_docs/reference/index.html
+(cd h && just docs >/dev/null 2>&1)
+test -f h/_docs/assurance-case/index.html
+# k's flat package: mkdocstrings finds the module at the root, through paths = ["."].
+(cd k && just docs >/dev/null 2>&1)
 # A private repo's page has no links into the repo, which its readers cannot open.
 (lacks -rq 'github.com/' hush-plain/site hush-astro/site/src)
 grep -q 'href="https://github.com/.*/issues"' x/site/index.html
+# The plain starter is a tool page: the job under the name, or a TODO without a
+# description; an input, a result and one action; a privacy line its CSP keeps true.
+grep -qxF '    <p class="job">Tidies &#34;&lt;b&gt;&#34; tags &amp; more</p>' hush-plain/site/index.html
+(lacks -q 'TODO: one sentence' hush-plain/site/index.html)
+grep -qF 'TODO: one sentence naming the job' x/site/index.html
+(lacks -q 'class="job"' x/site/index.html)
+for r in x hush-plain; do
+  grep -qF '<textarea id="input"' "$r/site/index.html"
+  grep -qF '<pre id="result"' "$r/site/index.html"
+  grep -qF '<button type="button" id="copy" class="primary">' "$r/site/index.html"
+  grep -qF "content=\"default-src 'none'; script-src 'self';" "$r/site/index.html"
+  (grep -F 'http-equiv="Content-Security-Policy"' "$r/site/index.html" | lacks -q 'connect-src')
+  grep -qF 'what you type or open never leaves this page' "$r/site/index.html"
+  node --check "$r/site/main.mjs"
+done
 grep -q 'Skip to the content' hush-astro/site/src/layouts/Base.astro
+# The Astro layout holds the description as an expression, which Astro escapes at build. A
+# quoted attribute would end at the description's first quote and fail the build.
+grep -qxF '    <meta name="description" content={ "Tidies \"<b>\" tags & more" } />' hush-astro/site/src/layouts/Base.astro
 # Site previews are <slug>-site-pr-<n>, apart from a web app's <slug>-pr-<n>.
 # shellcheck disable=SC2016
 grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.jsonc' x/.github/workflows/site.yml
@@ -1636,12 +1899,12 @@ grep -qF 'deploy-worker.sh" Preview "cli-me-site-pr-$PR" --config wrangler.site.
 grep -qF 'deploy-worker.sh" Preview "pipe-me-site-pr-$PR" --config wrangler.site.jsonc' d/.github/workflows/site.yml
 # One retire job per prefix, each in the group of the preview job it retires, so a site
 # preview and a web-app preview of one PR never share a group.
-grep -qx '          - { slug: cli-me-site, group: preview-site }' x/.github/workflows/preview-retire.yml
-test "$(grep -c '^          - { slug: ' x/.github/workflows/preview-retire.yml)" = 1
-grep -qx '          - { slug: pipe-me, group: preview }' d/.github/workflows/preview-retire.yml
-grep -qx '          - { slug: pipe-me-site, group: preview-site }' d/.github/workflows/preview-retire.yml
-grep -qx '          - { slug: app, group: preview }' s/.github/workflows/preview-retire.yml
-test "$(grep -c '^          - { slug: ' s/.github/workflows/preview-retire.yml)" = 1
+grep -qx '          - {slug: cli-me-site, group: preview-site}' x/.github/workflows/preview-retire.yml
+test "$(grep -c '^          - {slug: ' x/.github/workflows/preview-retire.yml)" = 1
+grep -qx '          - {slug: pipe-me, group: preview}' d/.github/workflows/preview-retire.yml
+grep -qx '          - {slug: pipe-me-site, group: preview-site}' d/.github/workflows/preview-retire.yml
+grep -qx '          - {slug: app, group: preview}' s/.github/workflows/preview-retire.yml
+test "$(grep -c '^          - {slug: ' s/.github/workflows/preview-retire.yml)" = 1
 # Without a package.json, the preview job's pnpm comes from the pin; with one, from it.
 grep -qxF "          version: \"$pnpm_pin\"" x/.github/workflows/site.yml
 grep -qx '          package_json_file: web/package.json' d/.github/workflows/site.yml
@@ -1668,8 +1931,9 @@ for r in a m w; do
   test ! -e "$r/.github/scripts/deploy-worker.sh"
   (lacks -q '_site' "$r/.gitignore")
   (lacks -qx 'site:' "$r/justfile")
-  (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile")
 done
+# m turns Pages on for its docs site.
+for r in a w; do (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile"); done
 (lacks -q 'app-site' s/.github/workflows/preview-retire.yml)
 # Astro site: y has no TypeScript stack, so the site's node and pnpm come from site.yml and
 # site/package.json alone. t has it beside a TypeScript package at the root.
@@ -1783,6 +2047,92 @@ sed -n '/^  production:$/,/^  [a-z]/p' s/.github/workflows/ts.yml | grep -xF '  
 test -f s/.github/workflows/preview-retire.yml
 grep -qx '          path: dist' s/.github/workflows/ts.yml
 (lacks -q 'working-directory' s/.github/workflows/preview-retire.yml)
+# Hosting and the Worker script. d, s, x and y keep the defaults: no script, no custom
+# domain, the site on Pages. wk is a web app with both; cfp a plain site on a Worker with
+# both; cfa an Astro site on a Worker at its workers.dev address.
+for f in wk/wrangler.jsonc cfp/wrangler.site.jsonc; do
+  grep -qF '"binding": "ASSETS",' "$f"
+  grep -qF '"run_worker_first": ["/api/*"]' "$f"
+done
+grep -qF '"main": "./worker/index.ts",' wk/wrangler.jsonc
+grep -qF '"main": "./site/worker/index.mjs",' cfp/wrangler.site.jsonc
+for f in d/web/wrangler.jsonc s/wrangler.jsonc x/wrangler.site.jsonc cfa/wrangler.site.jsonc; do
+  (lacks -qE '"main"|"binding"|run_worker_first' "$f")
+done
+for f in index.ts index.test.ts tsconfig.json; do test -f "wk/worker/$f"; done
+test ! -e s/worker
+test ! -e d/web/worker
+grep -qF '"typecheck": "tsc && tsc -p worker"' wk/package.json
+jq -e '.devDependencies["@cloudflare/workers-types"]' wk/package.json >/dev/null
+grep -qF '"typecheck": "tsc"' s/package.json
+(lacks -q 'workers-types' s/package.json d/web/package.json)
+# The site's script: `just site` runs its tests with node, which the build job sets up,
+# and leaves it out of the files it builds.
+test -f cfp/site/worker/index.mjs
+# A plain site on a Worker ships _headers, which a meta tag cannot replace for
+# frame-ancestors; Pages and Astro get none. Its policy is the page's plus frame-ancestors.
+test -f cfp/site/_headers
+grep -qF 'X-Content-Type-Options: nosniff' cfp/site/_headers
+grep -qF 'Strict-Transport-Security:' cfp/site/_headers
+meta_csp=$(sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' cfp/site/index.html)
+grep -qxF "  Content-Security-Policy: $meta_csp; frame-ancestors 'none'" cfp/site/_headers
+for r in x cfa; do test ! -e "$r/site/_headers"; done
+test -f cfp/site/worker/index.test.mjs
+test ! -e x/site/worker
+test ! -e cfa/site/worker
+grep -qx '    node --test site/worker/index.test.mjs' cfp/justfile
+(lacks -q 'node --test' x/justfile cfa/justfile)
+(cd cfp && just site >/dev/null 2>&1)
+test -f cfp/_site/index.html
+test ! -e cfp/_site/worker
+sed -n '/^  build:$/,/^  deploy:$/p' cfp/.github/workflows/site.yml | grep -q 'uses: actions/setup-node@'
+(sed -n '/^  build:$/,/^  deploy:$/p' x/.github/workflows/site.yml | lacks -q 'uses: actions/setup-node@')
+# A custom domain goes to production alone, as --domain: previews deploy the same config.
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --domain app.example.org'" wk/.github/workflows/ts.yml
+(lacks -q 'Preview.*--domain' wk/.github/workflows/ts.yml cfp/.github/workflows/site.yml)
+(lacks -q -- '--domain' d/.github/workflows/ts.yml s/.github/workflows/ts.yml cfa/.github/workflows/site.yml x/.github/workflows/site.yml)
+# shellcheck disable=SC2016 # the backticks are Markdown
+grep -qF 'Only `production`'"'"'s token also needs Zone > Workers Routes: Edit for the zone of `app.example.org`' wk/README.md
+# shellcheck disable=SC2016 # the backticks are Markdown
+grep -qF 'only `production`'"'"'s token also gets Zone > Workers Routes: Edit for the zone of `demo.example.org`' cfp/README.md
+(lacks -q 'Workers Routes' d/README.md s/README.md cfa/README.md x/README.md)
+# The site on a Worker: production deploys the build job's artifact with the site's
+# config, in the production environment, and neither job touches Pages or serves under /<repo>/.
+for r in cfp cfa; do
+  wf=$r/.github/workflows/site.yml
+  deploy_job=$(sed -n '/^  deploy:$/,/^  [a-z]/p' "$wf")
+  grep -qx '      name: production' <<<"$deploy_job"
+  grep -qx '      group: site-production' <<<"$deploy_job"
+  grep -qxF "    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'" <<<"$deploy_job"
+  grep -qxF "          WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@$wrangler_pin" <<<"$deploy_job"
+  (lacks -qE 'pages: write|id-token|deploy-pages|_redirects' "$wf")
+  (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile")
+  test "$(grep -c '^    timeout-minutes:' "$wf")" = 3
+  test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
+done
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --config wrangler.site.jsonc --domain demo.example.org'" cfp/.github/workflows/site.yml
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --config wrangler.site.jsonc'" cfa/.github/workflows/site.yml
+grep -qF "printf '\\n/*\\n  X-Robots-Tag: noindex\\n' >> _site/_headers" cfp/.github/workflows/site.yml
+# cfd: the site deploys to its Worker, and repo-settings turns Pages on for docs.yml alone.
+grep -qx '      name: production' <<<"$(sed -n '/^  deploy:$/,/^  [a-z]/p' cfd/.github/workflows/site.yml)"
+(lacks -q 'pages: write' cfd/.github/workflows/site.yml)
+test "$(grep -c 'pages: write' cfd/.github/workflows/docs.yml)" = 1
+test "$(grep -cF 'POST repos/{owner}/{repo}/pages' cfd/justfile)" = 1
+grep -qF "so docs.yml's deploy job skips." cfd/justfile
+(lacks -qF -e "site.yml's deploy job" -e "For the site's previews" cfd/justfile)
+grep -qF 'environments/production"' cfd/justfile
+# The Pages site keeps its deploy and its /<repo>/ previews.
+grep -qx '      name: github-pages' <<<"$(sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml)"
+# Astro on a Worker: `site` is the Worker's address, with no Pages base.
+grep -qx '  site: "https://cfa-me-site.example-org.workers.dev",' cfa/site/astro.config.mjs
+(lacks -q 'base:' cfa/site/astro.config.mjs)
+# shellcheck disable=SC2016 # the backticks are Markdown
+grep -q 'deploys that build to the Cloudflare Worker `cf-me-site`' cfp/README.md
+grep -q 'deploys that build to GitHub Pages' x/README.md
+# site_url: asked of a site on a Worker, defaulting to the site Worker's address; a Pages
+# site has none.
+grep -qx 'site_url: https://cfa-me-site.example-org.workers.dev' cfa/.copier-answers.yml
+(lacks -q 'site_url' x/.copier-answers.yml y/.copier-answers.yml)
 # Other kinds get none of it.
 test ! -e a/wrangler.jsonc
 (lacks -q 'production' a/.github/workflows/ts.yml)
@@ -1810,6 +2160,18 @@ done
 # word and on a relative link to a missing file. prek needs a git repo, so each check
 # runs in a copy. lychee runs offline in the hook; links.yml checks the web weekly.
 prek=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --all-files)
+# yamlfmt leaves a fresh render's workflows as they are, or the project's own first
+# `prek run --all-files` fails: dp ends python.yml on a `run: |` that yamlfmt would turn
+# into `|-`, and preview-retire.yml's matrix (d both entries, s a web app, x a site) is
+# written the way yamlfmt spaces flow mappings.
+for r in dp d s x; do
+  rm -rf "$r-yaml"
+  cp -R "$r" "$r-yaml"
+  git -C "$r-yaml" init -q
+  git -C "$r-yaml" add -A
+  (cd "$r-yaml" && "${prek[@]}" yamlfmt >/dev/null)
+  rm -rf "$r-yaml"
+done
 for r in a b d h; do
   rm -rf "$r-hooks"
   cp -R "$r" "$r-hooks"
@@ -1819,6 +2181,58 @@ for r in a b d h; do
   # b is private with no license, so it has no reuse hook.
   [ "$r" = b ] || (cd "$r-hooks" && "${prek[@]}" reuse >/dev/null)
 done
+# Every Python render passes Scientific Python's repo-review, bar the checks its
+# pyproject.toml ignores with a reason. Those depend on the answers: the bot, the
+# license and a nested package each change the list.
+rr_runs=0
+for cfg in */.pre-commit-config.yaml; do
+  r=${cfg%%/*}
+  case $r in *-hooks | rr-*) continue ;; esac
+  grep -q 'id: sp-repo-review$' "$cfg" || continue
+  rm -rf "rr-$r"
+  cp -R "$r" "rr-$r"
+  git -C "rr-$r" init -q
+  git -C "rr-$r" add -A
+  (cd "rr-$r" && "${prek[@]}" sp-repo-review >"../rr-$r.log" 2>&1) || {
+    cat "rr-$r.log" >&2
+    exit 1
+  }
+  rr_runs=$((rr_runs + 1))
+done
+[ "$rr_runs" -ge 10 ]
+# The hook is Python-only, and a nested package points it at its own directory.
+(lacks -q 'sp-repo-review' h/.pre-commit-config.yaml compose/.pre-commit-config.yaml)
+grep -qxF '        args: [--show=err, --package-dir=api]' c/.pre-commit-config.yaml
+(lacks -q 'package-dir' w/.pre-commit-config.yaml)
+# The ignore list follows the answers: the bot, the license and the package path.
+grep -q '^GH212 = ' w/pyproject.toml
+(lacks -q '^GH200 = ' w/pyproject.toml)
+grep -q '^GH200 = ' d/pipe/pyproject.toml
+(lacks -q '^GH212 = ' d/pipe/pyproject.toml)
+grep -q '^PY003 = "no license yet' b/svc/pyproject.toml
+grep -q '^PY003 = "LICENSE sits at the repo root' c/api/pyproject.toml
+grep -q '^PY004 = ' c/api/pyproject.toml
+(lacks -qE '^PY00[34] = ' w/pyproject.toml)
+grep -qx 'strict = true' w/pyproject.toml
+# The first-release checklist holds only the steps the answers need. w is a private-use
+# app: nothing to register, so no checklist, no archive badge and no save link.
+fr=.github/first-release.md
+grep -q 'Zenodo' "a/$fr"
+grep -qF '.github/allowed_signers' "a/$fr"
+grep -q 'archive.softwareheritage.org/save/' "a/$fr"
+grep -q 'research-software-directory.org' "a/$fr"
+(lacks -qE 'PyPI|OpenSSF' "a/$fr")
+grep -q 'PyPI trusted publishing' "c/$fr"
+grep -q 'passing first, then silver' "h/$fr"
+grep -q 'OpenSSF' "m/$fr"
+(lacks -q 'then silver' "m/$fr")
+test ! -e "w/$fr"
+test ! -e "b/$fr"
+grep -qF -- "--body-file $fr" a/justfile
+(lacks -q 'first-release' w/justfile)
+grep -qF '(https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/example-org/render-me)' a/README.md
+grep -q 'Archive it in Software Heritage' a/justfile
+(lacks -q 'softwareheritage' w/README.md w/justfile b/README.md b/justfile)
 # The web apps track the shots spec and ignore only the screenshots `just ts-shots` writes.
 rm -rf s-git
 cp -R s s-git
@@ -1914,7 +2328,8 @@ done
 (lacks -q -- '--exclude' a/.github/workflows/links.yml)
 grep -qF -- "--exclude '^https://github\\.com/example-org/odd-name--co([/#?]|\$)'" b/.github/workflows/links.yml
 test "$(grep -c 'commit-message: {prefix: chore, include: scope}' a/.github/dependabot.yml)" -eq 5
-grep -q "extends: \['config:recommended', ':semanticCommits', ':configMigration', 'abandonments:recommended'\]" d/renovate.json5
+grep -q "extends: \['config:best-practices', ':semanticCommits'\]" d/renovate.json5
+grep -q "ignorePresets: \[':pinDevDependencies', 'security:minimumReleaseAgeNpm'\]" d/renovate.json5
 grep -qx 'playwright-report/' d/.gitignore
 # Outside CI, reusing a server on the preview port would test whichever app holds it.
 (lacks -q reuseExistingServer d/web/playwright.config.ts)
@@ -1986,8 +2401,9 @@ recipe_has() {
     exit 1
   }
 }
-for cmd in 'uv run ruff check' 'uv run ruff format --check' 'uv run ty check' 'uv run pytest' \
-  'uv audit --locked --preview-features audit-command'; do
+# --locked: CI's uv sync --locked fails on a stale uv.lock, so py-check must not rewrite it.
+for cmd in 'uv run --locked ruff check' 'uv run --locked ruff format --check' 'uv run --locked ty check' \
+  'uv run --locked pytest' 'uv audit --locked --preview-features audit-command'; do
   recipe_has a/just/python.just py-check "    $cmd"
 done
 for cmd in check typecheck test build; do recipe_has a/just/ts.just ts-check "    pnpm run $cmd"; done
@@ -2019,7 +2435,8 @@ recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
 # Whitespace control around the fmt recipe's last line must not glue the next comment onto it.
 for r in a h t; do
-  grep -qx '# Run every git hook over the whole repo, not just staged files. The checks workflow skips' "$r/justfile"
+  test "$(grep -B1 -x '# The checks workflow skips the hooks in its SKIP list, which the stack workflows run' "$r/justfile" | head -1)" = ''
+  grep -qx '# Run every git hook over the whole repo, not just staged files.' "$r/justfile"
 done
 
 # AGENTS.md names the check and test recipes, so each must be one the justfile has.
@@ -2089,6 +2506,12 @@ done
 list=$FAKE_DIR/rulesets.json
 case $call in
   *"api user"*) echo "90462640" ;;
+  *"security_and_analysis"*)
+    if [ -n "${FAKE_SECRET:-}" ]; then
+      echo "gh: Secret scanning is not available for this repository. (HTTP $FAKE_SECRET)" >&2
+      exit 1
+    fi
+    echo '{}' ;;
   *"code-scanning/default-setup"*)
     if [ -n "${FAKE_CODEQL:-}" ]; then
       echo '{"message":"Code Security must be enabled for this repository to use code scanning.","status":"403"}'
@@ -2172,6 +2595,13 @@ chmod +x "$fake/gh"
   done
   # Every public render has the DCO check, so web commits need a sign-off from silver down.
   [[ "$patch " == *" -F web_commit_signoff_required=true "* ]]
+  # OSPS Baseline BR-07.01: push protection refuses a known secret format before it lands.
+  # It has a PATCH of its own, so a repo without Secret Protection still gets the rest.
+  (lacks -q 'security_and_analysis' <<<"$patch")
+  secret=$(grep -F -- 'api -X PATCH repos/{owner}/{repo} -f security_and_analysis' "$FAKE_LOG" | head -1)
+  for flag in 'security_and_analysis[secret_scanning][status]=enabled' 'security_and_analysis[secret_scanning_push_protection][status]=enabled'; do
+    [[ "$secret " == *" -f $flag "* ]]
+  done
   # SECURITY.md's advisory link needs private vulnerability reporting on.
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/private-vulnerability-reporting' "$FAKE_LOG"
   # CodeQL default setup scans every PR and push on public repos.
@@ -2209,6 +2639,11 @@ chmod +x "$fake/gh"
   FAKE_CODEQL=403 just repo-settings >/dev/null 2>"$fake/err"
   grep -q 'Warning: CodeQL default setup could not be turned on.*Code Security must be enabled' "$fake/err"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/vulnerability-alerts' "$FAKE_LOG"
+  # So does a refused secret scanning setup.
+  : >"$FAKE_LOG"
+  FAKE_SECRET=422 just repo-settings >/dev/null 2>"$fake/err"
+  grep -q 'Warning: secret scanning could not be turned on.*not available' "$fake/err"
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/vulnerability-alerts' "$FAKE_LOG"
 )
 (cd b && ! grep -q 'DCO sign-off' .github/rulesets/main.json)
 # Silver: the DCO check needs commits made in GitHub's web UI to carry a sign-off.
@@ -2239,6 +2674,12 @@ chmod +x "$fake/gh"
   (lacks -q 'environments/production' "$fake/log-c")
   grep -q 'https://pypi.org/manage/account/publishing/?provider=github&project_name=mono-me&owner=simonvanlierde&repository=project-templates&workflow_filename=python-release.yml&environment=pypi' "$fake/out-c"
   grep -q 'https://zenodo.org/account/settings/github/' "$fake/out-c"
+  # A released project deletes the checklist, and the hint goes with it.
+  grep -q 'First-release checklist' "$fake/out-c"
+  mv .github/first-release.md "$fake/first-release.md"
+  just repo-settings >"$fake/out-c"
+  mv "$fake/first-release.md" .github/first-release.md
+  (lacks -q 'First-release checklist' "$fake/out-c")
 )
 # The web app (d) gets the preview environment, with no reviewer or branch limit.
 (
@@ -2278,6 +2719,19 @@ chmod +x "$fake/gh"
   (! FAKE_PAGES=500 just repo-settings >/dev/null 2>&1)
 )
 (lacks -qF 'repos/{owner}/{repo}/pages' "$fake/log-c")
+# A site on a Worker (cfp) gets the production environment instead of Pages.
+(
+  cd cfp
+  # shellcheck disable=SC2030,SC2031 # as above
+  export FAKE_LOG="$fake/log-cfp" FAKE_DIR="$fake/cfp" PATH="$fake:$PATH"
+  mkdir -p "$FAKE_DIR"
+  cp "$fake/rulesets.json" "$FAKE_DIR/"
+  just repo-settings >"$fake/out-cfp"
+  grep -qxF -- 'api -X PUT repos/{owner}/{repo}/environments/preview' "$FAKE_LOG"
+  grep -q 'environments/production' "$FAKE_LOG"
+  (lacks -qF 'repos/{owner}/{repo}/pages' "$FAKE_LOG")
+  grep -q 'see the Site section of the README' "$fake/out-cfp"
+)
 # Renovate's app skips the review, so its PRs merge themselves, but never the checks.
 jq -e '.bypass_actors[1] == {actor_id: 2740, actor_type: "Integration", bypass_mode: "pull_request"}' d/.github/rulesets/main.json >/dev/null
 jq -e '.bypass_actors | length == 1' d/.github/rulesets/main-checks.json >/dev/null
@@ -2308,13 +2762,15 @@ jq -e '(.rules[] | select(.type == "pull_request").parameters
 (lacks -q code-scanning b/justfile)
 # repo-about: the About box comes from the answers. No description answer leaves the description alone;
 # a quote in it survives the shell and braces survive just; topics only get added.
-for r in a b d; do
+for r in a b d cfp x; do
   # shellcheck disable=SC2031 # $fake/gh from the repo-settings test, logging every call
   (cd "$r" && FAKE_LOG="$fake/about-$r" PATH="$fake:$PATH" just repo-about >/dev/null)
 done
 grep -qxF -- 'repo edit --add-topic python --add-topic typescript --add-topic rust --add-topic go --add-topic docker' "$fake/about-a"
 grep -qxF -- "repo edit --description A \"quoted\" {{ one }}, naïve \$USD --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
 grep -qxF -- 'repo edit --homepage https://pipe-me.example-org.workers.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
+grep -qxF -- 'repo edit --homepage https://demo.example.org --add-topic python' "$fake/about-cfp"
+grep -qxF -- 'repo edit --add-topic python' "$fake/about-x"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
   r=${answers%%/*}
@@ -2398,6 +2854,7 @@ done
 test ! -e b/.github/workflows/dco.yml
 (lacks -q 'id: dco-signoff' b/.pre-commit-config.yaml)
 (lacks -q 'web_commit_signoff_required' b/justfile)
+(lacks -q 'security_and_analysis' b/justfile)
 # A fresh clone has only origin, and a pushed branch needs a lease, not a bare force-push.
 for f in "$repo/CONTRIBUTING.md" a/.github/CONTRIBUTING.md h/.github/CONTRIBUTING.md \
   a/.github/workflows/dco.yml; do
@@ -2477,7 +2934,7 @@ cat >"$cuh/uvx" <<'FAKE'
 #!/usr/bin/env bash
 echo "uvx $*" >>"$FAKE_LOG"
 mkdir -p "$(dirname "$FAKE_FILE")"
-echo "# from the template" >>"$FAKE_FILE"
+echo "${FAKE_TEXT:-# from the template}" >>"$FAKE_FILE"
 FAKE
 chmod +x "$cuh/gh" "$cuh/uvx"
 (
@@ -2499,7 +2956,14 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     if [ "$pr" != - ]; then git -C "$cuh/tpl" push -q "$p.git" HEAD:refs/heads/chore/copier-update; fi
     git init -q -b main "$p"
     printf '_commit: v0.9.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
-    git -C "$p" add .copier-answers.yml
+    # A layered template with its own answers file; this project's own is already current.
+    if [ "$name" = layer ]; then
+      cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"
+      printf '_commit: v0.10.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
+    fi
+    # Both answers files behind, and an update that leaves a conflict marker.
+    if [ "$name" = both ]; then cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"; fi
+    git -C "$p" add -A
     git -C "$p" commit -q -m init
     # The privileged job starts from a clean checkout, not the generator's worktree.
     git clone -q "$p" "$p-clean"
@@ -2512,6 +2976,9 @@ chmod +x "$cuh/gh" "$cuh/uvx"
         RUNNER_TEMP="$p-runner"
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
         GIT_CONFIG_VALUE_0="https://x-access-token:$GH_TOKEN@github.com/$REPO.git"
+      FAKE_TEXT=''
+      if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
+      export FAKE_TEXT
       : >"$p.gho"
       # The copier step gets neither token variable.
       env -u GH_TOKEN -u HAS_TOKEN GITHUB_OUTPUT="$p.gho" bash --noprofile --norc -eo pipefail "$cuh/copier.sh" >"$p.out" 2>&1 || {
@@ -2539,10 +3006,22 @@ asked false - 3
 push true - -
 edit true 7 -
 plain false - - README.md
+layer true - - README.md
+both true - - README.md
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
-  grep -qx "uvx copier@$copier_pin update --defaults --vcs-ref v0.10.0" issue.log
+  grep -qx "uvx copier@$copier_pin update --answers-file .copier-answers.yml --defaults --vcs-ref v0.10.0" issue.log
+  # Each answers file updates on its own, and the PR names the layer that moved.
+  grep -qx "uvx copier@$copier_pin update --answers-file .copier-answers.cml.yml --defaults --vcs-ref v0.10.0" layer.log
+  (lacks -q 'answers-file .copier-answers.yml' layer.log)
+  grep -q '^pr create --head chore/copier-update --base main --title chore: update from template cml v0.10.0 ' layer.log
+  git -C layer.git show chore/copier-update:README.md | grep -qx '# from the template'
+  # Two templates that both moved share one title, and a conflict marker is named in the body.
+  grep -q '^pr create --head chore/copier-update --base main --title chore: update from template v0.10.0, cml v0.10.0 ' both.log
+  # shellcheck disable=SC2016 # the backticks are Markdown
+  grep -qx -- '- `README.md`' both-runner/copier-update/body.md
+  (lacks -q 'merge conflicts' layer-runner/copier-update/body.md)
   # No token and a workflow change: one issue, the older PR closed, no push.
   grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
   grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
@@ -2645,5 +3124,21 @@ uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD
 grep -q 'Updating to template version' "$out/sample-up.log"
 (lacks -q 'def add(' "$sample_up/src/sample_me/__init__.py")
 test ! -e "$sample_up/tests/test_add.py"
+
+# install-action falls back to cargo-binstall for a tool past its manifest, which
+# installs an unchecked binary: every step says fallback: none, but cargo-codspeed,
+# which the manifest does not list.
+# The sweep counts the steps it saw, so a changed `uses:` spelling cannot pass it by
+# matching nothing.
+unpinned=$(find . -path '*/.github/workflows/*.yml' -exec awk '
+  FNR == 1 { n = 0 }
+  /uses: taiki-e\/install-action@/ { n = 3; step = ""; seen++; next }
+  n > 0 { step = step $0 "\n"; if (--n == 0 && step !~ /fallback: none/ && step !~ /tool: cargo-codspeed@/) print FILENAME }
+  END { if (!seen) print "no install-action step found" }
+' {} +)
+test -z "$unpinned" || {
+  echo "install-action without fallback: none: $unpinned" >&2
+  exit 1
+}
 
 echo "all render checks passed"

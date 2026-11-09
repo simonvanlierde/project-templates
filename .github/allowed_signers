@@ -1,0 +1,4 @@
+# The SSH keys a release tag may be signed with, one per line. release.yml reads this
+# file from the default branch and publishes nothing for a tag signed with any other key.
+# Format: "ALLOWED SIGNERS" in ssh-keygen(1).
+90462640+simonvanlierde@users.noreply.github.com namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC2w5rH/cakbhUZkWx998fEmuLhBKNLfmgqYUkv3aE+v

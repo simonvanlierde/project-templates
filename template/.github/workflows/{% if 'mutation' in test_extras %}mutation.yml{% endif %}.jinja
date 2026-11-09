@@ -58,6 +58,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: just@{{ just_version }}
+          fallback: none
 
       - run: uv sync --locked
       - run: just py-mutation
@@ -97,6 +98,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: just@{{ just_version }}
+          fallback: none
 
       - run: just ts-mutation
 {%- endif %}
@@ -123,6 +125,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: just@{{ just_version }},cargo-mutants@{{ cargo_mutants_version }}
+          fallback: none
 
       # Exit 3 means some mutants hung until the timeout, which counts as caught. A missed
       # one gives 2, unless a timeout came too, so check the list as well.
@@ -153,6 +156,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: just@{{ just_version }}
+          fallback: none
 
       - run: just go-mutation
 {%- endif %}
@@ -162,7 +166,8 @@ jobs:
     # The only job that may write issues.
     name: "mutation: report failure"
     needs: {{ stack_jobs }}
-    if: failure() && github.event_name == 'schedule'
+    # A job that runs past timeout-minutes ends cancelled, not failed.
+    if: always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -173,7 +178,7 @@ jobs:
           GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
           GH_REPO: {% raw %}${{ github.repository }}{% endraw %}
           RUN_URL: {% raw %}${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}{% endraw %}
-        run: |
+        run: |-
           title="Weekly mutation run failed"
           body="The scheduled run failed: $RUN_URL"
           issue=$(gh issue list --state open --author app/github-actions --search "in:title \"$title\"" --json number -q '.[0].number')

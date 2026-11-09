@@ -33,40 +33,46 @@ ts-test *args:
     {{ pnpm }} exec vitest run {% raw %}{{ args }}{% endraw %}
 {%- if publish_to_npm %}
 
-# Rewrite {{ slug }}.api.md from the built types after a deliberate API change, and
-# commit it: its diff is the API change reviewers see. api-extractor.json gives
+# Commit it: its diff is the API change reviewers see. api-extractor.json gives
 # the compiler its own options because api-extractor's bundled TypeScript 5 can't
 # read this tsconfig.json.
+
+# Rewrite {{ slug }}.api.md from the built types after a deliberate API change.
 ts-api:
     {{ pnpm }} run build
     {{ pnpm }} exec api-extractor run --local
 {%- endif %}
 {%- if ts_kind == 'library' and 'mutation' in test_extras %}
 
-# Plant small bugs in src/ and report each one the tests miss. Slow: CI runs it
-# weekly (mutation.yml); run it by hand after writing tests. The HTML report lands in
-# reports/mutation/. stryker.config.json names the runner plugin, which Stryker can't
-# find in pnpm's node_modules on its own, and sets an empty tsconfigFile: Stryker's
-# tsconfig rewrite calls a TypeScript API that TypeScript 7 no longer has.
+# Slow: CI runs it weekly (mutation.yml); run it by hand after writing tests. The HTML
+# report lands in reports/mutation/. stryker.config.json names the runner plugin, which
+# Stryker can't find in pnpm's node_modules on its own, and sets an empty tsconfigFile:
+# Stryker's tsconfig rewrite calls a TypeScript API that TypeScript 7 no longer has.
+
+# Plant small bugs in src/ and report each one the tests miss.
 ts-mutation:
     {{ pnpm }} exec stryker run
 {%- endif %}
 {%- if ts_kind == 'library' and 'property' in test_extras %}
 
-# The tests with fast-check at 10,000 runs a property instead of 100 (FC_NUM_RUNS,
-# read in src/index.test.ts). CI runs it weekly (property.yml).
+# FC_NUM_RUNS sets the count, read in src/index.test.ts. CI runs it weekly (property.yml).
+
+# The tests with fast-check at 10,000 runs a property instead of 100.
 ts-property:
     FC_NUM_RUNS=10000 {{ pnpm }} exec vitest run
 {%- endif %}
 {%- if ts_kind == 'web-app' %}
 
-# Playwright against the production build: the accessibility and CSP specs.
 # Install the browser once per machine: `{{ pnpm }} exec playwright install chromium`.
+
+# Playwright against the production build: the accessibility and CSP specs.
 ts-e2e *args:
     {{ pnpm }} run test:e2e {% raw %}{{ args }}{% endraw %}
 
-# Screenshot every route at 390 and 1440 px, light and dark, into the gitignored
-# shots/ (`<route>-<width>-<scheme>.png`). Builds and serves the app like ts-e2e.
+# The files go into the gitignored shots/ (`<route>-<width>-<scheme>.png`). It builds
+# and serves the app like ts-e2e.
+
+# Screenshot every route at 390 and 1440 px, light and dark.
 ts-shots:
     rm -rf {{ ts_dir }}/shots
     SHOTS=1 {{ pnpm }} exec playwright test --project shots

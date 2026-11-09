@@ -352,5 +352,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
+{%- if custom_domain %}
+        # --domain attaches the custom domain here only: previews deploy the same config.
+        run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production "" --domain {{ custom_domain }}'
+{%- else %}
         run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production'
+{%- endif %}
 {%- endif %}

@@ -10,43 +10,86 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
-### Added
-
-- `mutation.yml` and `property.yml` open an issue, or comment on the open one, when a weekly run fails, so a failure no longer reaches only whoever last edited the cron. GitHub pauses schedules after 60 days without repository activity; re-enable them from the Actions tab.
-
-### Changed
-
-- Renovate also extends `:configMigration` and `abandonments:recommended`, the two presets from `config:best-practices` the template wants without its pin PRs.
-- With `codspeed`, `benchmarks.yml` runs on pull requests that touch benchmarked code only: the stack's source, tests or benches, its manifest, lockfile and `.python-version`, or the workflow. A flat layout watches the package at the root. Pushes to `main` still run every time, so CodSpeed always has a recent main result to compare with. [CI baseline](docs/ci-baseline.md#path-filters) has the stance on path filters.
-- Web apps: the e2e job starts beside `check` instead of after it. A small `playwright` job reads the locked Playwright version for the container tag, which `check` used to output.
-- `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
-
-## [0.14.0] - 2026-11-05
-
 Upgrade steps:
 
+- **Breaking:** a release workflow publishes only a tag signed with an SSH key listed in `.github/allowed_signers` on `main`, which the update adds with no keys in it. Before your next release, add your signing key and commit the file to `main`: `echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config --type=path user.signingkey | sed 's/\.pub$//').pub")" >>.github/allowed_signers`. A GPG-signed tag no longer publishes: switch to an SSH signing key (`git config gpg.format ssh`).
 - **Breaking:** `docker_stacks` is gone, and copier drops the old answer. What the update does depends on what it listed:
   - Only `ts`, without the python stack: the project becomes a [Compose-only repo](docs/usage.md#compose-only-repos). The update deletes the TypeScript `Dockerfile`, `.dockerignore`, `src/main.ts` stub and compose service; keep them with `git checkout HEAD -- <path>` before you commit.
   - Only `ts`, with the python stack: update with `copier update --data docker_image=false`, or the update replaces the TypeScript `Dockerfile` with the Python image.
   - `python` and `ts`: the Python service is now named `app`, and the `web` service is gone.
 - **Breaking:** a web app or a command-line tool refuses a GitHub noreply `author_email`, because its privacy and accessibility pages give that address as the contact. Update with `copier update --data author_email=<an address that gets mail>`.
+- An update of a web-service, data-pipeline, web-app, Compose-only or Silver-badge project adds `docs/decisions/` with a first record. Update with `copier update --data decision_records=false` to skip it.
+- **Breaking:** `site_url` takes a host alone, such as `https://example.org`: no path, port or capitals. Update with `copier update --data site_url=https://<host>` if yours has one.
+- **Breaking:** in a web app whose `site_url` is a custom domain (not `*.workers.dev`), the production job now attaches that domain on every deploy. Before you merge the update, give the `production` environment's `CLOUDFLARE_API_TOKEN` the permission Zone > Workers Routes: Edit for that domain's zone, or the deploy fails. A domain already on the Worker stays.
+- Python projects: an update adds the `sp-repo-review` hook. Run `prek run sp-repo-review --all-files`, then fix each check that fails or skip it under `[tool.repo-review.ignore]` in `pyproject.toml` with its reason ([Scientific Python repo-review](docs/usage.md#scientific-python-repo-review)).
+- An update of a public project with a citation or an OpenSSF badge, or of one that publishes to PyPI, adds `.github/first-release.md`. Delete it if the project has already released.
+- **Breaking:** pytest settings move from `[tool.pytest.ini_options]` to pytest 9's `[tool.pytest]` table, with `strict = true`, `filterwarnings = ["error"]`, `log_level = "INFO"` and `minversion = "9.0"`. A warning in your tests now fails them: fix it, or add an `ignore::` entry to `filterwarnings` with the reason. Merge your own pytest options into the new table during `copier update`.
+- Updating from before v0.13.0, check three files for a block the update added a second time beside your own, and delete the extra:
+  - `pyproject.toml` with `keywords` or `classifiers` already set: TOML refuses the duplicate key, so delete the second of each.
+  - `.pre-commit-config.yaml` with a citesync block from v0.12: delete the older one, or citesync runs twice.
 
 ### Added
 
+- `mutation.yml` and `property.yml` open an issue, or comment on the open one, when a weekly run fails or times out, so a failure no longer reaches only whoever last edited the cron. GitHub pauses schedules after 60 days without repository activity; re-enable them from the Actions tab.
 - Compose-only repos: with `docker` in `stacks` and no `python` stack, or with `docker_image=false`, the render has no Dockerfile. It gets a starter `compose.yaml` (an example service pinned by digest, with a healthcheck, bound to `127.0.0.1`) and `.env.example`, which are the project's after the first render; a `compose.yml` workflow, a required check on `main` in a public repo; the `docker-compose` ecosystem in the dependency bot, which with Dependabot also reads the directories one level down, where an `include:` points; a `just check` that runs `docker compose --env-file .env.example config -q` and lints shell scripts; and a `just docker-fmt` that `just fmt` runs. With `cold_install`, that job runs each other stack's own `check` and `fmt` in place of `just check` and `just fmt`, which need Docker. Projects with the Python image render as before ([Compose-only repos](docs/usage.md#compose-only-repos)).
+- `python_windows` (asked under `customise`, off by default) adds a `python: tests (windows)` job to `python.yml`: the tests on `windows-latest` with `python_version`, without ruff or ty, so a missing `encoding="utf-8"` or a POSIX-only path fails CI. A required check in a public repo with the package at the root ([Tests on Windows](docs/usage.md#tests-on-windows)).
 - `just check` ends with the repo's own `local-check` recipe when `just/local.just` has one.
+- `decision_records`: `docs/decisions/` with a MADR 4.0.0 index and a first record that the project starts from this template. On by default for the web-service, data-pipeline and web-app kinds, Compose-only repos and Silver-badge projects; AGENTS.md then points at it. ([Decision records](docs/usage.md#decision-records)).
+- `site_host`, asked with a static site: `cloudflare` deploys `main` to the Worker `<slug>-site` from `wrangler.site.jsonc` instead of GitHub Pages, served from `/` (an Astro site gets no `base`). `just repo-settings` then creates the `production` environment and leaves Pages alone. The default, `pages`, renders as before ([Static site](docs/usage.md#static-site)).
+- A custom domain from `site_url`: a host other than `*.workers.dev` is attached to the production Worker of the web app, or of a site on Cloudflare, by `wrangler deploy --domain` in the production job. Previews deploy without it. `site_url` is asked of a site on Cloudflare too ([Workers hosting](docs/usage.md#workers-hosting)).
+- `worker`, asked of a web app or a site on Cloudflare: a Worker script in front of the static assets, with the `ASSETS` binding and `run_worker_first` for `/api/*`, and an example `/api/health` route. A web app gets `worker/index.ts`, typed with `@cloudflare/workers-types` and tested by Vitest; a site gets `site/worker/index.mjs`, tested with `node --test` by `just site` ([Workers hosting](docs/usage.md#workers-hosting)).
+- `presets/`: answers files for a Rust CLI, a uv research package and a Compose-only deploy repo, passed with `--data-file` ([Presets](docs/usage.md#presets)), and a note on layering an organisation's own template with its own answers file.
+- With `openssf_badge` set, `README.md` gets a `## Usage` section: where to get the software (releases, and PyPI or npm when the project publishes there), and a TODO for what it does and its basic use. The OpenSSF passing criteria and OSPS Baseline level 1 ask for both. The README is the project's after the first render, so `copier update` doesn't add the section to an existing one.
+- `just repo-settings` turns on secret scanning and push protection in a public repo. GitHub then refuses a push that holds a known secret format (OSPS Baseline BR-07.01).
+- The [badge section](docs/usage.md#openssf-best-practices-badge) of the usage docs lists the steps before you register a project on bestpractices.dev, the criteria only you can answer, and which file or setting meets each OSPS Baseline level 1 control.
+- A Rust library gets an API-break check: an `api` job in `rust.yml` and a `just rs-api` recipe run `cargo-semver-checks` against the last `v*` tag. A break fails until `Cargo.toml`'s version is bumped to match (major, or minor before 1.0). With no tag yet, it passes ([API-break check](docs/usage.md#api-break-check)).
+- Python projects run Scientific Python's [repo-review](docs/usage.md#scientific-python-repo-review) as a git hook (`sp-repo-review`), so `just hooks` and CI check the packaging, pytest and workflow settings. `[tool.repo-review.ignore]` in `pyproject.toml` lists the checks the template skips, each with its reason.
+- `.github/first-release.md`, a checklist to open as an issue for the [first release](docs/usage.md#first-release): PyPI trusted publishing, Zenodo, Software Heritage, the Research Software Directory and the OpenSSF badge, as far as the answers need them. `just repo-settings` prints the `gh issue create` command.
+- A public citable README gets a Software Heritage archive badge, and `just release` prints the Software Heritage save link after it pushes the tag. The badge lands in new renders only, since `copier update` leaves README.md alone.
+- `docs_site` (under `customise`): a documentation site that [Zensical](https://zensical.org) builds from the Markdown in `docs/`, with search. It renders `zensical.toml`, a `docs/index.md` home page, `just docs` and `just docs-serve`, and a `docs.yml` workflow. The workflow builds with `--strict` on every pull request and deploys to GitHub Pages from `main`. A Python library with `python_api` also gets `docs/reference.md`, an API reference from the docstrings. The validator refuses it together with a `site` on GitHub Pages, since a repo has one Pages site; a site on a Worker can sit beside it. It also refuses a web app at the repo root, whose privacy and accessibility pages in `docs/` the site would publish a second time ([Documentation site](docs/usage.md#documentation-site)).
 
 ### Changed
 
+- A `site=plain` page on a Cloudflare Worker (`site_host=cloudflare`) ships `site/_headers`: the page's Content-Security-Policy plus `frame-ancestors 'none'`, `X-Frame-Options`, `X-Content-Type-Options: nosniff`, HSTS and the web app's other security headers. It had none, and a meta tag cannot set `frame-ancestors`. The update adds the file; keep it in step with the CSP in `site/index.html`.
+- **Breaking:** `release.yml`, `python-release.yml`, `ts-release.yml`, and `docker.yml` on a tag publish only a tag signed with an SSH key in `.github/allowed_signers`, read from the default branch so a tag cannot bring its own key. Before, they accepted any tag GitHub marked Verified, which a key registered to any GitHub account passes, and `docker.yml` checked no signature at all. `tag-release.sh` runs the same check, `.github/scripts/verify-tag.sh`, before it pushes, and deletes a tag it made that fails ([Signed release tags](docs/usage.md#signed-release-tags)).
+- `site=plain` renders a working tool page in place of the empty starter: a compact header with the job, an input and its result with one Copy result action, Settings and Use it elsewhere disclosures, and a footer with a privacy line that the page's Content-Security-Policy keeps true. The stand-in job formats JSON; replace `convert()` in `site/main.mjs`. An existing site keeps its own files ([The plain tool page](docs/usage.md#the-plain-tool-page)).
 - `.editorconfig` sets a 2-space indent for `*.sh`, matching the scripts the template ships.
+- A web app's `vitest.config.ts` also runs `worker/**/*.test.ts`.
 - The `docker_stacks` question is now a yes/no `docker_image`: build the Python package into an image. It is asked only when `stacks` has both `docker` and `python`, and defaults to yes. `app_port` and `publish_to_ghcr` are not asked without an image.
+- With `codspeed`, `benchmarks.yml` runs on pull requests that touch benchmarked code only: the stack's source, tests or benches, its manifest, lockfile and `.python-version`, or the workflow. A flat layout watches the package at the root. Pushes to `main` still run every time, so CodSpeed always has a recent main result to compare with. [CI baseline](docs/ci-baseline.md#path-filters) has the stance on path filters.
+- `AGENTS.md` says `just check` runs the stack checks CI runs, so a miss is caught there too.
+- Web apps: the e2e job starts beside `check` instead of after it. A small `playwright` job reads the locked Playwright version for the container tag, which `check` used to output.
+- Web apps and sites on Cloudflare: the README's deploy setup warns that one Cloudflare token in both environments lets any pushed branch deploy over production, and links the fix in the usage guide.
+- Renovate extends `config:best-practices` in place of `config:recommended`, without its `:pinDevDependencies` (the lockfile already pins them) and its 3-day npm wait (the config waits 7 days). New presets in it reach projects with the next Renovate release.
+- `copier-update.yml` updates every `.copier-answers*.yml`, one template after another, so a template layered over this one (such as an organisation's own) lands in the same pull request. Its title names each template that moved.
+- The shell lint and `just docker-fmt` skip files marked `linguist-vendored` in `.gitattributes`, so a vendored script keeps its upstream style.
+- The message at the end of `copier copy` mentions lockfiles only when the project has
+  them, and the package version only when it publishes to PyPI or npm. It ends by saying
+  that `copier update` pulls in new template releases.
+- Every `taiki-e/install-action` step sets `fallback: none`, so a tool past the action's manifest fails the step instead of installing an unchecked binary through cargo-binstall. The `cargo-codspeed` step in `benchmarks.yml` keeps the fallback: the manifest does not list it.
 
 ### Fixed
 
+- Data pipelines no longer ship `data/processed/.gitkeep`, which `just validate` refuses from sourceledger 0.4.0 on ("no source '.gitkeep' in sources.toml"). `copier update` deletes it.
+- `site=astro`: a `"` in `project_description` ended the layout's quoted `content` attribute and failed `astro build`. The layout now passes the description as an expression.
+- CONTRIBUTING describes the two lines of the pull request template, `Tested:` and `Not checked:`, not the three it used to ask for.
+- `property.yml` mentions Go's `FuzzAdd` only in a project with the Go library.
+- A comment of several lines above a recipe showed only its last line in `just --list`. Each recipe now has one summary line directly above it, and the detail sits behind a blank line (`hooks`, `citation`, `py-mutation`, `py-property` and the other recipes that had a block).
+- `just py-check` runs `uv run --locked`, so a stale `uv.lock` fails locally the way CI's `uv sync --locked` does, in place of being rewritten.
+- The citesync hook's Python dependencies (`packaging`, `ruamel-yaml`, `tomlkit`) are pinned exactly in `additional_dependencies`, so the dependency bot can bump them.
+- `just/mutation_diff.py` prints `skipped (decorated): <name>` to stderr for each changed function mutmut leaves alone for its decorator.
 - CONTRIBUTING links the README without the `#development` anchor, which a project's own README may not have.
 - With a GitHub noreply `author_email`, SECURITY.md offers only the private advisory and the code of conduct only GitHub's abuse report: that address gets no mail.
 - Files name only the stacks a project has: the `.gitignore` sections, the justfile's imports and recipe prefixes, the `uv` and `pnpm` remarks in the hook and YAML configs, the lockfile steps in the copier-update PR body, the SKIP list in `checks.yml`, and the NumPy words in `_typos.toml`. `just repo-settings` names the dependency bot the project uses.
 - AGENTS.md no longer points at a README release section or a `docs/decisions/` folder the render does not have. SECURITY.md, CONTRIBUTING and the bug form ask for the release or commit, which works before the first release.
+- A Preact web app's `biome.json` turns on `noDangerouslySetInnerHtml`, which Biome enables
+  only with React. The suppression in `src/App.tsx` now has an effect, and `just check` no
+  longer warns about it on a fresh render.
+- A data-pipeline at the repo root ends `python.yml` on a `run: |-` block, so yamlfmt no
+  longer rewrites it and a fresh render passes its own `prek run --all-files`.
+- `preview-retire.yml` writes its matrix entries as `{slug: ..., group: ...}`, the way yamlfmt
+  spaces flow mappings, so a web app or a site passes its own `prek run --all-files` on a
+  fresh render.
 
 ### Removed
 
@@ -854,8 +897,7 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.14.0...HEAD
-[0.14.0]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...v0.14.0
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...HEAD
 [0.13.0]: https://github.com/simonvanlierde/project-templates/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/simonvanlierde/project-templates/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/simonvanlierde/project-templates/compare/v0.10.0...v0.11.0

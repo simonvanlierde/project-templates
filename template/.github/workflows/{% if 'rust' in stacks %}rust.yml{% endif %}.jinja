@@ -46,6 +46,7 @@ jobs:
       - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: cargo-nextest,cargo-deny
+          fallback: none
 
       - run: cargo fmt --check
       # --locked: the first build fails on a Cargo.lock that is missing or stale.
@@ -56,3 +57,45 @@ jobs:
       - run: cargo test --doc --all-features
 {%- endif %}
       - run: cargo deny check
+{%- if rust_kind == 'library' %}
+
+  api:
+    # Fails when the public API breaks since the last v* tag and Cargo.toml's version does
+    # not say so: a break needs a major bump (a minor one below 1.0). Passes when there is no tag yet.
+    name: "rust: API breaks since the last tag"
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+{%- if rust_dir != '.' %}
+    defaults:
+      run:
+        working-directory: {{ rust_dir }}
+{%- endif %}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history and tags: cargo-semver-checks builds the last tag's code from git.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: {% raw %}${{ github.event_name != 'pull_request' }}{% endraw %}
+{%- if rust_dir != '.' %}
+          workspaces: {{ rust_dir }}
+{%- endif %}
+
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+        with:
+          tool: cargo-semver-checks@{{ cargo_semver_checks_version }}
+          fallback: none
+
+      # |-, not |: yamlfmt rewrites a literal block that ends the file.
+      - run: |-
+          tag=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null) || { echo "No v* tag yet: nothing to compare against."; exit 0; }
+          cargo semver-checks --baseline-rev "$tag"
+{%- endif %}

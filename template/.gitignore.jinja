@@ -31,7 +31,7 @@ htmlcov/
 .coverage
 coverage.xml
 {%- endif %}
-{%- if 'ts' in stacks or site == 'astro' %}
+{%- if has_pnpm %}
 
 # Node
 node_modules/
@@ -92,4 +92,9 @@ mutants.out*/
 # Astro's generated types
 /site/.astro/
 {%- endif %}
+{%- endif %}
+{%- if docs_site %}
+
+# What `just docs` builds from docs/
+/_docs/
 {%- endif %}
