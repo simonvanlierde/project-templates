@@ -70,6 +70,7 @@ Upgrade steps:
 
 ### Fixed
 
+- Data pipelines no longer ship `data/processed/.gitkeep`, which `just validate` refuses from sourceledger 0.4.0 on ("no source '.gitkeep' in sources.toml"). `copier update` deletes it.
 - `site=astro`: a `"` in `project_description` ended the layout's quoted `content` attribute and failed `astro build`. The layout now passes the description as an expression.
 - CONTRIBUTING describes the two lines of the pull request template, `Tested:` and `Not checked:`, not the three it used to ask for.
 - `property.yml` mentions Go's `FuzzAdd` only in a project with the Go library.

@@ -1433,6 +1433,7 @@ grep -qF '"root": "../.."' c/apps/web/biome.json
 test -f d/pipe/sources.toml
 test -f d/pipe/src/pipe_me/pipeline.py
 test -f d/pipe/data/raw/.gitkeep
+test ! -e d/pipe/data/processed/.gitkeep
 grep -qF '](pipe/sources.toml)' d/ATTRIBUTION.md
 grep -qF '](pipe/sources.toml)' d/README.md
 # The week-old-release escape hatch names each nested lockfile owner, and only those.
