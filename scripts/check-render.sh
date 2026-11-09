@@ -1591,9 +1591,10 @@ grep -qx "private-web sets no cookies, so there's no cookie banner. Local storag
 grep -qx 'private-web comes with no warranty.' j/docs/privacy.md
 test ! -e j/docs/terms.md
 (lacks -q '/terms' j/src/App.tsx j/tests/e2e/routes.ts j/tests/e2e/legal-pages.spec.ts j/docs/privacy.md)
-# GitHub shows the pages as they are, so they pass the project's own Markdown lint.
+# GitHub shows the pages and the design stubs as they are, so they pass the project's own
+# Markdown lint. d has no description, which PRODUCT.md leaves out.
 rumdl_version=$(sed -n '/rumdl-pre-commit/{n;s/.*frozen: v//p;}' "$repo/.pre-commit-config.yaml")
-uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs d/AGENTS.md
+uvx "rumdl@$rumdl_version" check --config d/.rumdl.toml d/web/docs d/web/PRODUCT.md d/web/DESIGN.md d/AGENTS.md
 test ! -e a/docs/privacy.md
 # PRODUCT.md and DESIGN.md stubs: a web app gets both, beside its package.json,
 # and they speak of the project's own users. Other kinds have neither.
