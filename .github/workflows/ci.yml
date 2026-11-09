@@ -186,7 +186,7 @@ jobs:
       # The default globs match nothing (pins live in .jinja files), so key on the template.
       # Rows of one kind share dependencies. Saved from main only: a PR-ref cache is
       # readable by that PR alone.
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: template/**/pyproject.toml.jinja
@@ -317,7 +317,7 @@ jobs:
       - *checkout
 
       # uv runs copier and the linters here; key on this file, which pins them.
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: .github/workflows/ci.yml
@@ -456,7 +456,7 @@ jobs:
           fetch-depth: 0 # copier needs the tags to pick the update base
 
       - &setup-uv-copier
-        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         # uv only runs copier here and in the typescript, rust and go jobs, which
         # reuse this step and so share its cache key.
         with:
@@ -652,7 +652,7 @@ jobs:
     steps:
       - *checkout
 
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: template/**/pyproject.toml.jinja
@@ -723,7 +723,7 @@ jobs:
           toolchain: stable
           components: clippy, rustfmt
 
-      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest,cargo-deny${{ matrix.answers.test_extras && ',cargo-mutants' || '' }}
           fallback: none
