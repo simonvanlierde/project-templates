@@ -14,13 +14,16 @@ CI, so CI skips it unless TRIPWIRE=1 is set.
 import csv
 import hashlib
 import os
+import tomllib
 from pathlib import Path
 
 import pytest
+from sourceledger import read_output
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw" / "example-co2.csv"
-OUT = ROOT / "data" / "processed" / "example-co2.csv"
+OUTPUT_FORMAT = tomllib.loads((ROOT / "sources.toml").read_text(encoding="utf-8")).get("output_format", "csv")
+OUT = ROOT / "data" / "processed" / f"example-co2.{OUTPUT_FORMAT}"
 
 tripwire = pytest.mark.skipif(
     bool(os.environ.get("CI")) and os.environ.get("TRIPWIRE") != "1",
@@ -36,8 +39,7 @@ def published() -> dict[str, dict[str, str]]:
         if os.environ.get("PIPELINE_OUTPUT_REQUIRED") == "1":
             pytest.fail(msg)
         pytest.skip(msg)
-    with OUT.open(newline="", encoding="utf-8") as fh:
-        return {row["Year"]: row for row in csv.DictReader(fh)}
+    return {row["Year"]: row for row in read_output(OUT)}
 
 
 def test_each_value_is_the_raw_files_text(published: dict[str, dict[str, str]]) -> None:

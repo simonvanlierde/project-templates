@@ -13,7 +13,7 @@ import pytest
 from {{ module_name }} import pipeline
 
 FIXTURE = "year,value\n2020,1.5\n2021,2.5\n"
-OUT = Path("data/processed/example.csv")
+OUT = Path("data/processed/example.parquet")
 TERMS = 'terms = "CC0-1.0"\nterms_url = "https://example.org/terms"\nlicense = "CC0-1.0"\nredistribute = true'
 
 
@@ -23,7 +23,10 @@ def upstream(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     source = tmp_path / "upstream" / "example.csv"
     source.parent.mkdir()
     source.write_text(FIXTURE, encoding="utf-8")
-    manifest = f'[[source]]\nid = "example"\nstatus = "implemented"\nurl = "{source.as_uri()}"\n{TERMS}\n'
+    manifest = (
+        'output_format = "parquet"\n'
+        f'[[source]]\nid = "example"\nstatus = "implemented"\nurl = "{source.as_uri()}"\n{TERMS}\n'
+    )
     (tmp_path / "sources.toml").write_text(manifest, encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     return source
