@@ -22,7 +22,7 @@ def upstream(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A fixture source file and a manifest that points at it. The test runs inside the project directory."""
     source = tmp_path / "upstream" / "example.csv"
     source.parent.mkdir()
-    source.write_text(FIXTURE, encoding="utf-8")
+    source.write_bytes(FIXTURE.encode())  # bytes: Windows text mode would write CRLF
     manifest = (
         'output_format = "parquet"\n'
         f'[[source]]\nid = "example"\nstatus = "implemented"\nurl = "{source.as_uri()}"\n{TERMS}\n'
@@ -45,9 +45,9 @@ def test_the_whole_pipeline_runs_from_a_local_file(upstream: Path) -> None:
 
 
 @pytest.mark.usefixtures("upstream")
-def test_a_missing_input_is_one_line_and_a_failed_exit(capsys: pytest.CaptureFixture[str]) -> None:
+def test_a_missing_input_is_an_error_not_a_traceback(capsys: pytest.CaptureFixture[str]) -> None:
     """Building before fetching names the missing file instead of printing a traceback."""
     assert pipeline.main(["build"]) == 3
     err = capsys.readouterr().err
-    assert "example.csv.fetch.json is missing" in err
-    assert len(err.strip().splitlines()) == 1
+    assert err.startswith("error: data/raw/example.csv.fetch.json is missing")
+    assert "Traceback" not in err
