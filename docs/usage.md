@@ -314,6 +314,8 @@ Execute `just repo-settings` once after creating the repository and again whenev
 
 User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, citation files (`CITATION.cff`, `codemeta.json`), silver-badge governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
 
+Known limit: once a project has deleted any file the template renders, copier 9.19.1 reads the skip list before it loads the answers. A Compose-only repo's `compose.yaml` and `.env.example`, and the owned files under `ts_dir` or `go_dir`, then merge with the template's and can conflict. Keep your side of each.
+
 Updates skip the sample code and pages (the package's `__init__.py`, `tests/test_add.py`, the web app's components, the site's pages and Worker scripts), so a sample you deleted stays deleted. So does a feature you turn on later with `copier update --data`: it comes without its samples, which a fresh `copier copy` into a scratch directory shows. Delete a file the project owns, such as `README.md`, and the update writes it again.
 
 To relocate a package directory, execute `copier update` with the new path and delete the old directory manually.
@@ -327,7 +329,7 @@ After updating, refresh and commit project lockfiles (`uv lock`, `pnpm install`,
 - **Renovate:** Automatically opens update PRs using `copier update --skip-answered --defaults`. Inspect PR diffs for conflict markers before merging.
 - **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`. It updates each `.copier-answers*.yml` in turn, so a [layered template](#layering-another-template) lands in the same PR.
 
-Without [the update App](#the-update-app), `copier-update.yml` pushes with `GITHUB_TOKEN`, which can't change files in `.github/workflows/`: an update that does opens an issue asking for a local update instead. A PR it opens starts no checks either, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so.
+Without [the update App](#the-update-app), `copier-update.yml` pushes with `GITHUB_TOKEN`, which can't change files in `.github/workflows/`: an update that does opens an issue asking for a local update instead. A PR it opens starts no checks either, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so. To open the PR at all, turn on Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests". With the App, the workflow does not need it.
 
 #### The update App
 
@@ -336,7 +338,7 @@ A GitHub App of your own gives the workflow a token for each run. The token last
 1. Create the App at <https://github.com/settings/apps/new>. Give it a name and any homepage URL, untick Webhook > Active, and give it the repository permissions Contents, Pull requests and Workflows, each "Read and write". Let it be installed on this account only.
 2. On the App's page, note the Client ID and generate a private key, which downloads a `.pem` file.
 3. Install the App on each repo that uses the template (Install App, then Only select repositories).
-4. In each repo, run `just repo-settings`. It creates the `copier-update` environment and limits it to `main`, so a workflow on another branch can't read the key. Then add the App to it:
+4. In each repo, run `just repo-settings`. It creates the `copier-update` environment and limits it to `main`, so a workflow on another branch can't read the key. (On a private repo on GitHub Free the environment cannot limit branches; see the note below the commands.) Then add the App to it:
 
    ```sh
    gh variable set COPIER_UPDATE_CLIENT_ID --env copier-update --body <client-id>
@@ -345,7 +347,7 @@ A GitHub App of your own gives the workflow a token for each run. The token last
 
 Delete the `.pem` file afterwards, or keep it in your password manager to set up the next repo.
 
-A private repo on GitHub Free has no environment secrets. There, leave `--env copier-update` out of both commands: the job reads repo-level ones too, but then a workflow on any branch can read the key. The push job only runs from `main`, so starting the workflow by hand from another branch fails at that job.
+A private repo on GitHub Free has no environment secrets. There, leave `--env copier-update` out of both commands: the job reads repo-level ones too, but then a workflow on any branch can read the key. There the key is readable from any branch, so use one App per repo, or skip the App and use the `GITHUB_TOKEN` path above.
 
 ## Publishing
 
@@ -357,7 +359,7 @@ To publish a release:
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
 
-If a publishing job fails before artifacts upload to the registry, re-run the failed CI job on the existing tag. If the release artifact is already published to the registry, do not move the git tag; bump the patch version and publish a new release.
+If a publishing job fails before artifacts upload to the registry, re-run the failed CI job on the existing tag. If `docker.yml`'s `attest` step fails after the image push, re-run only that step: a full re-run rebuilds the image and repoints the semver tags. If the release artifact is already published to the registry, do not move the git tag; bump the patch version and publish a new release.
 
 Publishing controls:
 
@@ -386,6 +388,8 @@ The file renders with a comment and no keys, so the first release fails until yo
 ```sh
 echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config --type=path user.signingkey | sed 's/\.pub$//').pub")" >>.github/allowed_signers
 ```
+
+The check holds together with the `v*` tag ruleset, which lets only admins push tags: a tag runs the workflow and script from its own commit, so a tag pushed by someone else could carry a weaker check. `copier update` and Renovate also move a project to the newest `v*` tag of the template whether or not that tag's `release.yml` accepted it.
 
 A GPG-signed tag fails the check: `git tag -v` reads an allowed signers file for SSH signatures only. `allowed_signers` is the project's file after the first render, and `copier update` leaves it alone. To check a tag yourself: `git -c gpg.ssh.allowedSignersFile=.github/allowed_signers tag -v vX.Y.Z`.
 
