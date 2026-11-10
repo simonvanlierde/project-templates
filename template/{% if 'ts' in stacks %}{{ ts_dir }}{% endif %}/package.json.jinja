@@ -1,4 +1,3 @@
-{%- set web = ts_kind == 'web-app' -%}
 {%- set mutation = ts_kind == 'library' and 'mutation' in test_extras -%}
 {
   "name": "{{ slug }}",
@@ -36,7 +35,7 @@
 {%- if publish_to_npm %}
     "api": "api-extractor run",
 {%- endif %}
-{%- if web %}
+{%- if web_app %}
     "budget": "node scripts/checkBundleBudget.mjs",
     "build": "vite build",
 {%- else %}
@@ -44,15 +43,15 @@
 {%- endif %}
     "check": "biome check && knip",
     "coverage": "vitest run --coverage --coverage.reporter=text",
-{%- if web %}
+{%- if web_app %}
     "dev": "vite",
 {%- endif %}
     "fix": "biome check --write",
-{%- if web %}
+{%- if web_app %}
     "preview": "vite preview",
 {%- endif %}
     "test": "vitest run",
-{%- if web %}
+{%- if web_app %}
     "test:e2e": "playwright test",
     "typecheck": "tsc{% if worker %} && tsc -p worker{% endif %}"
 {%- else %}
@@ -68,7 +67,7 @@
 {%- if publish_to_npm and ts_dir != '.' %},
       "publint"
 {%- endif %}
-{%- if web %},
+{%- if web_app %},
       "wrangler"
 {%- endif %}
     ]
@@ -78,7 +77,7 @@
       "site/**"
     ]
 {%- endif %}
-{%- if web %},
+{%- if web_app %},
 {#- playwright.config.ts adds tests/shots only when SHOTS is set, so knip, which
     loads the config without it, needs the spec named. The plugin's entry adds to
     the config's test files; a top-level entry would replace knip's defaults. #}
@@ -89,7 +88,7 @@
     }
 {%- endif %}
   },
-{%- if web %}
+{%- if web_app %}
   "dependencies": {
 {%- if web_framework == 'preact' %}
     "preact": "^11.1.0"
@@ -100,11 +99,11 @@
   },
 {%- endif %}
   "devDependencies": {
-{%- if web %}
+{%- if web_app %}
     "@axe-core/playwright": "^4.14.0",
 {%- endif %}
     "@biomejs/biome": "^2.6.3",
-{%- if web and worker %}
+{%- if web_app and worker %}
     "@cloudflare/workers-types": "^5.20261001.1",
 {%- endif %}
     "@j178/prek": "^0.5.7",
@@ -115,7 +114,7 @@
     "@stryker-mutator/core": "^10.1.1",
     "@stryker-mutator/vitest-runner": "^10.1.1",
 {%- endif %}
-{%- if web %}
+{%- if web_app %}
     "@playwright/test": "^1.64.1",
 {#- @testing-library/react takes the DOM library as a peer; the preact one bundles it. #}
 {%- if web_framework == 'preact' %}
@@ -126,7 +125,7 @@
 {%- endif %}
 {%- endif %}
     "@types/node": "^26.6.5",
-{%- if web and web_framework == 'react' %}
+{%- if web_app and web_framework == 'react' %}
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
@@ -135,11 +134,11 @@
 {%- if ts_kind == 'library' and 'property' in test_extras %}
     "fast-check": "^4.10.2",
 {%- endif %}
-{%- if web %}
+{%- if web_app %}
     "jsdom": "^30.1.3",
 {%- endif %}
     "knip": "^6.43.0",
-{%- if web %}
+{%- if web_app %}
 {#- Exact: a change in how it renders the legal pages comes in its own bump, not in a lockfile refresh. #}
     "marked": "18.1.1",
 {%- endif %}
@@ -147,10 +146,10 @@
     "publint": "^0.3.25",
 {%- endif %}
     "typescript": "^7.0.2",
-{%- if web %}
+{%- if web_app %}
     "vite": "^8.3.5",
 {%- endif %}
-    "vitest": "^5.0.5"{% if web %},
+    "vitest": "^5.0.5"{% if web_app %},
 {#- Exact: CI runs it with the Cloudflare token. Renovate bumps it on its own. #}
     "wrangler": "{{ wrangler_version }}"{% endif %}
   }

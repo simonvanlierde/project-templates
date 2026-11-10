@@ -15,9 +15,9 @@
 # {{ 'prek comes from the @j178/prek devDependency' if 'ts' in stacks and 'python' not in stacks else 'The README says how to install prek' }}. Revs are commit SHAs, since tags are
 # mutable; the dependency bot moves each SHA and its `# frozen:` tag together.
 
-# `prek install` sets up each of these: the commit message is checked as you commit{% if 'ts' in stacks and ts_kind == 'web-app' %},
+# `prek install` sets up each of these: the commit message is checked as you commit{% if web_app %},
 # and the unit tests run before each push{% endif %}.
-default_install_hook_types: [pre-commit, commit-msg{% if 'ts' in stacks and ts_kind == 'web-app' %}, pre-push{% endif %}]
+default_install_hook_types: [pre-commit, commit-msg{% if web_app %}, pre-push{% endif %}]
 {%- if 'python' in stacks %}
 
 # data/ and tests/fixtures/ hold inputs and test cases: the whitespace, end-of-file

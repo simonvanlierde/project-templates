@@ -12,7 +12,7 @@ body:
       description: What you did, what you expected, and what happened instead.
     validations:
       required: true
-{% if 'ts' in stacks and ts_kind == 'web-app' %}
+{% if web_app %}
   - type: input
     id: url
     attributes:

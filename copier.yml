@@ -134,6 +134,13 @@ slug:
   when: false
   default: "{{ project_name|lower|replace(' ', '-')|regex_replace('[^a-z0-9._-]', '')|regex_replace('[._-]+$', '') }}"
 
+# Computed, never asked: the slug as a Cloudflare Worker name, which takes `-` but not
+# the `.` or `_` a slug may carry.
+worker_slug:
+  type: str
+  when: false
+  default: "{{ slug | replace('.', '-') | replace('_', '-') }}"
+
 project_description:
   type: str
   help: One-line description, for the README, package metadata and citation files
@@ -181,11 +188,17 @@ ts_kind:
     Web app (Vite single-page app, Playwright e2e, Cloudflare Workers): web-app
   default: library
 
+# Computed, never asked: the TypeScript package is a web app.
+web_app:
+  type: bool
+  when: false
+  default: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+
 # Only the web-app kind renders JSX. Preact runs the same code through its
 # React-compatible layer, aliased in vite.config.ts and tsconfig.json.
 web_framework:
   type: str
-  when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+  when: "{{ web_app }}"
   help: UI library for the web app; Preact runs the same React code in a smaller bundle
   choices:
     React: react
@@ -199,7 +212,7 @@ web_framework:
 # default would not do: copier checks it against the choices even when skipped.
 user_data:
   type: str
-  when: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
+  when: "{{ web_app }}"
   help: What does the app keep about its users? Sets what the privacy page says, and whether there is a terms page
   choices:
     Nothing (no cookies, no storage, no accounts): nothing
@@ -240,6 +253,14 @@ go_kind:
     Library (a package at the module root, with an Example): library
     Binary (package main at the module root): binary
   default: library
+
+# Computed, never asked: some stack in this repo is a library, so it gets the extra tests.
+library:
+  type: bool
+  when: false
+  default: >-
+    {{ ('python' in stacks and kind == 'library') or ('ts' in stacks and ts_kind == 'library')
+    or ('rust' in stacks and rust_kind == 'library') or ('go' in stacks and go_kind == 'library') }}
 
 # Computed, never asked. A package name is one lowercase identifier: no `-` or
 # `.`, which a slug may carry.
@@ -292,7 +313,7 @@ author_email:
     Give an email address: package metadata, SECURITY.md and the code of conduct use it.
     {% elif user_data|default('') == 'accounts' and author_email|lower == 'code@duinlab.nl' %}
     An app that keeps personal data on a server needs its own contact address, for example <app>@duinlab.nl.
-    {% elif author_email|regex_search('@users\\.noreply\\.github\\.com$') and (cli or ('ts' in stacks and ts_kind|default('') == 'web-app')) %}
+    {% elif author_email|regex_search('@users\\.noreply\\.github\\.com$') and (cli or web_app) %}
     A GitHub noreply address gets no mail, and the privacy, terms and accessibility pages give it as the contact: use one that does.
     {% endif %}
 
@@ -432,7 +453,6 @@ profiling:
 
 cold_install:
   type: bool
-  when: "{{ stacks }}"
   ask: "{{ customise }}"
   help: Verify README setup instructions in a fresh Debian container on setup changes
   default: false
@@ -442,7 +462,6 @@ cold_install:
 # (docs/usage.md#static-site).
 site:
   type: str
-  when: "{{ stacks }}"
   ask: "{{ customise }}"
   help: A static page (playground, demo or report) in site/, deployed to GitHub Pages from main, with a preview per pull request
   choices:
@@ -488,14 +507,13 @@ site_on_workers:
 # A web app at the root is ruled out too: its legal pages live in docs/.
 docs_site:
   type: bool
-  when: "{{ stacks }}"
   ask: "{{ customise }}"
   help: A search-indexed documentation site built from docs/ with Zensical, deployed to GitHub Pages from main (an API reference too for a Python library)
   default: false
   validator: >-
     {% if docs_site and site != 'none' and not site_on_workers %}
     The docs site and the `site` page would both deploy to this repo's one GitHub Pages site: answer site_host=cloudflare or site=none, or no here.
-    {% elif docs_site and 'ts' in stacks and ts_kind == 'web-app' and ts_dir == '.' %}
+    {% elif docs_site and web_app and ts_dir == '.' %}
     A web app at the repo root keeps its privacy and accessibility pages in docs/, and the docs site would publish a second copy: answer a ts_dir such as web, or no here.
     {% endif %}
 
@@ -511,6 +529,12 @@ openssf_badge:
     Passing (CONTRIBUTING.md gains a test policy and the coding standards): passing
     Silver (passing, plus GOVERNANCE.md, docs/roadmap.md and docs/assurance-case.md to fill in): silver
   default: none
+
+# Computed, never asked: the silver badge adds the governance documents and the DCO check.
+silver:
+  type: bool
+  when: false
+  default: "{{ public and license != 'none' and openssf_badge == 'silver' }}"
 
 # --- python -------------------------------------------------------------------
 
@@ -620,12 +644,12 @@ docs_api:
 # the account's workers.dev subdomain is the GitHub user.
 site_url:
   type: str
-  when: "{{ ('ts' in stacks and ts_kind == 'web-app') or site_on_workers }}"
+  when: "{{ web_app or site_on_workers }}"
   ask: "{{ customise }}"
   help: >-
-    The public address of the {{ 'web app' if 'ts' in stacks and ts_kind == 'web-app' else 'site' }}: a custom domain
+    The public address of the {{ 'web app' if web_app else 'site' }}: a custom domain
     (production attaches it to the Worker), or your own workers.dev subdomain if it is not the GitHub user.
-  default: "https://{{ slug | replace('.', '-') | replace('_', '-') }}{{ '' if 'ts' in stacks and ts_kind == 'web-app' else '-site' }}.{{ github_user | lower }}.workers.dev"
+  default: "https://{{ worker_slug }}{{ '' if web_app else '-site' }}.{{ github_user | lower }}.workers.dev"
   validator: >-
     {% if not site_url|regex_search('^https://') %}
     Give the full address, starting with https://.
@@ -645,13 +669,13 @@ custom_domain:
 site_domain:
   type: str
   when: false
-  default: "{{ custom_domain if site_on_workers and not ('ts' in stacks and ts_kind == 'web-app') else '' }}"
+  default: "{{ custom_domain if site_on_workers and not web_app else '' }}"
 
 # A Worker script in front of the static assets, for server code. Requests for files
 # stay free; each request the script handles counts against the Workers plan.
 worker:
   type: bool
-  when: "{{ ('ts' in stacks and ts_kind == 'web-app') or site_on_workers }}"
+  when: "{{ web_app or site_on_workers }}"
   ask: "{{ customise }}"
   help: Add a Worker script in front of the static assets that handles /api/* (one example route, /api/health)
   default: false
@@ -796,9 +820,7 @@ govulncheck_version:
 test_extras:
   type: str
   multiselect: true
-  when: >-
-    {{ ('python' in stacks and kind == 'library') or ('ts' in stacks and ts_kind == 'library')
-    or ('rust' in stacks and rust_kind == 'library') or ('go' in stacks and go_kind == 'library') }}
+  when: "{{ library }}"
   ask: "{{ customise }}"
   help: Extra tests for the library code (none, one or both)
   choices:
@@ -951,4 +973,4 @@ decision_records:
   type: bool
   ask: "{{ customise }}"
   help: Keep architecture decision records in docs/decisions/ (MADR 4.0.0), starting with one that records this template's answers
-  default: "{{ kind in ['web-service', 'data-pipeline'] or ts_kind == 'web-app' or compose_only or (public and license != 'none' and openssf_badge == 'silver') }}"
+  default: "{{ kind in ['web-service', 'data-pipeline'] or ts_kind == 'web-app' or compose_only or silver }}"

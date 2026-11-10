@@ -1,4 +1,4 @@
-{%- set worker_name = slug | replace('.', '-') | replace('_', '-') ~ '-site' -%}
+{%- set worker_name = worker_slug ~ '-site' -%}
 {%- if site_on_workers -%}
 // The site's Worker: .github/workflows/site.yml deploys {{ site_out }}/ with it, the deploy
 // job to {{ worker_name }} on every push to main, and the preview job with
