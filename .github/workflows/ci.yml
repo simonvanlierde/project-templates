@@ -769,7 +769,7 @@ jobs:
 
       - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
-          tool: cargo-nextest,cargo-deny${{ matrix.answers.test_extras && ',cargo-mutants' || '' }}
+          tool: cargo-nextest,cargo-deny${{ matrix.answers.test_extras && ',cargo-mutants' || '' }}${{ matrix.answers.rust_kind == 'library' && ',cargo-semver-checks' || '' }}
           fallback: none
 
       - *just
@@ -779,6 +779,23 @@ jobs:
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just rs-sync rs-check
+
+      # rs-api only compares against a v* tag, so tag the scaffold: it passes unchanged and
+      # fails once a public function is gone (a private one is no longer public API).
+      - if: matrix.answers.rust_kind == 'library'
+        name: api gate fails when it should
+        working-directory: ${{ runner.temp }}/proj
+        run: |
+          set -euo pipefail
+          log=$RUNNER_TEMP/api.log
+          git init -q && git add -A
+          git -c user.name=ci -c user.email=ci@example.com commit -qm scaffold --no-verify
+          git tag v0.0.0
+          just rs-api
+          sed -i 's/^pub fn add/fn add/' src/lib.rs
+          (! just rs-api >"$log" 2>&1) || { cat "$log"; exit 1; }
+          grep -q 'function_missing' "$log" || { cat "$log"; exit 1; }
+          git checkout -- src/lib.rs
 
       - if: matrix.answers.test_extras
         working-directory: ${{ runner.temp }}/proj
@@ -792,7 +809,8 @@ jobs:
           set -euo pipefail
           log=$RUNNER_TEMP/mutation-diff.log
           git init -q && git add -A
-          git -c user.name=ci -c user.email=ci@example.com commit -qm scaffold --no-verify
+          # The api step above may have committed the scaffold already.
+          git -c user.name=ci -c user.email=ci@example.com commit -q --allow-empty -m scaffold --no-verify
           printf '\n/// Untested.\npub fn sub(left: u64, right: u64) -> u64 {\n    left - right\n}\n' >>src/lib.rs
           git -c user.name=ci -c user.email=ci@example.com commit -qam sub --no-verify
           line=$(grep -n '^    left - right$' src/lib.rs | cut -d: -f1)
@@ -891,12 +909,47 @@ jobs:
           grep -q "NOT COVERED .* at cigoextras.go:$line:" "$log" || { cat "$log"; exit 1; }
           if grep -E '(KILLED|LIVED|NOT COVERED) .* at cigoextras.go:' "$log" | grep -qv "cigoextras.go:$line:"; then cat "$log"; exit 1; fi
 
+  python-windows:
+    # python_windows=true renders a windows-latest test job; run what it runs. Case x of
+    # check-render. Bash, so the scaffold step runs as on Linux.
+    # NOTE: the data-pipeline (case d) is left out: its project cannot lock until
+    # sourceledger 0.5.0 is on PyPI. Add a row for it then.
+    name: python (windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: library
+            answers:
+              project_name: ci-win
+              stacks: [python]
+              kind: library
+              publish_to_pypi: true
+              python_api: false
+              test_extras: [property, mutation]
+              python_windows: true
+    steps:
+      - *checkout
+
+      - *setup-uv-copier
+
+      - *scaffold
+
+      - name: tests
+        working-directory: ${{ runner.temp }}/proj
+        run: uv sync && uv run pytest
+
   ok:
     # The one ci check the main ruleset requires (with DCO sign-off, its own workflow),
     # so jobs and matrix rows can change without touching repo settings. always(): a skipped job must fail it.
     name: ci ok
     if: always()
-    needs: [hooks, renovate, python, render, update, typescript, rust, go, fullstack]
+    needs: [hooks, renovate, python, python-windows, render, update, typescript, rust, go, fullstack]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
