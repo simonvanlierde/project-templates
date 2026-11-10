@@ -11,6 +11,10 @@
 .env
 .env.*
 !.env.example
+
+# The rumdl hook's cache. An older rumdl left it without an ignore file of its own,
+# and Biome then formats its JSON.
+.rumdl_cache/
 {%- if 'python' in stacks or 'ts' in stacks %}
 
 # Build output

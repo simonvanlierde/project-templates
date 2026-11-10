@@ -2251,6 +2251,8 @@ git -C s-git init -q
 git -C s-git add -A
 git -C s-git ls-files --error-unmatch tests/shots/shots.spec.ts >/dev/null
 git -C s-git check-ignore -q shots/index-390-light.png
+# A rumdl cache an older rumdl wrote has no ignore file of its own, and Biome formats its JSON.
+git -C s-git check-ignore -q .rumdl_cache/0.3.1/entry.json
 git -C d-hooks ls-files --error-unmatch web/tests/shots/shots.spec.ts >/dev/null
 git -C d-hooks check-ignore -q web/shots/index-390-light.png
 # h's commit-msg hook takes a sign-off with an email, and refuses one without.
