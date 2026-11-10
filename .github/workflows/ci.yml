@@ -641,6 +641,22 @@ jobs:
             exit 1
           fi
 
+      # The privacy spec passes browser storage it lists in ALLOWED and fails a name it
+      # does not list. The other storage kinds and the cookie and origin checks share its code.
+      - if: matrix.name == 'web-app (react)'
+        name: privacy allowlist
+        working-directory: ${{ runner.temp }}/proj
+        run: |
+          set -euo pipefail
+          sed -i 's|^createRoot|localStorage.setItem("demo.settings", "{}");\n&|' src/main.tsx
+          sed -i 's|^  localStorage: \[\] as string\[\],$|  localStorage: ["demo.settings"] as string[],|' tests/e2e/privacy.spec.ts
+          just ts-e2e privacy --retries=0
+          sed -i 's|"demo.settings", "{}"|"demo.other", "{}"|' src/main.tsx
+          if just ts-e2e privacy --retries=0; then
+            echo "::error::privacy.spec.ts passed a localStorage key that ALLOWED does not list" >&2
+            exit 1
+          fi
+
   fullstack:
     # Python and ts in one repo, each nested: the root justfile imports both recipe
     # files, and `check` runs both stacks. The python image listens on a non-default port.

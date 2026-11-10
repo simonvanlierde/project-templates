@@ -526,6 +526,8 @@ grep -qx 'site_url: https://app.example-org.workers.dev' "$out/s/.copier-answers
 # lychee resolves a web app's root-relative links in public/; other kinds have no lychee.toml.
 grep -qx 'root_dir = "public"' "$out/s/lychee.toml"
 test ! -e "$out/a/lychee.toml"
+# The privacy spec's ALLOWED is for what a browser-storage app keeps; ci.yml runs it.
+grep -q 'What a first visit may keep in the browser, by name, each with a line' "$out/s/tests/e2e/privacy.spec.ts"
 # wk: a web app at the root with the Worker script and a custom domain.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=edge-me --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=nothing --data worker=true \
