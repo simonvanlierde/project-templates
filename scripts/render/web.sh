@@ -150,7 +150,7 @@ import sys, yaml
 for name, job in yaml.safe_load(open(sys.argv[1]))["jobs"].items():
     steps = job.get("steps", [])
     for i, step in enumerate(steps):
-        if step.get("id") == "gate":
+        if "cloudflare-gate.sh" in step.get("run", ""):
             before = steps[i - 1]
             assert i > 0 and before.get("uses", "").startswith("actions/checkout@"), name
             assert "if" not in before and before["with"]["persist-credentials"] is False, name
