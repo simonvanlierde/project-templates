@@ -211,9 +211,10 @@ jobs:
           sdist=$(echo *.tar.gz)
           cp ../sbom-attestation/*.json "$sdist.sbom.intoto.jsonl"
           printf '\nThe SBOM lists the dependency versions this release was tested with, not what an install will resolve.\n' >>../notes/notes.md
-          gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file ../notes/notes.md *
+          gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file ../notes/notes.md ./*
           # Immutable once published: check every attestation against the repo first.
-          for f in $(ls | grep -v '\.intoto\.jsonl$'); do
+          for f in *; do
+            case $f in *.intoto.jsonl) continue ;; esac
             gh attestation verify "$f" --repo "$GH_REPO" --bundle "$f.intoto.jsonl"
           done
           gh attestation verify "$sdist" --repo "$GH_REPO" --bundle "$sdist.sbom.intoto.jsonl" \
