@@ -2301,7 +2301,9 @@ git -C s-git check-ignore -q .rumdl_cache/0.3.1/entry.json
 git -C d-hooks ls-files --error-unmatch web/tests/shots/shots.spec.ts >/dev/null
 git -C d-hooks check-ignore -q web/shots/index-390-light.png
 git -C d-hooks check-ignore -q web/.dev.vars
-git -C d-hooks check-ignore -q deploy.pem tls.key web/.npmrc
+git -C d-hooks check-ignore -q deploy.pem
+git -C d-hooks check-ignore -q tls.key
+git -C d-hooks check-ignore -q web/.npmrc
 git -C d-hooks check-ignore -q web/.dev.vars.production
 # h's commit-msg hook takes a sign-off with an email, and refuses one without.
 dco_hook=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --hook-stage commit-msg --commit-msg-filename msg dco-signoff)
