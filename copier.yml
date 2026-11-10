@@ -12,7 +12,10 @@ _min_copier_version: "9.19.0"
 # answers fixed at copy time.
 # The silver-badge documents are skeletons the project fills in. Each entry starts with `/`:
 # copier matches these like .gitignore lines, so a bare README.md would also skip
-# data/README.md.
+# data/README.md. In a project that deleted a file the template renders, copier 9.19.1
+# renders these before it loads the answers, so ts_dir and go_dir fall back to '.': a
+# package at the root then keeps its own files, where every entry used to miss and the
+# update conflicted them with the template's.
 _skip_if_exists:
   - /README.md
   - /.github/allowed_signers
@@ -25,21 +28,21 @@ _skip_if_exists:
   - /codemeta.json
   - /_typos.toml
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.tsx"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/App.test.tsx"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/main.tsx"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}src/app.css"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}index.html"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}worker/index.ts"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}worker/index.test.ts"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}PRODUCT.md"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}DESIGN.md"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility.md"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/accessibility-assessment.md"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/privacy.md"
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}docs/terms.md"
-  - "/{{ '' if go_dir == '.' else go_dir ~ '/' }}go.mod"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.tsx"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.test.tsx"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/main.tsx"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}index.html"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}PRODUCT.md"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}DESIGN.md"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}docs/accessibility.md"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}docs/accessibility-assessment.md"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}docs/privacy.md"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}docs/terms.md"
+  - "/{{ '' if go_dir | default('.') == '.' else go_dir ~ '/' }}go.mod"
   # A Compose-only repo's starter stack: replaced by the project's own services.
   - "/{{ 'compose.yaml' if compose_only else '.no-compose-starter' }}"
   - "/{{ '.env.example' if compose_only else '.no-compose-starter' }}"
@@ -58,7 +61,7 @@ _skip_if_exists:
   - /docs/index.md
   - /docs/reference.md
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
-  - "/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
 # Defaults, plus the sample test file when updating.
 _exclude:
