@@ -582,11 +582,18 @@ load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
 seen = 0
 out = pathlib.Path(os.environ["OUT"])
-for path in sorted(itertools.chain(out.glob("[abcdm]/**/*"), out.glob("compose/**/*"), out.glob("compose2/**/*"))):
-    parse = load.get(path.suffix)
-    if parse and path.is_file():
-        parse(path.read_text())
-        seen += 1
+# Every render, found by its answers file, so a new case gets every check below.
+renders = sorted(answers.parent for answers in out.glob("*/.copier-answers.yml"))
+for render in renders:
+    for path in sorted(render.rglob("*")):
+        # The site builds install packages and write pnpm's multi-document lockfile; neither is template output.
+        if "node_modules" in path.parts or path.name == "pnpm-lock.yaml":
+            continue
+        # tsconfig is JSON with comments, as tsc and Biome read it.
+        parse = json5.loads if path.name.startswith("tsconfig") else load.get(path.suffix)
+        if parse and path.is_file():
+            parse(path.read_text())
+            seen += 1
 print(f"parsed {seen} files")
 # Catches a copier run that rendered nothing.
 assert seen > 20, f"only {seen} structured files rendered"
@@ -638,10 +645,10 @@ for fail, expected in [("", ["create", *verify, "edit"]), ("create", ["create"])
             assert (work / f"assets/{bundle}.intoto.jsonl").is_file()
         assert (work / "assets/package.tar.gz.sbom.intoto.jsonl").is_file()
 # A ruleset requires a check by its job name, so two jobs with one name can't be told
-# apart. a, b, c and d each render more than one stack.
-for render in [*"abcdm", "compose", "compose2"]:
+# apart.
+for render in renders:
     names = {}
-    for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
+    for wf in sorted((render / ".github/workflows").glob("*.yml")):
         for job_id, job in yaml.safe_load(wf.read_text())["jobs"].items():
             if "name" in job:
                 names.setdefault(job["name"], []).append(f"{wf.name}:{job_id}")
@@ -669,8 +676,7 @@ for checks in sorted(out.glob("*/.github/rulesets/main*.json")):
             assert required["context"] in runs, f"{checks}: {required['context']!r} is no job's check run"
             required_by[render].append(required["context"])
 # Every render was checked, and each requires some check: an empty list passes the loop above.
-renders = {answers.parent for answers in out.glob("*/.copier-answers.yml")}
-assert len(renders) >= 18 and set(required_by) == renders, sorted(map(str, renders - set(required_by)))
+assert len(renders) >= 18 and set(required_by) == set(renders), sorted(map(str, set(renders) - set(required_by)))
 # A pull request saves no cache: only it could read one, and it evicts main's. Each
 # action that caches by default must carry its switch. CodSpeed's instrument cache has
 # no save switch and is left on. A job whose `if` excludes pull requests outright (an
@@ -689,8 +695,8 @@ saves = {
     "docker/build-push-action": lambda w, cond: bool(w.get("cache-to")) and "github.event_name == 'push'" not in w["cache-to"],
 }
 checked = collections.Counter()
-for render in [*"abcdm", "compose", "compose2"]:
-    for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
+for render in renders:
+    for wf in sorted((render / ".github/workflows").glob("*.yml")):
         doc = yaml.safe_load(wf.read_text())
         if "pull_request" not in doc[True]:
             continue
