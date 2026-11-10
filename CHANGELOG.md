@@ -10,6 +10,8 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-11
+
 Upgrade steps:
 
 - **Breaking:** with Dependabot, `copier-update.yml` no longer reads `COPIER_UPDATE_TOKEN`. Until you set up [the update App](docs/usage.md#the-update-app), it pushes with `GITHUB_TOKEN`, so a template update that changes a workflow opens an issue instead of a PR. Run `just repo-settings`, add the App's client ID and key to the `copier-update` environment, then delete the old secret: `gh secret delete COPIER_UPDATE_TOKEN`. Without the App, the PR is opened with `GITHUB_TOKEN`, which needs Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
@@ -924,7 +926,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/simonvanlierde/project-templates/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/simonvanlierde/project-templates/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/simonvanlierde/project-templates/compare/v0.10.0...v0.11.0
