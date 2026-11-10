@@ -17,6 +17,12 @@ on:
 permissions:
   contents: read
 
+# One group per pull request or sweep: the retire job's own group already orders it
+# against that pull request's deploy.
+concurrency:
+  group: {% raw %}${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}{% endraw %}
+  cancel-in-progress: false
+
 jobs:
   retire:
     name: Retire
@@ -76,3 +82,16 @@ jobs:
           PRS: {% raw %}${{ github.event.pull_request.number || inputs.prs }}{% endraw %}
           SLUG: {% raw %}${{ matrix.slug }}{% endraw %}
         run: .github/scripts/preview-retire.sh
+
+  notify:
+    # The daily sweep only: a failed pull request run shows on that pull request.
+    # The only job that may write issues.
+    name: "retire preview: report failure"
+    needs: [retire]
+    # A job that runs past timeout-minutes ends cancelled, not failed.
+    if: always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
+    permissions:
+      issues: write # opens or comments on the failure issue
+    uses: $/.github/workflows/report-failure.yml
+    with:
+      title: Daily preview sweep failed

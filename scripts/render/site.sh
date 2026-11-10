@@ -355,7 +355,7 @@ test "$(grep -c 'pages: write' cfd/.github/workflows/docs.yml)" = 1
 test "$(grep -cF 'POST repos/{owner}/{repo}/pages' cfd/justfile)" = 1
 grep -qF "so docs.yml's deploy job skips." cfd/justfile
 (lacks -qF -e "site.yml's deploy job" -e "For the site's previews" cfd/justfile)
-grep -qF 'environments/production"' cfd/justfile
+grep -qx '    main_only_env production' cfd/justfile
 # The Pages site keeps its deploy and its /<repo>/ previews.
 grep -qx '      name: github-pages' <<<"$(sed -n '/^  deploy:$/,/^  [a-z]/p' x/.github/workflows/site.yml)"
 # Astro on a Worker: `site` is the Worker's address, with no Pages base.

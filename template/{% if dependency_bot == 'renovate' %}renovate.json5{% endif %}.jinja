@@ -4,6 +4,10 @@
 //
 // Minor and patch updates of the packages CI installs, and the weekly relock, merge
 // themselves once the week's wait is over and every check on the branch has passed.
+{%- if 'rust' in stacks %}
+// The Cargo relock waits for you (the last package rule): Cargo has no release-age cutoff,
+// so it can pick up a crate published minutes before.
+{%- endif %}
 // Renovate does the merge. In a public repo the `main` ruleset asks for an approval,
 // which Renovate's app may skip, and `main-checks` holds the required checks, which it
 // may not. Majors, copier template releases, and the actions and hooks group stay for
@@ -68,5 +72,15 @@
     // Template releases, from .copier-answers.yml. Their tags carry no release date,
     // so the week's wait above would hold them back for good.
     { matchManagers: ['copier'], minimumReleaseAge: null },
+{%- if 'rust' in stacks %}
+    // Its own group gives the Cargo relock its own branch, so the uv and pnpm relocks still
+    // merge themselves: Renovate merges a branch only when every update on it may.
+    {
+      matchManagers: ['cargo'],
+      matchUpdateTypes: ['lockFileMaintenance'],
+      groupName: 'cargo lock file maintenance',
+      automerge: false,
+    },
+{%- endif %}
   ],
 }

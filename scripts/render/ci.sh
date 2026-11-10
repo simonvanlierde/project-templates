@@ -156,6 +156,7 @@ for r in b d h; do
 done
 for r in a c i; do
   test ! -e "$r/docs/decisions"
+  (lacks -q 'docs/decisions' "$r/AGENTS.md")
 done
 (lacks -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.
@@ -271,7 +272,8 @@ wf = yaml.safe_load(open("m/.github/workflows/mutation.yml"))
 assert set(wf["jobs"]) == {"python", "ts", "rust", "go", "notify"}, wf["jobs"].keys()
 assert set(wf[True]) == {"schedule", "workflow_dispatch"}, wf[True]
 assert wf["permissions"] == {"contents": "read"}, wf["permissions"]
-assert all("timeout-minutes" in j for j in wf["jobs"].values())
+assert all("timeout-minutes" in j for k, j in wf["jobs"].items() if k != "notify")
+assert wf["jobs"]["notify"]["uses"] == "$/.github/workflows/report-failure.yml"
 # A failed scheduled run reports itself, and only that job may write issues.
 n = wf["jobs"]["notify"]
 assert set(n["needs"]) == {"python", "ts", "rust", "go"}, n["needs"]

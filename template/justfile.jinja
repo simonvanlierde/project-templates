@@ -259,26 +259,26 @@ repo-settings:
     gh api -X PUT "repos/{owner}/{repo}/environments/preview" >/dev/null 2>"$err" || fail
     echo "Configured environment 'preview'."
 {%- endif %}
+{%- if web_app or site_on_workers or dependency_bot == 'dependabot' %}
+    # An environment that only main may deploy from, with no reviewer.
+    main_only_env() {
+        gh api -X PUT "repos/{owner}/{repo}/environments/$1" \
+            -F "deployment_branch_policy[protected_branches]=false" \
+            -F "deployment_branch_policy[custom_branch_policies]=true" >/dev/null 2>"$err" || fail
+        policies=$(gh api "repos/{owner}/{repo}/environments/$1/deployment-branch-policies" --jq '.branch_policies[].name' 2>/dev/null || true)
+        if ! echo "$policies" | grep -qxF 'main'; then
+            gh api -X POST "repos/{owner}/{repo}/environments/$1/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
+        fi
+    }
+{%- endif %}
 {%- if web_app or site_on_workers %}
     # The production jobs deploy from main only, unattended, so no reviewer.
-    gh api -X PUT "repos/{owner}/{repo}/environments/production" \
-        -F "deployment_branch_policy[protected_branches]=false" \
-        -F "deployment_branch_policy[custom_branch_policies]=true" >/dev/null 2>"$err" || fail
-    policies=$(gh api "repos/{owner}/{repo}/environments/production/deployment-branch-policies" --jq '.branch_policies[].name' 2>/dev/null || true)
-    if ! echo "$policies" | grep -qxF 'main'; then
-        gh api -X POST "repos/{owner}/{repo}/environments/production/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
-    fi
+    main_only_env production
     echo "Configured environment 'production'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to both environments: see the {{ 'Deploy' if web_app else 'Site' }} section of the README."
 {%- endif %}
 {%- if dependency_bot == 'dependabot' %}
     # copier-update.yml's push job reads the update App's key from this environment, from main only.
-    gh api -X PUT "repos/{owner}/{repo}/environments/copier-update" \
-        -F "deployment_branch_policy[protected_branches]=false" \
-        -F "deployment_branch_policy[custom_branch_policies]=true" >/dev/null 2>"$err" || fail
-    policies=$(gh api "repos/{owner}/{repo}/environments/copier-update/deployment-branch-policies" --jq '.branch_policies[].name' 2>/dev/null || true)
-    if ! echo "$policies" | grep -qxF 'main'; then
-        gh api -X POST "repos/{owner}/{repo}/environments/copier-update/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
-    fi
+    main_only_env copier-update
     echo "Configured environment 'copier-update'. For template updates that change workflows, add the update App: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#the-update-app"
 {%- endif %}
 {%- set site_on_pages = site != 'none' and not site_on_workers %}

@@ -80,6 +80,14 @@ jobs:
 
       # The wheel takes its version from pyproject.toml, not the tag: refuse a mismatch.
       - run: test "$(uv version --short)" = "${GITHUB_REF_NAME#v}"
+{%- if web_app %}
+
+      # The app shows package.json's version, so the tag must name the same one.
+      - name: refuse a tag that differs from package.json
+        run: |
+          app=$(node -p 'require(process.env.GITHUB_WORKSPACE + "/{{ ts_dir }}/package.json").version')
+          [ "$app" = "${GITHUB_REF_NAME#v}" ] || { echo "::error::{{ ts_dir ~ '/' if ts_dir != '.' else '' }}package.json is at $app, not ${GITHUB_REF_NAME#v}"; exit 1; }
+{%- endif %}
 
       # Validate and save the notes before PyPI publishes anything.
       - run: '"$GITHUB_WORKSPACE/.github/scripts/release-notes.sh" "$GITHUB_REF_NAME" "$GITHUB_WORKSPACE/CHANGELOG.md" >"$RUNNER_TEMP/notes.md"'

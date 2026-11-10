@@ -329,6 +329,30 @@ grep -q 'project edit' "$out/compose/compose.yaml"
   --data dependency_bot=renovate --data cold_install=true --data public=false . "$out/compose2"
 grep -qF "'docker-compose': { enabled: true }" "$out/compose2/renovate.json5"
 grep -E "^ +grep -vE" "$out/compose2/.github/workflows/cold-install.yml" | grep -qE '\|check\|fmt\||check\|fmt'
+
+# pw: a web app with a Python package on PyPI. python-release.yml takes over from
+# release.yml, so it refuses a tag that differs from web/package.json.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=pypi-web --data 'stacks=[python,ts]' \
+  --data kind=library --data publish_to_pypi=true --data ts_kind=web-app --data ts_dir=web \
+  --data user_data=nothing . "$out/pw" >/dev/null 2>&1
+test ! -e "$out/pw/.github/workflows/release.yml"
+grep -qF 'name: refuse a tag that differs from package.json' "$out/pw/.github/workflows/python-release.yml"
+# shellcheck disable=SC2016 # the workflow's literal $app
+grep -qF 'web/package.json is at $app, not' "$out/pw/.github/workflows/python-release.yml"
+
+# rsren: Rust with Renovate. Cargo has no release-age cutoff, so its relock gets its own
+# branch that waits for review, and the uv and pnpm relocks still merge themselves.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=rs-renovate --data 'stacks=[rust]' \
+  --data dependency_bot=renovate . "$out/rsren" >/dev/null 2>&1
+uv run --no-project --with json5 python - "$out/rsren/renovate.json5" "$out/d/renovate.json5" <<'PY'
+import json5, sys
+rust, other = (json5.load(open(p)) for p in sys.argv[1:])
+assert rust["lockFileMaintenance"]["automerge"] is True
+cargo = [r for r in rust["packageRules"] if r.get("matchUpdateTypes") == ["lockFileMaintenance"]]
+assert cargo == [{"matchManagers": ["cargo"], "matchUpdateTypes": ["lockFileMaintenance"],
+                  "groupName": "cargo lock file maintenance", "automerge": False}], cargo
+assert not [r for r in other["packageRules"] if "lockFileMaintenance" in r.get("matchUpdateTypes", [])]
+PY
 # The same project with an image still runs `just check` there.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=compose-img --data 'stacks=[python,docker]' \
   --data cold_install=true . "$out/compose3"

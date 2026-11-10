@@ -1,6 +1,8 @@
 // The Worker in front of the static assets in dist/. A request for a file is served
 // from the assets without running this script; run_worker_first in wrangler.jsonc sends
 // /api/* here first. Add a binding (KV, D1, a secret) in wrangler.jsonc and to Env.
+// Preview deploys share one API token with production, and a binding reaches every
+// preview: give previews their own token before you add one.
 export interface Env {
   ASSETS: Fetcher;
 }

@@ -6,7 +6,7 @@
 OUT=$out uv run --no-project --with pyyaml --with json5 python - <<'PY'
 import ast, collections, itertools, json, json5, os, pathlib, subprocess, tempfile, tomllib, yaml
 
-load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
+load = {".json": json.loads, ".json5": json5.loads, ".jsonc": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
 seen = 0
 out = pathlib.Path(os.environ["OUT"])
@@ -76,6 +76,34 @@ for fail, expected in [("", [*verify, "create", "edit"]), ("create", [*verify, "
         for bundle in ("package.whl", "package.tar.gz", "package.tar.gz.cdx.json"):
             assert (work / f"assets/{bundle}.intoto.jsonl").is_file()
         assert (work / "assets/package.tar.gz.sbom.intoto.jsonl").is_file()
+# Nothing is published before the tag is verified: the gate runs right after checkout in
+# the first job, and the job that publishes is that job or waits for it.
+def waits_for(jobs, job, gate):
+    todo, seen = [job], set()
+    while todo:
+        name = todo.pop()
+        if name not in seen:
+            seen.add(name)
+            need = jobs[name].get("needs", [])
+            todo += [need] if isinstance(need, str) else need
+    return gate in seen
+for path, publisher in [("c/.github/workflows/python-release.yml", "publish"),
+                        ("c/.github/workflows/ts-release.yml", "publish"),
+                        ("c/.github/workflows/docker.yml", "push"), ("a/.github/workflows/release.yml", "release")]:
+    jobs = yaml.safe_load((out / path).read_text())["jobs"]
+    gates = [(job, i) for job, body in jobs.items() for i, step in enumerate(body["steps"])
+             if "verify-tag.sh" in step.get("run", "")]
+    assert len(gates) == 1, (path, gates)
+    (gate_job, at), = gates
+    before = [step.get("uses", "").split("@")[0] for step in jobs[gate_job]["steps"][:at]]
+    assert before == ["actions/checkout"], (path, before)
+    assert waits_for(jobs, publisher, gate_job), (path, publisher, gate_job)
+# Each preset's answers are what its render recorded, so a renamed question can't drop one
+# silently.
+for preset in sorted(pathlib.Path("presets").glob("*.yml")):
+    recorded = yaml.safe_load((out / f"preset-{preset.stem}/.copier-answers.yml").read_text())
+    for key, value in yaml.safe_load(preset.read_text()).items():
+        assert recorded.get(key) == value, (preset.name, key, value, recorded.get(key))
 # A ruleset requires a check by its job name, so two jobs with one name can't be told
 # apart.
 for render in renders:

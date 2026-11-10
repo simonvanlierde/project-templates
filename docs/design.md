@@ -40,6 +40,7 @@ These rendered workflows publish. Most request `id-token: write` to exchange Ope
 | `site.yml` (`deploy` job) | `site`, `site_host=cloudflare` | Pushes to `main`, manual dispatch on `main` | `CLOUDFLARE_API_TOKEN` in the `production` environment: deploys the `<slug>-site` Worker through `deploy-worker.sh`, with `--domain` for a custom domain | Deploys the build job's artifact; only `main` can deploy to the environment |
 | `site.yml` (`preview` job) | `site` | Ready, non-bot pull requests from this repo | `CLOUDFLARE_API_TOKEN` in the `preview` environment: deploys a `<slug>-site-pr-<n>` Worker through `deploy-worker.sh` | Fork and bot pull requests get no token. Deploys the build job's artifact, but runs the branch's own `deploy-worker.sh` with the token, as the web app's preview does |
 | `copier-update.yml` (`push` job) | `dependency_bot=dependabot` | Weekly, manual dispatch | With [the update App](usage.md#the-update-app): an App token with Contents, Pull requests and Workflows write, minted from the `copier-update` environment's key. Without it, `GITHUB_TOKEN` with `contents: write` and `pull-requests: write` | Applies the patch the read-only job made and runs no template code or hooks ([Update](#update)). Limit the `copier-update` environment to `main` |
+| `docs.yml` | `docs_site` | Pushes to `main`, manual dispatch on `main` | `pages: write` and `id-token: write`, on the deploy job only: publishes to GitHub Pages | Deploys the build job's artifact from `main` and runs no repository code |
 | `scorecard.yml` | `public` | Pushes to `main`, weekly, branch rule changes | Publish OpenSSF Scorecard results | Runs approved actions on `main`; never triggered by pull requests |
 
 None of these workflows use `pull_request_target` or `workflow_run`, preventing untrusted fork code from running with write permissions. Actions pin full commit SHAs, and checkouts set `persist-credentials: false`.
@@ -68,7 +69,7 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 | --- | --- | --- |
 | User machine | Remote template and user answers | No Copier tasks or migrations in [`copier.yml`](../copier.yml); validator rules check answers ([Render](#render)) |
 | Template repo CI | PR code and metadata | `pull_request` trigger only; `contents: read` in [`ci.yml`](../.github/workflows/ci.yml), [`dco.yml`](../.github/workflows/dco.yml), and [`pr-title.yml`](../.github/workflows/pr-title.yml); `ci ok` required check |
-| Template releases | Pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, requires a tag signed with a key in `.github/allowed_signers` on `main`, runs only release script and `gh release create` |
+| Template releases | Pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, requires a tag signed with a key in `.github/allowed_signers` on `main` (a check that holds only with the `v*` tag ruleset: a tag runs its own commit's workflow and script), runs only release script and `gh release create` |
 | Generated project CI | PR code and metadata | Workflows use `contents: read` or `{}`; no `pull_request_target` or `workflow_run`; `persist-credentials: false` on checkouts |
 | Release jobs with OIDC | Built artifacts | OIDC tokens isolated to upload jobs without project code execution ([Workflows that can publish](#workflows-that-can-publish)); ruleset limits `v*` tags to admins |
 | Weekly update workflow | New template releases | `copier-update.yml` runs Copier read-only and applies patches in a separate job holding push credentials ([Update](#update)) |
@@ -93,7 +94,7 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 
 ### Security assessment
 
-Reviewed 2026-11-03 for release 0.13.0:
+Reviewed 2026-11-10 for release 0.14.0:
 
 | Threat | Impact | Controls |
 | --- | --- | --- |
@@ -103,4 +104,6 @@ Reviewed 2026-11-03 for release 0.13.0:
 | Compromised package or action release | Malicious code in CI or runtime | Pinned action SHAs, committed lockfiles, and 7-day update cooldown |
 | Crafted answer escapes template syntax | Malformed or insecure project structure | Validators in `copier.yml` validate types, formats, and escape sequences |
 | Branch code reads the Cloudflare token in a `preview` job | Anyone who can push a branch (people, agents, the update token) can replace or delete the production Worker, or copy the token until it is rotated | Fork and bot pull requests get no token. Accepted while the Worker serves only static files: the harm is a replaced site, as with a bad dependency merged to `main`. Give previews their own Cloudflare account before a Worker gets bindings (KV, D1, secrets), since those reach every preview |
+| Update App key read from another branch | Anyone who can push a branch can mint a token with Contents, Pull requests and Workflows write | The `copier-update` environment is limited to `main`. On a private repo on GitHub Free there are no environment branch policies, so the key is readable from any branch: use one App per repo there, or the `GITHUB_TOKEN` path ([The update App](usage.md#the-update-app)) |
+| Release tag signed by the wrong person | A package published from a tag no maintainer signed | `verify-tag.sh` checks the SSH signature against `allowed_signers` on `main`. It holds only with the `v*` tag ruleset, since a tag runs its own commit's workflow. Template updates follow the newest `v*` tag whether or not `release.yml` accepted it |
 | Accidental secret commit | Leaked credentials | betterleaks hook blocks local commits; on public repos, GitHub secret scanning with push protection covers remotes |

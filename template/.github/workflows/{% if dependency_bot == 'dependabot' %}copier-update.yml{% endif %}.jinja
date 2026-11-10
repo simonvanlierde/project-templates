@@ -68,7 +68,7 @@ jobs:
               echo "$answers: already on $latest."
               continue
             fi
-            uvx "copier@$COPIER_VERSION" update --answers-file "$answers" --defaults --vcs-ref "$latest"
+            uvx --exclude-newer "1 week" "copier@$COPIER_VERSION" update --answers-file "$answers" --defaults --vcs-ref "$latest"
             git add -A
             git -c core.hooksPath=/dev/null -c user.name=copier-update -c user.email=copier-update@localhost \
               commit -q --allow-empty -m "$answers $latest"
@@ -213,3 +213,16 @@ jobs:
             gh pr create --head "$branch" --base "$BASE" --title "chore: update from template $LATEST" --body-file "$RUNNER_TEMP/copier-update/body.md"
           fi
 {%- endraw %}
+
+  notify:
+    # Scheduled runs only: without it, a project stops getting template releases unseen.
+    # The only job that may write issues.
+    name: "copier update: report failure"
+    needs: [update, push]
+    # A job that runs past timeout-minutes ends cancelled, not failed.
+    if: always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
+    permissions:
+      issues: write # opens or comments on the failure issue
+    uses: $/.github/workflows/report-failure.yml
+    with:
+      title: Weekly template update failed
