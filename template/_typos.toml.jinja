@@ -5,3 +5,7 @@
 writeable = "writeable"
 WRITEABLE = "WRITEABLE"
 {%- endif %}
+{%- if publish_to_pypi %}
+# The in-toto provenance bundle suffix, `<asset>.intoto.jsonl`.
+intoto = "intoto"
+{%- endif %}

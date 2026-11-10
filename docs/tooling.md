@@ -96,4 +96,4 @@ Release workflows separate artifact build from artifact publication:
 1. **Build**: re-runs checks and tests the packaged artifact directly. Installs the Python wheel into a clean environment to run tests, or verifies npm packages with `publint`.
 2. **Publish**: downloads the built artifact and uploads it using OpenID Connect (`id-token: write`). This job runs no project code.
 
-With PyPI publishing, a final job attaches wheels and provenance bundles to the GitHub release. Images pushed to GHCR include an SBOM and a signed provenance attestation.
+With PyPI publishing, a final job attaches wheels, a CycloneDX SBOM and provenance bundles to the GitHub release, after `gh attestation verify` passes on each. Images pushed to GHCR include an SBOM and a signed provenance attestation.
