@@ -39,6 +39,7 @@ These rendered workflows publish. Most request `id-token: write` to exchange Ope
 | `site.yml` (`deploy` job) | `site`, `site_host=pages` | Pushes to `main`, manual dispatch on `main` | `pages: write` and `id-token: write`, on this job only: publishes to GitHub Pages | Deploys the build job's artifact and runs no repository code |
 | `site.yml` (`deploy` job) | `site`, `site_host=cloudflare` | Pushes to `main`, manual dispatch on `main` | `CLOUDFLARE_API_TOKEN` in the `production` environment: deploys the `<slug>-site` Worker through `deploy-worker.sh`, with `--domain` for a custom domain | Deploys the build job's artifact; only `main` can deploy to the environment |
 | `site.yml` (`preview` job) | `site` | Ready, non-bot pull requests from this repo | `CLOUDFLARE_API_TOKEN` in the `preview` environment: deploys a `<slug>-site-pr-<n>` Worker through `deploy-worker.sh` | Fork and bot pull requests get no token. Deploys the build job's artifact, but runs the branch's own `deploy-worker.sh` with the token, as the web app's preview does |
+| `copier-update.yml` (`push` job) | `dependency_bot=dependabot` | Weekly, manual dispatch | With [the update App](usage.md#the-update-app): an App token with Contents, Pull requests and Workflows write, minted from the `copier-update` environment's key. Without it, `GITHUB_TOKEN` with `contents: write` and `pull-requests: write` | Applies the patch the read-only job made and runs no template code or hooks ([Update](#update)). Limit the `copier-update` environment to `main` |
 | `scorecard.yml` | `public` | Pushes to `main`, weekly, branch rule changes | Publish OpenSSF Scorecard results | Runs approved actions on `main`; never triggered by pull requests |
 
 None of these workflows use `pull_request_target` or `workflow_run`, preventing untrusted fork code from running with write permissions. Actions pin full commit SHAs, and checkouts set `persist-credentials: false`.
@@ -87,7 +88,7 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 - **Workflow injection:** No `run:` step expands event expressions inline; expressions pass via `env:` variables. CI validates workflows with zizmor and jactionlint.
 - **Token theft:** Registry tokens are restricted to dedicated jobs that run no repository code. The Cloudflare `preview` jobs are the exception: they deploy the pull request's code, and the web app's also builds it. Checkouts disable credential persistence.
 - **Dependency compromise:** Actions pin full commit SHAs. Generated projects commit lockfiles, and CI installs with strict lockfile flags. A 7-day cooldown delays non-urgent updates.
-- **Answer injection:** 22 validators in [`copier.yml`](../copier.yml) constrain identifiers, URLs, versions, and descriptions. Descriptions are restricted to single lines without quotes or backslashes. Values pass into structured data via `to_json`.
+- **Answer injection:** validators in [`copier.yml`](../copier.yml) constrain identifiers, URLs, versions, and descriptions. Descriptions are restricted to single lines without quotes or backslashes. Values pass into structured data via `to_json`.
 - **Untested templates:** `check-render.sh` ensures every file in `template/` is rendered and validated across test combinations.
 
 ### Security assessment
@@ -100,6 +101,6 @@ Reviewed 2026-11-03 for release 0.13.0:
 | Release job attempts token theft | Malicious package or container published | OIDC tokens scoped strictly to upload jobs without project code; registries restrict uploads to `v*` tags |
 | Copier compromises update workflow | Unauthorized commit pushed to repository | Copier runs read-only; patch applied in separate push job without hook execution |
 | Compromised package or action release | Malicious code in CI or runtime | Pinned action SHAs, committed lockfiles, and 7-day update cooldown |
-| Crafted answer escapes template syntax | Malformed or insecure project structure | 22 validators in `copier.yml` validate types, formats, and escape sequences |
+| Crafted answer escapes template syntax | Malformed or insecure project structure | Validators in `copier.yml` validate types, formats, and escape sequences |
 | Branch code reads the Cloudflare token in a `preview` job | Anyone who can push a branch (people, agents, the update token) can replace or delete the production Worker, or copy the token until it is rotated | Fork and bot pull requests get no token. Accepted while the Worker serves only static files: the harm is a replaced site, as with a bad dependency merged to `main`. Give previews their own Cloudflare account before a Worker gets bindings (KV, D1, secrets), since those reach every preview |
 | Accidental secret commit | Leaked credentials | betterleaks hook blocks local commits; on public repos, GitHub secret scanning with push protection covers remotes |

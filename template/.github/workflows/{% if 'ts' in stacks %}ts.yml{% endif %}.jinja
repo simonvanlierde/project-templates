@@ -279,7 +279,7 @@ jobs:
             echo "::notice::Preview skipped: pull request $PR is no longer open and ready ($state)."
             exit 0
           fi
-          "$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Preview "{{ slug | replace('.', '-') | replace('_', '-') }}-pr-$PR"
+          "$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Preview "{{ worker_slug }}-pr-$PR"
 
   # Production: every push to main deploys the build the checks ran on. Without the
   # token, it skips with a notice.

@@ -1,4 +1,4 @@
-{%- set slug_ = slug | replace('.', '-') | replace('_', '-') -%}
+{%- set slug_ = worker_slug -%}
 name: Retire preview
 
 # Deletes the preview Worker of a pull request that closes or turns draft, and sweeps
@@ -29,7 +29,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-{%- if 'ts' in stacks and ts_kind == 'web-app' %}
+{%- if web_app %}
           - {slug: {{ slug_ }}, group: preview}
 {%- endif %}
 {%- if site != 'none' %}

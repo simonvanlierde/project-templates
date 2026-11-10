@@ -582,11 +582,18 @@ load = {".json": json.loads, ".json5": json5.loads, ".toml": tomllib.loads,
         ".yml": yaml.safe_load, ".yaml": yaml.safe_load}
 seen = 0
 out = pathlib.Path(os.environ["OUT"])
-for path in sorted(itertools.chain(out.glob("[abcdm]/**/*"), out.glob("compose/**/*"), out.glob("compose2/**/*"))):
-    parse = load.get(path.suffix)
-    if parse and path.is_file():
-        parse(path.read_text())
-        seen += 1
+# Every render, found by its answers file, so a new case gets every check below.
+renders = sorted(answers.parent for answers in out.glob("*/.copier-answers.yml"))
+for render in renders:
+    for path in sorted(render.rglob("*")):
+        # The site builds install packages and write pnpm's multi-document lockfile; neither is template output.
+        if "node_modules" in path.parts or path.name == "pnpm-lock.yaml":
+            continue
+        # tsconfig is JSON with comments, as tsc and Biome read it.
+        parse = json5.loads if path.name.startswith("tsconfig") else load.get(path.suffix)
+        if parse and path.is_file():
+            parse(path.read_text())
+            seen += 1
 print(f"parsed {seen} files")
 # Catches a copier run that rendered nothing.
 assert seen > 20, f"only {seen} structured files rendered"
@@ -638,10 +645,10 @@ for fail, expected in [("", ["create", *verify, "edit"]), ("create", ["create"])
             assert (work / f"assets/{bundle}.intoto.jsonl").is_file()
         assert (work / "assets/package.tar.gz.sbom.intoto.jsonl").is_file()
 # A ruleset requires a check by its job name, so two jobs with one name can't be told
-# apart. a, b, c and d each render more than one stack.
-for render in [*"abcdm", "compose", "compose2"]:
+# apart.
+for render in renders:
     names = {}
-    for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
+    for wf in sorted((render / ".github/workflows").glob("*.yml")):
         for job_id, job in yaml.safe_load(wf.read_text())["jobs"].items():
             if "name" in job:
                 names.setdefault(job["name"], []).append(f"{wf.name}:{job_id}")
@@ -669,8 +676,7 @@ for checks in sorted(out.glob("*/.github/rulesets/main*.json")):
             assert required["context"] in runs, f"{checks}: {required['context']!r} is no job's check run"
             required_by[render].append(required["context"])
 # Every render was checked, and each requires some check: an empty list passes the loop above.
-renders = {answers.parent for answers in out.glob("*/.copier-answers.yml")}
-assert len(renders) >= 18 and set(required_by) == renders, sorted(map(str, renders - set(required_by)))
+assert len(renders) >= 18 and set(required_by) == set(renders), sorted(map(str, set(renders) - set(required_by)))
 # A pull request saves no cache: only it could read one, and it evicts main's. Each
 # action that caches by default must carry its switch. CodSpeed's instrument cache has
 # no save switch and is left on. A job whose `if` excludes pull requests outright (an
@@ -689,8 +695,8 @@ saves = {
     "docker/build-push-action": lambda w, cond: bool(w.get("cache-to")) and "github.event_name == 'push'" not in w["cache-to"],
 }
 checked = collections.Counter()
-for render in [*"abcdm", "compose", "compose2"]:
-    for wf in sorted((out / render / ".github/workflows").glob("*.yml")):
+for render in renders:
+    for wf in sorted((render / ".github/workflows").glob("*.yml")):
         doc = yaml.safe_load(wf.read_text())
         if "pull_request" not in doc[True]:
             continue
@@ -984,6 +990,9 @@ cold c >"$out/c-matrix.sh"
 # The README installs the prek that checks.yml runs, and justfile explains the SKIP gap.
 prek_ci=$(sed -n 's/^ *PREK_VERSION: *//p' c/.github/workflows/checks.yml)
 grep -qF "uv tool install prek==$prek_ci " a/README.md
+# The other two literal prek pins, so a Renovate bump that misses one fails here.
+grep -qx "  PREK_VERSION: $prek_ci" c/.github/workflows/advisories.yml
+grep -qxF "    \"@j178/prek\": \"^$prek_ci\"," a/package.json
 grep -qF 'checks workflow skips' c/justfile
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 (lacks -q 'Development Status' a/pyproject.toml)
@@ -2553,6 +2562,20 @@ local-custom:
 JUST
 (cd a && just --list | grep -q 'local-custom')
 rm -f a/just/local.just
+# No hook lints a justfile's shebang recipes, so shellcheck their bodies in every render.
+# The version argument becomes "$1", and gh's {owner}/{repo} placeholders plain words.
+# SC2043: the release-environment loop runs once when the answers pick one registry.
+for answers in */.copier-answers.yml; do
+  for recipe in release repo-settings; do
+    # shellcheck disable=SC2016 # a literal "$1" for the recipe body
+    (cd "${answers%/*}" && just --show "$recipe") |
+      sed -e '1,/^[a-z-]*\( [a-z]*\)*:$/d' -e 's/^    //' -e 's/{{ version }}/"$1"/' -e 's/{owner}\/{repo}/OWNER\/REPO/g' |
+      shellcheck -s bash -e SC2043 - || {
+      echo "${answers%/*}: just $recipe fails shellcheck" >&2
+      exit 1
+    }
+  done
+done
 
 # The generated workflows are linted, never run: a typo in a run line fails only
 # in the new project.
@@ -2961,6 +2984,16 @@ grep -qx '    if: github.event.pull_request.head.repo.full_name != github.reposi
 (lacks -q 'the maintainers. included' i/.github/CONTRIBUTING.md)
 grep -q 'the maintainers. included' h/.github/CONTRIBUTING.md
 cmp "$repo/committed.toml" "$repo/template/committed.toml"
+# Every question someone can be asked is named in the usage docs.
+# shellcheck disable=SC2016 # Python source: the backticks are Markdown, not a shell command
+uv run --no-project --with pyyaml python -c '
+import sys, yaml
+questions = yaml.safe_load(open(sys.argv[1]))
+doc = open(sys.argv[2]).read()
+missing = [k for k, v in questions.items() if not k.startswith("_") and isinstance(v, dict)
+           and v.get("when") is not False and f"`{k}`" not in doc]
+sys.exit(f"questions missing from docs/usage.md: {missing}" if missing else 0)' \
+  "$repo/copier.yml" "$repo/docs/usage.md"
 # Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off
 # without an email, and skips the merge. Trailing whitespace and CRLF still count as signed.
 dco_filter=$(uv run --no-project --with pyyaml python -c '

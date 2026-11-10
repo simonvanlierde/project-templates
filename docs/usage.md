@@ -60,7 +60,8 @@ When `customise` is `no`, advanced questions take these defaults:
 | `openssf_badge` | None ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
 | `decision_records` | On for `web-service`, `data-pipeline`, `web-app`, Compose-only and Silver-badge projects ([Decision records](#decision-records)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
-| `python_version`, `python_min`, `node_version`, `rust_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
+| `python_version`, `python_min`, `node_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
+| `rust_version` | The crate's minimum supported Rust version (`rust-version` in `Cargo.toml`), the current stable minor by default |
 | `python_api` | Enabled ([API-break check](#api-break-check)) |
 | `python_windows` | Disabled ([Tests on Windows](#tests-on-windows)) |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](#publishing)) |

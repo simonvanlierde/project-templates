@@ -1,4 +1,4 @@
-{%- set worker_name = slug | replace('.', '-') | replace('_', '-') ~ '-site' -%}
+{%- set worker_name = worker_slug ~ '-site' -%}
 name: site
 
 # The static page in site/, which `just site` builds into {{ site_out }}/. Every pull request

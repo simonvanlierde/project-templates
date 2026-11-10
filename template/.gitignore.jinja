@@ -15,7 +15,7 @@
 *.key
 # pnpm settings live in pnpm-workspace.yaml, so an .npmrc here would hold a registry token.
 .npmrc
-{%- if site_on_workers or ('ts' in stacks and ts_kind == 'web-app') %}
+{%- if site_on_workers or web_app %}
 # wrangler's local secrets and dev state.
 .dev.vars*
 .wrangler/
@@ -51,7 +51,7 @@ node_modules/
 .pnpm-store/
 *.tsbuildinfo
 coverage/
-{%- if 'ts' in stacks and ts_kind == 'web-app' %}
+{%- if web_app %}
 playwright-report/
 {#- Anchored: `just ts-shots` writes <ts_dir>/shots/, and tests/shots/ holds its spec. #}
 /{{ '' if ts_dir == '.' else ts_dir ~ '/' }}shots/

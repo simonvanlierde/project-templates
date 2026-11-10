@@ -10,7 +10,7 @@
 //
 // Keep the slug short: a Worker name can have at most 63 characters, and "-pr-123" takes seven.
 {
-  "name": "{{ slug | replace('.', '-') | replace('_', '-') }}",
+  "name": "{{ worker_slug }}",
 {%- if worker %}
   "main": "./worker/index.ts",
 {%- endif %}
