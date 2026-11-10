@@ -603,24 +603,31 @@ assert release["needs"] == "publish", release
 assert release["permissions"] == {"contents": "write"}, release
 assert not any("checkout" in s.get("uses", "") for s in release["steps"]), release
 publish_script = release["steps"][-1]["run"]
-for fail_create, expected in [(False, ["create", "edit"]), (True, ["create"])]:
+verify = ["verify"] * 4
+for fail, expected in [("", ["create", *verify, "edit"]), ("create", ["create"]),
+                       ("verify", ["create", "verify"])]:
     with tempfile.TemporaryDirectory() as tmp:
         work = pathlib.Path(tmp)
-        for directory in ("dist", "provenance", "notes", "bin"):
+        for directory in ("assets", "provenance", "sbom-attestation", "notes", "bin"):
             (work / directory).mkdir()
-        (work / "dist/package.whl").touch()
+        for asset in ("package.whl", "package.tar.gz", "package.tar.gz.cdx.json"):
+            (work / "assets" / asset).touch()
         (work / "provenance/bundle.json").write_text("{}")
+        (work / "sbom-attestation/bundle.json").write_text("{}")
         (work / "notes/notes.md").write_text("Release notes")
         gh = work / "bin/gh"
-        gh.write_text('#!/bin/sh\nprintf "%s\\n" "$2" >>calls\n'
-                      'test "$2" != create || test "$FAIL_CREATE" != true\n')
+        gh.write_text('#!/bin/sh\nprintf "%s\\n" "$2" >>"$(dirname "$0")/../calls"\n'
+                      'test "$2" != "$FAIL" || exit 1\n')
         gh.chmod(0o755)
         result = subprocess.run(["bash", "-c", publish_script], cwd=work,
-                                env={"PATH": f"{work / 'bin'}:/usr/bin:/bin", "TAG": "v1.2.3",
-                                     "FAIL_CREATE": str(fail_create).lower()}, check=False)
-        assert (result.returncode != 0) == fail_create, result
+                                env={"PATH": f"{work / 'bin'}:/usr/bin:/bin", "TAG": "v1.2.3", "GH_REPO": "o/r",
+                                     "FAIL": fail}, check=False)
+        assert (result.returncode != 0) == bool(fail), result
         assert (work / "calls").read_text().splitlines() == expected
-        assert (work / "provenance/mono-me-1.2.3.sigstore.json").is_file()
+        # Every asset carries a bundle under its own name; the SBOM's rides on the sdist.
+        for bundle in ("package.whl", "package.tar.gz", "package.tar.gz.cdx.json"):
+            assert (work / f"assets/{bundle}.intoto.jsonl").is_file()
+        assert (work / "assets/package.tar.gz.sbom.intoto.jsonl").is_file()
 # A ruleset requires a check by its job name, so two jobs with one name can't be told
 # apart. a, b, c and d each render more than one stack.
 for render in [*"abcdm", "compose", "compose2"]:
@@ -1364,6 +1371,10 @@ grep -q -- '--draft --verify-tag' c/.github/workflows/python-release.yml
 grep -q -- '--draft=false' c/.github/workflows/python-release.yml
 # shellcheck disable=SC2016 # literal workflow expression
 grep -qF '${{ steps.attest.outputs.bundle-path }}' c/.github/workflows/python-release.yml
+grep -qF 'actions/attest@' c/.github/workflows/python-release.yml
+(lacks -q 'attest-build-provenance' c/.github/workflows/python-release.yml)
+grep -qF 'sbom-path: sbom/*.cdx.json' c/.github/workflows/python-release.yml
+grep -qF 'gh attestation verify' c/.github/workflows/python-release.yml
 # The API-break checks render with the publish answers, and only with them: griffe in CI from
 # the repository root, so its search path carries the nested dir; the npm report beside
 # the nested package.
@@ -2478,6 +2489,7 @@ grep -qx '      - run: pnpm audit --prod --audit-level=moderate' a/.github/workf
 # workflow-level grant stays read-only.
 grep -q '^      id-token: write ' c/.github/workflows/python-release.yml
 grep -qx '      attestations: write' c/.github/workflows/python-release.yml
+grep -q '^      artifact-metadata: write' c/.github/workflows/python-release.yml
 grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 # The publish step: npm, from a tarball built earlier.
 grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
