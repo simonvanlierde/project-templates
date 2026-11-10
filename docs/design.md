@@ -102,4 +102,4 @@ Reviewed 2026-11-03 for release 0.13.0:
 | Compromised package or action release | Malicious code in CI or runtime | Pinned action SHAs, committed lockfiles, and 7-day update cooldown |
 | Crafted answer escapes template syntax | Malformed or insecure project structure | 22 validators in `copier.yml` validate types, formats, and escape sequences |
 | Branch code reads the Cloudflare token in a `preview` job | Anyone who can push a branch (people, agents, the update token) can replace or delete the production Worker, or copy the token until it is rotated | Fork and bot pull requests get no token. Accepted while the Worker serves only static files: the harm is a replaced site, as with a bad dependency merged to `main`. Give previews their own Cloudflare account before a Worker gets bindings (KV, D1, secrets), since those reach every preview |
-| Accidental secret commit | Leaked credentials | betterleaks hook blocks local commits; GitHub secret scanning with push protection covers remotes |
+| Accidental secret commit | Leaked credentials | betterleaks hook blocks local commits; on public repos, GitHub secret scanning with push protection covers remotes |

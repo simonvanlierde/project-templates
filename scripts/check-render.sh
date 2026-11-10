@@ -545,6 +545,10 @@ grep -q 'What a first visit may keep in the browser, by name, each with a line' 
 # cfd: a site on a Worker leaves GitHub Pages to the docs site.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cfd-me --data 'stacks=[python]' \
   --data site=plain --data site_host=cloudflare --data docs_site=true . "$out/cfd"
+# A site on a Worker ignores wrangler's local secrets and state; a render without wrangler does not list them.
+grep -qxF '.dev.vars*' "$out/cfp/.gitignore"
+grep -qxF '.wrangler/' "$out/cfp/.gitignore"
+lacks -q wrangler "$out/dp/.gitignore"
 
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the
@@ -2296,6 +2300,9 @@ git -C s-git check-ignore -q shots/index-390-light.png
 git -C s-git check-ignore -q .rumdl_cache/0.3.1/entry.json
 git -C d-hooks ls-files --error-unmatch web/tests/shots/shots.spec.ts >/dev/null
 git -C d-hooks check-ignore -q web/shots/index-390-light.png
+git -C d-hooks check-ignore -q web/.dev.vars
+git -C d-hooks check-ignore -q deploy.pem tls.key web/.npmrc
+git -C d-hooks check-ignore -q web/.dev.vars.production
 # h's commit-msg hook takes a sign-off with an email, and refuses one without.
 dco_hook=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --hook-stage commit-msg --commit-msg-filename msg dco-signoff)
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg

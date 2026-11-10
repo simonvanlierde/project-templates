@@ -11,6 +11,15 @@
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+# pnpm settings live in pnpm-workspace.yaml, so an .npmrc here would hold a registry token.
+.npmrc
+{%- if site_on_workers or ('ts' in stacks and ts_kind == 'web-app') %}
+# wrangler's local secrets and dev state.
+.dev.vars*
+.wrangler/
+{%- endif %}
 
 # The rumdl hook's cache. An older rumdl left it without an ignore file of its own,
 # and Biome then formats its JSON.
@@ -48,7 +57,6 @@ playwright-report/
 /{{ '' if ts_dir == '.' else ts_dir ~ '/' }}shots/
 test-results/
 blob-report/
-.wrangler/
 dev-dist/
 {%- endif %}
 {%- endif %}
