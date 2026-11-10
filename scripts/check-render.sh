@@ -990,6 +990,9 @@ cold c >"$out/c-matrix.sh"
 # The README installs the prek that checks.yml runs, and justfile explains the SKIP gap.
 prek_ci=$(sed -n 's/^ *PREK_VERSION: *//p' c/.github/workflows/checks.yml)
 grep -qF "uv tool install prek==$prek_ci " a/README.md
+# The other two literal prek pins, so a Renovate bump that misses one fails here.
+grep -qx "  PREK_VERSION: $prek_ci" c/.github/workflows/advisories.yml
+grep -qxF "    \"@j178/prek\": \"^$prek_ci\"," a/package.json
 grep -qF 'checks workflow skips' c/justfile
 grep -q 'Private :: Do Not Upload' a/pyproject.toml
 (lacks -q 'Development Status' a/pyproject.toml)

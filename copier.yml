@@ -773,7 +773,7 @@ golangci_lint_version:
   default: v2.15.0
 
 # Computed, never asked: the prek the README installs. Keep it equal to PREK_VERSION in
-# checks.yml (scripts/check-render.sh asserts that). Renovate bumps it from its `# renovate:` line.
+# checks.yml and advisories.yml and to package.json's @j178/prek (scripts/check-render.sh asserts that). Renovate bumps it from its `# renovate:` line.
 # renovate: datasource=github-releases depName=j178/prek
 prek_version:
   type: str
