@@ -78,6 +78,7 @@ Upgrade steps:
 
 ### Fixed
 
+- `python-release.yml`'s SBOM lists the dependencies of every extra too. Before, a package whose runtime needs live in extras shipped an SBOM with no components.
 - For a web app that publishes to PyPI, `python-release.yml` refuses a tag that differs from `package.json`, as `release.yml` already does.
 - A sample file you deleted stays deleted on `copier update`: the package's `__init__.py` and `tests/test_add.py`, the web app's `App.tsx`, `App.test.tsx`, `main.tsx`, `app.css` and Worker script, the plain site's page, the example site Worker, and the Astro starter pages `site/src/pages/index.astro` and `about.md`. Before, an update that changed one could bring it back, and it conflicted on the sample `__init__.py` when the pages were gone. A file the project owns, such as `README.md`, a decision record or a legal page, comes back if you delete it. A feature you turn on later with `copier update --data` does not get its samples.
 - A web app or a site on a Worker ignores `.dev.vars*`, where wrangler reads local secrets, so `git add .` no longer stages them with only the betterleaks hook in the way. A site on a Worker without a web app now ignores wrangler's `.wrangler/` state too.
