@@ -13,8 +13,8 @@ intoto = "intoto"
 ue = "ue"
 
 [files]
-# check-render.sh feeds typos a misspelling on purpose, to prove the rendered hook fails.
-extend-exclude = ["scripts/check-render.sh"]
+# The render checks feed typos a misspelling on purpose, to prove the rendered hook fails.
+extend-exclude = ["scripts/render/hooks.sh"]
 
 [default]
 # `Café` in the CHANGELOG, written out as a test case's name.

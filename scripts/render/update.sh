@@ -1,0 +1,270 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2154,SC2164 # check-render.sh sets out, repo, copier and set -e
+# Template updates: the copier-update workflow, ADRs and sample code across an update.
+# Renders adr-check and sample-up, which the install-action sweep at the end covers.
+
+# copier-update pushes with the update App's token when it is set up; GITHUB_TOKEN can't push workflow
+# changes, so without it a workflow change becomes an issue, not a failed push.
+cu=a/.github/workflows/copier-update.yml
+# Copier dependencies and the push token must run on separate workers.
+uv run --no-project --with pyyaml python - "$cu" <<'PYTEST'
+import sys, yaml
+jobs = yaml.safe_load(open(sys.argv[1]))["jobs"]
+assert jobs["update"]["permissions"] == {"contents": "read"}
+assert "COPIER_UPDATE_PRIVATE_KEY" not in str(jobs["update"]) and "environment" not in jobs["update"]
+# The App key is an environment secret; repo-settings limits that environment to main.
+assert jobs["push"]["environment"] == "copier-update"
+app = [s for s in jobs["push"]["steps"] if s.get("uses", "").startswith("actions/create-github-app-token@")]
+assert len(app) == 1 and app[0]["if"] == "vars.COPIER_UPDATE_CLIENT_ID != ''", app
+assert {k for k in app[0]["with"] if k.startswith("permission-")} == {"permission-contents", "permission-pull-requests", "permission-workflows"}
+assert jobs["push"]["needs"] == "update"
+assert any(s.get("uses", "").startswith("actions/download-artifact@") for s in jobs["push"]["steps"])
+assert not any("uvx" in s.get("run", "") for s in jobs["push"]["steps"])
+PYTEST
+cuh=$out/copier-update
+mkdir -p "$cuh"
+awk -v d="$cuh" '/^      - /{n++} n{print >(d "/step" n)}' "$cu"
+grep -l 'copier@' "$cuh"/step* | grep -q .
+(! grep -l 'copier@' "$cuh"/step* | xargs grep -q COPIER_UPDATE_PRIVATE_KEY)
+# shellcheck disable=SC2016 # literal workflow text, not shell expansions
+grep -qF 'GH_TOKEN: ${{ steps.app.outputs.token || github.token }}' "$cu"
+# The token never sits in a command line: git asks gh's credential helper for it.
+(lacks -q 'x-access-token' "$cu")
+grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
+# The run below stands in true or false for this expression.
+grep -qF "HAS_TOKEN: \${{ steps.app.outputs.token != '' }}" "$cu"
+# Run the step's script against a fake gh, a fake uvx that changes one file, a template
+# repo with two tags and a bare repo standing in for GitHub. GIT_ALLOW_PROTOCOL=file makes
+# a push that misses the rewrite fail instead of reaching github.com.
+# Each step's script: the copier step runs first, with no token, then the push step.
+for n in copier apply push; do
+  case $n in copier) name=Update ;; apply) name=Apply ;; push) name=Push ;; esac
+  f=$(grep -l "^      - name: $name" "$cuh"/step*)
+  awk '/^        run: \|-$/{f=1;next} f&&NF&&!/^          /{exit} f{sub(/^          /,"");print}' "$f" >"$cuh/$n.sh"
+done
+cat >"$cuh/gh" <<'FAKE'
+#!/usr/bin/env bash
+echo "$*" >>"$FAKE_LOG"
+case "$1 $2" in
+  "issue list") echo "${FAKE_ISSUE:-}" ;;
+  "pr list") echo "${FAKE_PR:-}" ;;
+esac
+FAKE
+cat >"$cuh/uvx" <<'FAKE'
+#!/usr/bin/env bash
+echo "uvx $*" >>"$FAKE_LOG"
+mkdir -p "$(dirname "$FAKE_FILE")"
+echo "${FAKE_TEXT:-# from the template}" >>"$FAKE_FILE"
+FAKE
+chmod +x "$cuh/gh" "$cuh/uvx"
+(
+  # A subshell drops the ERR trap; set -E would fire it in every (! ...) below.
+  trap 'echo "check-render: failed at ${BASH_SOURCE[0]}:$LINENO" >&2' ERR
+  # shellcheck disable=SC2031 # a separate subshell sets its own
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_ALLOW_PROTOCOL=file \
+    GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.org GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.org
+  git init -q -b main "$cuh/tpl"
+  git -C "$cuh/tpl" commit -q --allow-empty -m one
+  git -C "$cuh/tpl" tag v0.9.0
+  git -C "$cuh/tpl" tag v0.10.0
+  # name, HAS_TOKEN, the open PR and the issue the fake gh finds ("-": none), and the
+  # file the update changes.
+  while read -r name token pr issue file; do
+    p=$cuh/$name
+    git init -q --bare "$p.git"
+    # An open PR has its branch on the remote, on a history the update does not extend.
+    if [ "$pr" != - ]; then git -C "$cuh/tpl" push -q "$p.git" HEAD:refs/heads/chore/copier-update; fi
+    git init -q -b main "$p"
+    printf '_commit: v0.9.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
+    # A layered template with its own answers file; this project's own is already current.
+    if [ "$name" = layer ]; then
+      cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"
+      printf '_commit: v0.10.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
+    fi
+    # Both answers files behind, and an update that leaves a conflict marker.
+    if [ "$name" = both ]; then cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"; fi
+    git -C "$p" add -A
+    git -C "$p" commit -q -m init
+    # The privileged job starts from a clean checkout, not the generator's worktree.
+    git clone -q "$p" "$p-clean"
+    (
+      cd "$p"
+      # shellcheck disable=SC2030,SC2031 # each fake run sets its own environment
+      export PATH="$cuh:$PATH" FAKE_LOG="$p.log" FAKE_PR="${pr#-}" FAKE_ISSUE="${issue#-}" \
+        FAKE_FILE="${file:-.github/workflows/ci.yml}" \
+        GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION="$copier_pin" \
+        RUNNER_TEMP="$p-runner"
+      export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
+        GIT_CONFIG_VALUE_0="https://github.com/$REPO.git"
+      FAKE_TEXT=''
+      if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
+      export FAKE_TEXT
+      : >"$p.gho"
+      # The copier step gets neither token variable.
+      env -u GH_TOKEN -u HAS_TOKEN GITHUB_OUTPUT="$p.gho" bash --noprofile --norc -eo pipefail "$cuh/copier.sh" >"$p.out" 2>&1 || {
+        cat "$p.out" >&2
+        exit 1
+      }
+      # shellcheck disable=SC2030 # each fake run reads its own outputs
+      LATEST=$(sed -n 's/^latest=//p' "$p.gho") WORKFLOWS=$(sed -n 's/^workflows=//p' "$p.gho")
+      export LATEST WORKFLOWS
+      if [ -n "$LATEST" ]; then
+        cd "$p-clean"
+        bash --noprofile --norc -eo pipefail "$cuh/apply.sh" >>"$p.out" 2>&1 || {
+          cat "$p.out" >&2
+          exit 1
+        }
+        bash --noprofile --norc -eo pipefail "$cuh/push.sh" >>"$p.out" 2>&1 || {
+          cat "$p.out" >&2
+          exit 1
+        }
+      fi
+    )
+  done <<'CASES'
+issue false 7 -
+asked false - 3
+push true - -
+edit true 7 -
+plain false - - README.md
+layer true - - README.md
+both true - - README.md
+CASES
+  cd "$cuh"
+  # Newest tag by version, not by name.
+  grep -qx "uvx copier@$copier_pin update --answers-file .copier-answers.yml --defaults --vcs-ref v0.10.0" issue.log
+  # Each answers file updates on its own, and the PR names the layer that moved.
+  grep -qx "uvx copier@$copier_pin update --answers-file .copier-answers.cml.yml --defaults --vcs-ref v0.10.0" layer.log
+  (lacks -q 'answers-file .copier-answers.yml' layer.log)
+  grep -q '^pr create --head chore/copier-update --base main --title chore: update from template cml v0.10.0 ' layer.log
+  git -C layer.git show chore/copier-update:README.md | grep -qx '# from the template'
+  # Two templates that both moved share one title, and a conflict marker is named in the body.
+  grep -q '^pr create --head chore/copier-update --base main --title chore: update from template v0.10.0, cml v0.10.0 ' both.log
+  # shellcheck disable=SC2016 # the backticks are Markdown
+  grep -qx -- '- `README.md`' both-runner/copier-update/body.md
+  (lacks -q 'merge conflicts' layer-runner/copier-update/body.md)
+  # No token and a workflow change: one issue, the older PR closed, no push.
+  grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
+  grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
+  grep -q '^pr close 7 --delete-branch ' issue.log
+  (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml 2>/dev/null)
+  # An issue that exists, open or closed, is not asked again.
+  (lacks -q '^issue create' asked.log)
+  # A token pushes the branch with the workflow change, over the open PR's, then opens or
+  # updates the PR. So does no token with no workflow change.
+  for r in push:.github/workflows/ci.yml edit:.github/workflows/ci.yml plain:README.md; do
+    git -C "${r%%:*}.git" show "chore/copier-update:${r#*:}" | grep -qx '# from the template'
+    (lacks -q '^issue ' "${r%%:*}.log")
+  done
+  grep -q '^pr create --head chore/copier-update --base main ' push.log
+  # gh becomes git's credential helper before the push.
+  for r in push edit plain; do grep -qx 'auth setup-git' "$r.log"; done
+  grep -q '^pr create --head chore/copier-update --base main ' plain.log
+  grep -q '^pr edit chore/copier-update ' edit.log
+  (lacks -q '^pr create' edit.log)
+  # Patch data must never replace Git configuration, and artifact symlinks are refused.
+  git clone -q "$cuh/tpl" "$cuh/reject-checkout"
+  mkdir -p "$cuh/reject/copier-update"
+  echo body >"$cuh/reject/copier-update/body.md"
+  cat >"$cuh/reject/copier-update/update.patch" <<'PATCH'
+diff --git a/.git/config b/.git/config
+new file mode 100644
+--- /dev/null
++++ b/.git/config
+@@ -0,0 +1 @@
++unsafe config
+PATCH
+  (
+    cd "$cuh/reject-checkout"
+    # shellcheck disable=SC2031 # the rejection check sets its own environment
+    export RUNNER_TEMP="$cuh/reject" LATEST=v0.10.0
+    if bash --noprofile --norc -eo pipefail "$cuh/apply.sh" >"$cuh/rejected.log" 2>&1; then
+      echo "accepted a patch to Git configuration" >&2
+      exit 1
+    fi
+    grep -qF ".git/config:" "$cuh/rejected.log"
+    mv "$RUNNER_TEMP/copier-update/update.patch" "$RUNNER_TEMP/config.patch"
+    ln -s "$RUNNER_TEMP/config.patch" "$RUNNER_TEMP/copier-update/update.patch"
+    if bash --noprofile --norc -eo pipefail "$cuh/apply.sh" >"$cuh/rejected.log" 2>&1; then
+      echo "accepted a symlink artifact" >&2
+      exit 1
+    fi
+    # The symlink fails before Git gets to parse its invalid patch.
+    (lacks -qF '.git/config' "$cuh/rejected.log")
+  )
+)
+
+# rumdl's MD012 rewrites a README with two blank lines in a row on its first commit.
+for r in a c; do
+  if ! awk '/^$/ { if (++n == 2) exit 1; next } { n = 0 }' "$out/$r/README.md"; then
+    echo "check-render: $r/README.md has two blank lines in a row" >&2
+    exit 1
+  fi
+done
+
+# Rendering over a repo with docs/adr leaves ADRs intact, and usage docs guide migration:
+adr_dir=$out/adr-check
+mkdir -p "$adr_dir/docs/adr"
+echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=adr-check --data 'stacks=[python]' \
+  --data kind=library "$repo" "$adr_dir"
+test -f "$adr_dir/docs/adr/0001-x.md"
+test ! -e "$adr_dir/docs/decisions"
+grep -q 'docs/adr' "$repo/docs/usage.md"
+
+# Sample code is not recreated on copier update. The update must cross a template commit
+# that changes the sample files: from an unchanged template, copier keeps a project's own
+# deletions and edits even without the skip and exclude rules. A throwaway template repo
+# holds the working tree, so uncommitted edits are tested too.
+sample_tpl=$out/sample-tpl
+sample_up=$out/sample-up
+mkdir -p "$sample_tpl"
+cp -R "$repo/copier.yml" "$repo/includes" "$repo/template" "$sample_tpl/"
+git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
+"${git_t[@]}" init -q
+"${git_t[@]}" add -A
+"${git_t[@]}" commit -q -m base
+"${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=sample-me --data 'stacks=[python]' \
+  --data kind=library --data site=astro "$sample_tpl" "$sample_up" >/dev/null
+test -f "$sample_up/src/sample_me/__init__.py"
+test -f "$sample_up/tests/test_add.py"
+test -f "$sample_up/site/src/pages/index.astro"
+test -f "$sample_up/site/src/pages/about.md"
+grep -q 'def add(' "$sample_up/src/sample_me/__init__.py"
+cat >"$sample_up/src/sample_me/__init__.py" <<'PY'
+"""sample-me package."""
+PY
+rm "$sample_up/tests/test_add.py" "$sample_up/site/src/pages/index.astro" "$sample_up/site/src/pages/about.md"
+git -C "$sample_up" init -q
+git -C "$sample_up" add -A
+git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "customize package"
+for f in "$sample_tpl"/template/*/tests/*test_add.py*.jinja "$sample_tpl"/template/*/*/*/__init__.py.jinja \
+  "$sample_tpl"/template/*site*/*src*/pages/index.astro.jinja "$sample_tpl"/template/*site*/*src*/pages/about.md; do
+  echo '# changed upstream' >>"$f"
+done
+"${git_t[@]}" commit -q -am "change the samples"
+# shellcheck disable=SC2031 # COPIER_VERSION is set at file top
+uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >"$out/sample-up.log" 2>&1
+grep -q 'Updating to template version' "$out/sample-up.log"
+(lacks -q 'def add(' "$sample_up/src/sample_me/__init__.py")
+test ! -e "$sample_up/tests/test_add.py"
+# A site that replaced the starter pages with its own routes keeps them gone.
+test ! -e "$sample_up/site/src/pages/index.astro"
+test ! -e "$sample_up/site/src/pages/about.md"
+
+# install-action falls back to cargo-binstall for a tool past its manifest, which
+# installs an unchecked binary: every step says fallback: none, but cargo-codspeed,
+# which the manifest does not list.
+# The sweep counts the steps it saw, so a changed `uses:` spelling cannot pass it by
+# matching nothing.
+unpinned=$(find . -path '*/.github/workflows/*.yml' -exec awk '
+  FNR == 1 { n = 0 }
+  /uses: taiki-e\/install-action@/ { n = 3; step = ""; seen++; next }
+  n > 0 { step = step $0 "\n"; if (--n == 0 && step !~ /fallback: none/ && step !~ /tool: cargo-codspeed@/) print FILENAME }
+  END { if (!seen) print "no install-action step found" }
+' {} +)
+test -z "$unpinned" || {
+  echo "install-action without fallback: none: $unpinned" >&2
+  exit 1
+}
