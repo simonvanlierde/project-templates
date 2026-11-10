@@ -218,6 +218,8 @@ chmod +x "$fake/gh"
   test "$(grep -cxF -- 'api -X POST repos/{owner}/{repo}/environments/production/deployment-branch-policies -f name=main -f type=branch' "$FAKE_LOG")" = 1
   (lacks -q 'environments/production.*reviewers' "$FAKE_LOG")
   grep -q "Configured environment 'production'" "$fake/out-d"
+  # d uses Renovate, which needs no copier-update environment.
+  (lacks -q 'environments/copier-update' "$FAKE_LOG")
 )
 # The site (x) gets the preview environment and Pages from Actions: created on the first
 # run, switched over on the second, when GitHub answers 409.

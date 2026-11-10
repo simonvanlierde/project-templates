@@ -182,7 +182,8 @@ chmod +x "$dstub/pnpm"
 deploy() {
   : >"$dstub/calls" && : >"$dstub/gho" && : >"$dstub/sum"
   (cd "$dstub/work" && env STUB="$dstub" PATH="$dstub:$PATH" GITHUB_OUTPUT="$dstub/gho" \
-    GITHUB_STEP_SUMMARY="$dstub/sum" "$@" "$deploy_sh" Label ${DEPLOY_NAME:+"$DEPLOY_NAME"} >"$dstub/out" 2>&1)
+    GITHUB_STEP_SUMMARY="$dstub/sum" "$@" "$deploy_sh" Label ${DEPLOY_NAME+"$DEPLOY_NAME"} \
+    ${DEPLOY_DOMAIN:+--domain "$DEPLOY_DOMAIN"} >"$dstub/out" 2>&1)
 }
 deploy
 grep -qx 'pnpm exec wrangler deploy' "$dstub/calls"
@@ -190,6 +191,9 @@ grep -qx 'url=https://pipe-me.acct.workers.dev' "$dstub/gho"
 grep -qx '### Label: https://pipe-me.acct.workers.dev' "$dstub/sum"
 DEPLOY_NAME=pipe-me-pr-4 deploy
 grep -qx 'pnpm exec wrangler deploy --name pipe-me-pr-4' "$dstub/calls"
+# An empty name keeps the config's, so the production deploy passes only its domain.
+DEPLOY_NAME='' DEPLOY_DOMAIN=app.example.org deploy
+grep -qx 'pnpm exec wrangler deploy --domain app.example.org' "$dstub/calls"
 (! deploy NO_URL=1)
 grep -qF 'wrangler printed no workers.dev address' "$dstub/out"
 # wrangler is an exact devDependency of a web app only, which both deploy jobs install.

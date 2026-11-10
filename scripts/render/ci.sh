@@ -156,6 +156,7 @@ for r in b d h; do
 done
 for r in a c i; do
   test ! -e "$r/docs/decisions"
+  (lacks -q 'docs/decisions' "$r/AGENTS.md")
 done
 (lacks -rq vale a/.pre-commit-config.yaml a/.gitignore)
 # Every render runs the hooks in CI.

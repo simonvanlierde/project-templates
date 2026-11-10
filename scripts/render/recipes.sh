@@ -52,6 +52,9 @@ for cmd in 'cargo fmt --check' 'cargo clippy --all-targets --all-features -- -D 
   'cargo nextest run --all-features' 'cargo deny check'; do
   recipe_has a/just/rust.just rs-check "    $cmd"
 done
+# nextest skips doctests, so a library runs them apart, in the recipe and in CI.
+recipe_has a/just/rust.just rs-check '    cargo test --doc --all-features'
+grep -qx '      - run: cargo test --doc --all-features' a/.github/workflows/rust.yml
 for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' \
   'go tool govulncheck ./...'; do
   recipe_has a/just/go.just go-check "    $cmd"
