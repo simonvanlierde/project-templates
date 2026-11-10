@@ -127,6 +127,9 @@ grep -qF 'test "$(uv version --short)" = "${GITHUB_REF_NAME#v}"' c/.github/workf
 # shellcheck disable=SC2016 # literal workflow text
 grep -qF '= "${GITHUB_REF_NAME#v}"' c/.github/workflows/ts-release.yml
 grep -q -- '--draft --verify-tag' c/.github/workflows/python-release.yml
+# The SBOM lists what the extras pull in too: a package whose runtime needs are all
+# extras would otherwise ship an SBOM with no components.
+grep -qF 'uv export --locked --no-dev --all-extras --format cyclonedx1.5' c/.github/workflows/python-release.yml
 grep -q -- '--draft=false' c/.github/workflows/python-release.yml
 # shellcheck disable=SC2016 # literal workflow expression
 grep -qF '${{ steps.attest.outputs.bundle-path }}' c/.github/workflows/python-release.yml
