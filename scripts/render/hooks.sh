@@ -7,8 +7,8 @@ grep -qx 'default_install_hook_types: \[pre-commit, commit-msg\]' a/.pre-commit-
 for r in a b c d; do
   grep -qx 'style = "conventional"' "$r/committed.toml"
   grep -qx '      - id: committed' "$r/.pre-commit-config.yaml"
-  grep -q 'uvx committed@[0-9.]* --config committed.toml --commit-file -' "$r/.github/workflows/pr-title.yml"
-  committed=$(sed -n 's/.*uvx committed@\([0-9.]*\) .*/\1/p' "$r/.github/workflows/pr-title.yml")
+  grep -q 'uvx --exclude-newer "1 week" committed@[0-9.]* --config committed.toml --commit-file -' "$r/.github/workflows/pr-title.yml"
+  committed=$(sed -n 's/.*uvx --exclude-newer "1 week" committed@\([0-9.]*\) .*/\1/p' "$r/.github/workflows/pr-title.yml")
   for msg in 'chore: update from template v1.0.0' 'chore(deps): bump x from 1 to 2' 'feat!: drop x' 'revert: feat: add x'; do
     printf '%s\n' "$msg" | uvx -q "committed@$committed" --config "$r/committed.toml" --commit-file - >/dev/null
   done

@@ -139,7 +139,7 @@ grep -qF 'gh attestation verify' c/.github/workflows/python-release.yml
 # The API-break checks render with the publish answers, and only with them: griffe in CI from
 # the repository root, so its search path carries the nested dir; the npm report beside
 # the nested package.
-grep -qx '      - run: uvx griffe@[0-9.]* check --search api/src --format github mono_me' c/.github/workflows/python.yml
+grep -qx '      - run: uvx --exclude-newer "1 week" griffe@[0-9.]* check --search api/src --format github mono_me' c/.github/workflows/python.yml
 # A CLI-only package (x, python_api=false) gets no api job, though it publishes.
 grep -q 'name: "python: API breaks since the last tag"' c/.github/workflows/python.yml
 test -f x/.github/workflows/python.yml

@@ -36,4 +36,4 @@ jobs:
       - name: check the title
         env:
           TITLE: {% raw %}${{ github.event.pull_request.title }}{% endraw %}
-        run: printf '%s\n' "$TITLE" | uvx committed@{{ committed_version }} --config committed.toml --commit-file -
+        run: printf '%s\n' "$TITLE" | uvx --exclude-newer "1 week" committed@{{ committed_version }} --config committed.toml --commit-file -

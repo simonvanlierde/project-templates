@@ -131,9 +131,9 @@ both true - - README.md
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
-  grep -qx "uvx copier@$copier_pin update --answers-file .copier-answers.yml --defaults --vcs-ref v0.10.0" issue.log
+  grep -qx "uvx --exclude-newer 1 week copier@$copier_pin update --answers-file .copier-answers.yml --defaults --vcs-ref v0.10.0" issue.log
   # Each answers file updates on its own, and the PR names the layer that moved.
-  grep -qx "uvx copier@$copier_pin update --answers-file .copier-answers.cml.yml --defaults --vcs-ref v0.10.0" layer.log
+  grep -qx "uvx --exclude-newer 1 week copier@$copier_pin update --answers-file .copier-answers.cml.yml --defaults --vcs-ref v0.10.0" layer.log
   (lacks -q 'answers-file .copier-answers.yml' layer.log)
   grep -q '^pr create --head chore/copier-update --base main --title chore: update from template cml v0.10.0 ' layer.log
   git -C layer.git show chore/copier-update:README.md | grep -qx '# from the template'

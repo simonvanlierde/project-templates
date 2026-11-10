@@ -68,7 +68,7 @@ jobs:
               echo "$answers: already on $latest."
               continue
             fi
-            uvx "copier@$COPIER_VERSION" update --answers-file "$answers" --defaults --vcs-ref "$latest"
+            uvx --exclude-newer "1 week" "copier@$COPIER_VERSION" update --answers-file "$answers" --defaults --vcs-ref "$latest"
             git add -A
             git -c core.hooksPath=/dev/null -c user.name=copier-update -c user.email=copier-update@localhost \
               commit -q --allow-empty -m "$answers $latest"
