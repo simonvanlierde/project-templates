@@ -507,6 +507,28 @@ jobs:
           test -z "$(find "$PROJ" -name '*.rej' -print -quit)"
           cd "$PROJ" && uv lock -q && uv sync -q --locked && just check
 
+      # A web app from before the template had PRODUCT.md and DESIGN.md, with its own of
+      # each, that deleted a file the template renders. The update keeps both files as
+      # they are: a deleted file made copier read the skip list without the answers.
+      - name: web app from v0.12.0 with its own PRODUCT.md, update to HEAD
+        run: |
+          set -euo pipefail
+          PROJ="$RUNNER_TEMP/web"
+          git init -q "$PROJ"
+          uvx "copier@$COPIER_VERSION" copy --vcs-ref=v0.12.0 --defaults --overwrite \
+            --data project_name=web-me --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=browser . "$PROJ"
+          sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
+          printf '# Product\n\nThis app wrote its own.\n' >"$RUNNER_TEMP/PRODUCT.md"
+          printf '# Design\n\nThis app wrote its own.\n' >"$RUNNER_TEMP/DESIGN.md"
+          cp "$RUNNER_TEMP/PRODUCT.md" "$RUNNER_TEMP/DESIGN.md" "$PROJ/"
+          rm "$PROJ/tests/e2e/reflow.spec.ts"
+          git -C "$PROJ" add -A
+          git -C "$PROJ" -c user.email=ci@invalid -c user.name=ci commit -qm scaffold
+          uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults --conflict rej "$PROJ"
+          test -z "$(find "$PROJ" -name '*.rej' -print -quit)"
+          cmp "$RUNNER_TEMP/PRODUCT.md" "$PROJ/PRODUCT.md"
+          cmp "$RUNNER_TEMP/DESIGN.md" "$PROJ/DESIGN.md"
+
   typescript:
     # TS stack. publish_to_npm (asked only of a library) renders the conditionally named
     # ts-release.yml.
@@ -638,6 +660,22 @@ jobs:
           # phrase opens the note at the top of docs/privacy.md.
           if grep -rq 'Keep this page true' dist/; then
             echo "::error::an authoring note from docs/ reached the build" >&2
+            exit 1
+          fi
+
+      # The privacy spec passes browser storage it lists in ALLOWED and fails a name it
+      # does not list. The other storage kinds and the cookie and origin checks share its code.
+      - if: matrix.name == 'web-app (react)'
+        name: privacy allowlist
+        working-directory: ${{ runner.temp }}/proj
+        run: |
+          set -euo pipefail
+          sed -i 's|^createRoot|localStorage.setItem("demo.settings", "{}");\n&|' src/main.tsx
+          sed -i 's|^  localStorage: \[\] as string\[\],$|  localStorage: ["demo.settings"] as string[],|' tests/e2e/privacy.spec.ts
+          just ts-e2e privacy --retries=0
+          sed -i 's|"demo.settings", "{}"|"demo.other", "{}"|' src/main.tsx
+          if just ts-e2e privacy --retries=0; then
+            echo "::error::privacy.spec.ts passed a localStorage key that ALLOWED does not list" >&2
             exit 1
           fi
 

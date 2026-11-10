@@ -2,20 +2,41 @@ import { expect, test } from "@playwright/test";
 import { ROUTES } from "./routes";
 
 /**
+{%- if user_data == 'browser' %}
+ * docs/privacy.md says the app sets no cookies, keeps on the device only what it lists
+ * and loads nothing from other sites, so it needs no cookie banner. These prove it on
+ * a first visit to every route.
+{%- else %}
  * docs/privacy.md says the app sets no cookies, stores nothing before the user
  * acts and loads nothing from other sites, so it needs no cookie banner. These
  * prove it on a first visit to every route.
+{%- endif %}
  */
 
 // Origins a page may request besides its own. A visitor counter on another origin
 // goes here by name, with a line in docs/privacy.md and its origin in public/_headers.
 const OTHER_ORIGINS: string[] = [];
+{%- if user_data == 'browser' %}
+// What a first visit may keep in the browser, by name, each with a line in docs/privacy.md:
+// a settings key, say, or the cache and service worker scope ("/") of an app that works
+// offline. Anything else fails.
+{%- else %}
+// What a first visit may keep in the browser, by name. docs/privacy.md says it keeps
+// nothing, so these stay empty.
+{%- endif %}
+const ALLOWED = {
+  localStorage: [] as string[],
+  sessionStorage: [] as string[],
+  indexedDB: [] as string[],
+  caches: [] as string[],
+  serviceWorkers: [] as string[],
+};
 // How long a page may sit idle before the checks. Storage or a request made later
 // than this, or only after the user acts, is not seen.
 const SETTLE_MS = 3_000;
 
 for (const path of ROUTES) {
-  test(`${path} sets no cookies, stores nothing and loads only its own files`, async ({ page, context }) => {
+  test(`${path} sets no cookies, keeps only listed data and loads only its own files`, async ({ page, context }) => {
     const origins = new Set<string>();
     // On the context, so requests from workers and service workers count too.
     context.on("request", (request) => {
@@ -27,13 +48,16 @@ for (const path of ROUTES) {
 
     expect(await context.cookies()).toEqual([]);
     const stored = await page.evaluate(async () => ({
-      localStorage: localStorage.length,
-      sessionStorage: sessionStorage.length,
-      indexedDB: (await indexedDB.databases()).map((db) => db.name),
+      localStorage: Object.keys(localStorage),
+      sessionStorage: Object.keys(sessionStorage),
+      indexedDB: (await indexedDB.databases()).map((db) => db.name ?? ""),
       caches: await caches.keys(),
-      serviceWorkers: (await navigator.serviceWorker.getRegistrations()).length,
+      serviceWorkers: (await navigator.serviceWorker.getRegistrations()).map((sw) => new URL(sw.scope).pathname),
     }));
-    expect(stored).toEqual({ localStorage: 0, sessionStorage: 0, indexedDB: [], caches: [], serviceWorkers: 0 });
+    for (const [kind, names] of Object.entries(stored) as [keyof typeof ALLOWED, string[]][]) {
+      const unlisted = names.filter((name) => !ALLOWED[kind].includes(name));
+      expect(unlisted, kind).toEqual([]);
+    }
     const own = new URL(page.url()).origin;
     // The page's own files must show up, or the capture saw nothing and proves nothing.
     expect([...origins]).toContain(own);

@@ -523,6 +523,11 @@ done
   --data ts_kind=web-app --data user_data=browser . "$out/s"
 grep -qF '"name": "app",' "$out/s/wrangler.jsonc"
 grep -qx 'site_url: https://app.example-org.workers.dev' "$out/s/.copier-answers.yml"
+# lychee resolves a web app's root-relative links in public/; other kinds have no lychee.toml.
+grep -qx 'root_dir = "public"' "$out/s/lychee.toml"
+test ! -e "$out/a/lychee.toml"
+# The privacy spec's ALLOWED is for what a browser-storage app keeps; ci.yml runs it.
+grep -q 'What a first visit may keep in the browser, by name, each with a line' "$out/s/tests/e2e/privacy.spec.ts"
 # wk: a web app at the root with the Worker script and a custom domain.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=edge-me --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=nothing --data worker=true \
@@ -884,6 +889,42 @@ cp -R c "$rel/c"
   grep -q "version-mismatch.*0.1.0" ../c-release.log
   git diff --quiet
 )
+# A web app's first run sets package.json to the version and commits it with
+# CHANGELOG.md. The tag run refuses a package.json at another version on origin/main
+# before it signs anything.
+git init -q --bare -b main "$rel/s-origin.git"
+cp -R s "$rel/s"
+(
+  # shellcheck disable=SC2030,SC2031 # only this subshell reads them
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+  cd "$rel/s"
+  git init -q -b main
+  git remote add origin "$rel/s-origin.git"
+  git config user.name 'Marie Curie'
+  git config user.email curie@example.org
+  git config gpg.format ssh
+  git config user.signingkey "$rel/key.pub"
+  echo "curie@example.org namespaces=\"git\" $(cat "$rel/key.pub")" >>.github/allowed_signers
+  sed -i 's/^## \[Unreleased\]$/&\n\n- first thing/' CHANGELOG.md
+  git add -A
+  git commit -q -s -m 'chore: init'
+  git push -q origin main
+  just release 0.2.0 >/dev/null
+  test "$(git show --name-only --format= HEAD | sort | tr '\n' ' ')" = 'CHANGELOG.md package.json '
+  grep -qx '  "version": "0.2.0",' package.json
+  git push -q origin main
+  sed -i 's/^  "version": "0.2.0",$/  "version": "0.1.0",/' package.json
+  git commit -q -s -am 'chore: set another version'
+  git push -q origin main
+  (! just release 0.2.0 >release.log 2>&1)
+  grep -qxF 'package.json on origin/main is at 0.1.0, not 0.2.0' release.log
+  (! git rev-parse -q --verify refs/tags/v0.2.0 >/dev/null)
+  test -z "$(git -C "$rel/s-origin.git" tag)"
+)
+# The release workflow refuses a tag that differs from package.json, before it publishes.
+# shellcheck disable=SC2016 # literal $app and ${TAG#v}
+grep -qF '[ "$app" = "${TAG#v}" ] || { echo "::error::web/package.json is at $app, not ${TAG#v}"; exit 1; }' d/.github/workflows/release.yml
+(lacks -q 'differs from package.json' a/.github/workflows/release.yml)
 
 # cold-install.yml runs the README's Development blocks. Run its step with `bash -ex`
 # swapped for `cat`, and without the chown, to see which commands it picks: d's README
@@ -2251,6 +2292,8 @@ git -C s-git init -q
 git -C s-git add -A
 git -C s-git ls-files --error-unmatch tests/shots/shots.spec.ts >/dev/null
 git -C s-git check-ignore -q shots/index-390-light.png
+# A rumdl cache an older rumdl wrote has no ignore file of its own, and Biome formats its JSON.
+git -C s-git check-ignore -q .rumdl_cache/0.3.1/entry.json
 git -C d-hooks ls-files --error-unmatch web/tests/shots/shots.spec.ts >/dev/null
 git -C d-hooks check-ignore -q web/shots/index-390-light.png
 # h's commit-msg hook takes a sign-off with an email, and refuses one without.
@@ -2308,8 +2351,29 @@ git -C a-hooks add docs/flags.py
 (cd a-hooks && "${prek[@]}" typos >/dev/null)
 cmp a-hooks/docs/flags.py flags.py.orig
 rm -f flags.py.orig
+# typos knows English only, so it leaves translation catalogs alone: gettext .po files and
+# whatever sits in a locales/ directory. The English typo above still fails.
+mkdir -p a-hooks/po a-hooks/src/locales
+printf 'msgid "Settings"\nmsgstr "Une ressource et une adresse"\n' >a-hooks/po/fr.po
+printf '{"settings": "Un exemple de langage"}\n' >a-hooks/src/locales/fr.json
+cp a-hooks/po/fr.po fr.po.orig
+cp a-hooks/src/locales/fr.json fr.json.orig
+git -C a-hooks add po/fr.po src/locales/fr.json
+(cd a-hooks && "${prek[@]}" typos >/dev/null)
+cmp a-hooks/po/fr.po fr.po.orig
+cmp a-hooks/src/locales/fr.json fr.json.orig
+rm -f fr.po.orig fr.json.orig
 (cd a-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
 grep -q 'docs/missing.md.*File not found' a-hooks/lychee.log
+# A web app's root-relative links resolve in public/, where Vite serves them from, and
+# links.yml reads the same lychee.toml. A missing asset still fails.
+sed -i 's|</head>|<link rel="icon" href="/favicon.svg" /></head>|' d-hooks/web/index.html
+touch d-hooks/web/public/favicon.svg
+git -C d-hooks add web/index.html web/public/favicon.svg
+(cd d-hooks && "${prek[@]}" lychee >/dev/null)
+git -C d-hooks rm -qf web/public/favicon.svg
+(cd d-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
+grep -q 'web/public/favicon.svg.*File not found' d-hooks/lychee.log
 # yamlfmt ignores a nested pnpm-lock.yaml passed by prek
 mkdir -p a-hooks/ui
 cat >a-hooks/ui/pnpm-lock.yaml <<'LOCK'

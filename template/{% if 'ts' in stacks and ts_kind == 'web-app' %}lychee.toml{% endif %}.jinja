@@ -1,0 +1,3 @@
+{%- set public = ('' if ts_dir == '.' else ts_dir ~ '/') ~ 'public' -%}
+# Vite serves root-relative static assets from {{ public }}/. The lychee hook and links.yml read this file.
+root_dir = "{{ public }}"

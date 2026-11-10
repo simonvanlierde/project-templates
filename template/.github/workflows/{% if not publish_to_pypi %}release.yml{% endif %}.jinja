@@ -44,6 +44,16 @@ jobs:
           git -c credential.helper= -c 'credential.helper=!gh auth git-credential' fetch --quiet --no-tags --depth=1 --force origin \
             "refs/tags/$TAG:refs/tags/$TAG" "refs/heads/$DEFAULT_BRANCH:refs/remotes/origin/$DEFAULT_BRANCH"
           "$GITHUB_WORKSPACE/.github/scripts/verify-tag.sh" "$TAG" "origin/$DEFAULT_BRANCH"
+{%- if 'ts' in stacks and ts_kind == 'web-app' %}
+
+      # The app shows package.json's version, so the tag must name the same one.
+      - name: refuse a tag that differs from package.json
+        env:
+          TAG: {% raw %}${{ github.ref_name }}{% endraw %}
+        run: |
+          app=$(node -p 'require("./{{ ts_dir }}/package.json").version')
+          [ "$app" = "${TAG#v}" ] || { echo "::error::{{ ts_dir ~ '/' if ts_dir != '.' else '' }}package.json is at $app, not ${TAG#v}"; exit 1; }
+{%- endif %}
 
       - name: create the release
         env:

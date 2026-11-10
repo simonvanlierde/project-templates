@@ -335,8 +335,8 @@ A PR opened without this secret starts no checks, because `GITHUB_TOKEN` events 
 To publish a release:
 
 1. Set the version in `pyproject.toml` and `package.json` to `X.Y.Z` (only the one you publish). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts with no `version`, so citesync skips it; once you add one, after the first release, set it there too, or citesync fails with `version-mismatch`.
-2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits.
-3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it against `.github/allowed_signers` on `origin/main` and pushes it. See [Signed release tags](#signed-release-tags) for the key it needs.
+2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits. In a web app it also sets the version in `package.json` itself and commits both files.
+3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it against `.github/allowed_signers` on `origin/main` and pushes it. A web app's run first refuses a `package.json` on `origin/main` at another version, and its `release.yml` refuses such a tag again before it publishes. See [Signed release tags](#signed-release-tags) for the key it needs.
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
 
@@ -634,7 +634,9 @@ Two git hooks validate prose:
   ue = "ue"
   ```
 
-- `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links.
+  typos knows English only. The hook skips gettext `.po` files and anything in a `locales/` directory; list other files with text in other languages under `[files] extend-exclude` in `_typos.toml`.
+
+- `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links. In a web app, both read `lychee.toml`, which resolves root-relative links such as `/favicon.svg` in the Vite `public/` directory.
 
 ## Scientific Python repo-review
 
