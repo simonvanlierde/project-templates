@@ -2,7 +2,7 @@
   "@context": "https://w3id.org/codemeta/3.0",
   "@type": "SoftwareSourceCode",
   "name": "project-templates",
-  "description": "A Copier template for provenance-first data pipelines, where every row of a dataset built from public sources says which download it came from, plus Python, TypeScript, Rust, Go and Docker projects. Every project gets supply-chain-hardened CI, and public ones get community files and OpenSSF Scorecard; the web-app kind adds legal pages and an accessibility statement.",
+  "description": "A Copier template that starts Python, TypeScript, Rust, Go and Docker repos, secure by default and kept current by a weekly update PR. Research code comes citable, with CITATION.cff, a Zenodo DOI and a Software Heritage archive. Its data-pipeline kind builds a dataset from public sources where every row says which download it came from, and the web-app kind adds legal pages and an accessibility statement.",
   "author": [
     {
       "@type": "Person",

@@ -6,11 +6,11 @@ title: "project-templates"
 # The concept DOI, which always resolves to the newest release.
 doi: "10.5281/zenodo.23701980"
 abstract: >-
-  A Copier template for provenance-first data pipelines, where every row of a dataset
-  built from public sources says which download it came from, plus Python, TypeScript,
-  Rust, Go and Docker projects. Every project gets supply-chain-hardened CI, and public
-  ones get community files and OpenSSF Scorecard; the web-app kind adds legal pages and an
-  accessibility statement.
+  A Copier template that starts Python, TypeScript, Rust, Go and Docker repos, secure by
+  default and kept current by a weekly update PR. Research code comes citable, with
+  CITATION.cff, a Zenodo DOI and a Software Heritage archive. Its data-pipeline kind
+  builds a dataset from public sources where every row says which download it came from,
+  and the web-app kind adds legal pages and an accessibility statement.
 authors:
   - given-names: "Simon"
     family-names: "van Lierde"
