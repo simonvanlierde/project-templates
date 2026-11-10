@@ -330,7 +330,7 @@ Without [the update App](#the-update-app), `copier-update.yml` pushes with `GITH
 
 A GitHub App of your own gives the workflow a token for each run. The token lasts an hour, reaches only the repo it runs in, and is revoked when the job ends. One App serves all your repos.
 
-1. Create the App at <https://github.com/settings/apps/new>. Turn the webhook off and give it the repository permissions Contents, Pull requests and Workflows, each "Read and write". Let it be installed on this account only.
+1. Create the App at <https://github.com/settings/apps/new>. Give it a name and any homepage URL, untick Webhook > Active, and give it the repository permissions Contents, Pull requests and Workflows, each "Read and write". Let it be installed on this account only.
 2. On the App's page, note the Client ID and generate a private key, which downloads a `.pem` file.
 3. Install the App on each repo that uses the template (Install App, then Only select repositories).
 4. In each repo, run `just repo-settings`. It creates the `copier-update` environment and limits it to `main`, so a workflow on another branch can't read the key. Then add the App to it:
@@ -341,6 +341,8 @@ A GitHub App of your own gives the workflow a token for each run. The token last
    ```
 
 Delete the `.pem` file afterwards, or keep it in your password manager to set up the next repo.
+
+A private repo on GitHub Free has no environment secrets. There, leave `--env copier-update` out of both commands: the job reads repo-level ones too, but then a workflow on any branch can read the key. The push job only runs from `main`, so starting the workflow by hand from another branch fails at that job.
 
 ## Publishing
 
