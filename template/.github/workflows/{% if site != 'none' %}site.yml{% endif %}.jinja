@@ -86,26 +86,16 @@ jobs:
       name: production
       url: {% raw %}${{ steps.deploy.outputs.url }}{% endraw %}
     steps:
+      # For deploy-worker.sh and wrangler.site.jsonc. The page itself comes from the build job.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - id: gate
         env:
           TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           ACCOUNT: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
-        run: |
-          missing=""
-          [ -n "$TOKEN" ] || missing=CLOUDFLARE_API_TOKEN
-          [ -n "$ACCOUNT" ] || missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"
-          if [ -n "$missing" ]; then
-            echo "::notice::Production deploy skipped: $missing not set."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      # For deploy-worker.sh and wrangler.site.jsonc. The page itself comes from the build job.
-      - if: steps.gate.outputs.run == 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+        run: '"$GITHUB_WORKSPACE/.github/scripts/cloudflare-gate.sh" "Production deploy"'
 
       - if: steps.gate.outputs.run == 'true'
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -210,30 +200,17 @@ jobs:
       name: preview
       url: {% raw %}${{ steps.upload.outputs.url }}{% endraw %}
     steps:
+      # For deploy-worker.sh and wrangler.site.jsonc. The page itself comes from the build job.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - id: gate
         env:
           TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           ACCOUNT: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
           FORK: {% raw %}${{ github.event.pull_request.head.repo.full_name != github.repository }}{% endraw %}
-        run: |
-          missing=""
-          [ -n "$TOKEN" ] || missing=CLOUDFLARE_API_TOKEN
-          [ -n "$ACCOUNT" ] || missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"
-          if [ "$FORK" = "true" ]; then
-            echo "::notice::Preview skipped: fork PR."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          elif [ -n "$missing" ]; then
-            echo "::notice::Preview skipped: $missing not set."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      # For deploy-worker.sh and wrangler.site.jsonc. The page itself comes from the build job.
-      - if: steps.gate.outputs.run == 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+        run: '"$GITHUB_WORKSPACE/.github/scripts/cloudflare-gate.sh" Preview'
 
       - if: steps.gate.outputs.run == 'true'
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0

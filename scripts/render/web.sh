@@ -131,25 +131,37 @@ grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\"
 # A newer push to main must not cancel the run whose deploy is in flight.
 grep -qF "cancel-in-progress: \${{ github.event_name == 'pull_request' }}" d/.github/workflows/ts.yml
 grep -q '^ *name: preview$' d/.github/workflows/ts.yml
-# The gate step runs before checkout, so it must not cd into web/.
-grep -A2 -- '- id: gate$' d/.github/workflows/ts.yml | grep -q 'working-directory: \.$'
 grep -qF "deploy-worker.sh\" Preview \"pipe-me-pr-\$PR\"" d/.github/workflows/ts.yml
 # Both jobs deploy through the one script, which only a web app gets and which runs wrangler.
 test "$(grep -cE 'deploy-worker\.sh" (Preview|Production)' d/.github/workflows/ts.yml)" = 2
 # A nested app's ts.yml also runs when only the script changes, on push and on PRs.
-test "$(grep -cF 'paths: ["web/**", ".github/workflows/ts.yml", ".github/scripts/deploy-worker.sh"]' d/.github/workflows/ts.yml)" = 2
+test "$(grep -cF 'paths: ["web/**", ".github/workflows/ts.yml", ".github/scripts/cloudflare-gate.sh", ".github/scripts/deploy-worker.sh"]' d/.github/workflows/ts.yml)" = 2
 (lacks -q 'wrangler deploy' d/.github/workflows/ts.yml)
 # Every Cloudflare secrets gate checks both secrets: a missing account id fails each run.
+# Each deploy job runs the gate script right after its checkout, which brings the script.
 n=0
-for wf in */.github/workflows/{ts,site,preview-retire}.yml; do
+for wf in */.github/workflows/{ts,site}.yml; do
   [ -e "$wf" ] || continue
-  gates=$(grep -c 'missing=CLOUDFLARE_API_TOKEN$' "$wf" || true)
-  [ "$gates" -gt 0 ] || continue
-  # shellcheck disable=SC2016 # the literal workflow text
-  test "$(grep -cF '[ -n "$ACCOUNT" ] || missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"' "$wf")" = "$gates"
-  n=$((n + gates))
+  deploys=$(grep -cE 'deploy-worker\.sh" (Preview|Production)' "$wf" || true)
+  test "$(grep -c '/\.github/scripts/cloudflare-gate\.sh" ' "$wf" || true)" = "$deploys"
+  test "$(grep -B2 -- '- id: gate$' "$wf" | grep -c 'persist-credentials: false$' || true)" -ge "$deploys"
+  n=$((n + deploys))
 done
-test "$n" -ge 10
+test "$n" -ge 4
+for f in */.github/scripts/cloudflare-gate.sh */.github/workflows/preview-retire.yml; do
+  # shellcheck disable=SC2016 # the literal script text
+  grep -qF '[ -n "$ACCOUNT" ] || missing="${missing:+$missing and }CLOUDFLARE_ACCOUNT_ID"' "$f"
+done
+# The gate skips, never fails: no secrets or a fork PR give run=false and a notice.
+gate_cf=$out/d/.github/scripts/cloudflare-gate.sh
+test -x "$gate_cf"
+cf_gate() { env GITHUB_OUTPUT="$out/cf-gate.out" "$@" "$gate_cf" "Production deploy" 2>&1; }
+: >"$out/cf-gate.out"
+test "$(cf_gate TOKEN=t ACCOUNT=)" = '::notice::Production deploy skipped: CLOUDFLARE_ACCOUNT_ID not set.'
+test "$(cf_gate TOKEN= ACCOUNT=)" = '::notice::Production deploy skipped: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID not set.'
+test "$(cf_gate TOKEN=t ACCOUNT=a FORK=true)" = '::notice::Production deploy skipped: fork PR.'
+test -z "$(cf_gate TOKEN=t ACCOUNT=a FORK=false)"
+test "$(tr '\n' ' ' <"$out/cf-gate.out")" = 'run=false run=false run=false run=true '
 test -x d/.github/scripts/deploy-worker.sh
 test ! -e m/.github/scripts/deploy-worker.sh
 test -x s/.github/scripts/deploy-worker.sh
