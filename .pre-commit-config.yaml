@@ -69,7 +69,7 @@ repos:
       - id: yamllint
         args: [-c, .yamllint.yml]
 
-  # scripts/check-render.sh; jactionlint covers only workflow `run:` blocks.
+  # scripts/check-render.sh and scripts/render/; jactionlint covers only workflow `run:` blocks.
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: a6564f5d57444e123433a5c9af733e3975c77229 # frozen: v0.11.0.1-1
     hooks:

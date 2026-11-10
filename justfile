@@ -17,7 +17,7 @@ hooks:
 # The render includes uncommitted edits. Its commit tag is shared by every worktree of
 # this repo, so don't run it in two worktrees at once.
 
-# Render the answer sets in scripts/check-render.sh and check the output.
+# Render the answer sets in scripts/render/cases.sh and check the output.
 render:
     #!/usr/bin/env bash
     set -euo pipefail

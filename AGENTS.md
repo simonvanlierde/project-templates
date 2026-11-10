@@ -6,7 +6,10 @@ Notes for coding agents working on this Copier template. `just` lists the comman
   copy as they are. The questions and validators are in `copier.yml`.
 - Test a change by rendering it: `just check` runs the git hooks and
   `scripts/check-render.sh`, which renders every answer set with `--vcs-ref=HEAD`
-  (uncommitted edits included). A new question, answer or file adds a case there.
+  (uncommitted edits included). A new question, answer or file adds a render to
+  `scripts/render/cases.sh` and its checks to that area's file in `scripts/render/`.
+  The files run in the order check-render.sh sources them, and later checks read
+  state that earlier ones leave, so add to a file rather than reorder.
 - The render script tags a commit that all worktrees of this repo share, so don't run
   it in two worktrees at once.
 - A render from an untagged commit records your local path as `_src_path`. Render a
