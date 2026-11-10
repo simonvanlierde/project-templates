@@ -72,6 +72,8 @@ Upgrade steps:
 
 ### Fixed
 
+- A web app or a site on a Worker ignores `.dev.vars*`, where wrangler reads local secrets, so `git add .` no longer stages them with only the betterleaks hook in the way. A site on a Worker without a web app now ignores wrangler's `.wrangler/` state too.
+- `.gitignore` lists `*.pem`, `*.key` and `.npmrc` under its secrets. The template keeps pnpm settings in `pnpm-workspace.yaml`, so a project `.npmrc` would hold only a registry token. A file you already track stays tracked.
 - `.gitignore` lists `.rumdl_cache/`. A cache that an older rumdl wrote has no ignore file of its own, so Biome formatted its JSON and `pnpm check` failed after `just hooks`.
 - Web apps: a new `lychee.toml` sets lychee's `root_dir` to the Vite `public/` directory, so the lychee hook and the weekly `links.yml` resolve root-relative links such as `/favicon.svg` or `/manifest.json` there, in place of failing on them with "Cannot resolve root-relative link". A missing asset still fails.
 - The typos hook skips gettext `.po` files and anything in a `locales/` directory. typos knows English only, and rewrote valid French, German, Italian and Dutch in translation catalogs. List other files with text in other languages under `[files] extend-exclude` in `_typos.toml`.
