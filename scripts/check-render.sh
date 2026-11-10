@@ -523,6 +523,9 @@ done
   --data ts_kind=web-app --data user_data=browser . "$out/s"
 grep -qF '"name": "app",' "$out/s/wrangler.jsonc"
 grep -qx 'site_url: https://app.example-org.workers.dev' "$out/s/.copier-answers.yml"
+# lychee resolves a web app's root-relative links in public/; other kinds have no lychee.toml.
+grep -qx 'root_dir = "public"' "$out/s/lychee.toml"
+test ! -e "$out/a/lychee.toml"
 # wk: a web app at the root with the Worker script and a custom domain.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=edge-me --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=nothing --data worker=true \
@@ -2312,6 +2315,15 @@ cmp a-hooks/docs/flags.py flags.py.orig
 rm -f flags.py.orig
 (cd a-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
 grep -q 'docs/missing.md.*File not found' a-hooks/lychee.log
+# A web app's root-relative links resolve in public/, where Vite serves them from, and
+# links.yml reads the same lychee.toml. A missing asset still fails.
+sed -i 's|</head>|<link rel="icon" href="/favicon.svg" /></head>|' d-hooks/web/index.html
+touch d-hooks/web/public/favicon.svg
+git -C d-hooks add web/index.html web/public/favicon.svg
+(cd d-hooks && "${prek[@]}" lychee >/dev/null)
+git -C d-hooks rm -qf web/public/favicon.svg
+(cd d-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
+grep -q 'web/public/favicon.svg.*File not found' d-hooks/lychee.log
 # yamlfmt ignores a nested pnpm-lock.yaml passed by prek
 mkdir -p a-hooks/ui
 cat >a-hooks/ui/pnpm-lock.yaml <<'LOCK'

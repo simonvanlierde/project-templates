@@ -634,7 +634,7 @@ Two git hooks validate prose:
   ue = "ue"
   ```
 
-- `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links.
+- `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links. In a web app, both read `lychee.toml`, which resolves root-relative links such as `/favicon.svg` in the Vite `public/` directory.
 
 ## Scientific Python repo-review
 
