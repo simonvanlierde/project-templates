@@ -109,7 +109,8 @@ citation:
     -{{ prek }} run citesync-write --hook-stage manual --all-files
     {{ prek }} run citesync --all-files
 {% endif %}
-# Release X.Y.Z. First run: cut CHANGELOG's [Unreleased] into [X.Y.Z] and commit it; merge that to main. Second run, on up-to-date main: sign and push tag vX.Y.Z.
+{%- set app_pkg = (ts_dir ~ '/' if ts_dir != '.' else '') ~ 'package.json' if 'ts' in stacks and ts_kind == 'web-app' else '' %}
+# Release X.Y.Z. First run: {% if app_pkg %}set {{ app_pkg }}'s version, {% endif %}cut CHANGELOG's [Unreleased] into [X.Y.Z] and commit {{ 'both' if app_pkg else 'it' }}; merge that to main. Second run, on up-to-date main: sign and push tag vX.Y.Z.
 release version:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -132,6 +133,11 @@ release version:
     # Not grep -q: it stops reading early, and under pipefail git show then fails on a
     # changelog bigger than the pipe buffer.
     if git show origin/main:CHANGELOG.md | grep "^## \[$version\] - " >/dev/null; then
+{%- if app_pkg %}
+        # The app shows {{ app_pkg }}'s version, so the tag must name the same one.
+        app=$(git show origin/main:{{ app_pkg }} | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).version')
+        [ "$app" = "$version" ] || { echo "{{ app_pkg }} on origin/main is at $app, not $version" >&2; exit 1; }
+{%- endif %}
         .github/scripts/tag-release.sh "$version"
 {%- if public and citable %}
         echo "Archive it in Software Heritage: https://archive.softwareheritage.org/save/ (git, $repo). The README badge then links to the SWHID."
@@ -149,9 +155,14 @@ release version:
         END { if (!h) exit 1; if (!l) { print ""; print "[Unreleased]: " repo "/compare/v" v "...HEAD"; print "[" v "]: " link } }
     ' CHANGELOG.md >"$tmp" || { echo "CHANGELOG.md has no [Unreleased] section" >&2; exit 1; }
     .github/scripts/release-notes.sh "$tag" "$tmp" >/dev/null || { echo "[Unreleased] has no entries to release" >&2; exit 1; }
+{%- if app_pkg %}
+    # A line edit keeps the file as Biome formats it.
+    sed -i.bak 's/^  "version": "[^"]*",$/  "version": "'"$version"'",/' {{ app_pkg }} && rm {{ app_pkg }}.bak
+    [ "$(node -p "require('./{{ app_pkg }}').version")" = "$version" ] || { echo "could not set the version in {{ app_pkg }}" >&2; exit 1; }
+{%- endif %}
     cp "$tmp" CHANGELOG.md
-    git add CHANGELOG.md
-    git commit -s -m "chore: release $version" -- CHANGELOG.md
+    git add CHANGELOG.md{{ ' ' ~ app_pkg if app_pkg }}
+    git commit -s -m "chore: release $version" -- CHANGELOG.md{{ ' ' ~ app_pkg if app_pkg }}
     echo "Merge this commit to main, then run: just release $version"
 
 # Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on secret scanning with push protection, private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}. Create the `preview` environment for pull request previews and the `production` environment, deployed from `main` only{% endif %}. Safe to rerun.

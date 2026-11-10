@@ -887,6 +887,42 @@ cp -R c "$rel/c"
   grep -q "version-mismatch.*0.1.0" ../c-release.log
   git diff --quiet
 )
+# A web app's first run sets package.json to the version and commits it with
+# CHANGELOG.md. The tag run refuses a package.json at another version on origin/main
+# before it signs anything.
+git init -q --bare -b main "$rel/s-origin.git"
+cp -R s "$rel/s"
+(
+  # shellcheck disable=SC2030,SC2031 # only this subshell reads them
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+  cd "$rel/s"
+  git init -q -b main
+  git remote add origin "$rel/s-origin.git"
+  git config user.name 'Marie Curie'
+  git config user.email curie@example.org
+  git config gpg.format ssh
+  git config user.signingkey "$rel/key.pub"
+  echo "curie@example.org namespaces=\"git\" $(cat "$rel/key.pub")" >>.github/allowed_signers
+  sed -i 's/^## \[Unreleased\]$/&\n\n- first thing/' CHANGELOG.md
+  git add -A
+  git commit -q -s -m 'chore: init'
+  git push -q origin main
+  just release 0.2.0 >/dev/null
+  test "$(git show --name-only --format= HEAD | sort | tr '\n' ' ')" = 'CHANGELOG.md package.json '
+  grep -qx '  "version": "0.2.0",' package.json
+  git push -q origin main
+  sed -i 's/^  "version": "0.2.0",$/  "version": "0.1.0",/' package.json
+  git commit -q -s -am 'chore: set another version'
+  git push -q origin main
+  (! just release 0.2.0 >release.log 2>&1)
+  grep -qxF 'package.json on origin/main is at 0.1.0, not 0.2.0' release.log
+  (! git rev-parse -q --verify refs/tags/v0.2.0 >/dev/null)
+  test -z "$(git -C "$rel/s-origin.git" tag)"
+)
+# The release workflow refuses a tag that differs from package.json, before it publishes.
+# shellcheck disable=SC2016 # literal $app and ${TAG#v}
+grep -qF '[ "$app" = "${TAG#v}" ] || { echo "::error::web/package.json is at $app, not ${TAG#v}"; exit 1; }' d/.github/workflows/release.yml
+(lacks -q 'differs from package.json' a/.github/workflows/release.yml)
 
 # cold-install.yml runs the README's Development blocks. Run its step with `bash -ex`
 # swapped for `cat`, and without the chown, to see which commands it picks: d's README
