@@ -31,6 +31,7 @@ Upgrade steps:
 
 ### Added
 
+- Scheduled runs of `copier-update.yml`, `advisories.yml` and the daily `preview-retire.yml` sweep open an issue when they fail, or comment on the one already open, as `mutation.yml` and `property.yml` do. All five call one `report-failure.yml` workflow.
 - `mutation.yml` and `property.yml` open an issue, or comment on the open one, when a weekly run fails or times out, so a failure no longer reaches only whoever last edited the cron. GitHub pauses schedules after 60 days without repository activity; re-enable them from the Actions tab.
 - Compose-only repos: with `docker` in `stacks` and no `python` stack, or with `docker_image=false`, the render has no Dockerfile. It gets a starter `compose.yaml` (an example service pinned by digest, with a healthcheck, bound to `127.0.0.1`) and `.env.example`, which are the project's after the first render (run `just repo-settings` to require the new `compose` check); a `compose.yml` workflow, a required check on `main` in a public repo; the `docker-compose` ecosystem in the dependency bot, which with Dependabot also reads the directories one level down, where an `include:` points; a `just check` that runs `docker compose --env-file .env.example config -q` and lints shell scripts; and a `just docker-fmt` that `just fmt` runs. With `cold_install`, that job runs each other stack's own `check` and `fmt` in place of `just check` and `just fmt`, which need Docker. Projects with the Python image render as before ([Compose-only repos](docs/usage.md#compose-only-repos)).
 - `python_windows` (asked under `customise`, off by default) adds a `python: tests (windows)` job to `python.yml`: the tests on `windows-latest` with `python_version`, without ruff or ty, so a missing `encoding="utf-8"` or a POSIX-only path fails CI. A required check in a public repo with the package at the root ([Tests on Windows](docs/usage.md#tests-on-windows)).
@@ -51,6 +52,7 @@ Upgrade steps:
 
 ### Changed
 
+- The Cloudflare deploy and preview jobs in `ts.yml` and `site.yml` check their secrets with one `.github/scripts/cloudflare-gate.sh`, after checkout. They skip with the same notices as before.
 - `python-release.yml` builds `dist/` in a job that installs only uv. A new `test` job syncs the dev group and runs the linters, the suite and the wheel suite after the upload, and `publish` needs both, so a compromised test dependency cannot change what the attestation signs.
 - **Breaking:** `copier-update.yml` pushes with a token from your own GitHub App, which `actions/create-github-app-token` mints for each run: it lasts an hour, reaches only this repo with Contents, Pull requests and Workflows write, and is revoked when the job ends. It replaces the `COPIER_UPDATE_TOKEN` personal access token, which lasted until it expired and which any workflow on any branch could read. The App's key is a secret of the `copier-update` environment, which `just repo-settings` creates and limits to `main` ([The update App](docs/usage.md#the-update-app)).
 - `copier-update.yml` pushes through gh's credential helper (`gh auth setup-git`), and `preview-retire.sh` sends the Cloudflare token from a header file, so neither token appears on a command line, where other processes on the runner could read it.
@@ -76,6 +78,7 @@ Upgrade steps:
 
 ### Fixed
 
+- For a web app that publishes to PyPI, `python-release.yml` refuses a tag that differs from `package.json`, as `release.yml` already does.
 - A sample file you deleted stays deleted on `copier update`: the package's `__init__.py` and `tests/test_add.py`, the web app's `App.tsx`, `App.test.tsx`, `main.tsx`, `app.css` and Worker script, the plain site's page, the example site Worker, and the Astro starter pages `site/src/pages/index.astro` and `about.md`. Before, an update that changed one could bring it back, and it conflicted on the sample `__init__.py` when the pages were gone. A file the project owns, such as `README.md`, a decision record or a legal page, comes back if you delete it. A feature you turn on later with `copier update --data` does not get its samples.
 - A web app or a site on a Worker ignores `.dev.vars*`, where wrangler reads local secrets, so `git add .` no longer stages them with only the betterleaks hook in the way. A site on a Worker without a web app now ignores wrangler's `.wrangler/` state too.
 - `.gitignore` lists `*.pem`, `*.key` and `.npmrc` under its secrets. The template keeps pnpm settings in `pnpm-workspace.yaml`, so a project `.npmrc` would hold only a registry token. A file you already track stays tracked.
@@ -110,6 +113,11 @@ Upgrade steps:
 ### Removed
 
 - The TypeScript image: the Node `Dockerfile`, `.dockerignore`, `src/main.ts` health stub and compose service. With `docker` but not `python` in `stacks`, the render is a Compose-only repo. No render used the ts image, and the web-app kind deploys to Cloudflare Workers without one.
+
+### Security
+
+- `uvx` in `copier-update.yml`, `pr-title.yml` and `python.yml`'s griffe step resolves only releases at least a week old (`--exclude-newer "1 week"`), like every other install.
+- With Rust and Renovate, the weekly Cargo lockfile refresh waits for review instead of merging itself: Cargo has no release-age cutoff.
 
 ## [0.13.0] - 2026-11-04
 
