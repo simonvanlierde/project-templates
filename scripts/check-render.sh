@@ -1772,7 +1772,9 @@ mkdir -p "$stub"
 cat >"$stub/curl" <<'STUB'
 #!/usr/bin/env bash
 method=GET out=/dev/null prev=''
+echo "$*" >>"$STUB/argv"
 for a; do
+  if [ "$prev" = -H ] && [[ $a = @* ]]; then cat "${a#@}" >>"$STUB/headers"; fi
   case $prev in -X) method=$a ;; -o) out=$a ;; esac
   prev=$a
 done
@@ -1793,7 +1795,7 @@ STUB
 chmod +x "$stub/curl" "$stub/gh"
 retire() {
   : >"$stub/deleted"
-  env SLUG=pipe-me REPO=o/r CLOUDFLARE_API_TOKEN=t CLOUDFLARE_ACCOUNT_ID=a PROBE_WAITS='0 0' \
+  env SLUG=pipe-me REPO=o/r CLOUDFLARE_API_TOKEN=cf-stub-token CLOUDFLARE_ACCOUNT_ID=a PROBE_WAITS='0 0' \
     STUB="$stub" PATH="$stub:$PATH" "$@" "$retire_sh" pipe-me-preview >"$stub/out" 2>&1
 }
 echo '{"state": "open", "draft": true}' >"$stub/pr-1"
@@ -1803,6 +1805,9 @@ echo '{"state": "open", "draft": false}' >"$stub/pr-2"
 (! retire)
 test "$(LC_ALL=C sort "$stub/deleted")" = "$(printf 'pipe-me-pr-1?force=true\npipe-me-preview?force=true')"
 grep -q 'Could not read PR 3' "$stub/out"
+# Every Cloudflare call sends the token from a header file, never on curl's command line.
+grep -qx 'Authorization: Bearer cf-stub-token' "$stub/headers"
+(lacks -q 'cf-stub-token' "$stub/argv")
 # The site's prefix takes only its own Worker.
 retire SLUG=pipe-me-site
 grep -qx 'pipe-me-site-pr-1?force=true' "$stub/deleted"
@@ -2667,6 +2672,9 @@ chmod +x "$fake/gh"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/42 --input .github/rulesets/main.json' "$FAKE_LOG"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/43 --input .github/rulesets/main-checks.json' "$FAKE_LOG"
   grep -qxF -- 'api -X PUT repos/{owner}/{repo}/rulesets/44 --input .github/rulesets/tags.json' "$FAKE_LOG"
+  # a uses Dependabot, so copier-update.yml gets its environment, limited to main.
+  grep -q -- '^api -X PUT repos/{owner}/{repo}/environments/copier-update ' "$FAKE_LOG"
+  grep -qF -- 'api -X POST repos/{owner}/{repo}/environments/copier-update/deployment-branch-policies -f name=main -f type=branch' "$FAKE_LOG"
   # A branch ruleset that protects other refs is never adopted.
   (lacks -q -- '-X PUT repos/{owner}/{repo}/rulesets/7 ' "$FAKE_LOG")
   test "$(jq -r '.[] | select(.id == 7) | .name' "$fake/rulesets.json")" = "release-branches"
@@ -2976,7 +2984,7 @@ JSON
 # in a bot's pull request too.
 test "$(PR_BY_BOT=false jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n1111111 chore(deps): bump\n2222222 fix: human on a bot branch')"
 test "$(PR_BY_BOT=true jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n2222222 fix: human on a bot branch')"
-# copier-update pushes with COPIER_UPDATE_TOKEN when set; GITHUB_TOKEN can't push workflow
+# copier-update pushes with the update App's token when it is set up; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml
 # Copier dependencies and the push token must run on separate workers.
@@ -2984,7 +2992,12 @@ uv run --no-project --with pyyaml python - "$cu" <<'PYTEST'
 import sys, yaml
 jobs = yaml.safe_load(open(sys.argv[1]))["jobs"]
 assert jobs["update"]["permissions"] == {"contents": "read"}
-assert "COPIER_UPDATE_TOKEN" not in str(jobs["update"])
+assert "COPIER_UPDATE_PRIVATE_KEY" not in str(jobs["update"]) and "environment" not in jobs["update"]
+# The App key is an environment secret; repo-settings limits that environment to main.
+assert jobs["push"]["environment"] == "copier-update"
+app = [s for s in jobs["push"]["steps"] if s.get("uses", "").startswith("actions/create-github-app-token@")]
+assert len(app) == 1 and app[0]["if"] == "vars.COPIER_UPDATE_CLIENT_ID != ''", app
+assert {k for k in app[0]["with"] if k.startswith("permission-")} == {"permission-contents", "permission-pull-requests", "permission-workflows"}
 assert jobs["push"]["needs"] == "update"
 assert any(s.get("uses", "").startswith("actions/download-artifact@") for s in jobs["push"]["steps"])
 assert not any("uvx" in s.get("run", "") for s in jobs["push"]["steps"])
@@ -2993,12 +3006,14 @@ cuh=$out/copier-update
 mkdir -p "$cuh"
 awk -v d="$cuh" '/^      - /{n++} n{print >(d "/step" n)}' "$cu"
 grep -l 'copier@' "$cuh"/step* | grep -q .
-(! grep -l 'copier@' "$cuh"/step* | xargs grep -q COPIER_UPDATE_TOKEN)
+(! grep -l 'copier@' "$cuh"/step* | xargs grep -q COPIER_UPDATE_PRIVATE_KEY)
 # shellcheck disable=SC2016 # literal workflow text, not shell expansions
-grep -qF 'GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}' "$cu"
+grep -qF 'GH_TOKEN: ${{ steps.app.outputs.token || github.token }}' "$cu"
+# The token never sits in a command line: git asks gh's credential helper for it.
+(lacks -q 'x-access-token' "$cu")
 grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
 # The run below stands in true or false for this expression.
-grep -qF "HAS_TOKEN: \${{ secrets.COPIER_UPDATE_TOKEN != '' }}" "$cu"
+grep -qF "HAS_TOKEN: \${{ steps.app.outputs.token != '' }}" "$cu"
 # Run the step's script against a fake gh, a fake uvx that changes one file, a template
 # repo with two tags and a bare repo standing in for GitHub. GIT_ALLOW_PROTOCOL=file makes
 # a push that misses the rewrite fail instead of reaching github.com.
@@ -3061,7 +3076,7 @@ chmod +x "$cuh/gh" "$cuh/uvx"
         GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION="$copier_pin" \
         RUNNER_TEMP="$p-runner"
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
-        GIT_CONFIG_VALUE_0="https://x-access-token:$GH_TOKEN@github.com/$REPO.git"
+        GIT_CONFIG_VALUE_0="https://github.com/$REPO.git"
       FAKE_TEXT=''
       if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
       export FAKE_TEXT
@@ -3122,6 +3137,8 @@ CASES
     (lacks -q '^issue ' "${r%%:*}.log")
   done
   grep -q '^pr create --head chore/copier-update --base main ' push.log
+  # gh becomes git's credential helper before the push.
+  for r in push edit plain; do grep -qx 'auth setup-git' "$r.log"; done
   grep -q '^pr create --head chore/copier-update --base main ' plain.log
   grep -q '^pr edit chore/copier-update ' edit.log
   (lacks -q '^pr create' edit.log)

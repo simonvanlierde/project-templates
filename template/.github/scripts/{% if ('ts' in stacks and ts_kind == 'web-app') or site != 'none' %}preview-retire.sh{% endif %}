@@ -9,7 +9,11 @@
 set -euo pipefail
 
 api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers"
-auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+# curl reads the token from a file only this user can read, so it stays out of the process list.
+auth=$(mktemp)
+body=$(mktemp)
+trap 'rm -f "$auth" "$body"' EXIT
+printf 'Authorization: Bearer %s\n' "$CLOUDFLARE_API_TOKEN" >"$auth"
 prs=${PRS:-}
 names=""
 failed=0
@@ -18,7 +22,7 @@ if [ -z "$prs" ]; then
   # shortcut: the sweep matches Workers by name alone, so in one Cloudflare account a repo
   # foo with a site and a repo foo-site with a web app share foo-site-pr-<n>. Rename one
   # repo's slug if that ever happens.
-  if ! all=$(curl -fsS --max-time 30 -H "$auth" "$api/scripts" | jq -r '.result[].id'); then
+  if ! all=$(curl -fsS --max-time 30 -H @"$auth" "$api/scripts" | jq -r '.result[].id'); then
     echo "::error::Could not list the account's Workers."
     exit 1
   fi
@@ -50,16 +54,15 @@ if [ -z "$names" ]; then
   exit "$failed"
 fi
 
-sub=$(curl -fsS --max-time 30 -H "$auth" "$api/subdomain" | jq -r '.result.subdomain') || sub=""
+sub=$(curl -fsS --max-time 30 -H @"$auth" "$api/subdomain" | jq -r '.result.subdomain') || sub=""
 if [ -z "$sub" ] || [ "$sub" = null ]; then
   echo "::error::Could not read the account's workers.dev subdomain, so no takedown below is verified."
   failed=1
 fi
-body=$(mktemp)
 for name in $names; do
   # The API rather than `wrangler delete`, which also lists KV namespaces the token
   # cannot read. A PR that never had a preview has no Worker: 404 is not an error.
-  status=$(curl -sS --max-time 30 -o "$body" -w '%{http_code}' -X DELETE -H "$auth" "$api/scripts/$name?force=true" || true)
+  status=$(curl -sS --max-time 30 -o "$body" -w '%{http_code}' -X DELETE -H @"$auth" "$api/scripts/$name?force=true" || true)
   case $status in
   200) echo "Deleted $name." ;;
   404) echo "::notice::$name does not exist, so there is nothing to retire." ;;
