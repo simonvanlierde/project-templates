@@ -1,9 +1,11 @@
-#:schema https://raw.githubusercontent.com/simonvanlierde/sourceledger/v0.2.0/src/sourceledger/sources.schema.json
+#:schema https://raw.githubusercontent.com/simonvanlierde/sourceledger/v0.5.0/src/sourceledger/sources.schema.json
+
+output_format = "parquet"
 
 # Input manifest: every source this pipeline reads, declared before any code reads it.
 #
 # `just fetch` downloads each `implemented` source to data/raw/, `just build` turns
-# it into data/processed/<id>.csv, and `just validate` checks what was published.
+# it into data/processed/<id>.parquet, and `just validate` checks what was published.
 #
 # Keep each `url` a small cut of its source (one series, a few years, a filtered API
 # query). CI runs the whole pipeline against these URLs on every push.
