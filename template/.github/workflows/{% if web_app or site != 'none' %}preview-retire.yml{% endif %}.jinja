@@ -91,7 +91,7 @@ jobs:
     # A job that runs past timeout-minutes ends cancelled, not failed.
     if: always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
     permissions:
-      issues: write
+      issues: write # opens or comments on the failure issue
     uses: $/.github/workflows/report-failure.yml
     with:
       title: Daily preview sweep failed

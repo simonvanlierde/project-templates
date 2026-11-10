@@ -73,7 +73,14 @@
     // so the week's wait above would hold them back for good.
     { matchManagers: ['copier'], minimumReleaseAge: null },
 {%- if 'rust' in stacks %}
-    { matchManagers: ['cargo'], matchUpdateTypes: ['lockFileMaintenance'], automerge: false },
+    // Its own group gives the Cargo relock its own branch, so the uv and pnpm relocks still
+    // merge themselves: Renovate merges a branch only when every update on it may.
+    {
+      matchManagers: ['cargo'],
+      matchUpdateTypes: ['lockFileMaintenance'],
+      groupName: 'cargo lock file maintenance',
+      automerge: false,
+    },
 {%- endif %}
   ],
 }

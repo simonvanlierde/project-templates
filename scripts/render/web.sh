@@ -144,7 +144,17 @@ for wf in */.github/workflows/{ts,site}.yml; do
   [ -e "$wf" ] || continue
   deploys=$(grep -cE 'deploy-worker\.sh" (Preview|Production)' "$wf" || true)
   test "$(grep -c '/\.github/scripts/cloudflare-gate\.sh" ' "$wf" || true)" = "$deploys"
-  test "$(grep -B2 -- '- id: gate$' "$wf" | grep -c 'persist-credentials: false$' || true)" -ge "$deploys"
+  # The gate script comes from the checkout, so that step runs first and unconditionally.
+  uv run --no-project --with pyyaml python - "$wf" <<'PY'
+import sys, yaml
+for name, job in yaml.safe_load(open(sys.argv[1]))["jobs"].items():
+    steps = job.get("steps", [])
+    for i, step in enumerate(steps):
+        if step.get("id") == "gate":
+            before = steps[i - 1]
+            assert i > 0 and before.get("uses", "").startswith("actions/checkout@"), name
+            assert "if" not in before and before["with"]["persist-credentials"] is False, name
+PY
   n=$((n + deploys))
 done
 test "$n" -ge 4

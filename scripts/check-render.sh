@@ -22,9 +22,10 @@ no_image() {
 
 bash scripts/check-release-fixtures.sh
 
-# Windows git cannot check out a path over 260 characters, and the runner's checkout
-# root takes about 40 of them: keep every tracked path under 200.
-long=$(git ls-files | awk 'length($0) > 200')
+# Windows git cannot write a path over 260 characters. On the runner, the checkout root
+# takes about 40 of them and copier's clone of the template, in %TEMP%, about 67:
+# keep every tracked path at 190 or under.
+long=$(git ls-files | awk 'length($0) > 190')
 if [ -n "$long" ]; then
   echo "check-render: paths too long for a Windows checkout:" >&2
   echo "$long" >&2

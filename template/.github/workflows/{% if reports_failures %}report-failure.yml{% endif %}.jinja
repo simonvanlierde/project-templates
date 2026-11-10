@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      issues: write
+      issues: write # opens or comments on the failure issue
     steps:
       - name: open or update the issue
         env:
