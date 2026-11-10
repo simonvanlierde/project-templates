@@ -911,9 +911,8 @@ jobs:
 
   python-windows:
     # python_windows=true renders a windows-latest test job; run what it runs. Case x of
-    # check-render. Bash, so the scaffold step runs as on Linux.
-    # NOTE: the data-pipeline (case d) is left out: its project cannot lock until
-    # sourceledger 0.5.0 is on PyPI. Add a row for it then.
+    # check-render, and a data pipeline, whose tests build file:// URLs from Windows paths.
+    # Bash, so the scaffold step runs as on Linux.
     name: python (windows)
     runs-on: windows-latest
     timeout-minutes: 20
@@ -932,6 +931,12 @@ jobs:
               publish_to_pypi: true
               python_api: false
               test_extras: [property, mutation]
+              python_windows: true
+          - name: data-pipeline
+            answers:
+              project_name: ci-win-pipe
+              stacks: [python]
+              kind: data-pipeline
               python_windows: true
     steps:
       - *checkout
