@@ -166,22 +166,8 @@ jobs:
     needs: {{ stack_jobs }}
     # A job that runs past timeout-minutes ends cancelled, not failed.
     if: always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
     permissions:
       issues: write
-    steps:
-      - name: open or update the issue
-        env:
-          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
-          GH_REPO: {% raw %}${{ github.repository }}{% endraw %}
-          RUN_URL: {% raw %}${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}{% endraw %}
-        run: |-
-          title="Weekly property run failed"
-          body="The scheduled run failed: $RUN_URL"
-          issue=$(gh issue list --state open --author app/github-actions --search "in:title \"$title\"" --json number -q '.[0].number')
-          if [ -n "$issue" ]; then
-            gh issue comment "$issue" --body "$body"
-          else
-            gh issue create --title "$title" --body "$body"
-          fi
+    uses: $/.github/workflows/report-failure.yml
+    with:
+      title: Weekly property run failed

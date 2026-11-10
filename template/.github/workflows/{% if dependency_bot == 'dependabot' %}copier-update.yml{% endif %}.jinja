@@ -213,3 +213,16 @@ jobs:
             gh pr create --head "$branch" --base "$BASE" --title "chore: update from template $LATEST" --body-file "$RUNNER_TEMP/copier-update/body.md"
           fi
 {%- endraw %}
+
+  notify:
+    # Scheduled runs only: without it, a project stops getting template releases unseen.
+    # The only job that may write issues.
+    name: "copier update: report failure"
+    needs: [update, push]
+    # A job that runs past timeout-minutes ends cancelled, not failed.
+    if: always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
+    permissions:
+      issues: write
+    uses: $/.github/workflows/report-failure.yml
+    with:
+      title: Weekly template update failed
