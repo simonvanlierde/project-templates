@@ -74,6 +74,7 @@ Upgrade steps:
 
 - `.gitignore` lists `.rumdl_cache/`. A cache that an older rumdl wrote has no ignore file of its own, so Biome formatted its JSON and `pnpm check` failed after `just hooks`.
 - Web apps: a new `lychee.toml` sets lychee's `root_dir` to the Vite `public/` directory, so the lychee hook and the weekly `links.yml` resolve root-relative links such as `/favicon.svg` or `/manifest.json` there, in place of failing on them with "Cannot resolve root-relative link". A missing asset still fails.
+- The typos hook skips gettext `.po` files and anything in a `locales/` directory. typos knows English only, and rewrote valid French, German, Italian and Dutch in translation catalogs. List other files with text in other languages under `[files] extend-exclude` in `_typos.toml`.
 - Data pipelines no longer ship `data/processed/.gitkeep`, which `just validate` refuses from sourceledger 0.4.0 on ("no source '.gitkeep' in sources.toml"). `copier update` deletes it.
 - `site=astro`: a `"` in `project_description` ended the layout's quoted `content` attribute and failed `astro build`. The layout now passes the description as an expression.
 - CONTRIBUTING describes the two lines of the pull request template, `Tested:` and `Not checked:`, not the three it used to ask for.

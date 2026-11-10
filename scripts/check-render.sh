@@ -2313,6 +2313,18 @@ git -C a-hooks add docs/flags.py
 (cd a-hooks && "${prek[@]}" typos >/dev/null)
 cmp a-hooks/docs/flags.py flags.py.orig
 rm -f flags.py.orig
+# typos knows English only, so it leaves translation catalogs alone: gettext .po files and
+# whatever sits in a locales/ directory. The English typo above still fails.
+mkdir -p a-hooks/po a-hooks/src/locales
+printf 'msgid "Settings"\nmsgstr "Une ressource et une adresse"\n' >a-hooks/po/fr.po
+printf '{"settings": "Un exemple de langage"}\n' >a-hooks/src/locales/fr.json
+cp a-hooks/po/fr.po fr.po.orig
+cp a-hooks/src/locales/fr.json fr.json.orig
+git -C a-hooks add po/fr.po src/locales/fr.json
+(cd a-hooks && "${prek[@]}" typos >/dev/null)
+cmp a-hooks/po/fr.po fr.po.orig
+cmp a-hooks/src/locales/fr.json fr.json.orig
+rm -f fr.po.orig fr.json.orig
 (cd a-hooks && ! "${prek[@]}" lychee >lychee.log 2>&1)
 grep -q 'docs/missing.md.*File not found' a-hooks/lychee.log
 # A web app's root-relative links resolve in public/, where Vite serves them from, and
