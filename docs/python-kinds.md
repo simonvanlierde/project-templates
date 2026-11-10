@@ -21,7 +21,8 @@ A `data-pipeline` project includes:
 - `data/fetches.jsonl`: committed log recording every fetch of every source version. Governed by `data_license` (CC0-1.0 by default) in `REUSE.toml` ([Licenses](usage.md#licenses)).
 - `pipeline.py`: defines `parse` to extract records from raw files and a command entry point. `parse` delegates CSV, JSON, and Excel reading to [sourceledger](https://github.com/simonvanlierde/sourceledger). For other formats, branch on the source ID.
   - `fetch`: downloads sources with retries, writes provenance records, and checks upstream `ETag` and `Last-Modified` headers.
-  - `build`: verifies downloads against fetch records, prepends five provenance columns, and emits `datapackage.json` with checksums, sources, and licenses.
+  - `build`: verifies downloads against fetch records, prepends five provenance columns, writes `data/processed/<id>.parquet`, and emits `datapackage.json` with checksums, sources, and licenses.
+    Set `output_format = "csv"` at the top of `sources.toml` to write CSV instead.
   - `validate`: checks output files against the manifest, fetch records, and reuse terms.
 - Lifecycle recipes: `just fetch`, `just build`, `just validate`, and `just pipeline` to run all three. `just status` lists source fetch timestamps, and `just attribution` generates the table for `ATTRIBUTION.md`.
 - `ATTRIBUTION.md`: documents upstream data sources and reuse terms.

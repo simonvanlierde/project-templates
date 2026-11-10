@@ -38,12 +38,11 @@ library then run over it:
 - `just validate` fails when an output came from an older download, a source has no
   reuse terms, or a raw file changed after it was fetched.
 
-A row of the example output:
+`just build` writes `data/processed/example-co2.parquet`. A row of it:
 
-```csv
-source_id,source_url,retrieved_at,vintage,raw_sha256,Year,Mean,Uncertainty
-example-co2,https://raw.githubusercontent.com/datasets/co2-ppm/8c4097238570147adf6fa97ad357315528dac4c5/data/co2-annmean-mlo.csv,2026-10-17T22:30:03Z,datasets/co2-ppm commit 8c40972,b1548ededea6f9b7eecac370753de8d8da6e0afafe1041f749a11db78c2e33c4,1959,315.98,0.12
-```
+| source_id | source_url | retrieved_at | vintage | raw_sha256 | Year | Mean | Uncertainty |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| example-co2 | `https://raw.githubusercontent.com/datasets/co2-ppm/8c40972…/co2-annmean-mlo.csv` | 2026-10-17T22:30:03Z | datasets/co2-ppm commit 8c40972 | `b1548ededea6f9b7eecac370753de8d8da6e0afafe1041f749a11db78c2e33c4` | 1959 | 315.98 | 0.12 |
 
 CI runs the whole pipeline against the live URLs. A weekly run comments on an issue when
 a publisher serves new bytes for a source, and fails when a value the tests pinned
