@@ -132,7 +132,9 @@ grep -q -- '--draft=false' c/.github/workflows/python-release.yml
 grep -qF '${{ steps.attest.outputs.bundle-path }}' c/.github/workflows/python-release.yml
 grep -qF 'actions/attest@' c/.github/workflows/python-release.yml
 (lacks -q 'attest-build-provenance' c/.github/workflows/python-release.yml)
-grep -qF 'sbom-path: sbom/*.cdx.json' c/.github/workflows/python-release.yml
+# shellcheck disable=SC2016 # literal workflow expression
+grep -qF 'sbom-path: ${{ steps.sbom.outputs.path }}' c/.github/workflows/python-release.yml
+! grep -qF 'sbom-path: sbom/*' c/.github/workflows/python-release.yml
 grep -qF 'gh attestation verify' c/.github/workflows/python-release.yml
 # The API-break checks render with the publish answers, and only with them: griffe in CI from
 # the repository root, so its search path carries the nested dir; the npm report beside

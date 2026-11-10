@@ -51,8 +51,9 @@ assert release["permissions"] == {"contents": "write"}, release
 assert not any("checkout" in s.get("uses", "") for s in release["steps"]), release
 publish_script = release["steps"][-1]["run"]
 verify = ["verify"] * 4
-for fail, expected in [("", ["create", *verify, "edit"]), ("create", ["create"]),
-                       ("verify", ["create", "verify"])]:
+# Every attestation is checked before the draft exists, so a failed check leaves nothing to delete.
+for fail, expected in [("", [*verify, "create", "edit"]), ("create", [*verify, "create"]),
+                       ("verify", ["verify"])]:
     with tempfile.TemporaryDirectory() as tmp:
         work = pathlib.Path(tmp)
         for directory in ("assets", "provenance", "sbom-attestation", "notes", "bin"):
