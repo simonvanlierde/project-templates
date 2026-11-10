@@ -43,6 +43,9 @@ assert not any("trivy-action" in s.get("uses", "") for s in docker["push"]["step
 # PyPI finishes before GitHub becomes immutable; the write job executes no project code.
 python_release = yaml.safe_load((out / "c/.github/workflows/python-release.yml").read_text())["jobs"]
 release = python_release["release"]
+assert python_release["publish"]["needs"] == ["build", "test"], python_release["publish"]
+assert not any("uv sync" in s.get("run", "") for s in python_release["build"]["steps"]), python_release["build"]
+assert any("uv sync --locked" in s.get("run", "") for s in python_release["test"]["steps"]), python_release["test"]
 assert release["needs"] == "publish", release
 assert release["permissions"] == {"contents": "write"}, release
 assert not any("checkout" in s.get("uses", "") for s in release["steps"]), release
