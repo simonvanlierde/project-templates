@@ -2984,6 +2984,16 @@ grep -qx '    if: github.event.pull_request.head.repo.full_name != github.reposi
 (lacks -q 'the maintainers. included' i/.github/CONTRIBUTING.md)
 grep -q 'the maintainers. included' h/.github/CONTRIBUTING.md
 cmp "$repo/committed.toml" "$repo/template/committed.toml"
+# Every question someone can be asked is named in the usage docs.
+# shellcheck disable=SC2016 # Python source: the backticks are Markdown, not a shell command
+uv run --no-project --with pyyaml python -c '
+import sys, yaml
+questions = yaml.safe_load(open(sys.argv[1]))
+doc = open(sys.argv[2]).read()
+missing = [k for k, v in questions.items() if not k.startswith("_") and isinstance(v, dict)
+           and v.get("when") is not False and f"`{k}`" not in doc]
+sys.exit(f"questions missing from docs/usage.md: {missing}" if missing else 0)' \
+  "$repo/copier.yml" "$repo/docs/usage.md"
 # Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off
 # without an email, and skips the merge. Trailing whitespace and CRLF still count as signed.
 dco_filter=$(uv run --no-project --with pyyaml python -c '
