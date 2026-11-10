@@ -55,7 +55,7 @@ classifiers = ["Private :: Do Not Upload"]
 {% if kind == 'data-pipeline' %}
 # `{{ slug }} fetch|build|validate`, what the `just` recipes of the same names run.
 [project.scripts]
-{{ slug | to_json }} = "{{ module_name }}.pipeline:main"
+{{ slug | to_json }} = "{{ module_name }}.pipeline:entry"
 {% endif %}{% if kind == 'web-service' %}
 # `{{ slug }}` serves on HOST:PORT, as `python -m {{ module_name }}` does in the image.
 [project.scripts]
