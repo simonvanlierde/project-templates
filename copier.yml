@@ -951,6 +951,14 @@ compose_only:
   when: false
   default: "{{ 'docker' in stacks and not docker_image }}"
 
+# Computed, not asked: some workflow calls report-failure.yml (mutation, property,
+# copier-update, preview-retire, advisories). It names that file, whose path must stay
+# short enough for a Windows checkout of this repo.
+reports_failures:
+  type: bool
+  when: false
+  default: "{{ 'mutation' in test_extras or 'property' in test_extras or dependency_bot == 'dependabot' or web_app or site != 'none' or 'python' in stacks or 'ts' in stacks or 'rust' in stacks or 'go' in stacks }}"
+
 # Computed, not asked: a ts stack or the Astro site installs Node packages with pnpm.
 has_pnpm:
   type: bool

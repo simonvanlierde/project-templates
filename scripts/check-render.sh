@@ -22,6 +22,15 @@ no_image() {
 
 bash scripts/check-release-fixtures.sh
 
+# Windows git cannot check out a path over 260 characters, and the runner's checkout
+# root takes about 40 of them: keep every tracked path under 200.
+long=$(git ls-files | awk 'length($0) > 200')
+if [ -n "$long" ]; then
+  echo "check-render: paths too long for a Windows checkout:" >&2
+  echo "$long" >&2
+  exit 1
+fi
+
 # Copier ignores a data-file key it has no question for, so a misspelt preset key
 # would fail nothing: every key must be a top-level question in copier.yml.
 for f in presets/*.yml; do
