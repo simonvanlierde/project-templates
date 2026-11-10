@@ -16,6 +16,9 @@ test -f d/pipe/tests/test_published.py
 grep -qx 'output_format = "parquet"' d/pipe/sources.toml
 grep -qF 'sourceledger[parquet]' d/pipe/pyproject.toml
 grep -qF 'data/processed/example.parquet' d/pipe/tests/test_pipeline.py
+# sourceledger 0.5 exits 3 when a stage cannot run, and read_output yields rows once.
+grep -qF 'pipeline.main(["build"]) == 3' d/pipe/tests/test_pipeline.py
+grep -qF 'rows = list(pipeline.sourceledger.read_output(OUT))' d/pipe/tests/test_pipeline.py
 grep -qF 'f"example-co2.{OUTPUT_FORMAT}"' d/pipe/tests/test_published.py
 # sourceledger releases resolve without the week's wait; other packages keep it.
 grep -qx 'exclude-newer-package = { sourceledger = false }' d/pipe/pyproject.toml

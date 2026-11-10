@@ -39,7 +39,7 @@ def test_the_whole_pipeline_runs_from_a_local_file(upstream: Path) -> None:
     record = json.loads(Path("data/raw/example.csv.fetch.json").read_text(encoding="utf-8"))
     assert record["url"] == upstream.as_uri()
     assert record["sha256"] == hashlib.sha256(FIXTURE.encode()).hexdigest()
-    rows = pipeline.sourceledger.read_output(OUT)
+    rows = list(pipeline.sourceledger.read_output(OUT))
     assert [(r["year"], r["value"]) for r in rows] == [("2020", "1.5"), ("2021", "2.5")]
     assert {r["raw_sha256"] for r in rows} == {record["sha256"]}
 
@@ -47,7 +47,7 @@ def test_the_whole_pipeline_runs_from_a_local_file(upstream: Path) -> None:
 @pytest.mark.usefixtures("upstream")
 def test_a_missing_input_is_one_line_and_a_failed_exit(capsys: pytest.CaptureFixture[str]) -> None:
     """Building before fetching names the missing file instead of printing a traceback."""
-    assert pipeline.main(["build"]) == 1
+    assert pipeline.main(["build"]) == 3
     err = capsys.readouterr().err
     assert "example.csv.fetch.json is missing" in err
     assert len(err.strip().splitlines()) == 1
