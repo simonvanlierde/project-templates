@@ -165,7 +165,7 @@ release version:
     git commit -s -m "chore: release $version" -- CHANGELOG.md{{ ' ' ~ app_pkg if app_pkg }}
     echo "Merge this commit to main, then run: just release $version"
 
-# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on secret scanning with push protection, private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}. Create the `preview` environment for pull request previews and the `production` environment, deployed from `main` only{% endif %}. Safe to rerun.
+# Protect the default branch (no deletion, no force-push, linear history, PRs squash-merged after the always-on checks pass{% if public %} and one approval{% endif %}) and the v* tags{% if public %}. Turn on secret scanning with push protection, private vulnerability reporting, CodeQL default setup{% endif %} and Dependabot alerts{% if publish_to_pypi or publish_to_npm or publish_to_ghcr %}. Set up release environments with required review{% endif %}{% if 'ts' in stacks and ts_kind == 'web-app' %}. Create the `preview` environment for pull request previews and the `production` environment, deployed from `main` only{% endif %}{% if dependency_bot == 'dependabot' %}. Create the `copier-update` environment, used from `main` only{% endif %}. Safe to rerun.
 repo-settings:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -269,6 +269,17 @@ repo-settings:
         gh api -X POST "repos/{owner}/{repo}/environments/production/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
     fi
     echo "Configured environment 'production'. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to both environments: see the {{ 'Deploy' if 'ts' in stacks and ts_kind == 'web-app' else 'Site' }} section of the README."
+{%- endif %}
+{%- if dependency_bot == 'dependabot' %}
+    # copier-update.yml's push job reads the update App's key from this environment, from main only.
+    gh api -X PUT "repos/{owner}/{repo}/environments/copier-update" \
+        -F "deployment_branch_policy[protected_branches]=false" \
+        -F "deployment_branch_policy[custom_branch_policies]=true" >/dev/null 2>"$err" || fail
+    policies=$(gh api "repos/{owner}/{repo}/environments/copier-update/deployment-branch-policies" --jq '.branch_policies[].name' 2>/dev/null || true)
+    if ! echo "$policies" | grep -qxF 'main'; then
+        gh api -X POST "repos/{owner}/{repo}/environments/copier-update/deployment-branch-policies" -f name="main" -f type="branch" >/dev/null 2>"$err" || fail
+    fi
+    echo "Configured environment 'copier-update'. For template updates that change workflows, add the update App: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#the-update-app"
 {%- endif %}
 {%- set site_on_pages = site != 'none' and not site_on_workers %}
 {%- if site_on_pages or docs_site %}

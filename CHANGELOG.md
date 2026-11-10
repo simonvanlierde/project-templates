@@ -12,6 +12,7 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
+- **Breaking:** with Dependabot, `copier-update.yml` no longer reads `COPIER_UPDATE_TOKEN`. Until you set up [the update App](docs/usage.md#the-update-app), it pushes with `GITHUB_TOKEN`, so a template update that changes a workflow opens an issue instead of a PR. Run `just repo-settings`, add the App's client ID and key to the `copier-update` environment, then delete the old secret: `gh secret delete COPIER_UPDATE_TOKEN`.
 - **Breaking:** a release workflow publishes only a tag signed with an SSH key listed in `.github/allowed_signers` on `main`, which the update adds with no keys in it. Before your next release, add your signing key and commit the file to `main`: `echo "$(git config user.email) namespaces=\"git\" $(cat "$(git config --type=path user.signingkey | sed 's/\.pub$//').pub")" >>.github/allowed_signers`. A GPG-signed tag no longer publishes: switch to an SSH signing key (`git config gpg.format ssh`).
 - **Breaking:** `docker_stacks` is gone, and copier drops the old answer. What the update does depends on what it listed:
   - Only `ts`, without the python stack: the project becomes a [Compose-only repo](docs/usage.md#compose-only-repos). The update deletes the TypeScript `Dockerfile`, `.dockerignore`, `src/main.ts` stub and compose service; keep them with `git checkout HEAD -- <path>` before you commit.
@@ -50,6 +51,8 @@ Upgrade steps:
 
 ### Changed
 
+- **Breaking:** `copier-update.yml` pushes with a token from your own GitHub App, which `actions/create-github-app-token` mints for each run: it lasts an hour, reaches only this repo with Contents, Pull requests and Workflows write, and is revoked when the job ends. It replaces the `COPIER_UPDATE_TOKEN` personal access token, which lasted until it expired and which any workflow on any branch could read. The App's key is a secret of the `copier-update` environment, which `just repo-settings` creates and limits to `main` ([The update App](docs/usage.md#the-update-app)).
+- `copier-update.yml` pushes through gh's credential helper (`gh auth setup-git`), and `preview-retire.sh` sends the Cloudflare token from a header file, so neither token appears on a command line, where other processes on the runner could read it.
 - `python-release.yml` attests with `actions/attest` (with `artifact-metadata: write`) in place of `actions/attest-build-provenance`, and attaches a CycloneDX SBOM (`uv export --format cyclonedx1.5 --no-dev`, attested against the sdist) and a `<asset>.intoto.jsonl` bundle for every asset, the name Scorecard's Signed-Releases check scores highest. The release job runs `gh attestation verify` on each asset before it undrafts the release. uv marks the CycloneDX export as preview.
 - `docker.yml` attests the image with `actions/attest` and `artifact-metadata: write` too.
 - A `site=plain` page on a Cloudflare Worker (`site_host=cloudflare`) ships `site/_headers`: the page's Content-Security-Policy plus `frame-ancestors 'none'`, `X-Frame-Options`, `X-Content-Type-Options: nosniff`, HSTS and the web app's other security headers. It had none, and a meta tag cannot set `frame-ancestors`. The update adds the file; keep it in step with the CSP in `site/index.html`.

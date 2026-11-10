@@ -4,8 +4,8 @@ name: copier update
 # weekly, finds each template's newest tag, and does nothing when `_commit` in every
 # .copier-answers*.yml already is that tag. The PR lives on one fixed branch.
 # GITHUB_TOKEN can't push a change to .github/workflows/, which most template releases
-# make, and its PR starts no CI. A COPIER_UPDATE_TOKEN secret fixes both; without it, an
-# update that touches a workflow opens an issue instead. See "Hearing about new releases"
+# make, and its PR starts no CI. A token from your own GitHub App fixes both; without one,
+# an update that touches a workflow opens an issue instead. See "The update App"
 # in the template's docs/usage.md.
 
 on:
@@ -123,9 +123,12 @@ jobs:
     if: needs.update.outputs.latest != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # The App's private key is a secret of this environment, which `just repo-settings`
+    # limits to main, so a workflow on another branch can't read it.
+    environment: copier-update
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write # without the App, GITHUB_TOKEN pushes the update branch
+      pull-requests: write # and opens or edits its PR
       issues: write # to ask for a local update when it can't push one
     steps:
       # A fresh runner keeps Copier's dependencies away from the push token.
@@ -154,11 +157,22 @@ jobs:
             -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
             commit -q -s -m "chore: update from template $LATEST"
 
+      # The App's token lasts an hour, reaches this repo only, and is revoked when the job ends.
+      - name: Get a token from the update App
+        id: app
+        if: vars.COPIER_UPDATE_CLIENT_ID != ''
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.COPIER_UPDATE_CLIENT_ID }}
+          private-key: ${{ secrets.COPIER_UPDATE_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
       - name: Push the update and open the PR
         env:
-          # A fine-grained token with contents, pull requests and workflows write on this repo.
-          GH_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN || github.token }}
-          HAS_TOKEN: ${{ secrets.COPIER_UPDATE_TOKEN != '' }}
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          HAS_TOKEN: ${{ steps.app.outputs.token != '' }}
           REPO: ${{ github.repository }}
           BASE: ${{ github.event.repository.default_branch }}
           LATEST: ${{ needs.update.outputs.latest }}
@@ -170,7 +184,7 @@ jobs:
             title="Update from template $LATEST by hand"
             {
               echo "Template \`$LATEST\` changes files in \`.github/workflows/\`, and \`GITHUB_TOKEN\` can't push those."
-              echo "Run \`copier update --answers-file <file> --vcs-ref <tag>\` locally for each template in it, and open the PR yourself, or add a \`COPIER_UPDATE_TOKEN\` secret (see the template's docs/usage.md) so this workflow can."
+              echo "Run \`copier update --answers-file <file> --vcs-ref <tag>\` locally for each template in it, and open the PR yourself, or set up the update App (see the template's docs/usage.md) so this workflow can."
             } >issue.md
             # A closed issue counts too, so closing it stops the weekly reminder for this tag.
             if [ -z "$(gh issue list --state all --search "\"$title\" in:title" --json number --jq '.[0].number')" ]; then
@@ -186,10 +200,12 @@ jobs:
           fi
 
           if [ "$HAS_TOKEN" != true ]; then
-            printf '\n%s\n' "This PR was opened without \`COPIER_UPDATE_TOKEN\`, so its checks do not start: close it and reopen it to run them." >>"$RUNNER_TEMP/copier-update/body.md"
+            printf '\n%s\n' "This PR was opened without the update App, so its checks do not start: close it and reopen it to run them." >>"$RUNNER_TEMP/copier-update/body.md"
           fi
 
-          git -c core.hooksPath=/dev/null push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"
+          # git reads the token from gh's credential helper, so it stays out of the process list.
+          gh auth setup-git
+          git -c core.hooksPath=/dev/null push --force "https://github.com/${REPO}.git" "$branch"
 
           if [ -n "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')" ]; then
             gh pr edit "$branch" --title "chore: update from template $LATEST" --body-file "$RUNNER_TEMP/copier-update/body.md"
