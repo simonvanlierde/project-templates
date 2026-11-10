@@ -63,7 +63,8 @@ _skip_if_exists:
   # The committed API report: `just ts-api` rewrites it after a deliberate change.
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
-# Defaults, plus the sample test file when updating.
+# Defaults, plus the sample files when updating: they are the project's after the first copy,
+# so one the project deleted stays deleted. _skip_if_exists keeps only the ones that exist.
 _exclude:
   - "copier.yaml"
   - "copier.yml"
@@ -74,6 +75,8 @@ _exclude:
   - ".DS_Store"
   - ".svn"
   - "{% if _copier_operation == 'update' %}/{{ '' if python_dir == '.' else python_dir ~ '/' }}tests/test_add.py{% endif %}"
+  - "{% if _copier_operation == 'update' %}/site/src/pages/index.astro{% endif %}"
+  - "{% if _copier_operation == 'update' %}/site/src/pages/about.md{% endif %}"
 
 # Shown on `copier copy` only; `--quiet` hides both.
 _message_before_copy: |

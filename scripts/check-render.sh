@@ -3180,18 +3180,21 @@ git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
 "${git_t[@]}" commit -q -m base
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=sample-me --data 'stacks=[python]' \
-  --data kind=library "$sample_tpl" "$sample_up" >/dev/null
+  --data kind=library --data site=astro "$sample_tpl" "$sample_up" >/dev/null
 test -f "$sample_up/src/sample_me/__init__.py"
 test -f "$sample_up/tests/test_add.py"
+test -f "$sample_up/site/src/pages/index.astro"
+test -f "$sample_up/site/src/pages/about.md"
 grep -q 'def add(' "$sample_up/src/sample_me/__init__.py"
 cat >"$sample_up/src/sample_me/__init__.py" <<'PY'
 """sample-me package."""
 PY
-rm "$sample_up/tests/test_add.py"
+rm "$sample_up/tests/test_add.py" "$sample_up/site/src/pages/index.astro" "$sample_up/site/src/pages/about.md"
 git -C "$sample_up" init -q
 git -C "$sample_up" add -A
 git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "customize package"
-for f in "$sample_tpl"/template/*/tests/*test_add.py*.jinja "$sample_tpl"/template/*/*/*/__init__.py.jinja; do
+for f in "$sample_tpl"/template/*/tests/*test_add.py*.jinja "$sample_tpl"/template/*/*/*/__init__.py.jinja \
+  "$sample_tpl"/template/*site*/*src*/pages/index.astro.jinja "$sample_tpl"/template/*site*/*src*/pages/about.md; do
   echo '# changed upstream' >>"$f"
 done
 "${git_t[@]}" commit -q -am "change the samples"
@@ -3200,6 +3203,9 @@ uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD
 grep -q 'Updating to template version' "$out/sample-up.log"
 (lacks -q 'def add(' "$sample_up/src/sample_me/__init__.py")
 test ! -e "$sample_up/tests/test_add.py"
+# A site that replaced the starter pages with its own routes keeps them gone.
+test ! -e "$sample_up/site/src/pages/index.astro"
+test ! -e "$sample_up/site/src/pages/about.md"
 
 # install-action falls back to cargo-binstall for a tool past its manifest, which
 # installs an unchecked binary: every step says fallback: none, but cargo-codspeed,
