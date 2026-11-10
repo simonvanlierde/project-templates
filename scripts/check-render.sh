@@ -2559,6 +2559,20 @@ local-custom:
 JUST
 (cd a && just --list | grep -q 'local-custom')
 rm -f a/just/local.just
+# No hook lints a justfile's shebang recipes, so shellcheck their bodies in every render.
+# The version argument becomes "$1", and gh's {owner}/{repo} placeholders plain words.
+# SC2043: the release-environment loop runs once when the answers pick one registry.
+for answers in */.copier-answers.yml; do
+  for recipe in release repo-settings; do
+    # shellcheck disable=SC2016 # a literal "$1" for the recipe body
+    (cd "${answers%/*}" && just --show "$recipe") |
+      sed -e '1,/^[a-z-]*\( [a-z]*\)*:$/d' -e 's/^    //' -e 's/{{ version }}/"$1"/' -e 's/{owner}\/{repo}/OWNER\/REPO/g' |
+      shellcheck -s bash -e SC2043 - || {
+      echo "${answers%/*}: just $recipe fails shellcheck" >&2
+      exit 1
+    }
+  done
+done
 
 # The generated workflows are linted, never run: a typo in a run line fails only
 # in the new project.
