@@ -173,7 +173,7 @@ The `preview` job runs the pull request's code with the `preview` environment's 
 
 The first deploy creates each Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. wrangler is an exact devDependency in `package.json` ([why](decisions/0002-wrangler-is-an-exact-dev-dependency.md)), and the dependency bot bumps it.
 
-Copier updates do not overwrite user-owned starter files: `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css`, `index.html`, `tests/e2e/routes.ts`, and markdown files in `docs/`.
+The starter app is yours after the first render. `copier update` never touches `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css` or the Worker script, even to bring back one you deleted. It leaves `index.html`, `tests/e2e/routes.ts` and the Markdown files in `docs/` alone too, but re-creates one you delete.
 
 The web app's folder also gets `PRODUCT.md` and `DESIGN.md`, stubs to fill in. They name who uses the app and how it looks, and are yours to edit: an update leaves them alone.
 
@@ -313,6 +313,8 @@ Execute `just repo-settings` once after creating the repository and again whenev
 `copier update` performs a three-way merge against the latest template release.
 
 User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, citation files (`CITATION.cff`, `codemeta.json`), silver-badge governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
+
+Updates skip the sample code and pages (the package's `__init__.py`, `tests/test_add.py`, the web app's components, the site's pages and Worker scripts), so a sample you deleted stays deleted. So does a feature you turn on later with `copier update --data`: it comes without its samples, which a fresh `copier copy` into a scratch directory shows. Delete a file the project owns, such as `README.md`, and the update writes it again.
 
 To relocate a package directory, execute `copier update` with the new path and delete the old directory manually.
 

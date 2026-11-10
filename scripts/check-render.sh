@@ -34,6 +34,11 @@ for f in presets/*.yml; do
 done
 
 out=${1:?usage: scripts/check-render.sh OUT_DIR}
+# A render into a previous run's tree keeps that run's project edits, and the hooks then fail.
+if [ -e "$out/a/.copier-answers.yml" ]; then
+  echo "check-render: $out holds an earlier run; pass a new directory" >&2
+  exit 2
+fi
 # The identity answers have no defaults. CI's settings file fills them, and
 # replaces your own copier settings for this run.
 export COPIER_SETTINGS_PATH=$PWD/.github/ci-copier-settings.yml

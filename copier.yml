@@ -1,22 +1,19 @@
 _subdirectory: template
 # `ask:` hides the advanced questions behind `customise`, which needs 9.19.0.
 _min_copier_version: "9.19.0"
-# Written once, then owned by the project: `copier update` leaves them alone, and
-# `copier copy` into an existing repo keeps its own. The README is the project's
-# from its first real paragraph, so template changes to it never arrive. A release
-# adds its version, date and DOI to the citation files, and an update would then
-# conflict with that edit every time. The web-app entries are its starter files and
-# legal pages, which the project rewrites from day one, as are the site's starter
-# files and the Worker scripts. go.mod is rewritten by the first `go mod tidy`, and
-# Dependabot bumps its requirements after that; its module path and go version are
-# answers fixed at copy time.
-# The silver-badge documents are skeletons the project fills in. Each entry starts with `/`:
-# copier matches these like .gitignore lines, so a bare README.md would also skip
-# data/README.md. In a project that deleted a file the template renders, copier 9.19.1
-# renders these before it loads the answers, so ts_dir and go_dir fall back to '.': a
-# package at the root then keeps its own files, where every entry used to miss and the
-# update conflicted them with the template's.
+# Each entry starts with `/`: copier matches these like .gitignore lines, so a bare
+# README.md would also skip data/README.md. In a project that deleted a file the template
+# renders, copier 9.19.1 renders these before it loads the answers, so ts_dir and go_dir
+# fall back to '.': a package at the root then keeps its own files, where every entry used
+# to miss and the update conflicted them with the template's.
 _skip_if_exists:
+  # Owned: written once, then the project's. `copier update` and a `copier copy` into an
+  # existing repo leave one that exists alone, and re-create one that is missing, so a
+  # release can add them to existing projects. The README is the project's from its first
+  # real paragraph; a release adds its version, date and DOI to the citation files; the
+  # silver-badge documents, PRODUCT.md, DESIGN.md and the legal pages are skeletons the
+  # project fills in. go.mod is rewritten by the first `go mod tidy`, and the committed API
+  # report by `just ts-api`.
   - /README.md
   - /.github/allowed_signers
   - /CHANGELOG.md
@@ -27,44 +24,44 @@ _skip_if_exists:
   - /CITATION.cff
   - /codemeta.json
   - /_typos.toml
-  - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
-  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.tsx"
-  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.test.tsx"
-  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/main.tsx"
-  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}index.html"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}tests/e2e/routes.ts"
-  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts"
-  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}PRODUCT.md"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}DESIGN.md"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}docs/accessibility.md"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}docs/accessibility-assessment.md"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}docs/privacy.md"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}docs/terms.md"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
   - "/{{ '' if go_dir | default('.') == '.' else go_dir ~ '/' }}go.mod"
-  # A Compose-only repo's starter stack: replaced by the project's own services.
   - "/{{ 'compose.yaml' if compose_only else '.no-compose-starter' }}"
   - "/{{ '.env.example' if compose_only else '.no-compose-starter' }}"
   - /docs/decisions/README.md
   - /docs/decisions/0001-start-from-project-templates.md
+  - /site/astro.config.mjs
+  - /site/src/layouts/Base.astro
+  - /zensical.toml
+  - /docs/index.md
+  - /docs/reference.md
+  # Samples: code and pages the project replaces. Each is also in the update-only
+  # `_exclude` below, so one the project deleted stays deleted (check-render checks both).
+  - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
+  - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}tests/test_add.py"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.tsx"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.test.tsx"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/main.tsx"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts"
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
-  - /site/astro.config.mjs
-  - /site/src/layouts/Base.astro
   - /site/src/pages/index.astro
   - /site/src/pages/about.md
   - /site/worker/index.mjs
   - /site/worker/index.test.mjs
-  - /zensical.toml
-  - /docs/index.md
-  - /docs/reference.md
-  # The committed API report: `just ts-api` rewrites it after a deliberate change.
-  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}{{ slug }}.api.md"
 
-# Defaults, plus the sample files when updating: they are the project's after the first copy,
-# so one the project deleted stays deleted. _skip_if_exists keeps only the ones that exist.
+# Defaults, plus the samples from _skip_if_exists when updating.
 _exclude:
   - "copier.yaml"
   - "copier.yml"
@@ -74,9 +71,21 @@ _exclude:
   - ".git"
   - ".DS_Store"
   - ".svn"
+  - "{% if _copier_operation == 'update' %}/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if python_dir == '.' else python_dir ~ '/' }}tests/test_add.py{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.tsx{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.test.tsx{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/main.tsx{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts{% endif %}"
+  - "{% if _copier_operation == 'update' %}/site/index.html{% endif %}"
+  - "{% if _copier_operation == 'update' %}/site/style.css{% endif %}"
+  - "{% if _copier_operation == 'update' %}/site/main.mjs{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/src/pages/index.astro{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/src/pages/about.md{% endif %}"
+  - "{% if _copier_operation == 'update' %}/site/worker/index.mjs{% endif %}"
+  - "{% if _copier_operation == 'update' %}/site/worker/index.test.mjs{% endif %}"
 
 # Shown on `copier copy` only; `--quiet` hides both.
 _message_before_copy: |

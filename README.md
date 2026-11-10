@@ -8,13 +8,25 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16002/badge)](https://www.bestpractices.dev/projects/16002)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23701980.svg)](https://doi.org/10.5281/zenodo.23701980)
 
-Build a dataset from public sources where every row says which download it came from.
+Start a Python, TypeScript, Rust, Go or Docker repo that is secure by default and kept
+current by a weekly update PR. Research code comes citable: `CITATION.cff`, a Zenodo DOI
+and a Software Heritage archive from the first release.
 
 This is a [Copier](https://copier.readthedocs.io) template. It starts Python, TypeScript,
-Rust, Go and Docker projects, in any mix ([quick start](#quick-start)). Its `data-pipeline` kind
-writes a Python project around one manifest, `sources.toml`, which lists each input with
-its URL and the publisher's reuse terms. Three steps from the
-[sourceledger](https://github.com/simonvanlierde/sourceledger) library then run over it:
+Rust, Go and Docker projects, in any mix ([quick start](#quick-start)).
+
+Every project gets a passing test on day one, `just check` running
+the same checks as CI, actions pinned to exact commits, and optional releases to PyPI, npm
+and the GitHub Container Registry with no tokens to store. When the template improves,
+`copier update` pulls the changes in.
+
+## Data pipelines
+
+The `data-pipeline` kind builds a dataset from public sources where every row says
+which download it came from. It writes a Python project around one manifest,
+`sources.toml`, which lists each input with its URL and the publisher's reuse terms.
+Three steps from the [sourceledger](https://github.com/simonvanlierde/sourceledger)
+library then run over it:
 
 - `just fetch` downloads each source and writes a record beside it: the URL, when it
   was fetched, the SHA-256 and size of the bytes, the vintage you expect, and the
@@ -38,11 +50,6 @@ a publisher serves new bytes for a source, and fails when a value the tests pinn
 changed. The raw and processed data stay out of git, so the repository never
 redistributes a source. `CITATION.cff` and `codemeta.json` come from the
 same answers, ready for a Zenodo DOI.
-
-Every project, data pipeline or not, gets a passing test on day one, `just check` running
-the same checks as CI, actions pinned to exact commits, and optional releases to PyPI, npm
-and the GitHub Container Registry with no tokens to store. When the template improves,
-`copier update` pulls the changes in.
 
 ## Quick start
 

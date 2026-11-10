@@ -76,6 +76,7 @@ Upgrade steps:
 
 ### Fixed
 
+- A sample file you deleted stays deleted on `copier update`: the package's `__init__.py`, the web app's `App.tsx`, `App.test.tsx`, `main.tsx`, `app.css` and Worker script, the plain site's page, and the example site Worker. Before, an update that changed one could bring it back. A file the project owns, such as `README.md`, a decision record or a legal page, comes back if you delete it. A feature you turn on later with `copier update --data` does not get its samples.
 - A web app or a site on a Worker ignores `.dev.vars*`, where wrangler reads local secrets, so `git add .` no longer stages them with only the betterleaks hook in the way. A site on a Worker without a web app now ignores wrangler's `.wrangler/` state too.
 - `.gitignore` lists `*.pem`, `*.key` and `.npmrc` under its secrets. The template keeps pnpm settings in `pnpm-workspace.yaml`, so a project `.npmrc` would hold only a registry token. A file you already track stays tracked.
 - `.gitignore` lists `.rumdl_cache/`. A cache that an older rumdl wrote has no ignore file of its own, so Biome formatted its JSON and `pnpm check` failed after `just hooks`.

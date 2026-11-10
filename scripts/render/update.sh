@@ -212,10 +212,30 @@ test -f "$adr_dir/docs/adr/0001-x.md"
 test ! -e "$adr_dir/docs/decisions"
 grep -q 'docs/adr' "$repo/docs/usage.md"
 
-# Sample code is not recreated on copier update. The update must cross a template commit
-# that changes the sample files: from an unchanged template, copier keeps a project's own
-# deletions and edits even without the skip and exclude rules. A throwaway template repo
-# holds the working tree, so uncommitted edits are tested too.
+# Each sample in _skip_if_exists (the entries after its `# Samples:` comment) has an
+# update-only _exclude entry with the same path, and no update-only entry lacks one.
+uv run --no-project --with pyyaml python - "$repo/copier.yml" <<'PY'
+import sys, yaml
+text = open(sys.argv[1]).read()
+conf = yaml.safe_load(text)
+samples = []
+for line in text[text.index("\n  # Samples:") + 1:].splitlines():
+    if line.startswith("  #"):
+        continue
+    if not line.startswith("  - "):
+        break
+    samples += yaml.safe_load(line.strip())
+assert samples and set(samples) <= set(conf["_skip_if_exists"]), samples
+want = {"{% if _copier_operation == 'update' %}" + s + "{% endif %}" for s in samples}
+have = {e for e in conf["_exclude"] if e.startswith("{% if _copier_operation == 'update' %}")}
+assert not want - have, f"samples not excluded on update: {sorted(want - have)}"
+assert not have - want, f"update-only excludes outside the samples group: {sorted(have - want)}"
+PY
+
+# A sample the project deleted stays deleted on copier update; an owned file it deleted comes
+# back. The update must cross a template commit that changes those files: from an unchanged
+# template, copier keeps a project's own deletions even without the skip and exclude rules. A
+# throwaway template repo holds the working tree, so uncommitted edits are tested too.
 sample_tpl=$out/sample-tpl
 sample_up=$out/sample-up
 mkdir -p "$sample_tpl"
@@ -225,33 +245,35 @@ git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
 "${git_t[@]}" add -A
 "${git_t[@]}" commit -q -m base
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=sample-me --data 'stacks=[python]' \
-  --data kind=library --data site=astro "$sample_tpl" "$sample_up" >/dev/null
-test -f "$sample_up/src/sample_me/__init__.py"
-test -f "$sample_up/tests/test_add.py"
-test -f "$sample_up/site/src/pages/index.astro"
-test -f "$sample_up/site/src/pages/about.md"
-grep -q 'def add(' "$sample_up/src/sample_me/__init__.py"
-cat >"$sample_up/src/sample_me/__init__.py" <<'PY'
-"""sample-me package."""
-PY
-rm "$sample_up/tests/test_add.py" "$sample_up/site/src/pages/index.astro" "$sample_up/site/src/pages/about.md"
+  --data project_name=sample-me --data 'stacks=[python,ts]' --data kind=library \
+  --data ts_dir=web --data ts_kind=web-app --data user_data=nothing --data worker=true \
+  --data site=astro --data site_host=cloudflare --data decision_records=true \
+  "$sample_tpl" "$sample_up" >/dev/null
+# Every sample this render has: a missing one fails here, before the update can pass on it.
+samples=(src/sample_me/__init__.py tests/test_add.py
+  web/src/App.tsx web/src/App.test.tsx web/src/main.tsx web/src/app.css
+  web/worker/index.ts web/worker/index.test.ts
+  site/src/pages/index.astro site/src/pages/about.md site/worker/index.mjs site/worker/index.test.mjs)
+owned=docs/decisions/0001-start-from-project-templates.md
+(cd "$sample_up" && rm "${samples[@]}" "$owned")
 git -C "$sample_up" init -q
 git -C "$sample_up" add -A
-git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "customize package"
-for f in "$sample_tpl"/template/*/tests/*test_add.py*.jinja "$sample_tpl"/template/*/*/*/__init__.py.jinja \
-  "$sample_tpl"/template/*site*/*src*/pages/index.astro.jinja "$sample_tpl"/template/*site*/*src*/pages/about.md; do
-  echo '# changed upstream' >>"$f"
-done
+git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "replace the samples"
+find "$sample_tpl/template" -type f \( -name '*test_add.py*' -o -name '__init__.py.jinja' \
+  -o -name '*App.tsx*' -o -name '*App.test.tsx*' -o -name '*main.tsx*' -o -name '*app.css*' \
+  -o -path '*worker*/index.ts' -o -path '*worker*/index.test.ts' -o -path '*worker*/index.mjs' \
+  -o -path '*worker*/index.test.mjs' -o -name 'index.astro.jinja' -o -name 'about.md' \
+  -o -name '0001-start-from-project-templates.md.jinja' \) -exec sh -c 'echo "// changed upstream" >>"$1"' _ {} \;
 "${git_t[@]}" commit -q -am "change the samples"
 # shellcheck disable=SC2031 # COPIER_VERSION is set at file top
 uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >"$out/sample-up.log" 2>&1
 grep -q 'Updating to template version' "$out/sample-up.log"
-(lacks -q 'def add(' "$sample_up/src/sample_me/__init__.py")
-test ! -e "$sample_up/tests/test_add.py"
-# A site that replaced the starter pages with its own routes keeps them gone.
-test ! -e "$sample_up/site/src/pages/index.astro"
-test ! -e "$sample_up/site/src/pages/about.md"
+back=$(cd "$sample_up" && for f in "${samples[@]}"; do if [ -e "$f" ]; then echo "$f"; fi; done)
+test -z "$back" || {
+  echo "check-render: copier update brought back deleted samples: $back" >&2
+  exit 1
+}
+test -f "$sample_up/$owned"
 
 # install-action falls back to cargo-binstall for a tool past its manifest, which
 # installs an unchecked binary: every step says fallback: none, but cargo-codspeed,
