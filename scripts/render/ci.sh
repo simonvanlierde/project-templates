@@ -95,13 +95,14 @@ test ! -e b/.github/workflows/scorecard.yml
 (lacks -q -i scorecard b/README.md)
 # A badge render's README says how to get the software and leaves a TODO for what it does
 # and its basic use (OpenSSF interact, description_good, documentation_basics; Baseline
-# DO-01.01). m publishes to npm only. a has no badge answer, and b is private.
+# DO-01.01). m publishes to npm only. c is at level minimal, and b is private.
 grep -qx '## Usage' m/README.md
 grep -qF '<!-- TODO: say what this software does and the problem it solves, then show its basic use.' m/README.md
 # shellcheck disable=SC2016 # literal backticks
 grep -qF 'Get it from the [releases](https://github.com/example-org/mutate-me/releases), from [npm](https://www.npmjs.com/package/mutate-me) (`pnpm add mutate-me`), or clone the repository.' m/README.md
 grep -qx '## Usage' h/README.md
-for r in a b; do (lacks -qx '## Usage' "$r/README.md"); done
+grep -qx '## Usage' a/README.md
+for r in b c; do (lacks -qx '## Usage' "$r/README.md"); done
 # fair-software.eu: the weekly howfairis workflow and its badge need a citable kind (a, research)
 # and public. b is private; h, a public Go library, gets both.
 grep -qx "          uvx --exclude-newer \"1 week\" --from git+https://github.com/fair-software/howfairis@$howfairis_pin howfairis $(grep -o 'https://github.com/[^/]*/render-me' a/CITATION.cff | head -1) | tee out.txt || true" a/.github/workflows/fair.yml

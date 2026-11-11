@@ -309,7 +309,7 @@ repo-settings:
 {%- if public and citable %}
     echo "Zenodo: https://zenodo.org/account/settings/github/"
 {%- endif %}
-{%- if (public and (citable or openssf_badge != 'none')) or publish_to_pypi %}
+{%- if (public and (citable or level != 'minimal')) or publish_to_pypi %}
     if [ -f .github/first-release.md ]; then echo "First-release checklist: gh issue create --title 'First release' --body-file .github/first-release.md"; fi
 {%- endif %}
 

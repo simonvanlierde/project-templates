@@ -11,7 +11,7 @@ _skip_if_exists:
   # existing repo leave one that exists alone, and re-create one that is missing, so a
   # release can add them to existing projects. The README is the project's from its first
   # real paragraph; a release adds its version, date and DOI to the citation files; the
-  # silver-badge documents, PRODUCT.md, DESIGN.md and the legal pages are skeletons the
+  # community-level documents, PRODUCT.md, DESIGN.md and the legal pages are skeletons the
   # project fills in. go.mod is rewritten by the first `go mod tidy`, and the committed API
   # report by `just ts-api`.
   - /README.md
@@ -526,24 +526,28 @@ docs_site:
     A web app at the repo root keeps its privacy and accessibility pages in docs/, and the docs site would publish a second copy: answer a ts_dir such as web, or no here.
     {% endif %}
 
-# The OpenSSF Best Practices badge (bestpractices.dev) is for public, open-source
-# projects. These documents are starting points for the project to complete.
-openssf_badge:
+# The practice ladder in levels.toml (docs/usage.md#levels). The OpenSSF Best Practices
+# badge is for public, open-source projects, so a private or unlicensed repo is off it.
+level:
   type: str
   when: "{{ public and license != 'none' }}"
   ask: "{{ customise }}"
-  help: OpenSSF Best Practices badge level to prepare for; adds the documents its criteria ask for
+  help: How much the repo commits to (docs/usage.md#levels); each level adds the documents its requirements ask for
   choices:
-    None: none
-    Passing (CONTRIBUTING.md gains a test policy and the coding standards): passing
-    Silver (passing, plus GOVERNANCE.md, docs/roadmap.md and docs/assurance-case.md to fill in): silver
-  default: none
+    Minimal (a public repo with few users; no badge documents): minimal
+    Standard (OpenSSF passing; CONTRIBUTING.md gains a test policy and the coding standards): standard
+    Community (outside contributors, OpenSSF silver; adds GOVERNANCE.md, docs/roadmap.md and docs/assurance-case.md to fill in): community
+  # `copier update` from before this question maps the old openssf_badge answer onto it.
+  # Not a _migrations entry: copier counts those as unsafe, and every update would then need --trust.
+  default: >-
+    {{ {'none': 'minimal', 'passing': 'standard', 'silver': 'community'}[openssf_badge] if openssf_badge is defined
+    else 'standard' if public and license != 'none' else 'minimal' }}
 
-# Computed, never asked: the silver badge adds the governance documents and the DCO check.
+# Computed, never asked: the community level adds the governance documents and the DCO check.
 silver:
   type: bool
   when: false
-  default: "{{ public and license != 'none' and openssf_badge == 'silver' }}"
+  default: "{{ public and license != 'none' and level == 'community' }}"
 
 # --- python -------------------------------------------------------------------
 

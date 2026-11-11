@@ -61,7 +61,7 @@ repos:
 {%- if public %}
 
   # Refuse an unsigned commit before the dco workflow sees it: that checks fork pull requests,
-  # and every pull request with openssf_badge=silver. Merge commits are skipped, as there.
+  # and every pull request with level=community. Merge commits are skipped, as there.
   - repo: local
     hooks:
       - id: dco-signoff

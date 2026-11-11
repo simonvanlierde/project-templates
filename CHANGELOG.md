@@ -10,6 +10,15 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+Upgrade steps:
+
+- **Breaking:** a `level` question (`minimal`, `standard` or `community`) replaces `openssf_badge`. `copier update` turns `none` into `minimal`, `passing` into `standard` and `silver` into `community`, so an existing project renders as before. A new public project with a license now starts at `standard`, which adds the test policy to `.github/CONTRIBUTING.md` and a `## Usage` section to the README. Scripts that pass `--data openssf_badge=...` need `--data level=...` instead.
+
+### Added
+
+- [Levels](docs/usage.md#levels): the requirements a public repo meets at each level, by the traits that make a requirement apply, with the standard each comes from and the date it starts to count. `levels.toml` holds them, versioned with the template's releases.
+- The roadmap skeleton at level `community` asks for each planned theme to link the open issue that tracks it.
+
 ## [0.14.0] - 2026-11-11
 
 Upgrade steps:

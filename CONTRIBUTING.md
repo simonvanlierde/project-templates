@@ -70,7 +70,8 @@ after each change you want projects to receive, and add an entry to
 [CHANGELOG.md](CHANGELOG.md). Its introduction says which part of the version to bump.
 
 Before you tag, move the `[Unreleased]` entries under a `## [X.Y.Z] - YYYY-MM-DD`
-heading and add its compare link, and merge that. Then run `template/.github/scripts/tag-release.sh X.Y.Z`.
+heading and add its compare link. Set `version` in `levels.toml` to `X.Y.Z` and run
+`just levels-doc`: the `levels-doc` hook fails until they match. Merge that. Then run `template/.github/scripts/tag-release.sh X.Y.Z`.
 It signs the tag `vX.Y.Z` on `origin/main` with your SSH signing key and pushes it, which
 runs the release workflow. The workflow publishes a GitHub release with that version's
 section as its notes. It refuses a tag not signed with a key in `.github/allowed_signers` on

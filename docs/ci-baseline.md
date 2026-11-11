@@ -24,7 +24,7 @@ What CI and the git hooks check in a generated project, why, and what the templa
 | `SECURITY.md` | `.github/` (when `public`) | Documents private vulnerability disclosure procedures, SLAs (14 days), and remediation policies |
 | `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, PR template | `.github/` (when `public`) | Provides contributor setup instructions, sign-off guidelines, and Contributor Covenant 3.0 |
 | Issue forms | `.github/ISSUE_TEMPLATE/` (when `public`) | Structured templates for bugs and feature requests, validated against GitHub schemas |
-| DCO sign-off check | `dco.yml` (when `public`) | Verifies `Signed-off-by:` lines on fork commits; enforced on all branches with `openssf_badge=silver`. The `dco-signoff` commit-msg hook refuses an unsigned commit locally in every public render |
+| DCO sign-off check | `dco.yml` (when `public`) | Verifies `Signed-off-by:` lines on fork commits; enforced on all branches with `level=community`. The `dco-signoff` commit-msg hook refuses an unsigned commit locally in every public render |
 | `CITATION.cff`, `codemeta.json` | Licensed `library` kinds, plus licensed Python `research` and `data-pipeline` | Maintained for Zenodo, Software Heritage, and GitHub citation. `citesync` verifies consistency |
 | REUSE licensing check | `reuse` git hook (when licensed) | Fails while a file has no copyright and license in `REUSE.toml` or `LICENSES/` |
 | Multi-version Python testing | `python.yml` (`library` kind) | Tests packages across all supported minor versions from `python_min` to `python_version` |

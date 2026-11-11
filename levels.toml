@@ -1,0 +1,295 @@
+# The practice ladder: what a public repo made from this template does at each level.
+# `just levels-doc` writes the table in docs/usage.md#levels from this file.
+#
+# A repo meets a level when it meets every requirement at that level and below that
+# applies to it. A requirement applies to every repo when `traits` is empty, otherwise to
+# a repo with any of the traits listed. `since` is the date a requirement starts to count:
+# before then a report shows it without lowering the repo's level.
+#
+# `version` is the template release this file ships in. It moves with the template's tags
+# (the levels-doc check holds it to the newest release in CHANGELOG.md), so a report can
+# say which version of the ladder a repo meets.
+#
+# Fields: area, level (minimal, standard, community), traits (web, cli, package,
+# pipeline, numerics), text (one line), source (the standard and its version, or
+# "project-templates" for a practice of this template's own), verify (automated: a
+# script can check it from the repo or its settings; review: a person has to judge it),
+# since (a date).
+
+version = "0.14.0"
+
+# --- minimal: any public repo ---------------------------------------------------------
+
+[requirement.lockfile]
+area = "supply chain"
+level = "minimal"
+traits = []
+text = "A lockfile is committed beside each root `pyproject.toml` or `package.json`."
+source = "OpenSSF Scorecard v5 (Pinned-Dependencies)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.dependency-bot]
+area = "supply chain"
+level = "minimal"
+traits = []
+text = "Dependabot or Renovate opens update pull requests for the repo's dependencies."
+source = "OpenSSF Scorecard v5 (Dependency-Update-Tool)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.workflow-hardening]
+area = "supply chain"
+level = "minimal"
+traits = []
+text = "Every workflow sets `permissions:`, checks out with `persist-credentials: false` and has no `pull_request_target` trigger."
+source = "OpenSSF Scorecard v5 (Token-Permissions, Dangerous-Workflow); OSPS Baseline v2026.08.28 (BR-01.01)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.scorecard-workflow]
+area = "supply chain"
+level = "minimal"
+traits = []
+text = "The OpenSSF Scorecard workflow runs on the default branch."
+source = "OpenSSF Scorecard v5"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.security-policy]
+area = "community"
+level = "minimal"
+traits = []
+text = "`SECURITY.md` says how to report a vulnerability privately and how soon you reply."
+source = "OSPS Baseline v2026.08.28 (VM-02.01); OpenSSF Best Practices passing (vulnerability_report_process)"
+verify = "automated"
+since = 2026-11-11
+
+# --- standard: the default for a public repo ------------------------------------------
+
+[requirement.python-repo-review]
+area = "supply chain"
+level = "standard"
+traits = []
+text = "A repo with a root `pyproject.toml` passes Scientific Python repo-review."
+source = "Scientific Python Development Guide (sp-repo-review)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.license]
+area = "community"
+level = "standard"
+traits = []
+text = "`LICENSE` holds an OSI-approved license."
+source = "OpenSSF Best Practices passing (floss_license); OSPS Baseline v2026.08.28 (LE-02.01)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.community-files]
+area = "community"
+level = "standard"
+traits = []
+text = "The repo has `CONTRIBUTING.md`, a code of conduct, issue forms and a pull request template."
+source = "GitHub community profile; OpenSSF Best Practices passing (contribution)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.test-policy]
+area = "community"
+level = "standard"
+traits = []
+text = "`CONTRIBUTING.md` says that a change comes with tests and names the coding standards."
+source = "OpenSSF Best Practices passing (test_policy, coding_standards)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.changelog]
+area = "releases"
+level = "standard"
+traits = []
+text = "`CHANGELOG.md` has a section for each release."
+source = "Keep a Changelog 1.1.0; OpenSSF Best Practices passing (release_notes)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.api-break-check]
+area = "releases"
+level = "standard"
+traits = ["package"]
+text = "CI checks each pull request for breaks in the public API (griffe, cargo-semver-checks or API Extractor)."
+source = "Semantic Versioning 2.0.0"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.citation-file]
+area = "citation"
+level = "standard"
+traits = ["package", "pipeline", "numerics"]
+text = "`CITATION.cff` says how to cite the software."
+source = "Citation File Format 1.2.0"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.codemeta]
+area = "citation"
+level = "standard"
+traits = ["package", "pipeline", "numerics"]
+text = "`codemeta.json` describes the software for archives and registries."
+source = "CodeMeta 3.0"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.readme]
+area = "docs"
+level = "standard"
+traits = []
+text = "`README.md` says what the project is, its status, and how to run or develop it (docs tier 0)."
+source = "OpenSSF Best Practices passing (description_good, interact)"
+verify = "review"
+since = 2026-11-11
+
+[requirement.cold-install]
+area = "docs"
+level = "standard"
+traits = []
+text = "A CI workflow runs the README's setup steps in a clean container."
+source = "project-templates"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.docs-tier-1]
+area = "docs"
+level = "standard"
+traits = ["package", "cli"]
+text = "A README of under about 1,000 words is the front page, and `docs/` holds Markdown split into tutorials, how-to guides, reference and explanation, with the reference generated or tested against the code."
+source = "Diátaxis"
+verify = "review"
+since = 2026-11-11
+
+[requirement.docs-site]
+area = "docs"
+level = "standard"
+traits = ["package", "cli"]
+text = "Once outside users need search or versioned docs, or the reference is too big to browse as files, `docs/` builds a search-indexed site from the same Markdown (docs tier 2)."
+source = "project-templates"
+verify = "review"
+since = 2026-11-11
+
+[requirement.architecture-doc]
+area = "docs"
+level = "standard"
+traits = []
+text = "A repo with 40 or more code files (tests and fixtures not counted) has an architecture page with a Mermaid diagram, and each path or link it names exists."
+source = "project-templates"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.accessibility-statement]
+area = "docs"
+level = "standard"
+traits = ["web", "cli"]
+text = "A web app publishes an accessibility statement and runs an axe scan in CI; a command-line tool has `docs/accessibility.md`."
+source = "WCAG 2.2 (Level AA)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.web-head-tags]
+area = "web"
+level = "standard"
+traits = ["web"]
+text = "Each page has a canonical link, `og:url`, and an absolute `og:image` that loads, with `og:image:alt`."
+source = "The Open Graph protocol"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.security-headers]
+area = "web"
+level = "standard"
+traits = ["web"]
+text = "The site sends a Content-Security-Policy, and its root sends Strict-Transport-Security."
+source = "OWASP Secure Headers Project"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.security-txt]
+area = "web"
+level = "standard"
+traits = ["web"]
+text = "The site root serves `/.well-known/security.txt` with a `Contact:` line."
+source = "RFC 9116"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.sitemap-answers]
+area = "web"
+level = "standard"
+traits = ["web"]
+text = "Each sitemap that `robots.txt` names loads."
+source = "RFC 9309; Sitemaps protocol 0.9"
+verify = "automated"
+since = 2026-11-11
+
+# --- community: for outside contributors (OpenSSF Best Practices silver) ---------------
+
+[requirement.governance]
+area = "community"
+level = "community"
+traits = []
+text = "`GOVERNANCE.md` says who decides, who can merge and release, and how the project carries on if a maintainer is gone."
+source = "OpenSSF Best Practices silver (governance, roles_responsibilities, access_continuity)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.dco]
+area = "community"
+level = "community"
+traits = []
+text = "Every commit carries a `Signed-off-by:` line, and CI checks each pull request for it."
+source = "Developer Certificate of Origin 1.1; OpenSSF Best Practices silver (dco)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.roadmap]
+area = "docs"
+level = "community"
+traits = []
+text = "`docs/roadmap.md` says what the project plans for the next year and what it will not do."
+source = "OpenSSF Best Practices silver (documentation_roadmap)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.roadmap-issue-links]
+area = "docs"
+level = "community"
+traits = []
+text = "Each theme in the roadmap links an open issue, and its \"Last reviewed\" date is under a year old."
+source = "project-templates"
+verify = "automated"
+since = 2027-01-01
+
+[requirement.assurance-case]
+area = "docs"
+level = "community"
+traits = []
+text = "`docs/assurance-case.md` gives the threat model, the trust boundaries, the secure design principles and the weaknesses countered."
+source = "OpenSSF Best Practices silver (assurance_case)"
+verify = "review"
+since = 2026-11-11
+
+[requirement.decision-records]
+area = "docs"
+level = "community"
+traits = []
+text = "`docs/decisions/` records each choice that is costly to reverse."
+source = "MADR 4.0.0"
+verify = "review"
+since = 2026-11-11
+
+[requirement.signed-releases]
+area = "releases"
+level = "community"
+traits = []
+text = "Release tags are signed, and the release workflow refuses a tag signed by a key it does not list."
+source = "OpenSSF Best Practices silver (signed_releases)"
+verify = "automated"
+since = 2026-11-11
