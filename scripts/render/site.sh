@@ -53,6 +53,7 @@ done
 for r in x r d y; do
   grep -qF '<h1>' "$r/docs/og-card.html"
   grep -qx 'og-card:' "$r/justfile"
+  # shellcheck disable=SC2016 # the recipe's literal text, not an expansion
   grep -qF 'og.png?v=$(shasum' "$r/justfile"
 done
 for f in x/site/index.html r/site/index.html d/web/index.html y/site/src/layouts/Base.astro; do
