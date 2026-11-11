@@ -82,7 +82,7 @@ jq -e '.rules[0].parameters.required_status_checks | any(.context == "site: buil
 sed -n '/^check:/,/^$/p' y/justfile | grep -qx '    @just site'
 (sed -n '/^check:/,/^$/p' x/justfile | lacks -q 'just site')
 
-# Docs site: m (nested src), k (flat) and h (Go) answer docs_site=true; ds is a library
+# Docs site: m (nested src), k (flat) and h (Go) select docs_site in extras; ds is a library
 # without python_api. Built from docs/ with the pinned Zensical, deployed like the site.
 zensical_pin=$(sed -n '/^zensical_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
 mkdocstrings_pin=$(sed -n '/^mkdocstrings_python_version:/,/^$/s/^  default: //p' "$repo/copier.yml")

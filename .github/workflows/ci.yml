@@ -148,7 +148,7 @@ jobs:
               stacks: [python]
               kind: library
               publish_to_pypi: true
-              test_extras: [property, mutation]
+              extras: [cold_install, property, mutation]
           # Nested layout: the build context is a subdirectory.
           - name: monorepo
             answers:
@@ -217,7 +217,7 @@ jobs:
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: just py-sync check
 
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         # Two calls: py-mutation takes mutant patterns, so `just py-mutation py-property`
         # would hand py-property to mutmut instead of running the recipe.
@@ -228,7 +228,7 @@ jobs:
       # The run above passes, but so would a gate that ignored mutmut. Each case here must
       # turn it red, and py-mutation-diff must mutate only the function a commit changes.
       # Not in check-render: it needs the synced env this job already has.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         name: mutation gate fails when it should
         working-directory: ${{ runner.temp }}/proj
         run: |
@@ -255,7 +255,7 @@ jobs:
 
       # A new Hypothesis profile copies the loaded one, here the derandomized "ci"
       # profile, which would make the weekly run repeat its inputs.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'property')
         name: long profile draws new inputs
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: >-
@@ -563,7 +563,7 @@ jobs:
               ts_dir: apps/lib
               ts_kind: library
               publish_to_npm: true
-              test_extras: [property, mutation]
+              extras: [cold_install, property, mutation]
           - name: app
             answers:
               project_name: ci-ts-app
@@ -644,7 +644,7 @@ jobs:
         run: just ts-sync check
 
       # Then the checks again: biome reads .gitignore, so a report left unignored fails them.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         working-directory: ${{ runner.temp }}/proj
         run: just ts-mutation ts-property ts-check
 
@@ -747,7 +747,7 @@ jobs:
               project_name: ci-rs-extras
               stacks: [rust]
               rust_kind: library
-              test_extras: [property, mutation]
+              extras: [cold_install, property, mutation]
           - name: binary
             answers:
               project_name: ci-rs-bin
@@ -769,7 +769,7 @@ jobs:
 
       - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
-          tool: cargo-nextest,cargo-deny${{ matrix.answers.test_extras && ',cargo-mutants' || '' }}${{ matrix.answers.rust_kind == 'library' && ',cargo-semver-checks' || '' }}
+          tool: cargo-nextest,cargo-deny${{ contains(matrix.answers.extras, 'mutation') && ',cargo-mutants' || '' }}${{ matrix.answers.rust_kind == 'library' && ',cargo-semver-checks' || '' }}
           fallback: none
 
       - *just
@@ -797,12 +797,12 @@ jobs:
           grep -q 'function_missing' "$log" || { cat "$log"; exit 1; }
           git checkout -- src/lib.rs
 
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         working-directory: ${{ runner.temp }}/proj
         run: just rs-mutation rs-property
 
       # rs-mutation-diff must mutate the function a commit adds, and only that one.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         name: mutation-diff reports an untested function
         working-directory: ${{ runner.temp }}/proj
         run: |
@@ -842,7 +842,7 @@ jobs:
               project_name: ci-go-extras
               stacks: [go]
               go_kind: library
-              test_extras: [property, mutation]
+              extras: [cold_install, property, mutation]
           - name: binary
             answers:
               project_name: ci-go-bin
@@ -888,13 +888,13 @@ jobs:
         working-directory: ${{ runner.temp }}/proj
         run: just go-sync go-check
 
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         working-directory: ${{ runner.temp }}/proj
         run: just go-mutation && just go-property -fuzztime=10s
 
       # go-mutation-diff must reach the function a commit adds, and skip the rest. gremlins
       # exits 0 on an uncovered mutant, so the report is the check.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         name: mutation-diff reports an untested function
         working-directory: ${{ runner.temp }}/proj
         run: |
@@ -930,14 +930,13 @@ jobs:
               kind: library
               publish_to_pypi: true
               python_api: false
-              test_extras: [property, mutation]
-              python_windows: true
+              extras: [cold_install, python_windows, property, mutation]
           - name: data-pipeline
             answers:
               project_name: ci-win-pipe
               stacks: [python]
               kind: data-pipeline
-              python_windows: true
+              extras: [cold_install, python_windows]
     steps:
       - *checkout
 

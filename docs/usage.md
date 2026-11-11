@@ -49,27 +49,42 @@ When `customise` is `no`, advanced questions take these defaults:
 | `python_dir`, `ts_dir`, `rust_dir`, `go_dir` | `.` (package located at repository root) |
 | `python_layout` | `src` (`src/<module>`); choose `flat` when [adopting in existing packages](#adopting-the-template-in-an-existing-python-package) |
 | `dependency_bot` | Dependabot |
-| `codecov` | Disabled |
-| `codspeed` | Disabled ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
-| `profiling` | Disabled ([Profiling](#profiling)) |
-| `cold_install` | Enabled at the `standard` and `community` levels ([CI baseline](ci-baseline.md)) |
 | `site` | None ([Static site](#static-site)) |
 | `site_host` | GitHub Pages; `cloudflare` deploys the site to a Worker ([Static site](#static-site)) |
 | `worker` | Disabled; a Worker script for `/api/*` in a web app or a site on Cloudflare ([Workers hosting](#workers-hosting)) |
-| `docs_site` | Disabled ([Documentation site](#documentation-site)) |
+| `extras` | `cold_install` at `standard` and `community`; otherwise none ([Optional features](#optional-features)) |
 | `level` | `standard` for a public repo with a license ([Levels](#levels)) |
 | `decision_records` | On for `web-service`, `data-pipeline`, `web-app`, Compose-only and `community`-level projects ([Decision records](#decision-records)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
 | `python_version`, `python_min`, `node_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
 | `rust_version` | The crate's minimum supported Rust version (`rust-version` in `Cargo.toml`), the current stable minor by default |
 | `python_api` | Enabled ([API-break check](#api-break-check)) |
-| `python_windows` | Disabled ([Tests on Windows](#tests-on-windows)) |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](#publishing)) |
-| `test_extras` | None ([Test extras](#test-extras)) |
 | `app_port` | 8000 |
 | `site_url` | `https://<project>.<github_user>.workers.dev`, or `<project>-site` for a site on Cloudflare (the Worker's workers.dev address, if the account's subdomain is the GitHub user). Another host is a custom domain ([Workers hosting](#workers-hosting)) |
 
 During `copier update`, previously configured answers are preserved even when `customise` is `no`. Change an individual setting with `copier update --data <key>=<value>` or prompt for a single setting with `copier update --ask <key>`.
+
+### Optional features
+
+`extras` is one multiselect under `customise`. Select every feature the project needs:
+`codecov`, `codspeed`, `profiling`, `cold_install`, `python_windows`, `docs_site`,
+`property` and `mutation`. Stack-specific features require their stack; property and
+mutation tests require a library kind. Publishing and hosting keep their own questions.
+
+New public, licensed projects at `standard` or `community` start with `cold_install`.
+An explicit list replaces the whole selection, including that default. To change the
+selection interactively, run `copier update --ask extras`. In scripts, list every feature
+to keep, for example:
+
+```sh
+copier update --data 'extras=[cold_install,codecov,property]'
+```
+
+An update from v0.14.0 seeds this list from the old yes/no answers and `test_extras`.
+It preserves disabled features too, including `cold_install: false` at `standard`.
+The next answers file stores only `extras`. Replace old `--data codecov=true` and
+`--data 'test_extras=[...]'` arguments with the full `extras` selection.
 
 To bypass prompts during initial generation, supply values via `--data-file answers.yml` or pass flags with `--data`.
 
@@ -418,7 +433,7 @@ A Rust library always gets an `api` job in `rust.yml`, and `just rs-api` runs th
 `python_windows` adds a `windows` job to `python.yml`. It runs `uv run pytest` on `windows-latest` with `python_version`, so a text file opened without `encoding="utf-8"`, a path built with `/`, or a POSIX-only module such as `fcntl` fails CI instead of a Windows user. Ruff and ty read the same code on every OS, so the job skips them, and it checks out the committed bytes (no CRLF conversion) so a test that hashes a committed file passes. It costs one more job on every push and pull request; Windows runners are also slower to start. With the Python package at the repo root, its check `python: tests (windows)` is required like the Linux ones.
 
 ```sh
-copier update --data python_windows=true
+copier update --data 'extras=[cold_install,python_windows]'
 ```
 
 Run `just repo-settings` after the update, so a public repo requires the new check.
@@ -434,7 +449,7 @@ Setup:
 3. Enable Codecov:
 
    ```sh
-   copier update --data codecov=true
+   copier update --data 'extras=[cold_install,codecov]'
    ```
 
 ## Benchmarks on CodSpeed
@@ -448,7 +463,7 @@ Setup:
 3. Enable CodSpeed:
 
    ```sh
-   copier update --data codspeed=true
+   copier update --data 'extras=[cold_install,codspeed]'
    ```
 
 ## Profiling
@@ -461,12 +476,12 @@ Setup:
 Enable with:
 
 ```sh
-copier update --data profiling=true
+copier update --data 'extras=[cold_install,profiling]'
 ```
 
 ## Test extras
 
-Library kinds configure `test_extras` under `customise`:
+Library kinds select `property` and `mutation` in `extras` under `customise`:
 
 | Option | Python | TypeScript | Rust | Go |
 | --- | --- | --- | --- | --- |
@@ -493,7 +508,7 @@ Each takes another git ref, e.g. `just py-mutation-diff main`.
 To add extras to an existing project:
 
 ```sh
-copier update --data 'test_extras=[property]'
+copier update --data 'extras=[cold_install,property]'
 ```
 
 ## Static site
@@ -572,7 +587,7 @@ The script and its test are the project's after the first render. A binding beyo
 
 ## Documentation site
 
-Answer `docs_site` (under `customise`) when outside users need search or versioned docs (the `docs-site` requirement in [Levels](#levels)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
+Select `docs_site` in `extras` (under `customise`) when outside users need search or versioned docs (the `docs-site` requirement in [Levels](#levels)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
 
 A render with `docs_site` gets:
 
@@ -619,7 +634,7 @@ The render cannot answer these for you:
 - `maintained`, `report_responses` and `enhancement_responses`: you reply to issues. `.github/CONTRIBUTING.md` promises a reply within about two weeks.
 - `vulnerability_report_response`: you reply to a vulnerability report within 14 days, as `.github/SECURITY.md` promises.
 - `tests_are_added`, `warnings_fixed`, `static_analysis_fixed`, `vulnerabilities_fixed_60_days` and `dynamic_analysis_fixed`: the project's history shows it.
-- `dynamic_analysis` (suggested): `test_extras=[property]` adds property tests.
+- `dynamic_analysis` (suggested): `property` in `extras` adds property tests.
 
 Add the badge to `README.md` once bestpractices.dev awards it.
 
@@ -700,7 +715,7 @@ A requirement applies to every repo, or only to repos with one of its traits. Th
 
 The requirements live in [`levels.toml`](https://github.com/simonvanlierde/project-templates/blob/main/levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
 
-The table says what a repo must have to count as meeting a level, not only what the render adds: every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site=true` once its trigger holds.
+The table says what a repo must have to count as meeting a level, not only what the render adds: every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site` in `extras` once its trigger holds.
 
 <!-- levels:start -->
 <!-- Generated from levels.toml by `just levels-doc`; edit that file, not this table. -->

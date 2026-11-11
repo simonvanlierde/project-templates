@@ -8,10 +8,9 @@
 # leading space. module_name is not set,
 # so its slug-derived default renders.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=render-me --data 'stacks=[python,ts,rust,go,docker]' \
+  --data 'extras=[codspeed,profiling,cold_install]' --data project_name=render-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data kind=research --data ts_kind=app \
   --data 'author_name= Ada Lovelace' \
-  --data codspeed=true --data profiling=true \
   . "$out/a"
 
 # b: public=false, so no SECURITY.md and a license that defaults to none, and a name, description and author name with punctuation that `slug`
@@ -43,14 +42,12 @@ grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name
 # one with the mutation extra, which the ts library (stryker) is the first to show. The
 # only level=minimal render.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=mono-me --data 'stacks=[python,ts,rust,go,docker]' \
+  --data 'extras=[codecov,codspeed,profiling,cold_install,mutation]' --data project_name=mono-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data python_dir=api --data ts_dir=apps/web \
   --data rust_dir=crates/cli --data rust_kind=binary \
   --data go_dir=services/tool --data go_kind=binary \
-  --data publish_to_pypi=true --data publish_to_npm=true --data codecov=true \
-  --data codspeed=true --data profiling=true \
-  --data 'test_extras=[mutation]' \
-  --data cold_install=true --data level=minimal \
+  --data publish_to_pypi=true --data publish_to_npm=true \
+  --data level=minimal \
   --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
@@ -59,11 +56,11 @@ grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name
 # paths are audited with the rest. Its user_data answer is the one that adds terms.md.
 # It also has the static site, so both kinds of preview share one retire workflow.
 d_args=(
-  --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
+  --data 'extras=[codecov,cold_install,python_windows]' --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
   --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
-  --data dependency_bot=renovate --data codecov=true --data cold_install=true
-  --data site=plain --data python_windows=true
+  --data dependency_bot=renovate
+  --data site=plain
 )
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d"
@@ -87,7 +84,7 @@ grep -q 'project edit' "$out/d/web/docs/accessibility-assessment.md"
 # with example_test.go, which a project_name of `example` would otherwise claim. The
 # only community-level render, and the docs site without an API reference.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' --data level=community --data docs_site=true . "$out/h"
+  --data 'extras=[docs_site,cold_install]' --data project_name=example --data 'stacks=[go]' --data level=community . "$out/h"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
 echo 'project edit' >>"$out/h/docs/index.md"
@@ -98,7 +95,7 @@ for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md .github/allowed_si
   echo 'project edit' >>"$out/h/$f"
 done
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' --data level=community --data docs_site=true . "$out/h" >/dev/null 2>&1
+  --data 'extras=[docs_site,cold_install]' --data project_name=example --data 'stacks=[go]' --data level=community . "$out/h" >/dev/null 2>&1
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md .github/allowed_signers; do
   grep -q 'project edit' "$out/h/$f"
 done
@@ -109,22 +106,27 @@ grep -q 'project edit' "$out/h/docs/index.md"
 # job for each. a has libraries too but no extras, so it must render neither. Also the
 # only BSD-3-Clause render, and the only npm-only publisher.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
+  --data 'extras=[cold_install,docs_site,property,mutation]' --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
-  --data 'test_extras=[property, mutation]' --data level=standard \
-  --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true \
-  --data docs_site=true . "$out/m"
+  --data level=standard \
+  --data license=BSD-3-Clause --data publish_to_npm=true \
+  . "$out/m"
 # x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
 # x and r have the static site without a package.json. x and d run the tests on Windows.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[python_windows,property,mutation]' --data project_name=cli-me --data 'stacks=[python]' \
   --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain \
-  --data 'test_extras=[property,mutation]' --data python_windows=true --data level=minimal . "$out/x"
+  --data level=minimal . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
+# The practice level still supplies the initial selection when extras is omitted.
+test -f "$out/w/.github/workflows/cold-install.yml"
+"${copier[@]}" --vcs-ref=HEAD --data project_name=minimal-extras --data level=minimal . "$out/minimal-extras"
+grep -qx 'extras: \[\]' "$out/minimal-extras/.copier-answers.yml"
+test ! -e "$out/minimal-extras/.github/workflows/cold-install.yml"
 # ds: a command-line-only Python library with the docs site: no API reference.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=docs-me --data 'stacks=[python]' \
-  --data python_api=false --data docs_site=true . "$out/ds"
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=docs-me --data 'stacks=[python]' \
+  --data python_api=false . "$out/ds"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
 # only its own manifest beside them, and t's hooks run through pnpm. Both have the
 # static site: r the plain one, t the Astro one beside a package at the root.
@@ -162,9 +164,9 @@ echo '# project readme' >"$out/k/README.md"
 echo '# project citation' >"$out/k/CITATION.cff"
 echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=adopt-me --data customise=true --data python_layout=flat \
-  --data license=GPL-3.0-or-later --data codspeed=true --data 'test_extras=[mutation]' \
-  --data publish_to_pypi=true --data cold_install=true --data docs_site=true . "$out/k"
+  --data 'extras=[codspeed,cold_install,docs_site,mutation]' --data project_name=adopt-me --data customise=true --data python_layout=flat \
+  --data license=GPL-3.0-or-later \
+  --data publish_to_pypi=true . "$out/k"
 grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
 grep -qx 'VALUE = 1' "$out/k/adopt_me/__init__.py"
@@ -327,8 +329,8 @@ grep -q 'project edit' "$out/compose/compose.yaml"
 
 # compose2: Renovate reads the Compose file, and the cold-install job (a container with no
 # Docker daemon) must not run the recipes that need one.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-two --data 'stacks=[docker]' \
-  --data dependency_bot=renovate --data cold_install=true --data public=false . "$out/compose2"
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[cold_install]' --data project_name=compose-two --data 'stacks=[docker]' \
+  --data dependency_bot=renovate --data public=false . "$out/compose2"
 grep -qF "'docker-compose': { enabled: true }" "$out/compose2/renovate.json5"
 grep -E "^ +grep -vE" "$out/compose2/.github/workflows/cold-install.yml" | grep -qE '\|check\|fmt\||check\|fmt'
 
@@ -356,12 +358,12 @@ assert cargo == [{"matchManagers": ["cargo"], "matchUpdateTypes": ["lockFileMain
 assert not [r for r in other["packageRules"] if "lockFileMaintenance" in r.get("matchUpdateTypes", [])]
 PY
 # The same project with an image still runs `just check` there.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-img --data 'stacks=[python,docker]' \
-  --data cold_install=true . "$out/compose3"
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[cold_install]' --data project_name=compose-img --data 'stacks=[python,docker]' \
+  . "$out/compose3"
 (lacks -qE '\|check\|fmt' "$out/compose3/.github/workflows/cold-install.yml")
 # A Compose-only repo with another stack runs that stack's own check and fmt there.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-mix --data 'stacks=[python,docker]' \
-  --data docker_image=false --data cold_install=true . "$out/compose-mix"
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[cold_install]' --data project_name=compose-mix --data 'stacks=[python,docker]' \
+  --data docker_image=false . "$out/compose-mix"
 (lacks -qE '\|check\|fmt' "$out/compose-mix/.github/workflows/cold-install.yml")
 mkdir -p "$out/mix"
 printf 'uv sync\njust check       # all\njust fmt\n' >"$out/mix/readme.sh"
@@ -449,6 +451,13 @@ refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'pro
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=a _b_'
 refuses 'the name is written into Markdown' --data 'stacks=[python]' --data 'project_name=my~app'
 refuses 'at least one stack' --data 'stacks=[]'
+refuses "Invalid choice for 'extras'" --data 'extras=[typo]'
+refuses 'Codecov needs' --data 'stacks=[go]' --data 'extras=[codecov]'
+refuses 'CodSpeed and profiling need' --data 'stacks=[ts]' --data 'extras=[codspeed]'
+refuses 'CodSpeed and profiling need' --data 'stacks=[go]' --data 'extras=[profiling]'
+refuses 'Windows tests need' --data 'stacks=[rust]' --data 'extras=[python_windows]'
+refuses 'need a library kind' --data kind=app --data 'extras=[property]'
+refuses 'need a library kind' --data kind=app --data 'extras=[mutation]'
 # A package directory can't be where the site goes.
 # shellcheck disable=SC2016 # the messages quote with backticks
 {
@@ -459,10 +468,10 @@ refuses 'at least one stack' --data 'stacks=[]'
 }
 refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
 # One repo has one GitHub Pages site.
-refuses 'one GitHub Pages site' --data 'stacks=[python]' --data site=plain --data docs_site=true
+refuses 'one GitHub Pages site' --data 'extras=[docs_site,cold_install]' --data 'stacks=[python]' --data site=plain
 # A root web app's legal pages are in docs/, which the docs site would publish again.
-refuses 'A web app at the repo root' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
-  --data docs_site=true
+refuses 'A web app at the repo root' --data 'extras=[docs_site,cold_install]' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing
+
 # A noreply address gets no mail, and these renders give it as a contact on a page.
 refuses 'A GitHub noreply address' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing \
   --data author_email=1+ada@users.noreply.github.com
@@ -528,8 +537,8 @@ grep -q 'What a first visit may keep in the browser, by name, each with a line' 
 "${copier[@]}" --vcs-ref=HEAD --data project_name=dp-me --data 'stacks=[python]' \
   --data kind=data-pipeline . "$out/dp"
 # cfd: a site on a Worker leaves GitHub Pages to the docs site.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=cfd-me --data 'stacks=[python]' \
-  --data site=plain --data site_host=cloudflare --data docs_site=true . "$out/cfd"
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=cfd-me --data 'stacks=[python]' \
+  --data site=plain --data site_host=cloudflare . "$out/cfd"
 # A site on a Worker ignores wrangler's local secrets and state; a render without wrangler does not list them.
 grep -qxF '.dev.vars*' "$out/cfp/.gitignore"
 grep -qxF '.wrangler/' "$out/cfp/.gitignore"
