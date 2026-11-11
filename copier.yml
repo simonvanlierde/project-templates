@@ -40,7 +40,6 @@ _skip_if_exists:
   - /docs/decisions/0001-start-from-project-templates.md
   - /site/astro.config.mjs
   - /site/src/layouts/Base.astro
-  - /docs/brand/opengraph-image.html
   - /zensical.toml
   - /docs/index.md
   - /docs/reference.md
@@ -54,6 +53,7 @@ _skip_if_exists:
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts"
+  - /docs/brand/opengraph-image.html
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
