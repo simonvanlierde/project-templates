@@ -6,8 +6,8 @@
 # a repo with any of the traits listed. `since` is the date a requirement starts to count:
 # before then a tool that reads this file may list it without counting it.
 #
-# `version` is the template release this file ships in. It moves with the template's tags
-# (the levels-doc check holds it to the newest release in CHANGELOG.md), so a repo can
+# `version` is the newest template release at or before this file: the levels-doc check
+# holds it to the newest release in CHANGELOG.md, so the release PR bumps it. A repo can
 # say which version of the ladder it meets.
 #
 # Fields: area (a lower-case label that groups related requirements), level (minimal,
