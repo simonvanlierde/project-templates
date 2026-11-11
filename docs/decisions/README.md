@@ -15,3 +15,4 @@ Confirmation section names the check that enforces it, or says none exists yet.
 | [0006](0006-zensical-builds-the-docs-site.md) Zensical builds the docs site | accepted | 2026-11-06 |
 | [0007](0007-the-plain-site-is-a-tool-page.md) The plain site is a tool page | accepted | 2026-11-07 |
 | [0008](0008-three-audiences-in-order.md) Three audiences in order | accepted | 2026-11-10 |
+| [0009](0009-optional-features-share-one-extras-answer.md) Optional features share one extras answer | accepted | 2026-11-11 |
