@@ -20,6 +20,7 @@ Upgrade steps:
 
 - [Levels](docs/usage.md#levels): the requirements a public repo meets at each level, by the traits that make a requirement apply, with the standard each comes from and the date it starts to count. `levels.toml` holds them, versioned with the template's releases.
 - The roadmap skeleton at level `community` asks for each planned theme to link the open issue that tracks it.
+- A web app or a site gets `docs/brand/opengraph-image.html`, a social card poster built from the project name, description and address, `just og-card` to render it to `opengraph-image.png`, and `og:image`, size, alt and `twitter:card` tags in the page head. Run `just og-card` and commit the PNG, or the tags point at a missing file. The card source is a starter file: an update leaves it alone. An update adds the tags to a web app's `index.html`; add them by hand to a site's page, and the card source and recipe if you want them.
 
 ## [0.14.0] - 2026-11-11
 

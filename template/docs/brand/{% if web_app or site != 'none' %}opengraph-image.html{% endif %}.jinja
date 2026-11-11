@@ -1,0 +1,67 @@
+{#- The poster is 1200x630. Link previews show it at 300 to 500 px wide and some crop it
+    to the centre square, so the name, the job and the address all sit in the centre
+    630 px (x 285 to 915), and nothing a reader needs is outside it. -#}
+{%- set address = card_address | regex_replace('^https://', '') | regex_replace('/$', '') -%}
+<!doctype html>
+<meta charset="utf-8">
+<title>{{ project_name | e }} social card</title>
+<!-- TODO: swap the colours and the font for this project's own, then run `just og-card`.
+     Keep the text at 36 px or more, one idea, and nothing outside the centre 630 px. -->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    width: 1200px;
+    height: 630px;
+    overflow: hidden;
+    background: #f4f5f2;
+    color: #17191c;
+    font-family: system-ui, "Segoe UI", sans-serif;
+    border-top: 20px solid #0b6457;
+    display: flex;
+    justify-content: center;
+  }
+  main {
+    width: 630px;
+    padding: 64px 0 56px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  h1 {
+    margin: 0;
+    font-size: 112px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-weight: 750;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+  p { margin: 0; }
+  .job {
+    margin-top: 28px;
+    font-size: 44px;
+    line-height: 1.3;
+    color: #3c424a;
+    text-wrap: balance;
+  }
+  .address {
+    font-size: 36px;
+    font-weight: 600;
+    color: #0b6457;
+    overflow-wrap: anywhere;
+  }
+</style>
+<main>
+  <div>
+    <h1>{{ project_name | e }}</h1>
+{%- if project_description %}
+    <p class="job">{{ project_description | e }}</p>
+{%- else %}
+    <!-- TODO: one sentence naming the job; set project_description to fill it from the answers. -->
+{%- endif %}
+    <!-- Optional: one real result or short example that proves the line above, at 36 px or
+         more and inside this column. Never a screenshot of the app. -->
+  </div>
+  <p class="address">{{ address }}</p>
+</main>

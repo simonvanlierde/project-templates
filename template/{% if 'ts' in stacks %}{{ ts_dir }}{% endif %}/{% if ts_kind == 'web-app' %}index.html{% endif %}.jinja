@@ -7,6 +7,11 @@
 {%- if project_description %}
     <meta name="description" content="{{ project_description | e }}" />
 {%- endif %}
+    <meta property="og:image" content="{{ site_url | regex_replace('/$', '') }}/opengraph-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="{{ (project_name ~ (": " ~ project_description if project_description else "")) | e }}" />
+    <meta name="twitter:card" content="summary_large_image" />
     <title>{{ project_name | e }}</title>
     <!-- No inline <script>: public/_headers allows scripts from this origin only.
          Code that must run before first paint goes in a file under public/,

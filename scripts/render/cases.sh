@@ -134,6 +134,7 @@ r_args=(--data project_name=crate-me --data 'stacks=[rust]' --data site=plain)
 echo '<!-- project edit -->' >>"$out/r/site/index.html"
 echo '/* project edit */' >>"$out/r/site/style.css"
 echo '// project edit' >>"$out/r/site/main.mjs"
+echo '<!-- project edit -->' >>"$out/r/docs/brand/opengraph-image.html"
 "${copier[@]}" --vcs-ref=HEAD "${r_args[@]}" . "$out/r" >/dev/null 2>&1
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true --data site=astro . "$out/t"
