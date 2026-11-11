@@ -60,9 +60,12 @@ for f in x/site/index.html r/site/index.html d/web/index.html y/site/src/layouts
   done
 done
 grep -qF 'playwright@' r/justfile
-grep -qF '"$PWD/site/opengraph-image.png"' r/justfile
-grep -qF '"$PWD/site/public/opengraph-image.png"' y/justfile
-grep -qF '"$PWD/web/public/opengraph-image.png"' d/justfile
+# shellcheck disable=SC2016 # a literal "$PWD" in the recipe body
+{
+  grep -qF '"$PWD/site/opengraph-image.png"' r/justfile
+  grep -qF '"$PWD/site/public/opengraph-image.png"' y/justfile
+  grep -qF '"$PWD/web/public/opengraph-image.png"' d/justfile
+}
 grep -qF 'pnpm -C web exec playwright screenshot' d/justfile
 grep -qx '<!-- project edit -->' r/docs/brand/opengraph-image.html
 grep -qF 'content="https://example-org.github.io/site-me/opengraph-image.png"' y/site/src/layouts/Base.astro || grep -qF '"https://example-org.github.io/site-me/opengraph-image.png"' y/site/src/layouts/Base.astro
