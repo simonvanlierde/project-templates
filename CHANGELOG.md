@@ -10,6 +10,8 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+- A web app or a site gets `docs/brand/opengraph-image.html`, a social card poster built from the project name, description and address, `just og-card` to render it to `opengraph-image.png`, and `og:image`, size, alt and `twitter:card` tags in the page head. Run `just og-card` and commit the PNG, or the tags point at a missing file. The card source is a starter file: an update leaves it alone. An update adds the tags to a web app's `index.html`; add them by hand to a site's page, and the card source and recipe if you want them.
+
 ## [0.14.0] - 2026-11-11
 
 Upgrade steps:
