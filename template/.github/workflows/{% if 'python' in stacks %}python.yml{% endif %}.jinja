@@ -70,6 +70,12 @@ jobs:
       # for known vulnerabilities and deprecated or quarantined projects. Still
       # experimental in uv, hence the preview flag.
       - run: uv audit --locked --preview-features audit-command
+{%- if license != 'none' %}
+      # Lists each locked package's license, read from the installed metadata, and fails
+      # on one the license in pyproject.toml cannot take.
+      - run: uv export --locked --no-hashes --no-annotate --no-header --no-emit-project -q -o "$RUNNER_TEMP/requirements.txt"
+      - run: uv run --locked --with licensecheck=={{ licensecheck_version }} licensecheck -r "$RUNNER_TEMP/requirements.txt" --zero
+{%- endif %}
 
       - run: uv run ruff check --output-format=github
       - run: uv run ruff format --check

@@ -81,6 +81,25 @@ for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' 
   'go tool govulncheck ./...'; do
   recipe_has c/just/go.just go-check "    $cmd"
 done
+# dependency-licenses: each stack lists its dependencies' licenses and fails on one
+# the license answer cannot take. a is MIT, so the GPL family stays out of the allow-list.
+# The pins come from copier.yml, so a version bump needs no edit here.
+lc_pin=$(sed -n '/^licensecheck_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+gl_pin=$(sed -n '/^go_licenses_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+lc="licensecheck==$lc_pin licensecheck -r \"\$d/requirements.txt\" --zero"
+recipe_has a/just/python.just py-check "    d=\$(mktemp -d) && uv export --locked --no-hashes --no-annotate --no-header --no-emit-project -q -o \"\$d/requirements.txt\" && uv run --locked --with $lc"
+recipe_has c/just/python.just py-check "    d=\$(mktemp -d) && uv --directory api export --locked --no-hashes --no-annotate --no-header --no-emit-project -q -o \"\$d/requirements.txt\" && uv --directory api run --locked --with $lc"
+recipe_has a/just/ts.just ts-check '    pnpm run licenses'
+grep -qF '"licenses": "pnpm licenses list --prod --json | node scripts/checkLicenses.mjs"' a/package.json
+grep -qxF '  "MPL-2.0",' a/scripts/checkLicenses.mjs
+lacks -F 'GPL' a/scripts/checkLicenses.mjs a/deny.toml
+recipe_has a/just/rust.just rs-check '    cargo deny list'
+gl="go run github.com/google/go-licenses/v2@$gl_pin"
+recipe_has a/just/go.just go-check "    $gl check --ignore github.com/example-org/render-me --allowed_licenses=0BSD,Apache-2.0,BSD-2-Clause,BSD-3-Clause,CC0-1.0,ISC,MIT,MPL-2.0,Unicode-3.0,Zlib ./..."
+# A project without a license has nothing to be compatible with: no check.
+lacks -F licensecheck b/just/python.just
+test ! -e b/scripts/checkLicenses.mjs
+lacks -F go-licenses i/just/go.just
 recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
 # Whitespace control around the fmt recipe's last line must not glue the next comment onto it.
@@ -138,6 +157,10 @@ grep -qx '      - run: cargo deny check' a/.github/workflows/rust.yml
 grep -qx '      - run: go test -race ./...' a/.github/workflows/go.yml
 grep -qx '      - run: go tool govulncheck ./...' a/.github/workflows/go.yml
 grep -qx '      - run: pnpm audit --prod --audit-level=moderate' a/.github/workflows/ts.yml
+grep -qxF "      - run: uv run --locked --with licensecheck==$lc_pin licensecheck -r \"\$RUNNER_TEMP/requirements.txt\" --zero" a/.github/workflows/python.yml
+grep -qx '      - run: pnpm run licenses' a/.github/workflows/ts.yml
+grep -qx '      - run: cargo deny list' a/.github/workflows/rust.yml
+grep -qx "      - run: $gl report --ignore github.com/example-org/render-me ./..." a/.github/workflows/go.yml
 # Trusted publishing and attestations need the job-level write scopes; the
 # workflow-level grant stays read-only.
 grep -q '^      id-token: write ' c/.github/workflows/python-release.yml

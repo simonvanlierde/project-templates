@@ -2,7 +2,7 @@
     is reached with cargo's own --manifest-path rather than with a cd. It renders
     empty for the flat layout, where the root already is the crate. -#}
 {%- set mp = '' if rust_dir == '.' else ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' -%}
-# What CI runs: format check, clippy, tests{% if rust_kind == 'library' %} (nextest, then the doctests it skips){% endif %}, cargo-deny.
+# What CI runs: format check, clippy, tests{% if rust_kind == 'library' %} (nextest, then the doctests it skips){% endif %}, cargo-deny's license list and checks.
 rs-check:
     cargo fmt{{ mp }} --check
     cargo clippy{{ mp }} --all-targets --all-features -- -D warnings
@@ -10,6 +10,7 @@ rs-check:
 {%- if rust_kind == 'library' %}
     cargo test{{ mp }} --doc --all-features
 {%- endif %}
+    cargo deny{{ mp }} list
     cargo deny{{ mp }} check
 
 # Download the dependencies, writing Cargo.lock if it is missing or stale. CI uses --locked.

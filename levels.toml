@@ -229,6 +229,24 @@ source = "RFC 9309; Sitemaps protocol 0.9"
 verify = "automated"
 since = 2026-11-11
 
+[requirement.ci-tests]
+area = "testing-and-ci"
+level = "standard"
+traits = []
+text = "A CI workflow runs the repo's test suite on every pull request."
+source = "DLR Software Engineering Guidelines v1.0.0 (EST.2, EST.4, EAA.8), doi:10.5281/zenodo.1344612"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.dependency-licenses]
+area = "licensing"
+level = "standard"
+traits = []
+text = "CI lists each dependency's license and fails when one is incompatible with the repo's license."
+source = "DLR guidelines v1.0.0 (EAA.2, EAA.3); GI/de-RSE Muster-Leitlinie 2025 section 3.5, doi:10.18420/2025-gi_de-rse"
+verify = "automated"
+since = 2026-11-11
+
 # --- community: for outside contributors (OpenSSF Best Practices silver) ---------------
 
 [requirement.governance]
@@ -292,4 +310,22 @@ traits = []
 text = "Release tags are signed, and the release workflow refuses a tag signed by a key it does not list."
 source = "OpenSSF Best Practices silver (signed_releases)"
 verify = "automated"
+since = 2026-11-11
+
+[requirement.release-build]
+area = "releases"
+level = "community"
+traits = ["package"]
+text = "A workflow builds each release package, and the run log and artifacts are kept."
+source = "DLR guidelines v1.0.0 (EAA.9, ERM.11)"
+verify = "automated"
+since = 2026-11-11
+
+[requirement.architecture-review]
+area = "architecture-design"
+level = "community"
+traits = []
+text = "The architecture page is reviewed against the code at least once a year, and the review is dated."
+source = "DLR guidelines v1.0.0 (ESA.10)"
+verify = "review"
 since = 2026-11-11

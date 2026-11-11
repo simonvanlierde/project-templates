@@ -56,6 +56,8 @@ jobs:
       # nextest skips doctests.
       - run: cargo test --doc --all-features
 {%- endif %}
+      # Each dependency's license, then advisories, licenses (deny.toml) and sources.
+      - run: cargo deny list
       - run: cargo deny check
 {%- if rust_kind == 'library' %}
 

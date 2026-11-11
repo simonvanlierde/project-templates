@@ -6,7 +6,7 @@
 ts-sync:
     {{ pnpm }} install
 
-# What CI runs: lint and unused code, types, tests, build{% if publish_to_npm %}, API report{% endif %}{% if ts_kind == 'web-app' %}, bundle budget{% endif %}, dependency audit.
+# What CI runs: lint and unused code, types, tests, build{% if publish_to_npm %}, API report{% endif %}{% if ts_kind == 'web-app' %}, bundle budget{% endif %}, dependency audit{% if license != 'none' %}, licenses{% endif %}.
 ts-check:
     {{ pnpm }} run check
     {{ pnpm }} run typecheck
@@ -19,6 +19,9 @@ ts-check:
     {{ pnpm }} run budget
 {%- endif %}
     {{ pnpm }} audit --prod --audit-level=moderate
+{%- if license != 'none' %}
+    {{ pnpm }} run licenses
+{%- endif %}
 
 # Fix what biome can fix, then format.
 ts-fmt:

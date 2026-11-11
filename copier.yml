@@ -848,6 +848,22 @@ govulncheck_version:
   when: false
   default: v1.9.0
 
+# Computed, never asked: the license checkers CI and the check recipes run. licensecheck
+# judges each locked Python package against the license in pyproject.toml. go-licenses,
+# run with `go run` outside go.mod, and the TypeScript check take the allow-list in
+# includes/dependency-licenses.jinja, as deny.toml does for Rust.
+# renovate: datasource=pypi depName=licensecheck
+licensecheck_version:
+  type: str
+  when: false
+  default: 2026.0.8
+
+# renovate: datasource=go depName=github.com/google/go-licenses/v2
+go_licenses_version:
+  type: str
+  when: false
+  default: v2.0.1
+
 # --- test extras --------------------------------------------------------------
 
 # Library kinds only: their public API has to hold for any caller's input. Property
