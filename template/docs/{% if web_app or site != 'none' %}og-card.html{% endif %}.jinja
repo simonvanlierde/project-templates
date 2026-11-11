@@ -1,12 +1,12 @@
-{#- The poster is 1200x630. Link previews show it at 300 to 500 px wide and some crop it
-    to the centre square, so the name, the job and the address all sit in the centre
-    630 px (x 285 to 915), and nothing a reader needs is outside it. -#}
+{#- The poster is 1200x630. Link previews show it at 255 to 500 px wide, and small square
+    thumbnails cut it to the centre 630 px (x 285 to 915), so the name sits there. The job
+    and the address stay 60 px clear of every edge. -#}
 {%- set address = card_address | regex_replace('^https://', '') | regex_replace('/$', '') -%}
 <!doctype html>
 <meta charset="utf-8">
 <title>{{ project_name | e }} social card</title>
 <!-- TODO: swap the colours and the font for this project's own, then run `just og-card`.
-     Keep the text at 36 px or more, one idea, and nothing outside the centre 630 px. -->
+     Keep the text at 36 px or more, one idea, and the name inside the centre 630 px. -->
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; }
