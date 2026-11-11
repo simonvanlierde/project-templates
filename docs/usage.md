@@ -546,12 +546,12 @@ One-time setup: `just repo-settings` creates the `preview` and `production` envi
 
 A web app or a site renders `docs/og-card.html`, a 1200x630 poster with the project name, `project_description` and the site's address, and `og:image`, `og:image:width`, `og:image:height`, `og:image:alt` and `twitter:card` tags in the page head that point at it. The alt text is the name and the description. The file is yours: an update leaves it alone.
 
-Run `just og-card` to render it to a PNG, and commit the PNG: `public/og.png` for a web app, `site/og.png` for `site=plain` and `site/public/og.png` for `site=astro`. A web app renders with the Playwright in its devDependencies (`pnpm exec playwright install chromium` once). A site runs `pnpm dlx playwright@<pinned version>`, so it needs no Node package of its own. The head tags point at a file that does not exist until you run it.
+Run `just og-card` to render it to a PNG, and commit the PNG: `public/og.png` for a web app, `site/og.png` for `site=plain` and `site/public/og.png` for `site=astro`. A web app renders with the Playwright in its devDependencies (`pnpm exec playwright install chromium` once). A site runs `pnpm dlx playwright@<pinned version>`, so it needs no Node package of its own. The recipe also writes the PNG's first 8 hex of SHA-256 into the page's `og:image` URL (`og.png?v=<hash>`), because Facebook, Slack, Discord and iMessage cache a preview by image URL and would keep the old card after a redraw. Commit the page with the PNG. The head tags point at a file that does not exist until you run it.
 
 Replace the card's colours and font with the project's own, then check it before you commit:
 
 - View it at 300 px wide. The name and the one-line job must still read.
-- Crop it to the centre 630 px square. Some apps crop previews that way, so the name, the job and the address must all survive.
+- Crop it to the centre 630 px square. Small square thumbnails (LinkedIn posts, X `summary`, WhatsApp) cut it that way, so the name and any mark must survive there. The job line and the address only need to stay 60 px clear of every edge, since no thumbnail is big enough to read them.
 
 Keep the text at 36 px or more at 1200 px wide, one idea on the card, no label above the name, and never a screenshot of the app: it is illegible at preview size. Keep the job line and the address on the card even though `og:description` and the alt text say the same: X shows only the image, LinkedIn hides the description, and a shared screenshot carries no preview text. One real result or short example may go under the job line to prove it. A repo with both a web app and a site prints the app's address on the one card.
 

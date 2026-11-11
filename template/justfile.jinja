@@ -92,6 +92,8 @@ site-sync:
 {%- if web_app or site != 'none' %}
 {%- set pw = ('pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir) ~ ' exec playwright' if web_app else 'pnpm dlx playwright@' ~ playwright_version %}
 {%- set shot = pw ~ ' screenshot --viewport-size=1200,630 "file://$PWD/docs/og-card.html"' %}
+{#- Link previews are cached by image URL, so each render puts the PNG's hash into the og:image URL of the page that names it. #}
+{%- macro stamp(png, page) %}sed -E -i.bak "s/og\.png(\?v=[0-9a-f]+)?\"/og.png?v=$(shasum -a 256 {{ png }} | cut -c1-8)\"/" {{ page }} && rm {{ page }}.bak{% endmacro %}
 
 # Needs Chromium: `{{ pw }} install chromium`. Check the result at 300 px wide and cropped to the centre square (docs/usage.md#social-card).
 
@@ -99,12 +101,14 @@ site-sync:
 og-card:
 {%- if web_app %}
     {{ shot }} "$PWD/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}public/og.png"
+    {{ stamp((ts_dir ~ '/' if ts_dir != '.' else '') ~ 'public/og.png', (ts_dir ~ '/' if ts_dir != '.' else '') ~ 'index.html') }}
 {%- endif %}
 {%- if site != 'none' %}
 {%- if not web_app %}
     {{ pw }} install chromium
 {%- endif %}
     {{ shot }} "$PWD/site/{{ 'public/' if site == 'astro' else '' }}og.png"
+    {{ stamp('site/' ~ ('public/' if site == 'astro' else '') ~ 'og.png', 'site/' ~ ('src/layouts/Base.astro' if site == 'astro' else 'index.html')) }}
 {%- endif %}
 {%- endif %}
 {%- if docs_site %}
