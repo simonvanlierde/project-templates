@@ -17,7 +17,7 @@ Tools used by each stack, default configurations, and release mechanics.
 
 Clippy lints live in `[lints]` in `Cargo.toml`. The policy enables clippy's `pedantic` group plus restriction lints against shortcuts: `unwrap_used`, `expect_used`, `dbg_macro`, `todo`, `unimplemented`, and `allow_attributes_without_reason`. `unsafe_code` is forbidden. Libraries also warn on `missing_docs` and prints to standard output or error.
 
-`clippy.toml` permits `unwrap`, `expect`, and `dbg!` in tests. `deny.toml` limits dependencies to crates.io and permissive licenses.
+`clippy.toml` permits `unwrap`, `expect`, and `dbg!` in tests. `deny.toml` limits dependencies to crates.io and to the licenses the project's license can take ([ci-baseline.md](ci-baseline.md)).
 
 Install `cargo-nextest` and `cargo-deny` once per machine. A Rust library's `api` job runs [cargo-semver-checks](usage.md#api-break-check) against the last `v*` tag.
 
@@ -87,6 +87,7 @@ Both `just check` and CI run dependency audits:
 - `pnpm audit --prod` for production TypeScript packages.
 - `cargo deny check` for Rust crates and licenses.
 - `govulncheck` for Go code paths.
+- A license check per stack, unless `license=none`: licensecheck, `pnpm run licenses`, `cargo deny list` and go-licenses.
 - Knip for unused TypeScript files, exports, and packages.
 
 ## Release workflows

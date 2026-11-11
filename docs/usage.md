@@ -732,6 +732,8 @@ Levels version 0.14.0:
 | `security-headers` | standard | web | The site sends a Content-Security-Policy, and its root sends Strict-Transport-Security. | automated | OWASP Secure Headers Project | 2026-11-11 |
 | `security-txt` | standard | web | The site root serves `/.well-known/security.txt` with a `Contact:` line. | automated | RFC 9116 | 2026-11-11 |
 | `sitemap-answers` | standard | web | Each sitemap that `robots.txt` names loads. | automated | RFC 9309; Sitemaps protocol 0.9 | 2026-11-11 |
+| `ci-tests` | standard | all | A CI workflow runs the repo's test suite on every pull request. | automated | DLR Software Engineering Guidelines v1.0.0 (EST.2, EST.4, EAA.8), doi:10.5281/zenodo.1344612 | 2026-11-11 |
+| `dependency-licenses` | standard | all | CI lists each dependency's license and fails when one is incompatible with the repo's license. | automated | DLR guidelines v1.0.0 (EAA.2, EAA.3); GI/de-RSE Muster-Leitlinie 2025 section 3.5, doi:10.18420/2025-gi_de-rse | 2026-11-11 |
 | `governance` | community | all | `GOVERNANCE.md` says who decides, who can merge and release, and how the project carries on if a maintainer is gone. | automated | OpenSSF Best Practices silver (governance, roles_responsibilities, access_continuity) | 2026-11-11 |
 | `dco` | community | all | Every commit carries a `Signed-off-by:` line, and CI checks each pull request for it. | automated | Developer Certificate of Origin 1.1; OpenSSF Best Practices silver (dco) | 2026-11-11 |
 | `roadmap` | community | all | `docs/roadmap.md` says what the project plans for the next year and what it will not do. | automated | OpenSSF Best Practices silver (documentation_roadmap) | 2026-11-11 |
@@ -739,6 +741,8 @@ Levels version 0.14.0:
 | `assurance-case` | community | all | `docs/assurance-case.md` gives the threat model, the trust boundaries, the secure design principles and the weaknesses countered. | review | OpenSSF Best Practices silver (assurance_case) | 2026-11-11 |
 | `decision-records` | community | all | `docs/decisions/` records each choice that is costly to reverse. | review | MADR 4.0.0 | 2026-11-11 |
 | `signed-releases` | community | all | Release tags are signed, and the release workflow refuses a tag signed by a key it does not list. | automated | OpenSSF Best Practices silver (signed_releases) | 2026-11-11 |
+| `release-build` | community | package | A workflow builds each release package, and the run log and artifacts are kept. | automated | DLR guidelines v1.0.0 (EAA.9, ERM.11) | 2026-11-11 |
+| `architecture-review` | community | all | The architecture page is reviewed against the code at least once a year, and the review is dated. | review | DLR guidelines v1.0.0 (ESA.10) | 2026-11-11 |
 <!-- levels:end -->
 
 To move a project to another level, run `copier update --data level=community`.

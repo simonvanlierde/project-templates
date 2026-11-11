@@ -102,6 +102,11 @@ jobs:
 {%- endif %}
       # Known advisories, moderate and up, in what ships: dependencies, not dev tooling.
       - run: pnpm audit --prod --audit-level=moderate
+{%- if license != 'none' %}
+      # Lists the license of each package that ships (dependencies, not dev tooling) and
+      # fails on one {{ license }} cannot take. The allow-list is in scripts/checkLicenses.mjs.
+      - run: pnpm run licenses
+{%- endif %}
 {%- if ts_kind == 'web-app' %}
 
   # The e2e container's tag must match the locked Playwright exactly. A job of its own reads it,

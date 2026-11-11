@@ -1,0 +1,36 @@
+{% from 'includes/dependency-licenses.jinja' import dependency_licenses with context -%}
+// Lists the license of each production dependency and fails on one this project's
+// {{ license }} license cannot take. Reads `pnpm licenses list --prod --json` on stdin.
+import process from "node:process";
+import { text } from "node:stream/consumers";
+
+// SPDX ids. Widen it only for a license that {{ license }} can take; for one package,
+// ask its authors or replace it instead.
+{#- One per line: the list is always past biome's line width. #}
+const ALLOWED = new Set([
+{%- for l in dependency_licenses %}
+  "{{ l }}",
+{%- endfor %}
+]);
+
+// An SPDX expression passes when one of its OR branches has every AND term allowed.
+// NOTE: parentheses are dropped, so `A AND (B OR C)` reads as `A AND B OR C`; parse
+// the expression properly if a dependency ever ships one.
+const allowed = (expression) =>
+  expression
+    .replace(/[()]/g, "")
+    .split(/ OR /i)
+    .some((branch) => branch.split(/ AND /i).every((term) => ALLOWED.has(term.trim())));
+
+const byLicense = JSON.parse(await text(process.stdin));
+let failed = false;
+for (const [license, packages] of Object.entries(byLicense)) {
+  const names = packages.map((p) => `${p.name}@${p.versions.join(",")}`).join(", ");
+  const ok = allowed(license);
+  failed ||= !ok;
+  console.log(`${ok ? "ok" : "NOT ALLOWED"}  ${license}: ${names}`);
+}
+if (failed) {
+  console.error("A dependency's license is not in the allow-list in scripts/checkLicenses.mjs.");
+  process.exit(1);
+}

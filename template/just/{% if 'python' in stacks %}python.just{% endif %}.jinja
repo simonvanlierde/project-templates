@@ -6,13 +6,16 @@
 py-sync:
     {{ uv }} sync
 
-# What CI runs: lint, format check, types, tests, dependency audit{% if kind == 'data-pipeline' %}. CI also runs the `just pipeline` stages{% endif %}.
+# What CI runs: lint, format check, types, tests, dependency audit{% if license != 'none' %} and licenses{% endif %}{% if kind == 'data-pipeline' %}. CI also runs the `just pipeline` stages{% endif %}.
 py-check:
     {{ uv }} run --locked ruff check
     {{ uv }} run --locked ruff format --check
     {{ uv }} run --locked ty check
     {{ uv }} run --locked pytest
     {{ uv }} audit --locked --preview-features audit-command
+{%- if license != 'none' %}
+    d=$(mktemp -d) && {{ uv }} export --locked --no-hashes --no-annotate --no-header --no-emit-project -q -o "$d/requirements.txt" && {{ uv }} run --locked --with licensecheck=={{ licensecheck_version }} licensecheck -r "$d/requirements.txt" --zero
+{%- endif %}
 
 # Fix what ruff can fix, then format.
 py-fmt:

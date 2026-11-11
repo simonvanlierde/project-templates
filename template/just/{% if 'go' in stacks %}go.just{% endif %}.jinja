@@ -1,14 +1,19 @@
+{% from 'includes/dependency-licenses.jinja' import dependency_licenses with context -%}
 {#- just runs every recipe from the root justfile's directory. golangci-lint has
     no flag naming the module, so a nested module is reached with just's own
     working-directory attribute rather than with a cd. It renders empty for the
     flat layout, where the root already is the module. -#}
 {%- set wd = '' if go_dir == '.' else "[working-directory: '" ~ go_dir ~ "']\n" -%}
-# What CI runs: format check, golangci-lint, tests (with the race detector and every Example), govulncheck.
+# What CI runs: format check, golangci-lint, tests (with the race detector and every Example), govulncheck{% if license != 'none' %}, licenses{% endif %}.
 {{ wd }}go-check:
     golangci-lint fmt --diff
     golangci-lint run
     go test -race ./...
     go tool govulncheck ./...
+{%- if license != 'none' %}
+    go run github.com/google/go-licenses/v2@{{ go_licenses_version }} report --ignore {{ go_module }} ./...
+    go run github.com/google/go-licenses/v2@{{ go_licenses_version }} check --ignore {{ go_module }} --allowed_licenses={{ dependency_licenses | join(',') }} ./...
+{%- endif %}
 
 # Resolve go.mod's requirements, govulncheck's included, and write go.sum.
 {{ wd }}go-sync:

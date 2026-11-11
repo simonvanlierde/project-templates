@@ -47,6 +47,9 @@
     "dev": "vite",
 {%- endif %}
     "fix": "biome check --write",
+{%- if license != 'none' %}
+    "licenses": "pnpm licenses list --prod --json | node scripts/checkLicenses.mjs",
+{%- endif %}
 {%- if web_app %}
     "preview": "vite preview",
 {%- endif %}

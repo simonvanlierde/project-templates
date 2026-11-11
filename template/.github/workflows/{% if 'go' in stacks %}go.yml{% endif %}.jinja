@@ -1,3 +1,4 @@
+{% from 'includes/dependency-licenses.jinja' import dependency_licenses with context -%}
 {% from 'includes/triggers.jinja' import push_and_pr -%}
 {%- set d = '' if go_dir == '.' else go_dir ~ '/' -%}
 name: go
@@ -66,6 +67,11 @@ jobs:
       # go test also runs every Example and checks its Output comment.
       - run: go test -race ./...
       - run: go tool govulncheck ./...
+{%- if license != 'none' %}
+      # Each dependency's license, then a failure on one that {{ license }} cannot take.
+      - run: go run github.com/google/go-licenses/v2@{{ go_licenses_version }} report --ignore {{ go_module }} ./...
+      - run: go run github.com/google/go-licenses/v2@{{ go_licenses_version }} check --ignore {{ go_module }} --allowed_licenses={{ dependency_licenses | join(',') }} ./...
+{%- endif %}
 
       - if: github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
