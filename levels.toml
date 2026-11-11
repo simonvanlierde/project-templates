@@ -4,16 +4,16 @@
 # A repo meets a level when it meets every requirement at that level and below that
 # applies to it. A requirement applies to every repo when `traits` is empty, otherwise to
 # a repo with any of the traits listed. `since` is the date a requirement starts to count:
-# before then a report shows it without lowering the repo's level.
+# before then a tool that reads this file may list it without counting it.
 #
 # `version` is the template release this file ships in. It moves with the template's tags
-# (the levels-doc check holds it to the newest release in CHANGELOG.md), so a report can
-# say which version of the ladder a repo meets.
+# (the levels-doc check holds it to the newest release in CHANGELOG.md), so a repo can
+# say which version of the ladder it meets.
 #
-# Fields: area (the practice area, a lower-case slug), level (minimal, standard, community), traits (web, cli, package,
-# pipeline, numerics), text (one line), source (the standard and its version, or
-# "project-templates" for a practice of this template's own), verify (automated: a
-# script can check it from the repo or its settings; review: a person has to judge it),
+# Fields: area (a lower-case label that groups related requirements), level (minimal,
+# standard, community), traits (web, cli, package, pipeline, numerics), text (one line), source (the standard and its version, or
+# "project-templates" for a practice of this template's own), verify (automated: it can
+# be checked mechanically from the repo or its settings; review: a person has to judge it),
 # since (a date).
 
 version = "0.14.0"
@@ -143,7 +143,7 @@ since = 2026-11-11
 area = "documentation"
 level = "standard"
 traits = []
-text = "`README.md` says what the project is, its status, and how to run or develop it (docs tier 0)."
+text = "`README.md` says what the project is, its status, and how to run or develop it."
 source = "OpenSSF Best Practices passing (description_good, interact)"
 verify = "review"
 since = 2026-11-11
@@ -157,11 +157,11 @@ source = "project-templates"
 verify = "automated"
 since = 2026-11-11
 
-[requirement.docs-tier-1]
+[requirement.docs-structure]
 area = "documentation"
 level = "standard"
 traits = ["package", "cli"]
-text = "A README of under about 1,000 words is the front page, and `docs/` holds Markdown split into tutorials, how-to guides, reference and explanation, with the reference generated or tested against the code."
+text = "`docs/` holds Markdown split into tutorials, how-to guides, reference and explanation, and the reference is generated or tested against the code."
 source = "Diátaxis"
 verify = "review"
 since = 2026-11-11
@@ -170,7 +170,7 @@ since = 2026-11-11
 area = "documentation"
 level = "standard"
 traits = ["package", "cli"]
-text = "Once outside users need search or versioned docs, or the reference is too big to browse as files, `docs/` builds a search-indexed site from the same Markdown (docs tier 2)."
+text = "When outside users need search or versioned docs, `docs/` builds a search-indexed site from the same Markdown."
 source = "project-templates"
 verify = "review"
 since = 2026-11-11
@@ -179,7 +179,7 @@ since = 2026-11-11
 area = "architecture-design"
 level = "standard"
 traits = []
-text = "A repo with 40 or more code files (tests and fixtures not counted) has an architecture page with a Mermaid diagram, and each path or link it names exists."
+text = "A repo with 40 or more code files has an architecture page with a diagram, and each path it names exists."
 source = "project-templates"
 verify = "automated"
 since = 2026-11-11

@@ -348,6 +348,7 @@ uvx check-jsonschema --builtin-schema vendor.github-issue-forms \
 # roadmap and assurance-case skeletons and the decision records. minimal (c) gets neither.
 grep -qx 'level: standard' a/.copier-answers.yml
 grep -qx 'level: minimal' x/.copier-answers.yml
+(lacks -q '^level:' i/.copier-answers.yml)
 (lacks -q openssf_badge x/.copier-answers.yml)
 badge_docs=(GOVERNANCE.md docs/roadmap.md docs/assurance-case.md)
 for r in a c m; do
@@ -430,3 +431,20 @@ JSON
 # in a bot's pull request too.
 test "$(PR_BY_BOT=false jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n1111111 chore(deps): bump\n2222222 fix: human on a bot branch')"
 test "$(PR_BY_BOT=true jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n2222222 fix: human on a bot branch')"
+
+# levels_doc.py --check fails on a stale table, a version behind CHANGELOG.md, a bad field
+# and a missing end marker, run on a copy so the repo stays as it is.
+lv="$out/levels-copy"
+mkdir -p "$lv/scripts" "$lv/docs"
+cp "$repo/levels.toml" "$repo/CHANGELOG.md" "$lv/"
+cp "$repo/scripts/levels_doc.py" "$lv/scripts/"
+cp "$repo/docs/usage.md" "$lv/docs/"
+uv run -q "$lv/scripts/levels_doc.py" --check
+sed -i.bak 's/^text = "A lockfile/text = "One lockfile/' "$lv/levels.toml"
+(! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
+cp "$repo/levels.toml" "$lv/" && sed -i.bak 's/^version = .*/version = "0.0.1"/' "$lv/levels.toml"
+(! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
+cp "$repo/levels.toml" "$lv/" && sed -i.bak 's/^level = "minimal"/level = "gold"/' "$lv/levels.toml"
+(! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
+cp "$repo/levels.toml" "$lv/" && sed -i.bak '/levels:end/d' "$lv/docs/usage.md"
+(! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)

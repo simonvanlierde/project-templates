@@ -559,7 +559,7 @@ The script and its test are the project's after the first render. A binding beyo
 
 ## Documentation site
 
-Answer `docs_site` (under `customise`) when a project reaches documentation tier 2 (the `docs-site` requirement in [Levels](#levels)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
+Answer `docs_site` (under `customise`) when outside users need search or versioned docs (the `docs-site` requirement in [Levels](#levels)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
 
 A render with `docs_site` gets:
 
@@ -670,7 +670,7 @@ The checks the template skips on purpose are under `[tool.repo-review.ignore]` i
 `level` sets how much a public repo commits to. Each level adds requirements to the one below it:
 
 - `minimal`: a public repo with few users. Locked and updated dependencies, hardened workflows, the Scorecard workflow and `SECURITY.md`.
-- `standard`, the default: every requirement below that applies to the repo. The render adds the test policy and coding standards to `.github/CONTRIBUTING.md` and a `## Usage` section to the README ([OpenSSF badge](#openssf-best-practices-badge)).
+- `standard`, the default: every `minimal` and `standard` requirement that applies to the repo. The render adds the test policy and coding standards to `.github/CONTRIBUTING.md`, a `## Usage` section to the README, `.github/first-release.md` with the OpenSSF badge step ([OpenSSF badge](#openssf-best-practices-badge)), and `cold-install.yml`.
 - `community`: a repo that wants outside contributors. The render adds `GOVERNANCE.md`, `docs/roadmap.md`, `docs/assurance-case.md` and `docs/decisions/`, and the `dco` workflow checks every pull request.
 
 A private repo, or a public one without a license, is not on the ladder: copier skips the question.
@@ -685,9 +685,9 @@ A requirement applies to every repo, or only to repos with one of its traits. Th
 | `pipeline` | Python `kind=data-pipeline` |
 | `numerics` | Python `kind=research` |
 
-The requirements live in [`levels.toml`](../levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then it shows in a report but does not lower a repo's level, which gives repos time to catch up. The file's version is the template release it ships in, so a report can say which version a repo meets.
+The requirements live in [`levels.toml`](../levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
 
-A render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site=true` once its trigger holds.
+The table says what a repo must have to count as meeting a level, not only what the render adds: every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site=true` once its trigger holds.
 
 <!-- levels:start -->
 <!-- Generated from levels.toml by `just levels-doc`; edit that file, not this table. -->
@@ -709,11 +709,11 @@ Levels version 0.14.0:
 | `api-break-check` | standard | package | CI checks each pull request for breaks in the public API (griffe, cargo-semver-checks or API Extractor). | automated | Semantic Versioning 2.0.0 | 2026-11-11 |
 | `citation-file` | standard | package, pipeline, numerics | `CITATION.cff` says how to cite the software. | automated | Citation File Format 1.2.0 | 2026-11-11 |
 | `codemeta` | standard | package, pipeline, numerics | `codemeta.json` describes the software for archives and registries. | automated | CodeMeta 3.0 | 2026-11-11 |
-| `readme` | standard | all | `README.md` says what the project is, its status, and how to run or develop it (docs tier 0). | review | OpenSSF Best Practices passing (description_good, interact) | 2026-11-11 |
+| `readme` | standard | all | `README.md` says what the project is, its status, and how to run or develop it. | review | OpenSSF Best Practices passing (description_good, interact) | 2026-11-11 |
 | `cold-install` | standard | all | A CI workflow runs the README's setup steps in a clean container. | automated | project-templates | 2026-11-11 |
-| `docs-tier-1` | standard | package, cli | A README of under about 1,000 words is the front page, and `docs/` holds Markdown split into tutorials, how-to guides, reference and explanation, with the reference generated or tested against the code. | review | Diátaxis | 2026-11-11 |
-| `docs-site` | standard | package, cli | Once outside users need search or versioned docs, or the reference is too big to browse as files, `docs/` builds a search-indexed site from the same Markdown (docs tier 2). | review | project-templates | 2026-11-11 |
-| `architecture-doc` | standard | all | A repo with 40 or more code files (tests and fixtures not counted) has an architecture page with a Mermaid diagram, and each path or link it names exists. | automated | project-templates | 2026-11-11 |
+| `docs-structure` | standard | package, cli | `docs/` holds Markdown split into tutorials, how-to guides, reference and explanation, and the reference is generated or tested against the code. | review | Diátaxis | 2026-11-11 |
+| `docs-site` | standard | package, cli | When outside users need search or versioned docs, `docs/` builds a search-indexed site from the same Markdown. | review | project-templates | 2026-11-11 |
+| `architecture-doc` | standard | all | A repo with 40 or more code files has an architecture page with a diagram, and each path it names exists. | automated | project-templates | 2026-11-11 |
 | `accessibility-statement` | standard | web, cli | A web app publishes an accessibility statement and runs an axe scan in CI; a command-line tool has `docs/accessibility.md`. | automated | WCAG 2.2 (Level AA) | 2026-11-11 |
 | `web-head-tags` | standard | web | Each page has a canonical link, `og:url`, and an absolute `og:image` that loads, with `og:image:alt`. | automated | The Open Graph protocol | 2026-11-11 |
 | `security-headers` | standard | web | The site sends a Content-Security-Policy, and its root sends Strict-Transport-Security. | automated | OWASP Secure Headers Project | 2026-11-11 |

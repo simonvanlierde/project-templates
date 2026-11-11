@@ -12,8 +12,9 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
-- **Breaking:** a `level` question (`minimal`, `standard` or `community`) replaces `openssf_badge`. The old answer is not carried over: a public project with a license gets `standard`, which adds the test policy to `.github/CONTRIBUTING.md` and a `## Usage` section to the README. To keep what you had, update with `copier update --data level=minimal` if you answered `openssf_badge: none`, or `--data level=community` if you answered `silver`. Scripts that pass `--data openssf_badge=...` need `--data level=...` instead.
-- `cold_install` is on by default at the `standard` and `community` levels, since the `cold-install` requirement starts at `standard`. To keep the project without `cold-install.yml`, update with `--data cold_install=false`.
+- **Breaking:** a `level` question (`minimal`, `standard` or `community`) replaces `openssf_badge`. The old answer is not carried over: a public project with a license gets `standard`, which adds the test policy to `.github/CONTRIBUTING.md` and a `## Usage` section to the README. To keep what you had, update with `copier update --data level=minimal` if you answered `openssf_badge: none`, or `--data level=community` if you answered `silver`. Scripts that pass `--data openssf_badge=...` need `--data level=...` instead. A plain `copier update` of a project that answered `silver` deletes `GOVERNANCE.md`, `docs/roadmap.md` and `docs/assurance-case.md`, so pass `--data level=community`.
+- At `standard`, the render also adds `.github/first-release.md` with the OpenSSF badge step. The Levels section in `docs/usage.md` replaces "How much documentation".
+- `cold_install` is on by default for new projects at the `standard` and `community` levels, since the `cold-install` requirement starts at `standard`. An existing project keeps its stored answer; add the workflow with `copier update --data cold_install=true`.
 
 ### Added
 

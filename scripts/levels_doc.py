@@ -35,8 +35,11 @@ def problems(rid: str, r: dict) -> list[str]:
         out.append(f"verify {r.get('verify')!r} is not one of {sorted(VERIFY)}")
     if not isinstance(r.get("since"), datetime.date):
         out.append("since is not a date")
-    if "|" in r.get("text", "") or "\n" in r.get("text", ""):
-        out.append("text must be one line without |")
+    if isinstance(r.get("since"), datetime.datetime):
+        out.append("since is a datetime, not a date")
+    for field in ("text", "source", "area"):
+        if "|" in str(r.get(field, "")) or "\n" in str(r.get(field, "")):
+            out.append(f"{field} must be one line without |")
     return [f"levels.toml: requirement.{rid}: {p}" for p in out]
 
 
@@ -78,9 +81,9 @@ def main() -> int:
         return 1
     usage = ROOT / "docs" / "usage.md"
     text = usage.read_text()
+    if START not in text or END not in text:
+        sys.exit(f"docs/usage.md: needs both {START} and {END}")
     new = re.sub(re.escape(START) + ".*?" + re.escape(END), lambda _: table(data), text, count=1, flags=re.S)
-    if START not in text:
-        sys.exit(f"docs/usage.md: no {START} marker")
     if new == text:
         return 0
     if check:
