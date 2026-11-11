@@ -22,7 +22,7 @@ const allowed = (expression) => {
   const tokens = expression.match(/[()]|[^\s()]+/g) ?? [];
   let at = 0;
   const peek = () => tokens[at]?.toUpperCase();
-  const malformed = () => new Error(`malformed SPDX expression: ${expression}`);
+  const malformed = () => new Error();
   const term = () => {
     const token = tokens[at++];
     if (token === "(") {
@@ -36,7 +36,14 @@ const allowed = (expression) => {
     if (peek() === "WITH") {
       at++;
       const exception = tokens[at++];
-      if (exception === undefined || exception === "(" || exception === ")") throw malformed();
+      if (
+        exception === undefined ||
+        exception === "(" ||
+        exception === ")" ||
+        ["AND", "OR", "WITH"].includes(exception.toUpperCase())
+      ) {
+        throw malformed();
+      }
     }
     return ALLOWED.has(token.toLowerCase());
   };
@@ -44,6 +51,7 @@ const allowed = (expression) => {
     let ok = term();
     while (peek() === "AND") {
       at++;
+      // term() runs first, so it consumes its tokens even when ok is already false.
       ok = term() && ok;
     }
     return ok;
