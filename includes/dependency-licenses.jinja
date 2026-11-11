@@ -2,8 +2,16 @@
     Import it `with context`. Every project license can take the permissive ones and
     MPL-2.0, whose copyleft stays in the dependency's own files. The GPL family goes in
     only for a GPL or AGPL project, and the AGPL only for an AGPL one. A project without
-    a license gets the list a permissive one gets. -#}
+    a license gets the list a permissive one gets.
+    go-licenses names the GPL family without -only or -or-later, so Go takes
+    go_dependency_licenses. Its GPL-2.0 may be GPL-2.0-only and its LGPL-2.1 may be
+    LGPL-2.1-only, which GPL-3.0 cannot take, so both stay out. -#}
 {%- set copyleft = license in ('GPL-3.0-or-later', 'AGPL-3.0-or-later') -%}
-{%- set dependency_licenses = ['0BSD', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'CC0-1.0', 'ISC', 'MIT', 'MPL-2.0', 'Unicode-3.0', 'Zlib']
+{%- set agpl = license == 'AGPL-3.0-or-later' -%}
+{%- set permissive = ['0BSD', 'Apache-2.0', 'BlueOak-1.0.0', 'BSD-2-Clause', 'BSD-3-Clause', 'BSL-1.0', 'CC0-1.0', 'CDLA-Permissive-2.0', 'ISC', 'MIT', 'MIT-0', 'MPL-2.0', 'PSF-2.0', 'Python-2.0', 'Unicode-3.0', 'Unlicense', 'Zlib'] -%}
+{%- set dependency_licenses = permissive
   + (['GPL-2.0-or-later', 'GPL-3.0-only', 'GPL-3.0-or-later', 'LGPL-2.1-or-later', 'LGPL-3.0-only', 'LGPL-3.0-or-later'] if copyleft else [])
-  + (['AGPL-3.0-only', 'AGPL-3.0-or-later'] if license == 'AGPL-3.0-or-later' else []) -%}
+  + (['AGPL-3.0-only', 'AGPL-3.0-or-later'] if agpl else []) -%}
+{%- set go_dependency_licenses = permissive
+  + (['GPL-3.0', 'LGPL-3.0'] if copyleft else [])
+  + (['AGPL-3.0'] if agpl else []) -%}

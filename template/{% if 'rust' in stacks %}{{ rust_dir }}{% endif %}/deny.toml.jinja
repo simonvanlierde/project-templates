@@ -16,6 +16,8 @@ allow = [
 {%- for l in dependency_licenses %}
   "{{ l }}",
 {%- endfor %}
+  # cargo-deny matches a license exception only as the whole expression (target-lexicon).
+  "Apache-2.0 WITH LLVM-exception",
 ]
 # The list is policy, not an inventory: allowed licenses nothing uses yet are fine.
 unused-allowed-license = "allow"

@@ -4,23 +4,73 @@
 import process from "node:process";
 import { text } from "node:stream/consumers";
 
-// SPDX ids. Widen it only for a license that {{ license }} can take; for one package,
-// ask its authors or replace it instead.
+// SPDX ids, matched without regard to case. Widen it only for a license that {{ license }}
+// can take; for one package, ask its authors or replace it instead.
 {#- One per line: the list is always past biome's line width. #}
-const ALLOWED = new Set([
+const ALLOWED = new Set(
+  [
 {%- for l in dependency_licenses %}
-  "{{ l }}",
+    "{{ l }}",
 {%- endfor %}
-]);
+  ].map((id) => id.toLowerCase()),
+);
 
-// An SPDX expression passes when one of its OR branches has every AND term allowed.
-// NOTE: parentheses are dropped, so `A AND (B OR C)` reads as `A AND B OR C`; parse
-// the expression properly if a dependency ever ships one.
-const allowed = (expression) =>
-  expression
-    .replace(/[()]/g, "")
-    .split(/ OR /i)
-    .some((branch) => branch.split(/ AND /i).every((term) => ALLOWED.has(term.trim())));
+// Whether an SPDX expression is allowed: an OR needs one side allowed, an AND both. AND
+// binds tighter than OR, and parentheses group. An exception (`WITH`) only adds
+// permissions, so the license it qualifies decides. A malformed expression is refused.
+const allowed = (expression) => {
+  const tokens = expression.match(/[()]|[^\s()]+/g) ?? [];
+  let at = 0;
+  const peek = () => tokens[at]?.toUpperCase();
+  const malformed = () => new Error();
+  const term = () => {
+    const token = tokens[at++];
+    if (token === "(") {
+      const ok = anyOf();
+      if (tokens[at++] !== ")") throw malformed();
+      return ok;
+    }
+    if (token === undefined || token === ")" || ["AND", "OR", "WITH"].includes(token.toUpperCase())) {
+      throw malformed();
+    }
+    if (peek() === "WITH") {
+      at++;
+      const exception = tokens[at++];
+      if (
+        exception === undefined ||
+        exception === "(" ||
+        exception === ")" ||
+        ["AND", "OR", "WITH"].includes(exception.toUpperCase())
+      ) {
+        throw malformed();
+      }
+    }
+    return ALLOWED.has(token.toLowerCase());
+  };
+  const allOf = () => {
+    let ok = term();
+    while (peek() === "AND") {
+      at++;
+      // term() runs first, so it consumes its tokens even when ok is already false.
+      ok = term() && ok;
+    }
+    return ok;
+  };
+  const anyOf = () => {
+    let ok = allOf();
+    while (peek() === "OR") {
+      at++;
+      ok = allOf() || ok;
+    }
+    return ok;
+  };
+  try {
+    const ok = anyOf();
+    return ok && at === tokens.length;
+  } catch {
+    return false;
+  }
+};
 
 const byLicense = JSON.parse(await text(process.stdin));
 let failed = false;

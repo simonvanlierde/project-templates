@@ -87,7 +87,7 @@ Both `just check` and CI run dependency audits:
 - `pnpm audit --prod` for production TypeScript packages.
 - `cargo deny check` for Rust crates and licenses.
 - `govulncheck` for Go code paths.
-- A license check per stack, unless `license=none`: licensecheck, `pnpm run licenses`, `cargo deny list` and go-licenses.
+- A license check per stack, unless `license=none`: licensecheck, `pnpm run licenses`, `cargo deny list` and go-licenses. Each checks only the dependencies that ship: Python's runtime dependencies without dependency groups, TypeScript's `--prod` packages, Rust without dev-dependencies, and the Go packages a build imports, not test-only ones. TypeScript, Rust and Go refuse an LGPL-2.1-only dependency in every project, since GPL-3.0 cannot take it; Go refuses every LGPL-2.1 dependency, because go-licenses cannot tell -only from -or-later. Python follows licensecheck's own table, which lets LGPL-2.1 in.
 - Knip for unused TypeScript files, exports, and packages.
 
 ## Release workflows

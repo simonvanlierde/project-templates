@@ -849,9 +849,10 @@ govulncheck_version:
   default: v1.9.0
 
 # Computed, never asked: the license checkers CI and the check recipes run. licensecheck
-# judges each locked Python package against the license in pyproject.toml. go-licenses,
-# run with `go run` outside go.mod, and the TypeScript check take the allow-list in
-# includes/dependency-licenses.jinja, as deny.toml does for Rust.
+# judges each Python package that ships against the license in pyproject.toml, with its
+# own compatibility table. go-licenses, run with `go run` outside go.mod, and the
+# TypeScript check take the allow-list in includes/dependency-licenses.jinja, as
+# deny.toml does for Rust.
 # renovate: datasource=pypi depName=licensecheck
 licensecheck_version:
   type: str
