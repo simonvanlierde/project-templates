@@ -91,20 +91,20 @@ site-sync:
 {%- endif %}
 {%- if web_app or site != 'none' %}
 {%- set pw = ('pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir) ~ ' exec playwright' if web_app else 'pnpm dlx playwright@' ~ playwright_version %}
-{%- set shot = pw ~ ' screenshot --viewport-size=1200,630 "file://$PWD/docs/brand/opengraph-image.html"' %}
+{%- set shot = pw ~ ' screenshot --viewport-size=1200,630 "file://$PWD/docs/og-card.html"' %}
 
 # Needs Chromium: `{{ pw }} install chromium`. Check the result at 300 px wide and cropped to the centre square (docs/usage.md#social-card).
 
-# Render docs/brand/opengraph-image.html to the 1200x630 social card image, in each place the page serves it from.
+# Render docs/og-card.html to the 1200x630 social card image, in each place the page serves it from.
 og-card:
 {%- if web_app %}
-    {{ shot }} "$PWD/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}public/opengraph-image.png"
+    {{ shot }} "$PWD/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}public/og.png"
 {%- endif %}
 {%- if site != 'none' %}
 {%- if not web_app %}
     {{ pw }} install chromium
 {%- endif %}
-    {{ shot }} "$PWD/site/{{ 'public/' if site == 'astro' else '' }}opengraph-image.png"
+    {{ shot }} "$PWD/site/{{ 'public/' if site == 'astro' else '' }}og.png"
 {%- endif %}
 {%- endif %}
 {%- if docs_site %}

@@ -254,7 +254,7 @@ samples=(src/sample_me/__init__.py tests/test_add.py
   web/src/App.tsx web/src/App.test.tsx web/src/main.tsx web/src/app.css
   web/worker/index.ts web/worker/index.test.ts
   site/src/pages/index.astro site/src/pages/about.md site/worker/index.mjs site/worker/index.test.mjs
-  docs/brand/opengraph-image.html)
+  docs/og-card.html)
 owned=docs/decisions/0001-start-from-project-templates.md
 (cd "$sample_up" && rm "${samples[@]}" "$owned")
 git -C "$sample_up" init -q
