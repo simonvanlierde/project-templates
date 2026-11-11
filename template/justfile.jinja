@@ -95,7 +95,7 @@ site-sync:
 
 # Needs Chromium: `{{ pw }} install chromium`. Check the result at 300 px wide and cropped to the centre square (docs/usage.md#social-card).
 
-# Render docs/brand/opengraph-image.html to the 1200x630 social card PNG{% if web_app and site != 'none' %}s{% endif %}.
+# Render docs/brand/opengraph-image.html to the 1200x630 social card image, in each place the page serves it from.
 og-card:
 {%- if web_app %}
     {{ shot }} "$PWD/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}public/opengraph-image.png"
