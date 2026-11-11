@@ -40,6 +40,7 @@ _skip_if_exists:
   - /docs/decisions/0001-start-from-project-templates.md
   - /site/astro.config.mjs
   - /site/src/layouts/Base.astro
+  - /docs/brand/opengraph-image.html
   - /zensical.toml
   - /docs/index.md
   - /docs/reference.md
@@ -86,6 +87,7 @@ _exclude:
   - "{% if _copier_operation == 'update' %}/site/src/pages/about.md{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/worker/index.mjs{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/worker/index.test.mjs{% endif %}"
+  - "{% if _copier_operation == 'update' %}/docs/brand/opengraph-image.html{% endif %}"
 
 # Shown on `copier copy` only; `--quiet` hides both.
 _message_before_copy: |
@@ -99,6 +101,9 @@ _message_after_copy: |
   {%- endfor %}
   {%- if site == 'astro' %}
     just site-sync
+  {%- endif %}
+  {%- if web_app or site != 'none' %}
+    just og-card
   {%- endif %}
     just check
   {%- if stacks | reject('equalto', 'docker') | list or site == 'astro' %}
@@ -679,6 +684,27 @@ site_domain:
   type: str
   when: false
   default: "{{ custom_domain if site_on_workers and not web_app else '' }}"
+
+# Computed, never asked: where the static site is served, with a trailing slash. The social
+# card's image URL starts here, as do the site's own og:image tags.
+site_address:
+  type: str
+  when: false
+  default: "{% if site == 'none' %}{% elif site_on_workers %}{{ (site_url if not web_app else 'https://' ~ worker_slug ~ '-site.' ~ github_user | lower ~ '.workers.dev') | regex_replace('/$', '') }}/{% else %}https://{{ github_user | lower }}.github.io/{{ slug }}/{% endif %}"
+
+# Computed, never asked: the address the social card prints. The web app's, else the site's.
+card_address:
+  type: str
+  when: false
+  default: "{{ (site_url | regex_replace('/$', '') ~ '/') if web_app else site_address }}"
+
+# Computed, never asked: the Playwright a static site runs with `pnpm dlx` to render its
+# social card. A web app uses the one in its own devDependencies.
+# renovate: datasource=npm depName=playwright
+playwright_version:
+  type: str
+  when: false
+  default: 1.64.1
 
 # A Worker script in front of the static assets, for server code. Requests for files
 # stay free; each request the script handles counts against the Workers plan.
