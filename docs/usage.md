@@ -553,7 +553,7 @@ Replace the card's colours and font with the project's own, then check it before
 - View it at 300 px wide. The name and the one-line job must still read.
 - Crop it to the centre 630 px square. Some apps crop previews that way, so the name, the job and the address must all survive.
 
-Keep the text at 36 px or more at 1200 px wide, one idea on the card, no label above the name, and never a screenshot of the app: it is illegible at preview size. A repo with both a web app and a site prints the app's address on the one card.
+Keep the text at 36 px or more at 1200 px wide, one idea on the card, no label above the name, and never a screenshot of the app: it is illegible at preview size. Keep the job line and the address on the card even though `og:description` and the alt text say the same: X shows only the image, LinkedIn hides the description, and a shared screenshot carries no preview text. One real result or short example may go under the job line to prove it. A repo with both a web app and a site prints the app's address on the one card.
 
 ## Workers hosting
 
