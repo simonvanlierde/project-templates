@@ -13,7 +13,6 @@ This is a short view of what is planned for the template over the next year, to 
   binaries that `cargo binstall` can find, and attestations.
 - Register one generated project for the OpenSSF Best Practices badge before the README
   says a fresh render meets it.
-- Give this repo's own `docs/` a site with the `docs_site` option.
 
 ## Not planned
 

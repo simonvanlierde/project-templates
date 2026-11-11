@@ -1,6 +1,6 @@
 # Using the template
 
-The [README](../README.md#quick-start) shows how to start a project. This page is the
+The [README](https://github.com/simonvanlierde/project-templates/blob/main/README.md#quick-start) shows how to start a project. This page is the
 reference for what comes after, in the order you are likely to need it:
 
 - **Render:** [the questions](#the-questions) and [presets](#presets), [stacks](#choosing-your-stacks) and
@@ -698,7 +698,7 @@ A requirement applies to every repo, or only to repos with one of its traits. Th
 | `pipeline` | Python `kind=data-pipeline` |
 | `numerics` | Python `kind=research` |
 
-The requirements live in [`levels.toml`](../levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
+The requirements live in [`levels.toml`](https://github.com/simonvanlierde/project-templates/blob/main/levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
 
 The table says what a repo must have to count as meeting a level, not only what the render adds: every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site=true` once its trigger holds.
 
