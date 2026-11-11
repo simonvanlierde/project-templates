@@ -23,7 +23,7 @@
   --data 'project_name=Odd "Name" & Co!' \
   --data 'project_description=A "quoted" {{ one }}, naïve $USD' \
   --data 'author_name=Ada "X" Lovelace' \
-  --data public=false --data openssf_badge=silver --data 'stacks=[python,ts,docker]' \
+  --data public=false --data level=community --data 'stacks=[python,ts,docker]' \
   --data kind=web-service --data python_dir=svc \
   . "$out/b"
 # Explicit badge answers cannot add public-policy documents to a private project.
@@ -40,7 +40,8 @@ grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name
 # up-paths. The rust crate and go module are the binary kind. Render a has the
 # libraries. All publish flags on, so the release workflows could collide and
 # docker.yml renders its push job. Codecov is on here and in d. The only
-# one with the mutation extra, which the ts library (stryker) is the first to show.
+# one with the mutation extra, which the ts library (stryker) is the first to show. The
+# only level=minimal render.
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=mono-me --data 'stacks=[python,ts,rust,go,docker]' \
   --data python_dir=api --data ts_dir=apps/web \
@@ -49,7 +50,7 @@ grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name
   --data publish_to_pypi=true --data publish_to_npm=true --data codecov=true \
   --data codspeed=true --data profiling=true \
   --data 'test_extras=[mutation]' \
-  --data cold_install=true \
+  --data cold_install=true --data level=minimal \
   --data publish_to_ghcr=true . "$out/c"
 
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
@@ -84,9 +85,9 @@ grep -q 'project edit' "$out/d/web/docs/accessibility-assessment.md"
 
 # h: a go library named like the Example file. The unit test must not share its path
 # with example_test.go, which a project_name of `example` would otherwise claim. The
-# only silver-badge render, and the docs site without an API reference.
+# only community-level render, and the docs site without an API reference.
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver --data docs_site=true . "$out/h"
+  --data project_name=example --data 'stacks=[go]' --data level=community --data docs_site=true . "$out/h"
 # go.mod belongs to the project once written: `go mod tidy` rewrites it.
 echo '// project edit' >>"$out/h/go.mod"
 echo 'project edit' >>"$out/h/docs/index.md"
@@ -97,7 +98,7 @@ for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md .github/allowed_si
   echo 'project edit' >>"$out/h/$f"
 done
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=example --data 'stacks=[go]' --data openssf_badge=silver --data docs_site=true . "$out/h" >/dev/null 2>&1
+  --data project_name=example --data 'stacks=[go]' --data level=community --data docs_site=true . "$out/h" >/dev/null 2>&1
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md .github/allowed_signers; do
   grep -q 'project edit' "$out/h/$f"
 done
@@ -111,14 +112,14 @@ grep -q 'project edit' "$out/h/docs/index.md"
   --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
   --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
-  --data 'test_extras=[property, mutation]' --data openssf_badge=passing \
+  --data 'test_extras=[property, mutation]' --data level=standard \
   --data license=BSD-3-Clause --data publish_to_npm=true --data cold_install=true \
   --data docs_site=true . "$out/m"
 # x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
 # x and r have the static site without a package.json. x and d run the tests on Windows.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cli-me --data 'stacks=[python]' \
   --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain \
-  --data 'test_extras=[property,mutation]' --data python_windows=true . "$out/x"
+  --data 'test_extras=[property,mutation]' --data python_windows=true --data level=minimal . "$out/x"
 # w: a Python app, the one render no citation file is for.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
 # ds: a command-line-only Python library with the docs site: no API reference.
@@ -490,7 +491,7 @@ refuses 'shipped as the python image' --data 'stacks=[python,docker]' --data kin
 # Its gitignored build output drops the module path's /v2.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
   --data go_kind=binary --data go_module=github.com/example-org/1tool/v2 \
-  --data license=none --data openssf_badge=silver . "$out/i"
+  --data license=none --data level=community . "$out/i"
 # A public repo without an open-source license is also outside the badge scope.
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
   test ! -e "$out/i/$f"

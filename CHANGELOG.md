@@ -10,6 +10,17 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+Upgrade steps:
+
+- **Breaking:** a `level` question (`minimal`, `standard` or `community`) replaces `openssf_badge`. The old answer is not carried over: a public project with a license gets `standard`, which adds the test policy to `.github/CONTRIBUTING.md` and a `## Usage` section to the README. To keep what you had, update with `copier update --data level=minimal` if you answered `openssf_badge: none`, or `--data level=community` if you answered `silver`. Scripts that pass `--data openssf_badge=...` need `--data level=...` instead. A plain `copier update` of a project that answered `silver` deletes `GOVERNANCE.md`, `docs/roadmap.md` and `docs/assurance-case.md`, so pass `--data level=community`.
+- At `standard`, the render also adds `.github/first-release.md` with the OpenSSF badge step. The Levels section in `docs/usage.md` replaces "How much documentation".
+- `cold_install` is on by default for new projects at the `standard` and `community` levels, since the `cold-install` requirement starts at `standard`. An existing project keeps its stored answer; add the workflow with `copier update --data cold_install=true`.
+
+### Added
+
+- [Levels](docs/usage.md#levels): the requirements a public repo meets at each level, by the traits that make a requirement apply, with the standard each comes from and the date it starts to count. `levels.toml` holds them, versioned with the template's releases.
+- The roadmap skeleton at level `community` asks for each planned theme to link the open issue that tracks it.
+- A web app or a site gets `docs/og-card.html`, a social card poster built from the project name, description and address, `just og-card` to render it to `og.png`, and `og:image`, size, alt and `twitter:card` tags in the page head. Run `just og-card` and commit the PNG, or the tags point at a missing file. The card source is a starter file: an update leaves it alone. An update adds the tags to a web app's `index.html`; add them by hand to a site's page, and the card source and recipe if you want them.
 - A web app or a site gets `docs/og-card.html`, a social card poster built from the project name, description and address, `just og-card` to render it to `og.png`, and `og:image`, size, alt and `twitter:card` tags in the page head. Run `just og-card` and commit the PNG, or the tags point at a missing file. `just og-card` also rewrites the `?v=<hash of the PNG>` on the `og:image` URL in the page head, so link previews that cache by image URL pick up a redrawn card; commit the page with the PNG. The card source is a starter file: an update leaves it alone. An update adds the tags to a web app's `index.html`; add them by hand to a site's page, and the card source and recipe if you want them.
 
 ## [0.14.0] - 2026-11-11

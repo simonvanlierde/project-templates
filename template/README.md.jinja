@@ -19,7 +19,7 @@ Status: experimental. It may change in ways that break your code, without notice
 Questions and bugs: see [CONTRIBUTING.md]({{ blob }}.github/CONTRIBUTING.md).
 {% endif %}{% if project_description %}
 {{ project_description }}
-{% endif %}{% if public and license != 'none' and openssf_badge | default('none') != 'none' %}
+{% endif %}{% if public and license != 'none' and level | default('minimal') != 'minimal' %}
 ## Usage
 
 <!-- TODO: {% if not project_description %}say what this software does and the problem it solves, then {% endif %}show its basic use. The OpenSSF Best Practices badge asks for {{ 'both' if not project_description else 'it' }}. -->

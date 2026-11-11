@@ -15,7 +15,7 @@ reference for what comes after, in the order you are likely to need it:
   [CodSpeed](#benchmarks-on-codspeed), [profiling](#profiling),
   [test extras](#test-extras), a [static site](#static-site),
   [Workers hosting](#workers-hosting), a [documentation site](#documentation-site), the
-  [OpenSSF badge](#openssf-best-practices-badge) and the
+  [practice level](#levels), the [OpenSSF badge](#openssf-best-practices-badge) and the
   [dependency bot](#dependency-updates).
 - **Existing code:** [adopt the template](#adopting-the-template-in-an-existing-repo) in a
   repo you already have.
@@ -52,13 +52,13 @@ When `customise` is `no`, advanced questions take these defaults:
 | `codecov` | Disabled |
 | `codspeed` | Disabled ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
 | `profiling` | Disabled ([Profiling](#profiling)) |
-| `cold_install` | Disabled ([CI baseline](ci-baseline.md)) |
+| `cold_install` | Enabled at the `standard` and `community` levels ([CI baseline](ci-baseline.md)) |
 | `site` | None ([Static site](#static-site)) |
 | `site_host` | GitHub Pages; `cloudflare` deploys the site to a Worker ([Static site](#static-site)) |
 | `worker` | Disabled; a Worker script for `/api/*` in a web app or a site on Cloudflare ([Workers hosting](#workers-hosting)) |
 | `docs_site` | Disabled ([Documentation site](#documentation-site)) |
-| `openssf_badge` | None ([OpenSSF Best Practices badge](#openssf-best-practices-badge)) |
-| `decision_records` | On for `web-service`, `data-pipeline`, `web-app`, Compose-only and Silver-badge projects ([Decision records](#decision-records)) |
+| `level` | `standard` for a public repo with a license ([Levels](#levels)) |
+| `decision_records` | On for `web-service`, `data-pipeline`, `web-app`, Compose-only and `community`-level projects ([Decision records](#decision-records)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
 | `python_version`, `python_min`, `node_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
 | `rust_version` | The crate's minimum supported Rust version (`rust-version` in `Cargo.toml`), the current stable minor by default |
@@ -312,7 +312,7 @@ Execute `just repo-settings` once after creating the repository and again whenev
 
 `copier update` performs a three-way merge against the latest template release.
 
-User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, citation files (`CITATION.cff`, `codemeta.json`), silver-badge governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
+User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, citation files (`CITATION.cff`, `codemeta.json`), community-level governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
 
 Known limit: once a project has deleted any file the template renders, copier 9.19.1 reads the skip list before it loads the answers. A Compose-only repo's `compose.yaml` and `.env.example`, and the owned files under `ts_dir` or `go_dir`, then merge with the template's and can conflict. Keep your side of each.
 
@@ -395,7 +395,7 @@ A GPG-signed tag fails the check: `git tag -v` reads an allowed signers file for
 
 ### First release
 
-A public citable project, a project with `openssf_badge`, and one with `publish_to_pypi` get `.github/first-release.md`: the one-time steps around the first release, only those its answers need. `just repo-settings` prints the command that opens it as an issue. Delete the file once the issue is open.
+A public citable project, a project at level `standard` or `community`, and one with `publish_to_pypi` get `.github/first-release.md`: the one-time steps around the first release, only those its answers need. `just repo-settings` prints the command that opens it as an issue. Delete the file once the issue is open.
 
 The steps are the release signing key, PyPI trusted publishing, Zenodo, [Software Heritage](https://archive.softwareheritage.org/save/), the [Research Software Directory](https://research-software-directory.org) and the OpenSSF Best Practices badge. A public citable README gets a Software Heritage badge. It reads "not found" until the archive has visited the repo, then links to the archived copy and its SWHID. After `just release` pushes a tag, it prints the Software Heritage save link.
 
@@ -572,7 +572,7 @@ The script and its test are the project's after the first render. A binding beyo
 
 ## Documentation site
 
-Answer `docs_site` (under `customise`) when a project reaches documentation tier 2 ([How much documentation](#how-much-documentation)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
+Answer `docs_site` (under `customise`) when outside users need search or versioned docs (the `docs-site` requirement in [Levels](#levels)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
 
 A render with `docs_site` gets:
 
@@ -591,12 +591,12 @@ The template also refuses `docs_site` for a web app at the repo root (`ts_dir` i
 
 ## OpenSSF Best Practices badge
 
-`openssf_badge` configures documentation for the [OpenSSF Best Practices badge](https://www.bestpractices.dev):
+The [level](#levels) prepares a public, licensed repo for a level of the [OpenSSF Best Practices badge](https://www.bestpractices.dev): `standard` for passing, `community` for silver, and `minimal` for neither.
 
-- `passing`: adds testing and style sections to `.github/CONTRIBUTING.md`, and a `## Usage` section to `README.md` that links the releases and the package registry, with a TODO for what the software does and how to use it.
-- `silver`: adds `GOVERNANCE.md`, `docs/roadmap.md`, and `docs/assurance-case.md`, and the `dco` workflow checks every pull request, not only fork ones. The `dco-signoff` commit-msg hook (`git commit -s`) comes with every public render.
+- `standard` (passing): adds testing and style sections to `.github/CONTRIBUTING.md`, and a `## Usage` section to `README.md` that links the releases and the package registry, with a TODO for what the software does and how to use it.
+- `community` (silver): adds `GOVERNANCE.md`, `docs/roadmap.md`, and `docs/assurance-case.md`, and the `dco` workflow checks every pull request, not only fork ones. The `dco-signoff` commit-msg hook (`git commit -s`) comes with every public render.
 
-A public render with `passing` meets every MUST criterion of the passing level that a file or a repository setting can meet. The rest depend on you, or on the project's history.
+A public render at `standard` meets every MUST criterion of the passing level that a file or a repository setting can meet. The rest depend on you, or on the project's history.
 
 ### Before you register
 
@@ -678,20 +678,70 @@ A project with the python stack runs [sp-repo-review](https://learn.scientific-p
 
 The checks the template skips on purpose are under `[tool.repo-review.ignore]` in `pyproject.toml`, each with its reason: `just` instead of nox, ruff and ty as local hooks, no reStructuredText, no pre-commit.ci. To skip another, add its code and a reason there. Run it on its own with `prek run sp-repo-review --all-files`.
 
-## How much documentation
+## Levels
 
-The amount of documentation depends on the project's audience, not the size of its codebase:
+`level` sets how much a public repo commits to. Each level adds requirements to the one below it:
 
-| Tier | Audience | What it has |
-| --- | --- | --- |
-| 0: README only | Apps, tools, and experiments with no outside users | What the project is, its status line, and how to run or develop it. |
-| 1: README plus `docs/` | Anything others install: published packages, libraries, or CLIs | A README under about 1,000 words serving as the front page (overview, install, quickstart, and links into `docs/`). `docs/` in Markdown, split following [Diátaxis](https://diataxis.fr/) (tutorials, how-to guides, reference, and explanation). The reference (CLI flags, configuration, schema) is generated or tested against the code. |
-| 2: A documentation site | A tier-1 repository with extensive reference material | A search-indexed site built from the same Markdown files in `docs/`, never maintained as separate copy. |
+- `minimal`: a public repo with few users. Locked and updated dependencies, hardened workflows, the Scorecard workflow and `SECURITY.md`.
+- `standard`, the default: every `minimal` and `standard` requirement that applies to the repo. The render adds the test policy and coding standards to `.github/CONTRIBUTING.md`, a `## Usage` section to the README, `.github/first-release.md` with the OpenSSF badge step ([OpenSSF badge](#openssf-best-practices-badge)), and `cold-install.yml`.
+- `community`: a repo that wants outside contributors. The render adds `GOVERNANCE.md`, `docs/roadmap.md`, `docs/assurance-case.md` and `docs/decisions/`, and the `dco` workflow checks every pull request.
 
-### Moving up a tier
+A private repo, or a public one without a license, is not on the ladder: copier skips the question.
 
-- **0 to 1:** The first release to a package registry (such as PyPI, npm, or crates.io), or when someone other than the author begins using the project.
-- **1 to 2:** The reference is too large to browse comfortably as repository files; outside users need search or versioned documentation; or outside users file issues requesting documentation improvements. Automatic API documentation on docs.rs does not count toward this trigger.
+A requirement applies to every repo, or only to repos with one of its traits. The template derives the traits from your answers:
+
+| Trait | Applies when |
+| --- | --- |
+| `web` | `ts_kind=web-app`, or a `site` |
+| `cli` | A Rust or Go binary, or a Python `data-pipeline` (the computed `cli` answer) |
+| `package` | `publish_to_pypi`, `publish_to_npm`, or `rust_kind=library` (a crate for crates.io) |
+| `pipeline` | Python `kind=data-pipeline` |
+| `numerics` | Python `kind=research` |
+
+The requirements live in [`levels.toml`](../levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
+
+The table says what a repo must have to count as meeting a level, not only what the render adds: every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site=true` once its trigger holds.
+
+<!-- levels:start -->
+<!-- Generated from levels.toml by `just levels-doc`; edit that file, not this table. -->
+
+Levels version 0.14.0:
+
+| Requirement | Level | Applies to | What it asks | Verified by | Source | Counts from |
+| --- | --- | --- | --- | --- | --- | --- |
+| `lockfile` | minimal | all | A lockfile is committed beside each root `pyproject.toml` or `package.json`. | automated | OpenSSF Scorecard v5 (Pinned-Dependencies) | 2026-11-11 |
+| `dependency-bot` | minimal | all | Dependabot or Renovate opens update pull requests for the repo's dependencies. | automated | OpenSSF Scorecard v5 (Dependency-Update-Tool) | 2026-11-11 |
+| `workflow-hardening` | minimal | all | Every workflow sets `permissions:`, checks out with `persist-credentials: false` and has no `pull_request_target` trigger. | automated | OpenSSF Scorecard v5 (Token-Permissions, Dangerous-Workflow); OSPS Baseline v2026.08.28 (BR-01.01) | 2026-11-11 |
+| `scorecard-workflow` | minimal | all | The OpenSSF Scorecard workflow runs on the default branch. | automated | OpenSSF Scorecard v5 | 2026-11-11 |
+| `security-policy` | minimal | all | `SECURITY.md` says how to report a vulnerability privately and how soon you reply. | automated | OSPS Baseline v2026.08.28 (VM-02.01); OpenSSF Best Practices passing (vulnerability_report_process) | 2026-11-11 |
+| `python-repo-review` | standard | all | A repo with a root `pyproject.toml` passes Scientific Python repo-review. | automated | Scientific Python Development Guide (sp-repo-review) | 2026-11-11 |
+| `license` | standard | all | `LICENSE` holds an OSI-approved license. | automated | OpenSSF Best Practices passing (floss_license); OSPS Baseline v2026.08.28 (LE-02.01) | 2026-11-11 |
+| `community-files` | standard | all | The repo has `CONTRIBUTING.md`, a code of conduct, issue forms and a pull request template. | automated | GitHub community profile; OpenSSF Best Practices passing (contribution) | 2026-11-11 |
+| `test-policy` | standard | all | `CONTRIBUTING.md` says that a change comes with tests and names the coding standards. | automated | OpenSSF Best Practices passing (test_policy, coding_standards) | 2026-11-11 |
+| `changelog` | standard | all | `CHANGELOG.md` has a section for each release. | automated | Keep a Changelog 1.1.0; OpenSSF Best Practices passing (release_notes) | 2026-11-11 |
+| `api-break-check` | standard | package | CI checks each pull request for breaks in the public API (griffe, cargo-semver-checks or API Extractor). | automated | Semantic Versioning 2.0.0 | 2026-11-11 |
+| `citation-file` | standard | package, pipeline, numerics | `CITATION.cff` says how to cite the software. | automated | Citation File Format 1.2.0 | 2026-11-11 |
+| `codemeta` | standard | package, pipeline, numerics | `codemeta.json` describes the software for archives and registries. | automated | CodeMeta 3.0 | 2026-11-11 |
+| `readme` | standard | all | `README.md` says what the project is, its status, and how to run or develop it. | review | OpenSSF Best Practices passing (description_good, interact) | 2026-11-11 |
+| `cold-install` | standard | all | A CI workflow runs the README's setup steps in a clean container. | automated | project-templates | 2026-11-11 |
+| `docs-structure` | standard | package, cli | `docs/` holds Markdown split into tutorials, how-to guides, reference and explanation, and the reference is generated or tested against the code. | review | Diátaxis | 2026-11-11 |
+| `docs-site` | standard | package, cli | When outside users need search or versioned docs, `docs/` builds a search-indexed site from the same Markdown. | review | project-templates | 2026-11-11 |
+| `architecture-doc` | standard | all | A repo with 40 or more code files has an architecture page with a diagram, and each path it names exists. | automated | project-templates | 2026-11-11 |
+| `accessibility-statement` | standard | web, cli | A web app publishes an accessibility statement and runs an axe scan in CI; a command-line tool has `docs/accessibility.md`. | automated | WCAG 2.2 (Level AA) | 2026-11-11 |
+| `web-head-tags` | standard | web | Each page has a canonical link, `og:url`, and an absolute `og:image` that loads, with `og:image:alt`. | automated | The Open Graph protocol | 2026-11-11 |
+| `security-headers` | standard | web | The site sends a Content-Security-Policy, and its root sends Strict-Transport-Security. | automated | OWASP Secure Headers Project | 2026-11-11 |
+| `security-txt` | standard | web | The site root serves `/.well-known/security.txt` with a `Contact:` line. | automated | RFC 9116 | 2026-11-11 |
+| `sitemap-answers` | standard | web | Each sitemap that `robots.txt` names loads. | automated | RFC 9309; Sitemaps protocol 0.9 | 2026-11-11 |
+| `governance` | community | all | `GOVERNANCE.md` says who decides, who can merge and release, and how the project carries on if a maintainer is gone. | automated | OpenSSF Best Practices silver (governance, roles_responsibilities, access_continuity) | 2026-11-11 |
+| `dco` | community | all | Every commit carries a `Signed-off-by:` line, and CI checks each pull request for it. | automated | Developer Certificate of Origin 1.1; OpenSSF Best Practices silver (dco) | 2026-11-11 |
+| `roadmap` | community | all | `docs/roadmap.md` says what the project plans for the next year and what it will not do. | automated | OpenSSF Best Practices silver (documentation_roadmap) | 2026-11-11 |
+| `roadmap-issue-links` | community | all | Each theme in the roadmap links an open issue, and its "Last reviewed" date is under a year old. | automated | project-templates | 2027-01-01 |
+| `assurance-case` | community | all | `docs/assurance-case.md` gives the threat model, the trust boundaries, the secure design principles and the weaknesses countered. | review | OpenSSF Best Practices silver (assurance_case) | 2026-11-11 |
+| `decision-records` | community | all | `docs/decisions/` records each choice that is costly to reverse. | review | MADR 4.0.0 | 2026-11-11 |
+| `signed-releases` | community | all | Release tags are signed, and the release workflow refuses a tag signed by a key it does not list. | automated | OpenSSF Best Practices silver (signed_releases) | 2026-11-11 |
+<!-- levels:end -->
+
+To move a project to another level, run `copier update --data level=community`.
 
 ### Decision records
 

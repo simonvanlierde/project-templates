@@ -74,22 +74,25 @@ grep -q '^PY003 = "LICENSE sits at the repo root' c/api/pyproject.toml
 grep -q '^PY004 = ' c/api/pyproject.toml
 (lacks -qE '^PY00[34] = ' w/pyproject.toml)
 grep -qx 'strict = true' w/pyproject.toml
-# The first-release checklist holds only the steps the answers need. w is a private-use
-# app: nothing to register, so no checklist, no archive badge and no save link.
+# The first-release checklist holds only the steps the answers need. w is an app, not
+# citable: at level standard its checklist has only the badge, and no archive badge or save link.
 fr=.github/first-release.md
 grep -q 'Zenodo' "a/$fr"
 grep -qF '.github/allowed_signers' "a/$fr"
 grep -q 'archive.softwareheritage.org/save/' "a/$fr"
 grep -q 'research-software-directory.org' "a/$fr"
-(lacks -qE 'PyPI|OpenSSF' "a/$fr")
+(lacks -q 'PyPI' "a/$fr")
+grep -q 'OpenSSF' "a/$fr"
+(lacks -q 'OpenSSF' "c/$fr")
 grep -q 'PyPI trusted publishing' "c/$fr"
 grep -q 'passing first, then silver' "h/$fr"
 grep -q 'OpenSSF' "m/$fr"
 (lacks -q 'then silver' "m/$fr")
-test ! -e "w/$fr"
+grep -q 'OpenSSF' "w/$fr"
+(lacks -qE 'Zenodo|PyPI' "w/$fr")
 test ! -e "b/$fr"
 grep -qF -- "--body-file $fr" a/justfile
-(lacks -q 'first-release' w/justfile)
+grep -qF -- "--body-file $fr" w/justfile
 grep -qF '(https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/example-org/render-me)' a/README.md
 grep -q 'Archive it in Software Heritage' a/justfile
 (lacks -q 'softwareheritage' w/README.md w/justfile b/README.md b/justfile)

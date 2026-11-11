@@ -343,14 +343,20 @@ grep -qx '      render: shell' a/.github/ISSUE_TEMPLATE/bug.yml
 grep -qx '    id: environment' a/.github/ISSUE_TEMPLATE/bug.yml
 uvx check-jsonschema --builtin-schema vendor.github-issue-forms \
   a/.github/ISSUE_TEMPLATE/bug.yml d/.github/ISSUE_TEMPLATE/bug.yml
-# OpenSSF badge: passing (m) adds the test policy and a coding-standards line per stack;
-# silver (h) also adds the governance, roadmap and assurance-case skeletons. a is public
-# with the default none, so it gets neither.
+# Levels (docs/usage.md#levels): standard, the default for a public repo (a, m), adds the
+# test policy and a coding-standards line per stack; community (h) also adds the governance,
+# roadmap and assurance-case skeletons and the decision records. minimal (c) gets neither.
+grep -qx 'level: standard' a/.copier-answers.yml
+grep -qx 'level: minimal' x/.copier-answers.yml
+(lacks -q '^level:' i/.copier-answers.yml)
+(lacks -q openssf_badge x/.copier-answers.yml)
 badge_docs=(GOVERNANCE.md docs/roadmap.md docs/assurance-case.md)
-for r in a m; do
+for r in a c m; do
   for f in "${badge_docs[@]}"; do test ! -e "$r/$f"; done
 done
-(lacks -q '## Tests and code style' a/.github/CONTRIBUTING.md)
+test -d h/docs/decisions
+(lacks -q '## Tests and code style' c/.github/CONTRIBUTING.md)
+grep -q '## Tests and code style' a/.github/CONTRIBUTING.md
 grep -q '## Tests and code style' m/.github/CONTRIBUTING.md
 test "$(grep -c '^- \(Python\|TypeScript\|Rust\|Go\): ' m/.github/CONTRIBUTING.md)" = 4
 grep -qx -- '- Go: gofmt and \[golangci-lint\](https://golangci-lint.run).' h/.github/CONTRIBUTING.md
@@ -361,9 +367,10 @@ for heading in 'Threat model' 'Trust boundaries' 'Secure design principles' 'Wea
 done
 test "$(wc -l <h/docs/assurance-case.md)" -le 60
 grep -qF '| Maintainer |' h/GOVERNANCE.md
+grep -q "linked to \[the open issue\](https://github.com/example-org/example/issues)" h/docs/roadmap.md
 grep -qx 'Bus factor: TODO (the fewest people whose departure would leave the project unable to continue).' h/GOVERNANCE.md
-# This repo runs the silver render's DCO check, hook and commit rules: it checks its own
-# branches too. Below silver a render checks only pull requests from forks.
+# This repo runs the community render's DCO check, hook and commit rules: it checks its own
+# branches too. Below community a render checks only pull requests from forks.
 diff "$repo/.github/workflows/dco.yml" h/.github/workflows/dco.yml
 grep -qx '    if: github.event.pull_request.head.repo.full_name != github.repository' \
   a/.github/workflows/dco.yml
@@ -424,3 +431,20 @@ JSON
 # in a bot's pull request too.
 test "$(PR_BY_BOT=false jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n1111111 chore(deps): bump\n2222222 fix: human on a bot branch')"
 test "$(PR_BY_BOT=true jq -r "$dco_filter" "$commits")" = "$(printf 'bbbbbbb fix: unsigned\nddddddd fix: malformed\n2222222 fix: human on a bot branch')"
+
+# levels_doc.py --check fails on a stale table, a version behind CHANGELOG.md, a bad field
+# and a missing end marker, run on a copy so the repo stays as it is.
+lv="$out/levels-copy"
+mkdir -p "$lv/scripts" "$lv/docs"
+cp "$repo/levels.toml" "$repo/CHANGELOG.md" "$lv/"
+cp "$repo/scripts/levels_doc.py" "$lv/scripts/"
+cp "$repo/docs/usage.md" "$lv/docs/"
+uv run -q "$lv/scripts/levels_doc.py" --check
+sed -i.bak 's/^text = "A lockfile/text = "One lockfile/' "$lv/levels.toml"
+(! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
+cp "$repo/levels.toml" "$lv/" && sed -i.bak 's/^version = .*/version = "0.0.1"/' "$lv/levels.toml"
+(! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
+cp "$repo/levels.toml" "$lv/" && sed -i.bak 's/^level = "minimal"/level = "gold"/' "$lv/levels.toml"
+(! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
+cp "$repo/levels.toml" "$lv/" && sed -i.bak '/levels:end/d' "$lv/docs/usage.md"
+(! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
