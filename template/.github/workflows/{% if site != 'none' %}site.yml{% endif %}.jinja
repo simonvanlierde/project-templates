@@ -181,13 +181,6 @@ jobs:
           echo "::notice::GitHub Pages is off or does not deploy from Actions: run just repo-settings."
           echo "run=false" >> "$GITHUB_OUTPUT"
 
-{%- if site_domain %}
-      # Keep the duplicate workers.dev origin out of search results.
-      - if: steps.gate.outputs.run == 'true'
-        run: |
-          printf '\nhttps://:worker.:subdomain.workers.dev/*\n  X-Robots-Tag: noindex\n' >> {{ site_out }}/_headers
-
-{%- endif %}
       - if: steps.gate.outputs.run == 'true'
         id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

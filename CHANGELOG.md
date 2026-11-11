@@ -18,6 +18,7 @@ Upgrade steps:
 
 ### Fixed
 
+- Closing a Copier update PR unmerged skips that tag on later weekly runs; a newer tag can still open a PR.
 - Worker previews skip Copier update branches, including updates opened by a user account. Web app deploys keep hidden build files such as `.well-known/security.txt`.
 - Workers explicitly disable observability. With a custom domain, production adds `noindex` only to its duplicate workers.dev origin.
 - Generated hooks check shell scripts, and Dependabot projects explain how template updates refresh their prek pin.

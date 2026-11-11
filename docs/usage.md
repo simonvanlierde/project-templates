@@ -327,7 +327,7 @@ After updating, refresh and commit project lockfiles (`uv lock`, `pnpm install`,
 ### Hearing about new releases
 
 - **Renovate:** Automatically opens update PRs using `copier update --skip-answered --defaults`. Inspect PR diffs for conflict markers before merging.
-- **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`. It updates each `.copier-answers*.yml` in turn, so a [layered template](#layering-another-template) lands in the same PR.
+- **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`. It updates each `.copier-answers*.yml` in turn, so a [layered template](#layering-another-template) lands in the same PR. Closing that PR unmerged skips its tag; a later tag can open a new PR.
 
 Without [the update App](#the-update-app), `copier-update.yml` pushes with `GITHUB_TOKEN`, which can't change files in `.github/workflows/`: an update that does opens an issue asking for a local update instead. A PR it opens starts no checks either, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so. To open the PR at all, turn on Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests". With the App, the workflow does not need it.
 
@@ -359,7 +359,7 @@ To publish a release:
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
 
-If a publishing job fails before artifacts upload to the registry, re-run the failed CI job on the existing tag. If `docker.yml`'s `attest` step fails after the image push, re-run only that step: a full re-run rebuilds the image and repoints the semver tags. If the release artifact is already published to the registry, do not move the git tag; bump the patch version and publish a new release.
+If a publishing job fails before artifacts upload to the registry, re-run the failed CI job on the existing tag. PyPI uploads stay strict: an existing filename fails the job, so inspect a partial upload before publishing a new patch version. If `docker.yml`'s `attest` step fails after the image push, re-run only that step: a full re-run rebuilds the image and repoints the semver tags. If the release artifact is already published to the registry, do not move the git tag; bump the patch version and publish a new release.
 
 Publishing controls:
 

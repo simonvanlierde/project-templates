@@ -416,6 +416,9 @@ for path in root.glob('*/.github/workflows/*.yml'):
     if path.name not in {'ts.yml', 'site.yml'}:
         continue
     jobs = yaml.safe_load(path.read_text())['jobs']
+    for job in jobs.values():
+        if any(step.get('uses', '').startswith('actions/deploy-pages@') for step in job.get('steps', [])):
+            assert not any('workers.dev/*' in step.get('run', '') for step in job.get('steps', [])), path
     for name in ('production', 'deploy'):
         steps = jobs.get(name, {}).get('steps', [])
         runs = '\n'.join(step.get('run', '') for step in steps)

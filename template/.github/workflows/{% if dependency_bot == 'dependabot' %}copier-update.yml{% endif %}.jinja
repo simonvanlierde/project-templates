@@ -180,6 +180,13 @@ jobs:
         shell: bash
         run: |-
           branch=chore/copier-update
+          # Closing an update unmerged declines that tag; a later tag can open a new PR.
+          declined=$(gh pr list --head "$branch" --base "$BASE" --state closed --json title,mergedAt |
+            jq --arg title "chore: update from template $LATEST" 'any(.[]; .title == $title and .mergedAt == null)')
+          if [ "$declined" = true ]; then
+            echo "::notice::Template $LATEST was declined; skipping this tag"
+            exit 0
+          fi
           if [ "$HAS_TOKEN" != true ] && [ "$WORKFLOWS" = true ]; then
             title="Update from template $LATEST by hand"
             {

@@ -47,7 +47,12 @@ cat >"$cuh/gh" <<'FAKE'
 echo "$*" >>"$FAKE_LOG"
 case "$1 $2" in
   "issue list") echo "${FAKE_ISSUE:-}" ;;
-  "pr list") echo "${FAKE_PR:-}" ;;
+  "pr list")
+    case " $* " in
+      *" --state closed "*) printf '%s\n' "${FAKE_CLOSED_PRS:-[]}" ;;
+      *) echo "${FAKE_PR:-}" ;;
+    esac
+    ;;
 esac
 FAKE
 cat >"$cuh/uvx" <<'FAKE'
@@ -99,6 +104,15 @@ chmod +x "$cuh/gh" "$cuh/uvx"
       FAKE_TEXT=''
       if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
       export FAKE_TEXT
+      FAKE_CLOSED_PRS='[]'
+      # shellcheck disable=SC2089 # JSON data, never evaluated as shell code.
+      case $name in
+      declined*) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.10.0","mergedAt":null}]' ;;
+      older-declined) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.9.0","mergedAt":null}]' ;;
+      merged) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.10.0","mergedAt":"2026-11-11T12:00:00Z"}]' ;;
+      esac
+      # shellcheck disable=SC2090 # The fake gh prints this JSON verbatim.
+      export FAKE_CLOSED_PRS
       : >"$p.gho"
       # The copier step gets neither token variable.
       env -u GH_TOKEN -u HAS_TOKEN GITHUB_OUTPUT="$p.gho" bash --noprofile --norc -eo pipefail "$cuh/copier.sh" >"$p.out" 2>&1 || {
@@ -128,6 +142,11 @@ edit true 7 -
 plain false - - README.md
 layer true - - README.md
 both true - - README.md
+declined true - -
+declined-no-token false - -
+declined-plain false - - README.md
+older-declined true - -
+merged true - -
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
@@ -161,6 +180,15 @@ CASES
   grep -q '^pr create --head chore/copier-update --base main ' plain.log
   grep -q '^pr edit chore/copier-update ' edit.log
   (lacks -q '^pr create' edit.log)
+  # Declining a tag suppresses both pushes and manual-update issues for that tag.
+  for r in declined declined-no-token declined-plain; do
+    (lacks -q '^auth setup-git\|^pr create\|^pr edit\|^issue ' "$r.log")
+    (! git -C "$r.git" rev-parse --verify refs/heads/chore/copier-update 2>/dev/null)
+  done
+  # An older declined tag or a merged PR does not suppress a newer update.
+  for r in older-declined merged; do
+    grep -q '^pr create --head chore/copier-update --base main ' "$r.log"
+  done
   # Patch data must never replace Git configuration, and artifact symlinks are refused.
   git clone -q "$cuh/tpl" "$cuh/reject-checkout"
   mkdir -p "$cuh/reject/copier-update"
