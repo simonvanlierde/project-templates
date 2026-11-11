@@ -52,7 +52,7 @@ When `customise` is `no`, advanced questions take these defaults:
 | `codecov` | Disabled |
 | `codspeed` | Disabled ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
 | `profiling` | Disabled ([Profiling](#profiling)) |
-| `cold_install` | Disabled ([CI baseline](ci-baseline.md)) |
+| `cold_install` | Enabled at the `standard` and `community` levels ([CI baseline](ci-baseline.md)) |
 | `site` | None ([Static site](#static-site)) |
 | `site_host` | GitHub Pages; `cloudflare` deploys the site to a Worker ([Static site](#static-site)) |
 | `worker` | Disabled; a Worker script for `/api/*` in a web app or a site on Cloudflare ([Workers hosting](#workers-hosting)) |
@@ -687,7 +687,7 @@ A requirement applies to every repo, or only to repos with one of its traits. Th
 
 The requirements live in [`levels.toml`](../levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then it shows in a report but does not lower a repo's level, which gives repos time to catch up. The file's version is the template release it ships in, so a report can say which version a repo meets.
 
-A render meets each `automated` requirement at its level except `cold-install`, which needs `cold_install=true`. The `review` ones need you, and `docs-site` needs `docs_site=true` once its trigger holds.
+A render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site=true` once its trigger holds.
 
 <!-- levels:start -->
 <!-- Generated from levels.toml by `just levels-doc`; edit that file, not this table. -->

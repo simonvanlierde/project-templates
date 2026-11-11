@@ -460,12 +460,6 @@ profiling:
   help: Profiling recipes (a sampling profiler on Python; a frame-pointer build, samply and perf stat on Rust)
   default: false
 
-cold_install:
-  type: bool
-  ask: "{{ customise }}"
-  help: Verify README setup instructions in a fresh Debian container on setup changes
-  default: false
-
 # A static page beside the code (a playground, demo or report) in site/. GitHub Pages
 # serves it from main, and each open, ready pull request gets a preview Worker
 # (docs/usage.md#static-site).
@@ -544,6 +538,13 @@ silver:
   type: bool
   when: false
   default: "{{ public and license != 'none' and level == 'community' }}"
+
+# After `level`, which sets its default: the cold-install requirement starts at standard.
+cold_install:
+  type: bool
+  ask: "{{ customise }}"
+  help: Verify README setup instructions in a fresh Debian container on setup changes
+  default: "{{ public and license != 'none' and level != 'minimal' }}"
 
 # --- python -------------------------------------------------------------------
 

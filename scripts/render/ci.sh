@@ -38,7 +38,9 @@ if cold k >/dev/null 2>"$out/k-cold.log"; then
   exit 1
 fi
 grep -qF 'or delete .github/workflows/cold-install.yml' "$out/k-cold.log"
-test ! -e "$out/a/.github/workflows/cold-install.yml"
+# cold_install defaults on from the standard level (a), off at minimal (x) and in a private repo (b).
+test -f "$out/a/.github/workflows/cold-install.yml"
+test ! -e "$out/x/.github/workflows/cold-install.yml"
 test ! -e "$out/b/.github/workflows/cold-install.yml"
 test -f "$out/d/.github/workflows/cold-install.yml"
 # A change to the lockfile or the interpreter pin can break the first setup.
