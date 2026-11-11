@@ -10,7 +10,7 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
-- A web app or a site gets `docs/og-card.html`, a social card poster built from the project name, description and address, `just og-card` to render it to `og.png`, and `og:image`, size, alt and `twitter:card` tags in the page head. Run `just og-card` and commit the PNG, or the tags point at a missing file. The card source is a starter file: an update leaves it alone. An update adds the tags to a web app's `index.html`; add them by hand to a site's page, and the card source and recipe if you want them.
+- A web app or a site gets `docs/og-card.html`, a social card poster built from the project name, description and address, `just og-card` to render it to `og.png`, and `og:image`, size, alt and `twitter:card` tags in the page head. Run `just og-card` and commit the PNG, or the tags point at a missing file. `just og-card` also rewrites the `?v=<hash of the PNG>` on the `og:image` URL in the page head, so link previews that cache by image URL pick up a redrawn card; commit the page with the PNG. The card source is a starter file: an update leaves it alone. An update adds the tags to a web app's `index.html`; add them by hand to a site's page, and the card source and recipe if you want them.
 
 ## [0.14.0] - 2026-11-11
 

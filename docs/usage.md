@@ -546,7 +546,7 @@ One-time setup: `just repo-settings` creates the `preview` and `production` envi
 
 A web app or a site renders `docs/og-card.html`, a 1200x630 poster with the project name, `project_description` and the site's address, and `og:image`, `og:image:width`, `og:image:height`, `og:image:alt` and `twitter:card` tags in the page head that point at it. The alt text is the name and the description. The file is yours: an update leaves it alone.
 
-Run `just og-card` to render it to a PNG, and commit the PNG: `public/og.png` for a web app, `site/og.png` for `site=plain` and `site/public/og.png` for `site=astro`. A web app renders with the Playwright in its devDependencies (`pnpm exec playwright install chromium` once). A site runs `pnpm dlx playwright@<pinned version>`, so it needs no Node package of its own. The head tags point at a file that does not exist until you run it.
+Run `just og-card` to render it to a PNG, and commit the PNG: `public/og.png` for a web app, `site/og.png` for `site=plain` and `site/public/og.png` for `site=astro`. A web app renders with the Playwright in its devDependencies (`pnpm exec playwright install chromium` once). A site runs `pnpm dlx playwright@<pinned version>`, so it needs no Node package of its own. The recipe also writes the PNG's first 8 hex of SHA-256 into the page's `og:image` URL (`og.png?v=<hash>`), because Facebook, Slack, Discord and iMessage cache a preview by image URL and would keep the old card after a redraw. Commit the page with the PNG. The head tags point at a file that does not exist until you run it.
 
 Replace the card's colours and font with the project's own, then check it before you commit:
 

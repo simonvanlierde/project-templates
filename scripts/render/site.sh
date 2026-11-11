@@ -53,6 +53,7 @@ done
 for r in x r d y; do
   grep -qF '<h1>' "$r/docs/og-card.html"
   grep -qx 'og-card:' "$r/justfile"
+  grep -qF 'og.png?v=$(shasum' "$r/justfile"
 done
 for f in x/site/index.html r/site/index.html d/web/index.html y/site/src/layouts/Base.astro; do
   for t in 'og:image"' 'og:image:width" content="1200"' 'og:image:height" content="630"' 'og:image:alt"' 'twitter:card" content="summary_large_image"'; do
