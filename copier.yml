@@ -53,7 +53,7 @@ _skip_if_exists:
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts"
-  - /docs/brand/opengraph-image.html
+  - /docs/og-card.html
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
@@ -87,7 +87,7 @@ _exclude:
   - "{% if _copier_operation == 'update' %}/site/src/pages/about.md{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/worker/index.mjs{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/worker/index.test.mjs{% endif %}"
-  - "{% if _copier_operation == 'update' %}/docs/brand/opengraph-image.html{% endif %}"
+  - "{% if _copier_operation == 'update' %}/docs/og-card.html{% endif %}"
 
 # Shown on `copier copy` only; `--quiet` hides both.
 _message_before_copy: |

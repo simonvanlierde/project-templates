@@ -51,7 +51,7 @@ done
 # recipe. r's card, edited before its second render, is still edited: it is the project's.
 # The web app (d) and the Astro site (y) render theirs to their own public/.
 for r in x r d y; do
-  grep -qF '<h1>' "$r/docs/brand/opengraph-image.html"
+  grep -qF '<h1>' "$r/docs/og-card.html"
   grep -qx 'og-card:' "$r/justfile"
 done
 for f in x/site/index.html r/site/index.html d/web/index.html y/site/src/layouts/Base.astro; do
@@ -62,15 +62,15 @@ done
 grep -qF 'playwright@' r/justfile
 # shellcheck disable=SC2016 # a literal "$PWD" in the recipe body
 {
-  grep -qF '"$PWD/site/opengraph-image.png"' r/justfile
-  grep -qF '"$PWD/site/public/opengraph-image.png"' y/justfile
-  grep -qF '"$PWD/web/public/opengraph-image.png"' d/justfile
+  grep -qF '"$PWD/site/og.png"' r/justfile
+  grep -qF '"$PWD/site/public/og.png"' y/justfile
+  grep -qF '"$PWD/web/public/og.png"' d/justfile
 }
 grep -qF 'pnpm -C web exec playwright screenshot' d/justfile
-grep -qx '<!-- project edit -->' r/docs/brand/opengraph-image.html
-grep -qF 'content="https://example-org.github.io/site-me/opengraph-image.png"' y/site/src/layouts/Base.astro || grep -qF '"https://example-org.github.io/site-me/opengraph-image.png"' y/site/src/layouts/Base.astro
+grep -qx '<!-- project edit -->' r/docs/og-card.html
+grep -qF 'content="https://example-org.github.io/site-me/og.png"' y/site/src/layouts/Base.astro || grep -qF '"https://example-org.github.io/site-me/og.png"' y/site/src/layouts/Base.astro
 # The description is escaped in the card and the alt text.
-grep -qF 'Tidies &#34;&lt;b&gt;&#34; tags &amp; more' hush-plain/docs/brand/opengraph-image.html
+grep -qF 'Tidies &#34;&lt;b&gt;&#34; tags &amp; more' hush-plain/docs/og-card.html
 grep -qF 'og:image:alt" content="hush-me: Tidies &#34;&lt;b&gt;&#34; tags &amp; more"' hush-plain/site/index.html
 (lacks -rq 'og:image' a/)
 # The site build is a required check, and `just check` builds an Astro site.

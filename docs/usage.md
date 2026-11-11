@@ -544,9 +544,9 @@ One-time setup: `just repo-settings` creates the `preview` and `production` envi
 
 ## Social card
 
-A web app or a site renders `docs/brand/opengraph-image.html`, a 1200x630 poster with the project name, `project_description` and the site's address, and `og:image`, `og:image:width`, `og:image:height`, `og:image:alt` and `twitter:card` tags in the page head that point at it. The alt text is the name and the description. The file is yours: an update leaves it alone.
+A web app or a site renders `docs/og-card.html`, a 1200x630 poster with the project name, `project_description` and the site's address, and `og:image`, `og:image:width`, `og:image:height`, `og:image:alt` and `twitter:card` tags in the page head that point at it. The alt text is the name and the description. The file is yours: an update leaves it alone.
 
-Run `just og-card` to render it to a PNG, and commit the PNG: `public/opengraph-image.png` for a web app, `site/opengraph-image.png` for `site=plain` and `site/public/opengraph-image.png` for `site=astro`. A web app renders with the Playwright in its devDependencies (`pnpm exec playwright install chromium` once). A site runs `pnpm dlx playwright@<pinned version>`, so it needs no Node package of its own. The head tags point at a file that does not exist until you run it.
+Run `just og-card` to render it to a PNG, and commit the PNG: `public/og.png` for a web app, `site/og.png` for `site=plain` and `site/public/og.png` for `site=astro`. A web app renders with the Playwright in its devDependencies (`pnpm exec playwright install chromium` once). A site runs `pnpm dlx playwright@<pinned version>`, so it needs no Node package of its own. The head tags point at a file that does not exist until you run it.
 
 Replace the card's colours and font with the project's own, then check it before you commit:
 
