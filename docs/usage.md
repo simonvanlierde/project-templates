@@ -149,7 +149,7 @@ Every push to `main` runs the `production` job after the checks pass. It deploys
 
 An app made before this template deployed from CI was deployed by Cloudflare Pages. To move it:
 
-1. Merge the `copier update`, then run `just repo-settings` and add both secrets to the new `production` environment.
+1. Delete any Pages `public/_redirects` rule with status `200!`: Workers refuses it with error `100324`. Merge the `copier update`, then run `just repo-settings` and add both secrets to the new `production` environment.
 2. The next push to `main` deploys the Worker. Check the app at its workers.dev address.
 3. Remove the custom domain from the Pages project. With `site_url` set to it, the next production deploy attaches it to the Worker.
 4. Delete the Pages project, now that the Worker serves production.
@@ -160,7 +160,7 @@ Without a custom domain, the app's address changes: set the new one with `copier
 
 ### Pull request previews
 
-Each pull request that is open, not a draft and not opened by a bot such as Renovate gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`. The `preview` job deploys `wrangler.jsonc` under that name. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. Production never sends that header.
+Each pull request that is open, not a draft, not opened by a bot such as Renovate and not from `chore/copier-update` gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`. The `preview` job deploys `wrangler.jsonc` under that name. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. With a custom domain, production sends it only on the duplicate workers.dev origin.
 
 When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker through the Cloudflare API. A daily run lists the account's `<slug>-pr-<number>` Workers and deletes those whose pull request is not open and ready, in case an event was missed. When it cannot read a pull request, it keeps that Worker and fails. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep.
 
@@ -508,7 +508,7 @@ The two choices differ only in what is in `site/` and how `just site` builds it:
 The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
 
 - `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`. [On a Worker](#hosting-on-a-worker), it deploys to the Worker instead.
-- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/` (from `/` itself on a Worker), and sends `X-Robots-Tag: noindex`.
+- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft, not opened by a bot and not from `chore/copier-update` gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/` (from `/` itself on a Worker), and sends `X-Robots-Tag: noindex`.
 
 On GitHub Pages, the one-time setup is below; on a Worker, see [Hosting on a Worker](#hosting-on-a-worker).
 

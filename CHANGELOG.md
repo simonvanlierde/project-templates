@@ -16,6 +16,12 @@ Upgrade steps:
 - At `standard`, the render also adds `.github/first-release.md` with the OpenSSF badge step. The Levels section in `docs/usage.md` replaces "How much documentation".
 - `cold_install` is on by default for new projects at the `standard` and `community` levels, since the `cold-install` requirement starts at `standard`. An existing project keeps its stored answer; add the workflow with `copier update --data cold_install=true`.
 
+### Fixed
+
+- Worker previews skip Copier update branches, including updates opened by a user account. Web app deploys keep hidden build files such as `.well-known/security.txt`.
+- Workers explicitly disable observability. With a custom domain, production adds `noindex` only to its duplicate workers.dev origin.
+- Generated hooks check shell scripts, and Dependabot projects explain how template updates refresh their prek pin.
+
 ### Added
 
 - [Levels](docs/usage.md#levels): the requirements a public repo meets at each level, by the traits that make a requirement apply, with the standard each comes from and the date it starts to count. `levels.toml` holds them, versioned with the template's releases.
@@ -142,6 +148,7 @@ Upgrade steps:
 
 Upgrade steps:
 
+- When moving a web app from Pages to Workers, delete any `public/_redirects` rule with status `200!`. Workers refuses it with error `100324`.
 - **Breaking:** in a web app, add `export const LEGAL_LINKED_FROM: readonly string[] = [...ROUTES];` to `tests/e2e/routes.ts` to keep the old legal-page check, or list only the routes that link the legal pages.
 - **Breaking:** in a web app, merge the `copier update`, run `pnpm install` and commit `pnpm-lock.yaml` (the update adds wrangler as a devDependency, and CI installs with `--frozen-lockfile`). Run `just repo-settings` and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` to the `production` environment. Once the Worker is live, move the custom domain to it and delete the Pages project ([steps](docs/usage.md#moving-an-app-off-cloudflare-pages)). Without a custom domain, change the `site_url` answer to the workers.dev address: `copier update --data site_url=https://<slug>.<subdomain>.workers.dev`. Then fix the lines that still name Pages in files the update leaves alone: `docs/privacy.md`, the README's deploy section and the comment in `src/App.tsx`.
 - **Breaking:** in a web app, move any hand tests in `docs/accessibility.md` under "How we check" and delete the "Tested with" heading, or the statement test fails.

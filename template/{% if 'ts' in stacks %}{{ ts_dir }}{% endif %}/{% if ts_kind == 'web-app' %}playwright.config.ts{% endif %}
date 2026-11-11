@@ -17,7 +17,7 @@ export default defineConfig({
     // `just ts-shots` only: the normal run has no such project, so it skips tests/shots.
     ...(process.env.SHOTS ? [{ name: "shots", testDir: "tests/shots", use: { ...devices["Desktop Chrome"] } }] : []),
   ],
-  // The tests run against the production build, which is what the Cloudflare Worker serves.
+  // Build locally for these tests; CI deploys the separate check job's build.
   webServer: {
     command: "pnpm build && pnpm preview --strictPort",
     url,
