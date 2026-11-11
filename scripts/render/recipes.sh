@@ -81,21 +81,65 @@ for cmd in 'golangci-lint fmt --diff' 'golangci-lint run' 'go test -race ./...' 
   'go tool govulncheck ./...'; do
   recipe_has c/just/go.just go-check "    $cmd"
 done
-# dependency-licenses: each stack lists its dependencies' licenses and fails on one
-# the license answer cannot take. a is MIT, so the GPL family stays out of the allow-list.
-# The pins come from copier.yml, so a version bump needs no edit here.
+# dependency-licenses: each stack lists the licenses of the dependencies that ship and
+# fails on one the license answer cannot take. a is MIT, so the GPL family stays out of
+# the allow-list; agl is AGPL, so it goes in. The pins come from copier.yml, so a version
+# bump needs no edit here.
 lc_pin=$(sed -n '/^licensecheck_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
 gl_pin=$(sed -n '/^go_licenses_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
-lc="licensecheck==$lc_pin licensecheck -r \"\$d/requirements.txt\" --zero"
-recipe_has a/just/python.just py-check "    d=\$(mktemp -d) && uv export --locked --no-hashes --no-annotate --no-header --no-emit-project -q -o \"\$d/requirements.txt\" && uv run --locked --with $lc"
-recipe_has c/just/python.just py-check "    d=\$(mktemp -d) && uv --directory api export --locked --no-hashes --no-annotate --no-header --no-emit-project -q -o \"\$d/requirements.txt\" && uv --directory api run --locked --with $lc"
+# shellcheck disable=SC2016 # a literal $d for the recipe's shell
+export_args='export --locked --no-default-groups --no-hashes --no-annotate --no-header --no-emit-project -q -o "$d/requirements.txt"'
+lc="licensecheck==$lc_pin licensecheck -r \"\$d/requirements.txt\" --zero; }"
+recipe_has a/just/python.just py-check "    d=\$(mktemp -d) && uv $export_args && { test ! -s \"\$d/requirements.txt\" || uv run --locked --with $lc"
+recipe_has c/just/python.just py-check "    d=\$(mktemp -d) && uv --directory api $export_args && { test ! -s \"\$d/requirements.txt\" || uv --directory api run --locked --with $lc"
+# licensecheck reads AGPL-3.0-or-later as the GPL, which refuses AGPL dependencies.
+recipe_has agl/just/python.just py-check "    d=\$(mktemp -d) && uv $export_args && { test ! -s \"\$d/requirements.txt\" || uv run --locked --with licensecheck==$lc_pin licensecheck --license AGPL -r \"\$d/requirements.txt\" --zero; }"
 recipe_has a/just/ts.just ts-check '    pnpm run licenses'
 grep -qF '"licenses": "pnpm licenses list --prod --json | node scripts/checkLicenses.mjs"' a/package.json
-grep -qxF '  "MPL-2.0",' a/scripts/checkLicenses.mjs
 lacks -F 'GPL' a/scripts/checkLicenses.mjs a/deny.toml
+# The TypeScript check on `pnpm licenses list --json` output: one package per license.
+licenses_pass() {
+  printf '{"%s":[{"name":"p","versions":["1.0.0"]}]}' "$2" | node "$1/scripts/checkLicenses.mjs" >/dev/null 2>&1
+}
+# glob, minimatch and lru-cache are BlueOak-1.0.0, argparse is PSF-2.0 or Python-2.0.
+for l in MIT BlueOak-1.0.0 PSF-2.0 Python-2.0 BSL-1.0 MIT-0 Unlicense CDLA-Permissive-2.0 \
+  '(MIT OR Apache-2.0)' 'MIT OR GPL-3.0-only' 'Apache-2.0 WITH LLVM-exception' 'mit' \
+  '((MIT))' 'MIT AND (Apache-2.0 OR GPL-3.0-only)'; do
+  licenses_pass a "$l" || {
+    echo "checkLicenses.mjs refuses $l in an MIT project" >&2
+    exit 1
+  }
+done
+for l in GPL-3.0-only 'GPL-3.0-only AND (MIT OR Apache-2.0)' '(MIT OR GPL-3.0-only) AND CC-BY-4.0' \
+  'GPL-2.0-or-later WITH Classpath-exception-2.0' Unknown LicenseRef-Proprietary 'MIT OR' \
+  '(MIT' 'MIT)' 'MIT WITH' ''; do
+  if licenses_pass a "$l"; then
+    echo "checkLicenses.mjs lets $l into an MIT project" >&2
+    exit 1
+  fi
+done
+for l in AGPL-3.0-only 'GPL-3.0-only AND (MIT OR Apache-2.0)'; do
+  licenses_pass agl "$l" || {
+    echo "checkLicenses.mjs refuses $l in an AGPL project" >&2
+    exit 1
+  }
+done
+if licenses_pass agl GPL-2.0-only; then
+  echo "checkLicenses.mjs lets GPL-2.0-only into an AGPL project" >&2
+  exit 1
+fi
 recipe_has a/just/rust.just rs-check '    cargo deny list'
+# webpki-roots (via reqwest) is CDLA-Permissive-2.0, target-lexicon Apache-2.0 WITH
+# LLVM-exception; cargo-deny wants a WITH expression listed whole.
+for l in CDLA-Permissive-2.0 BSL-1.0 'Apache-2.0 WITH LLVM-exception'; do
+  grep -qxF "  \"$l\"," a/deny.toml
+done
+grep -qxF '  "AGPL-3.0-or-later",' agl/deny.toml
 gl="go run github.com/google/go-licenses/v2@$gl_pin"
-recipe_has a/just/go.just go-check "    $gl check --ignore github.com/example-org/render-me --allowed_licenses=0BSD,Apache-2.0,BSD-2-Clause,BSD-3-Clause,CC0-1.0,ISC,MIT,MPL-2.0,Unicode-3.0,Zlib ./..."
+permissive=0BSD,Apache-2.0,BlueOak-1.0.0,BSD-2-Clause,BSD-3-Clause,BSL-1.0,CC0-1.0,CDLA-Permissive-2.0,ISC,MIT,MIT-0,MPL-2.0,PSF-2.0,Python-2.0,Unicode-3.0,Unlicense,Zlib
+recipe_has a/just/go.just go-check "    $gl check --ignore github.com/example-org/render-me --allowed_licenses=$permissive ./..."
+# go-licenses names the GPL family without -only or -or-later: AGPL-3.0, not AGPL-3.0-or-later.
+recipe_has agl/just/go.just go-check "    $gl check --ignore github.com/example-org/agl-me --allowed_licenses=$permissive,GPL-3.0,LGPL-2.1,LGPL-3.0,AGPL-3.0 ./..."
 # A project without a license has nothing to be compatible with: no check.
 lacks -F licensecheck b/just/python.just
 test ! -e b/scripts/checkLicenses.mjs
@@ -157,7 +201,10 @@ grep -qx '      - run: cargo deny check' a/.github/workflows/rust.yml
 grep -qx '      - run: go test -race ./...' a/.github/workflows/go.yml
 grep -qx '      - run: go tool govulncheck ./...' a/.github/workflows/go.yml
 grep -qx '      - run: pnpm audit --prod --audit-level=moderate' a/.github/workflows/ts.yml
-grep -qxF "      - run: uv run --locked --with licensecheck==$lc_pin licensecheck -r \"\$RUNNER_TEMP/requirements.txt\" --zero" a/.github/workflows/python.yml
+# shellcheck disable=SC2016 # a literal $RUNNER_TEMP for the runner's shell
+grep -qxF '      - run: uv export --locked --no-default-groups --no-hashes --no-annotate --no-header --no-emit-project -q -o "$RUNNER_TEMP/requirements.txt"' a/.github/workflows/python.yml
+grep -qxF "      - run: test ! -s \"\$RUNNER_TEMP/requirements.txt\" || uv run --locked --with licensecheck==$lc_pin licensecheck -r \"\$RUNNER_TEMP/requirements.txt\" --zero" a/.github/workflows/python.yml
+grep -qxF "      - run: test ! -s \"\$RUNNER_TEMP/requirements.txt\" || uv run --locked --with licensecheck==$lc_pin licensecheck --license AGPL -r \"\$RUNNER_TEMP/requirements.txt\" --zero" agl/.github/workflows/python.yml
 grep -qx '      - run: pnpm run licenses' a/.github/workflows/ts.yml
 grep -qx '      - run: cargo deny list' a/.github/workflows/rust.yml
 grep -qx "      - run: $gl report --ignore github.com/example-org/render-me ./..." a/.github/workflows/go.yml

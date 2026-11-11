@@ -87,7 +87,7 @@ Both `just check` and CI run dependency audits:
 - `pnpm audit --prod` for production TypeScript packages.
 - `cargo deny check` for Rust crates and licenses.
 - `govulncheck` for Go code paths.
-- A license check per stack, unless `license=none`: licensecheck, `pnpm run licenses`, `cargo deny list` and go-licenses.
+- A license check per stack, unless `license=none`: licensecheck, `pnpm run licenses`, `cargo deny list` and go-licenses. Each checks only the dependencies that ship: Python's runtime dependencies without dependency groups, TypeScript's `--prod` packages, Rust without dev-dependencies, and the Go packages a build imports, not test-only ones.
 - Knip for unused TypeScript files, exports, and packages.
 
 ## Release workflows
