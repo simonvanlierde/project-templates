@@ -10,7 +10,7 @@
 # (the levels-doc check holds it to the newest release in CHANGELOG.md), so a report can
 # say which version of the ladder a repo meets.
 #
-# Fields: area, level (minimal, standard, community), traits (web, cli, package,
+# Fields: area (the practice area, a lower-case slug), level (minimal, standard, community), traits (web, cli, package,
 # pipeline, numerics), text (one line), source (the standard and its version, or
 # "project-templates" for a practice of this template's own), verify (automated: a
 # script can check it from the repo or its settings; review: a person has to judge it),
@@ -21,7 +21,7 @@ version = "0.14.0"
 # --- minimal: any public repo ---------------------------------------------------------
 
 [requirement.lockfile]
-area = "supply chain"
+area = "supply-chain"
 level = "minimal"
 traits = []
 text = "A lockfile is committed beside each root `pyproject.toml` or `package.json`."
@@ -30,7 +30,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.dependency-bot]
-area = "supply chain"
+area = "supply-chain"
 level = "minimal"
 traits = []
 text = "Dependabot or Renovate opens update pull requests for the repo's dependencies."
@@ -39,7 +39,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.workflow-hardening]
-area = "supply chain"
+area = "supply-chain"
 level = "minimal"
 traits = []
 text = "Every workflow sets `permissions:`, checks out with `persist-credentials: false` and has no `pull_request_target` trigger."
@@ -48,7 +48,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.scorecard-workflow]
-area = "supply chain"
+area = "supply-chain"
 level = "minimal"
 traits = []
 text = "The OpenSSF Scorecard workflow runs on the default branch."
@@ -57,7 +57,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.security-policy]
-area = "community"
+area = "security"
 level = "minimal"
 traits = []
 text = "`SECURITY.md` says how to report a vulnerability privately and how soon you reply."
@@ -68,7 +68,7 @@ since = 2026-11-11
 # --- standard: the default for a public repo ------------------------------------------
 
 [requirement.python-repo-review]
-area = "supply chain"
+area = "testing-and-ci"
 level = "standard"
 traits = []
 text = "A repo with a root `pyproject.toml` passes Scientific Python repo-review."
@@ -77,7 +77,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.license]
-area = "community"
+area = "licensing"
 level = "standard"
 traits = []
 text = "`LICENSE` holds an OSI-approved license."
@@ -86,7 +86,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.community-files]
-area = "community"
+area = "contribution-conventions"
 level = "standard"
 traits = []
 text = "The repo has `CONTRIBUTING.md`, a code of conduct, issue forms and a pull request template."
@@ -95,7 +95,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.test-policy]
-area = "community"
+area = "testing-and-ci"
 level = "standard"
 traits = []
 text = "`CONTRIBUTING.md` says that a change comes with tests and names the coding standards."
@@ -113,7 +113,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.api-break-check]
-area = "releases"
+area = "cli-api-design"
 level = "standard"
 traits = ["package"]
 text = "CI checks each pull request for breaks in the public API (griffe, cargo-semver-checks or API Extractor)."
@@ -122,7 +122,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.citation-file]
-area = "citation"
+area = "research-software-management"
 level = "standard"
 traits = ["package", "pipeline", "numerics"]
 text = "`CITATION.cff` says how to cite the software."
@@ -131,7 +131,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.codemeta]
-area = "citation"
+area = "research-software-management"
 level = "standard"
 traits = ["package", "pipeline", "numerics"]
 text = "`codemeta.json` describes the software for archives and registries."
@@ -140,7 +140,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.readme]
-area = "docs"
+area = "documentation"
 level = "standard"
 traits = []
 text = "`README.md` says what the project is, its status, and how to run or develop it (docs tier 0)."
@@ -149,7 +149,7 @@ verify = "review"
 since = 2026-11-11
 
 [requirement.cold-install]
-area = "docs"
+area = "testing-and-ci"
 level = "standard"
 traits = []
 text = "A CI workflow runs the README's setup steps in a clean container."
@@ -158,7 +158,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.docs-tier-1]
-area = "docs"
+area = "documentation"
 level = "standard"
 traits = ["package", "cli"]
 text = "A README of under about 1,000 words is the front page, and `docs/` holds Markdown split into tutorials, how-to guides, reference and explanation, with the reference generated or tested against the code."
@@ -167,7 +167,7 @@ verify = "review"
 since = 2026-11-11
 
 [requirement.docs-site]
-area = "docs"
+area = "documentation"
 level = "standard"
 traits = ["package", "cli"]
 text = "Once outside users need search or versioned docs, or the reference is too big to browse as files, `docs/` builds a search-indexed site from the same Markdown (docs tier 2)."
@@ -176,7 +176,7 @@ verify = "review"
 since = 2026-11-11
 
 [requirement.architecture-doc]
-area = "docs"
+area = "architecture-design"
 level = "standard"
 traits = []
 text = "A repo with 40 or more code files (tests and fixtures not counted) has an architecture page with a Mermaid diagram, and each path or link it names exists."
@@ -185,7 +185,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.accessibility-statement]
-area = "docs"
+area = "accessibility"
 level = "standard"
 traits = ["web", "cli"]
 text = "A web app publishes an accessibility statement and runs an axe scan in CI; a command-line tool has `docs/accessibility.md`."
@@ -194,7 +194,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.web-head-tags]
-area = "web"
+area = "web-presence"
 level = "standard"
 traits = ["web"]
 text = "Each page has a canonical link, `og:url`, and an absolute `og:image` that loads, with `og:image:alt`."
@@ -203,7 +203,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.security-headers]
-area = "web"
+area = "security"
 level = "standard"
 traits = ["web"]
 text = "The site sends a Content-Security-Policy, and its root sends Strict-Transport-Security."
@@ -212,7 +212,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.security-txt]
-area = "web"
+area = "security"
 level = "standard"
 traits = ["web"]
 text = "The site root serves `/.well-known/security.txt` with a `Contact:` line."
@@ -221,7 +221,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.sitemap-answers]
-area = "web"
+area = "web-presence"
 level = "standard"
 traits = ["web"]
 text = "Each sitemap that `robots.txt` names loads."
@@ -232,7 +232,7 @@ since = 2026-11-11
 # --- community: for outside contributors (OpenSSF Best Practices silver) ---------------
 
 [requirement.governance]
-area = "community"
+area = "contribution-conventions"
 level = "community"
 traits = []
 text = "`GOVERNANCE.md` says who decides, who can merge and release, and how the project carries on if a maintainer is gone."
@@ -241,7 +241,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.dco]
-area = "community"
+area = "contribution-conventions"
 level = "community"
 traits = []
 text = "Every commit carries a `Signed-off-by:` line, and CI checks each pull request for it."
@@ -250,7 +250,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.roadmap]
-area = "docs"
+area = "contribution-conventions"
 level = "community"
 traits = []
 text = "`docs/roadmap.md` says what the project plans for the next year and what it will not do."
@@ -259,7 +259,7 @@ verify = "automated"
 since = 2026-11-11
 
 [requirement.roadmap-issue-links]
-area = "docs"
+area = "contribution-conventions"
 level = "community"
 traits = []
 text = "Each theme in the roadmap links an open issue, and its \"Last reviewed\" date is under a year old."
@@ -268,7 +268,7 @@ verify = "automated"
 since = 2027-01-01
 
 [requirement.assurance-case]
-area = "docs"
+area = "security"
 level = "community"
 traits = []
 text = "`docs/assurance-case.md` gives the threat model, the trust boundaries, the secure design principles and the weaknesses countered."
@@ -277,7 +277,7 @@ verify = "review"
 since = 2026-11-11
 
 [requirement.decision-records]
-area = "docs"
+area = "architecture-design"
 level = "community"
 traits = []
 text = "`docs/decisions/` records each choice that is costly to reverse."
@@ -286,7 +286,7 @@ verify = "review"
 since = 2026-11-11
 
 [requirement.signed-releases]
-area = "releases"
+area = "supply-chain"
 level = "community"
 traits = []
 text = "Release tags are signed, and the release workflow refuses a tag signed by a key it does not list."
