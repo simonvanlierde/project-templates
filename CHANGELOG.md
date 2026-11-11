@@ -12,7 +12,7 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
-- **Breaking:** a `level` question (`minimal`, `standard` or `community`) replaces `openssf_badge`. `copier update` turns `none` into `minimal`, `passing` into `standard` and `silver` into `community`, so an existing project renders as before. A new public project with a license now starts at `standard`, which adds the test policy to `.github/CONTRIBUTING.md` and a `## Usage` section to the README. Scripts that pass `--data openssf_badge=...` need `--data level=...` instead.
+- **Breaking:** a `level` question (`minimal`, `standard` or `community`) replaces `openssf_badge`. The old answer is not carried over: a public project with a license gets `standard`, which adds the test policy to `.github/CONTRIBUTING.md` and a `## Usage` section to the README. To keep what you had, update with `copier update --data level=minimal` if you answered `openssf_badge: none`, or `--data level=community` if you answered `silver`. Scripts that pass `--data openssf_badge=...` need `--data level=...` instead.
 
 ### Added
 

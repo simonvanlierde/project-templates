@@ -537,11 +537,7 @@ level:
     Minimal (a public repo with few users; no badge documents): minimal
     Standard (OpenSSF passing; CONTRIBUTING.md gains a test policy and the coding standards): standard
     Community (outside contributors, OpenSSF silver; adds GOVERNANCE.md, docs/roadmap.md and docs/assurance-case.md to fill in): community
-  # `copier update` from before this question maps the old openssf_badge answer onto it.
-  # Not a _migrations entry: copier counts those as unsafe, and every update would then need --trust.
-  default: >-
-    {{ {'none': 'minimal', 'passing': 'standard', 'silver': 'community'}[openssf_badge] if openssf_badge is defined
-    else 'standard' if public and license != 'none' else 'minimal' }}
+  default: "{{ 'standard' if public and license != 'none' else 'minimal' }}"
 
 # Computed, never asked: the community level adds the governance documents and the DCO check.
 silver:
