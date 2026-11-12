@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Fixed
+
+- The project chooser uses the released `python_kind` answer in Python commands.
+
 ## [0.15.0] - 2026-11-12
 
 Upgrade steps:

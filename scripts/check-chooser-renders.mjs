@@ -50,19 +50,17 @@ try {
       }
       const answers = readFileSync(join(destination, ".copier-answers.yml"), "utf8");
       for (const [key, value] of Object.entries(profile.answers)) {
-        // The stored name changed in 0.15; commands using the old name still work.
-        const savedKey = key === "kind" && answers.includes("\npython_kind:") ? "python_kind" : key;
         // These profile values are plain scalars or lists of stack names.
         const expected = Array.isArray(value)
-          ? `${savedKey}:\n${value.map((item) => `- ${item}\n`).join("")}`
-          : `${savedKey}: ${value}\n`;
+          ? `${key}:\n${value.map((item) => `- ${item}\n`).join("")}`
+          : `${key}: ${value}\n`;
         assert.ok(answers.includes(`\n${expected}`), `${label} did not retain ${key}=${JSON.stringify(value)}`);
       }
       assert.ok(profile.files.length > 0, `${label} must name generated files.`);
       for (const file of profile.files) {
         assert.ok(existsSync(join(destination, file)), `${label} did not generate ${file}`);
       }
-      if (profile.answers.kind === "web-service") {
+      if (profile.answers.python_kind === "web-service") {
         assert.ok(existsSync(join(destination, "Dockerfile")), `${label} needs its Docker image.`);
         assert.ok(existsSync(join(destination, "compose.yaml")), `${label} needs Compose configuration.`);
       }

@@ -58,7 +58,7 @@ try {
       await expect(title).toHaveText("Python application");
       await tool.selectOption("service");
       await expect(title).toHaveText("Python web service with Docker");
-      await expect(command).toContainText("--data 'stacks=[python,docker]' --data 'kind=web-service' --data 'docker_image=true'");
+      await expect(command).toContainText("--data 'stacks=[python,docker]' --data 'python_kind=web-service' --data 'docker_image=true'");
       await tool.selectOption("compose");
       await expect(title).toHaveText("Docker Compose project");
       await expect(command).not.toContainText("kind=");
