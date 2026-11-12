@@ -321,7 +321,8 @@ test -z "$unpinned" || {
 }
 
 # v0.14.0 optional answers survive the move to extras, including explicit false
-# values at standard, and the old `kind` answer survives its rename to python_kind.
+# values at standard, the old `kind` answer survives its rename to python_kind, and
+# the old openssf_badge answer becomes level.
 # An untagged scratch history keeps updates local.
 # shellcheck disable=SC2030,SC2031 # each test subshell sets its own environment
 (
@@ -352,14 +353,23 @@ test -z "$unpinned" || {
     git -C "$out/extras-$selection" add .
     git -C "$out/extras-$selection" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org commit -qm old
   done
+  # The old openssf_badge answer becomes level: silver keeps its governance documents.
+  for badge in silver none; do
+    "${copier[@]}" --vcs-ref=HEAD --quiet --data project_name=level-check \
+      --data "openssf_badge=$badge" "$extras_tpl" "$out/level-$badge"
+    if [ "$badge" = silver ]; then echo "Edited by the project." >>"$out/level-$badge/GOVERNANCE.md"; fi
+    git -C "$out/level-$badge" -c core.hooksPath=/dev/null init -q
+    git -C "$out/level-$badge" add .
+    git -C "$out/level-$badge" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org commit -qm old
+  done
   cp "$repo/copier.yml" "$extras_tpl/copier.yml"
   cp -R "$repo/includes/." "$extras_tpl/includes/"
   cp -R "$repo/template/." "$extras_tpl/template/"
   "${git_extras[@]}" add copier.yml includes template
   "${git_extras[@]}" commit -qm extras
-  for selection in all some none; do
+  for selection in extras-all extras-some extras-none level-silver level-none; do
     (
-      cd "$out/extras-$selection"
+      cd "$out/$selection"
       uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --vcs-ref=HEAD --defaults --quiet
     )
   done
@@ -387,6 +397,11 @@ for selection, expected in [('all', features | {'property', 'mutation'}),
     assert ('windows-latest' in workflow) == ('python_windows' in expected), selection
     assert not list(project.rglob('*.rej')), selection
 PYTEST
+  grep -qx 'level: community' "$out/level-silver/.copier-answers.yml"
+  grep -qx 'level: minimal' "$out/level-none/.copier-answers.yml"
+  for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do test -f "$out/level-silver/$f"; done
+  grep -qx 'Edited by the project.' "$out/level-silver/GOVERNANCE.md"
+  (lacks openssf_badge "$out/level-silver/.copier-answers.yml")
   # A later edit replaces the full selection rather than reviving legacy answers.
   git -C "$out/extras-all" add .
   git -C "$out/extras-all" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org commit -qm migrated

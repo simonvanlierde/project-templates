@@ -3,12 +3,12 @@
 `level` sets how much a public repo commits to. Each level adds requirements to the one below it:
 
 - `minimal`: a public repo with few users. Locked and updated dependencies, hardened workflows, the Scorecard workflow and `SECURITY.md`.
-- `standard`, the default: every `minimal` and `standard` requirement that applies to the repo. The render adds the test policy and coding standards to `.github/CONTRIBUTING.md`, a `## Usage` section to the README, `.github/first-release.md` with the OpenSSF badge step ([OpenSSF badge](#openssf-best-practices-badge)), and `cold-install.yml`.
+- `standard`, the default: every `minimal` and `standard` requirement that applies to the repo. The render adds the test policy and coding standards to `.github/CONTRIBUTING.md`, a `## Usage` section to a new render's README, `.github/first-release.md` with the OpenSSF badge step ([OpenSSF badge](#openssf-best-practices-badge)), and `cold-install.yml`.
 - `community`: a repo that wants outside contributors. The render adds `GOVERNANCE.md`, `docs/roadmap.md`, `docs/assurance-case.md` and `docs/decisions/`, and the `dco` workflow checks every pull request.
 
 A private repo, or a public one without a license, is not on the ladder: copier skips the question.
 
-To move a project to another level, run `copier update --data level=community`.
+To move a project to another level, run `copier update --data level=community`. An update of a project made before 0.15.0 starts from its old `openssf_badge` answer: `none` becomes `minimal`, `passing` becomes `standard` and `silver` becomes `community`.
 
 ## Requirements
 
