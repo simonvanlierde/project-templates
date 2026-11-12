@@ -1,17 +1,22 @@
 # Legal pages: tips
 
-A rendered web app serves three pages from its `docs/` folder: `accessibility.md` at `/accessibility`, `privacy.md` at `/privacy`, and, for apps with accounts or uploads, `terms.md` at `/terms`. The app links them from every route in `LEGAL_LINKED_FROM` in `tests/e2e/routes.ts` (all routes in the starter, which uses a footer), and each page links back home.
-[Legal pages](usage.md#legal-pages) in the usage guide explains how the app compiles the pages and which tests verify them.
+A rendered web app serves these pages from its `docs/` folder:
 
-These tips help keep your pages accurate, but they are not formal legal advice. For high-stakes applications, consult a qualified lawyer or privacy officer.
+- `accessibility.md` at `/accessibility`
+- `privacy.md` at `/privacy`
+- `terms.md` at `/terms`, only for apps with accounts or uploads
+
+The app links them from every route in `LEGAL_LINKED_FROM` in `tests/e2e/routes.ts` (all routes in the starter, which uses a footer), and each page links back home. [Legal pages](usage.md#legal-pages) in the usage guide says how the app compiles the pages and which tests check them.
+
+These tips help keep your pages accurate. They are not legal advice. For a high-stakes application, ask a qualified lawyer or privacy officer.
 
 ## Fill in every TODO
 
-The template populates initial details: app name, address, email, and generation date. Remaining sections are marked TODO. Nothing checks for TODOs before a deploy, so a quick app can go live first. Fill them in before you share the app widely or once it stores personal data. Keep these pages updated alongside any code changes that affect their accuracy.
+The template fills in the app name, address, email and generation date. It marks the other sections TODO. Nothing checks for TODOs before a deploy, so an app can go live with them. Fill them in before you share the app widely, and before it stores personal data. Update the pages whenever a code change makes them wrong.
 
 ## Write for the person using the app
 
-Users open privacy and accessibility pages to find clear answers: where their data goes, how to delete it, whether the app is usable with assistive technology, and who to contact. State these facts directly in plain language.
+Visitors open these pages for four answers: where their data goes, how to delete it, whether the app works with assistive technology, and who to contact. State them directly, in plain language.
 
 - **Lead with facts:** Start the privacy page with what data is stored, where it lives, and whether anything leaves the device.
 - **Use user-facing terms:** Say "the books on your list", not "persisted entities"; "Settings, then **Delete all data**", not "invoking the deletion handler".

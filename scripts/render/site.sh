@@ -37,7 +37,7 @@ for r in x r d; do
   preview_job=$(sed -n '/^  preview:$/,$p' "$wf")
   (! grep -q 'just site' <<<"$preview_job")
   grep -qx '          name: github-pages' <<<"$preview_job"
-  grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]')" <<<"$preview_job"
+  grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]') && !endsWith(github.actor, '[bot]')" <<<"$preview_job"
   # shellcheck disable=SC2016
   grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostring)'\''' <<<"$preview_job"
   # shellcheck disable=SC2016

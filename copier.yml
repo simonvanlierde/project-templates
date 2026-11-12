@@ -114,7 +114,7 @@ _message_after_copy: |
   After the first push, run `just repo-settings` to protect main.
   {%- for reg, on in [('PyPI', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('ghcr', publish_to_ghcr | default(false))] if on %}
   Before the first {{ reg }} release, set up the trusted publisher and the protected environment:
-  https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing
+  https://github.com/simonvanlierde/project-templates/blob/main/docs/setup.md#publishing
   {%- endfor %}
   To release, run `just release X.Y.Z` (it cuts the CHANGELOG, then signs and pushes the tag).
   It needs an SSH signing key listed in .github/allowed_signers: that file says how to add yours.
@@ -176,7 +176,9 @@ stacks:
     Pick at least one stack: with none, `just check` checks nothing.
     {% endif %}
 
-kind:
+# Answers files from before 0.15.0 call this `kind`; copier still passes that
+# stored answer in, so an update keeps the project's kind.
+python_kind:
   type: str
   when: "{{ 'python' in stacks }}"
   help: What the Python package is; sets its layout, extra files and CI
@@ -186,9 +188,9 @@ kind:
     Research (packaged, plus notebooks/ and data/): research
     Data pipeline (packaged, plus sources.toml and fetch/build/validate): data-pipeline
     Web service (FastAPI, /health, OpenTelemetry, shipped as a container): web-service
-  default: library
+  default: "{{ kind | default('library') }}"
   validator: >-
-    {% if kind == 'web-service' and 'docker' not in stacks %}
+    {% if python_kind == 'web-service' and 'docker' not in stacks %}
     A web service ships as a container: add docker to `stacks` too.
     {% endif %}
 
@@ -273,7 +275,7 @@ library:
   type: bool
   when: false
   default: >-
-    {{ ('python' in stacks and kind == 'library') or ('ts' in stacks and ts_kind == 'library')
+    {{ ('python' in stacks and python_kind == 'library') or ('ts' in stacks and ts_kind == 'library')
     or ('rust' in stacks and rust_kind == 'library') or ('go' in stacks and go_kind == 'library') }}
 
 # Computed, never asked. A package name is one lowercase identifier: no `-` or
@@ -289,7 +291,14 @@ go_package:
 cli:
   type: bool
   when: false
-  default: "{{ ('rust' in stacks and rust_kind == 'binary') or ('go' in stacks and go_kind == 'binary') or ('python' in stacks and kind == 'data-pipeline') }}"
+  default: "{{ ('rust' in stacks and rust_kind == 'binary') or ('go' in stacks and go_kind == 'binary') or ('python' in stacks and python_kind == 'data-pipeline') }}"
+
+# Computed, never asked: the data-pipeline kind. Its files are named by it, which keeps
+# their template paths under the Windows checkout limit.
+pipeline:
+  type: bool
+  when: false
+  default: "{{ 'python' in stacks and python_kind == 'data-pipeline' }}"
 
 # What only outsiders need. True by default: answers files from before this
 # question had SECURITY.md, and an update with the default keeps it.
@@ -358,7 +367,7 @@ citable:
   type: bool
   when: false
   default: >-
-    {{ license != 'none' and (('python' in stacks and kind in ('library', 'research', 'data-pipeline'))
+    {{ license != 'none' and (('python' in stacks and python_kind in ('library', 'research', 'data-pipeline'))
     or ('ts' in stacks and ts_kind == 'library')
     or ('rust' in stacks and rust_kind == 'library')
     or ('go' in stacks and go_kind == 'library')) }}
@@ -388,14 +397,14 @@ copyright_year:
 # and carry each source's terms in datapackage.json instead.
 data_license:
   type: str
-  when: "{{ license != 'none' and 'python' in stacks and kind in ('research', 'data-pipeline') }}"
+  when: "{{ license != 'none' and 'python' in stacks and python_kind in ('research', 'data-pipeline') }}"
   ask: "{{ customise }}"
   help: License for the data you make and commit under data/ (code and data are licensed apart)
   choices:
     CC-BY-4.0 (reuse with credit, the usual choice for research data): CC-BY-4.0
     CC0-1.0 (public domain, no conditions; suits metadata): CC0-1.0
     None (the code license covers data/ too): none
-  default: "{{ 'none' if license == 'none' or 'python' not in stacks else {'research': 'CC-BY-4.0', 'data-pipeline': 'CC0-1.0'}.get(kind, 'none') }}"
+  default: "{{ 'none' if license == 'none' or 'python' not in stacks else {'research': 'CC-BY-4.0', 'data-pipeline': 'CC0-1.0'}.get(python_kind, 'none') }}"
 
 # `.` is a single-package repo. Any other value nests only the package. Workflows,
 # hooks, justfile and answers file stay at the root. includes/dir.jinja holds the
@@ -446,7 +455,7 @@ dependency_bot:
 
 # A static page beside the code (a playground, demo or report) in site/. GitHub Pages
 # serves it from main, and each open, ready pull request gets a preview Worker
-# (docs/usage.md#static-site).
+# (docs/hosting.md#static-site).
 site:
   type: str
   ask: "{{ customise }}"
@@ -471,7 +480,7 @@ site_out:
 
 # Where a push to main deploys the site. Pull request previews are Workers either way.
 # Pages serves it under /<repo>/; a Worker serves it from / at site_url, which can be
-# a custom domain, and can run a Worker script for /api/* (docs/usage.md#static-site).
+# a custom domain, and can run a Worker script for /api/* (docs/hosting.md#hosting-on-a-worker).
 site_host:
   type: str
   when: "{{ site != 'none' }}"
@@ -488,13 +497,13 @@ site_on_workers:
   when: false
   default: "{{ site != 'none' and site_host == 'cloudflare' }}"
 
-# The practice ladder in levels.toml (docs/usage.md#levels). The OpenSSF Best Practices
+# The practice ladder in levels.toml (docs/levels.md). The OpenSSF Best Practices
 # badge is for public, open-source projects, so a private or unlicensed repo is off it.
 level:
   type: str
   when: "{{ public and license != 'none' }}"
   ask: "{{ customise }}"
-  help: How much the repo commits to (docs/usage.md#levels); each level adds the documents its requirements ask for
+  help: How much the repo commits to (docs/levels.md); each level adds the documents its requirements ask for
   choices:
     Minimal (a public repo with few users; no badge documents): minimal
     Standard (OpenSSF passing; CONTRIBUTING.md gains a test policy and the coding standards): standard
@@ -609,7 +618,7 @@ python_layout:
     <module>/ at the root (an existing package): flat
   default: src
   validator: >-
-    {% if python_layout == 'flat' and kind in ('web-service', 'data-pipeline') %}
+    {% if python_layout == 'flat' and python_kind in ('web-service', 'data-pipeline') %}
     The flat layout is for an existing library, app or research package: the web-service
     and data-pipeline kinds and the python image need their starter modules in src/.
     {% endif %}
@@ -633,7 +642,7 @@ python_version:
 # two minors below python_version, and never below the template's own 3.12.
 python_min:
   type: str
-  when: "{{ 'python' in stacks and kind == 'library' }}"
+  when: "{{ 'python' in stacks and python_kind == 'library' }}"
   ask: "{{ customise }}"
   help: Oldest Python the library supports (requires-python, tested in CI)
   default: "3.{{ [python_version.split('.')[1] | int - 2, 12] | max }}"
@@ -646,14 +655,14 @@ python_min:
 
 publish_to_pypi:
   type: bool
-  when: "{{ 'python' in stacks and kind == 'library' }}"
+  when: "{{ 'python' in stacks and python_kind == 'library' }}"
   ask: "{{ customise }}"
   help: Add a release workflow publishing to PyPI via trusted publishing (needs setup on pypi.org first)
   default: false
 
 python_api:
   type: bool
-  when: "{{ 'python' in stacks and kind == 'library' }}"
+  when: "{{ 'python' in stacks and python_kind == 'library' }}"
   ask: "{{ customise }}"
   help: >-
     Is the package used through its Python API, not only its command line?
@@ -665,7 +674,7 @@ python_api:
 docs_api:
   type: bool
   when: false
-  default: "{{ docs_site and 'python' in stacks and kind == 'library' and python_api }}"
+  default: "{{ docs_site and 'python' in stacks and python_kind == 'library' and python_api }}"
 
 # --- ts -----------------------------------------------------------------------
 
@@ -984,7 +993,7 @@ howfairis_version:
 # --- docker -------------------------------------------------------------------
 
 # Asked even without `customise`: without an image the render is a Compose-only repo.
-# Its validator reads python_layout and kind, so it stays after them.
+# Its validator reads python_layout and python_kind, so it stays after them.
 docker_image:
   type: bool
   when: "{{ 'docker' in stacks and 'python' in stacks }}"
@@ -996,7 +1005,7 @@ docker_image:
     {% if docker_image and python_layout == 'flat' %}
     The flat layout is for an existing library, app or research package: the web-service
     and data-pipeline kinds and the python image need their starter modules in src/, or answer no to `docker_image`.
-    {% elif kind == 'web-service' and not docker_image %}
+    {% elif python_kind == 'web-service' and not docker_image %}
     The web-service kind is shipped as the python image: answer yes to `docker_image`.
     {% endif %}
 
@@ -1045,4 +1054,4 @@ decision_records:
   type: bool
   ask: "{{ customise }}"
   help: Keep architecture decision records in docs/decisions/ (MADR 4.0.0), starting with one that records this template's answers
-  default: "{{ kind in ['web-service', 'data-pipeline'] or ts_kind == 'web-app' or compose_only or silver }}"
+  default: "{{ python_kind in ['web-service', 'data-pipeline'] or ts_kind == 'web-app' or compose_only or silver }}"

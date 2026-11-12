@@ -1,8 +1,8 @@
 # Tooling
 
-Tools used by each stack, default configurations, and release mechanics.
-[usage.md](usage.md#choosing-your-stacks) lists files created by each stack, and
-[ci-baseline.md](ci-baseline.md) documents every workflow check.
+The tools each stack uses, their default settings, and how releases are built.
+[usage.md](usage.md#choosing-your-stacks) lists the files each stack creates, and
+[ci-baseline.md](ci-baseline.md) lists every workflow check.
 
 ## Tools per stack
 
@@ -29,17 +29,51 @@ Install golangci-lint once per machine. The template pins the golangci-lint vers
 
 ## Git hooks
 
-Hooks run via [prek](https://prek.j178.dev), a drop-in pre-commit replacement. A single `.pre-commit-config.yaml` covers all stacks. Python projects install prek with `uv tool install prek`; TypeScript projects install the `@j178/prek` devDependency. With the Python image (the `docker` stack and `docker_image`), the hadolint hook requires a running Docker daemon. Python projects also run [sp-repo-review](usage.md#scientific-python-repo-review) as a hook, which checks the packaging, pytest and workflow settings.
+[prek](https://prek.j178.dev), a drop-in pre-commit replacement, runs the hooks. One `.pre-commit-config.yaml` covers all stacks. Python projects install prek with `uv tool install prek`; TypeScript-only projects use the `@j178/prek` devDependency.
+
+| Area | Hooks |
+| --- | --- |
+| Every project | file hygiene, `check-toml`, `committed` (commit messages), `typos`, `lychee`, `rumdl` (Markdown), `betterleaks` (secrets), `shellcheck`, `yamlfmt`, `yamllint`, `jsonvet`, `zizmor`, `jactionlint` |
+| Public or licensed | `dco-signoff` (public), `reuse` (licensed) |
+| Citable | `check-citation-file-format`, `citesync` |
+| Python | `ruff-check`, `ruff-format`, `ty`, `nbstripout`, [`sp-repo-review`](levels.md#scientific-python-repo-review) |
+| TypeScript | `biome`, `tsc`, and `vitest` in a web app |
+| Rust | `cargo-fmt`, `cargo-clippy` |
+| Go | `golangci-lint-fmt`, `golangci-lint` |
+| Python image | `hadolint-docker`, which needs a running Docker daemon |
+
+## Spelling and link checks
+
+Two git hooks validate prose:
+
+- `typos`: detects spelling errors in code, comments, and documentation. Add project-specific terms to `_typos.toml` at the repository root:
+
+  ```toml
+  [default.extend-words]
+  ue = "ue"
+  ```
+
+  typos knows English only. The hook skips gettext `.po` files and anything in a `locales/` directory; list other files with text in other languages under `[files] extend-exclude` in `_typos.toml`.
+
+- `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links. In a web app, both read `lychee.toml`, which resolves root-relative links such as `/favicon.svg` in the Vite `public/` directory.
+
+## Documentation rules
+
+- **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`). A render with `publish_to_pypi` or `publish_to_npm` writes its README links this way.
+- **Stable links to documentation on `main`:** When documentation or CLI error messages link to rules or guides, point to `main`. Rule identifiers are permanent; if a rule is deprecated or removed, keep a stub heading so historical links continue to resolve.
+- **Single source of truth:** The README holds the overview and quickstart; code comments and docstrings define API contracts; `docs/` holds extended guides and references.
 
 ## Tasks
 
-Tasks run via [just](https://just.systems). The root `justfile` imports stack-specific `just/<stack>.just` modules. Recipes use a stack prefix (`py-`, `ts-`, `rs-`, `go-`, and `docker-` in a [Compose-only repo](usage.md#compose-only-repos)), except for kind-specific tasks: `fetch`, `build`, `validate`, and `pipeline` (data-pipeline), `serve` (web-service), and `up` (docker). `just check` runs the checks across all enabled stacks, then the `local-check` recipe in `just/local.just` if there is one. In a Compose-only repo it validates the Compose file and lints the shell scripts.
+[just](https://just.systems) runs the tasks. The root `justfile` imports a `just/<stack>.just` module per stack. Recipes carry a stack prefix (`py-`, `ts-`, `rs-`, `go-`, and `docker-` in a [Compose-only repo](usage.md#compose-only-repos)). The exceptions are kind-specific: `fetch`, `build`, `validate` and `pipeline` (data-pipeline), `serve` (web-service) and `up` (docker).
 
-Coverage is opt-in. `just py-cov` and `just ts-cov` print summaries without threshold gates. With the `codecov` option enabled, CI uploads coverage to Codecov, and `just check` runs TypeScript tests with coverage.
+`just check` runs the checks of every enabled stack, then the `local-check` recipe in `just/local.just` if there is one. In a Compose-only repo it validates the Compose file and lints the shell scripts.
+
+Coverage is opt-in. `just py-cov` and `just ts-cov` print summaries without threshold gates. With the `codecov` extra, CI uploads coverage to Codecov, and `just check` runs the TypeScript tests with coverage.
 
 ## Documentation site
 
-With `docs_site`, [Zensical](usage.md#documentation-site) builds `docs/` into a site, and mkdocstrings renders a Python package's API reference.
+With the `docs_site` extra, [Zensical](usage.md#documentation-site) builds `docs/` into a site, and mkdocstrings renders a Python library's API reference.
 
 ## Docker images
 
@@ -47,7 +81,7 @@ The Dockerfile follows upstream uv patterns: multi-stage builds on `-slim` base 
 
 ## Dependencies
 
-Generated projects use Dependabot by default. Setting `dependency_bot=renovate` writes equivalent rules to `renovate.json5`. Both bots share these policies:
+Generated projects use Dependabot by default. `dependency_bot=renovate` writes equivalent rules to `renovate.json5`. Both bots follow these policies:
 
 - Weekly version updates grouped into three PRs: actions and hooks, dev tooling, and minor/patch runtime updates.
 - Runtime major versions get separate individual PRs.

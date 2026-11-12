@@ -138,7 +138,7 @@ jobs:
             answers:
               project_name: ci-smoke
               stacks: [python]
-              kind: library
+              python_kind: library
               module_name: smokepkg
               publish_to_pypi: true
           # Property tests and the mutation and property recipes, run once to prove the recipes work.
@@ -146,7 +146,7 @@ jobs:
             answers:
               project_name: ci-extras
               stacks: [python]
-              kind: library
+              python_kind: library
               publish_to_pypi: true
               extras: [cold_install, property, mutation]
           # Nested layout: the build context is a subdirectory.
@@ -155,31 +155,31 @@ jobs:
               project_name: ci-mono-py
               stacks: [python, docker]
               python_dir: apps/api
-              kind: library
+              python_kind: library
               publish_to_pypi: true
           - name: app
             answers:
               project_name: ci-app
               stacks: [python]
-              kind: app
+              python_kind: app
           # Adds JupyterLab to the dev group.
           - name: research
             answers:
               project_name: ci-research
               stacks: [python]
-              kind: research
+              python_kind: research
           # With docker, so the image build covers the pipeline's dependencies.
           - name: data-pipeline
             answers:
               project_name: ci-pipeline
               stacks: [python, docker]
-              kind: data-pipeline
+              python_kind: data-pipeline
           # Also starts the FastAPI container and probes /health.
           - name: web-service
             answers:
               project_name: ci-web
               stacks: [python, docker]
-              kind: web-service
+              python_kind: web-service
     steps:
       - *checkout
 
@@ -190,7 +190,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: template/**/pyproject.toml.jinja
-          cache-suffix: ${{ github.job }}-${{ matrix.answers.kind }}
+          cache-suffix: ${{ github.job }}-${{ matrix.answers.python_kind }}
           save-cache: ${{ github.event_name != 'pull_request' }}
 
       - &scaffold
@@ -264,7 +264,7 @@ jobs:
 
       # The library's python.yml tests every version from python_min up. Run the
       # tests on each, so a floor the code can't meet fails here.
-      - if: matrix.answers.kind == 'library'
+      - if: matrix.answers.python_kind == 'library'
         name: tests on every supported python
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: |
@@ -274,7 +274,7 @@ jobs:
 
       # Runs the pipeline against the example source's live URL, then the tests that
       # read its output.
-      - if: matrix.answers.kind == 'data-pipeline'
+      - if: matrix.answers.python_kind == 'data-pipeline'
         name: pipeline
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         env:
@@ -293,7 +293,7 @@ jobs:
         run: docker build -t "$IMAGE" "$CONTEXT"
 
       # The image serves, and the HEALTHCHECK it ships turns healthy.
-      - if: matrix.answers.kind == 'web-service'
+      - if: matrix.answers.python_kind == 'web-service'
         name: container health
         env:
           IMAGE: ${{ matrix.answers.project_name }}:ci
@@ -520,12 +520,16 @@ jobs:
           git init -q "$PROJ"
           uvx "copier@$COPIER_VERSION" copy --vcs-ref="$TAG" --defaults --overwrite \
             --data project_name=pipe-me --data 'stacks=[python]' --data kind=data-pipeline . "$PROJ"
+          grep -qxE '(python_)?kind: data-pipeline' "$PROJ/.copier-answers.yml"
+          test -f "$PROJ/sources.toml"
           sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
           (cd "$PROJ" && uv lock -q)
           git -C "$PROJ" add -A
           git -C "$PROJ" -c user.email=ci@invalid -c user.name=ci commit -qm scaffold
           uvx "copier@$COPIER_VERSION" update --vcs-ref=HEAD --defaults --conflict rej "$PROJ"
           test -z "$(find "$PROJ" -name '*.rej' -print -quit)"
+          grep -qx 'python_kind: data-pipeline' "$PROJ/.copier-answers.yml"
+          test -f "$PROJ/sources.toml"
           cd "$PROJ" && uv lock -q && uv sync -q --locked && just check
 
       # A web app from before the template had PRODUCT.md and DESIGN.md, with its own of
@@ -942,7 +946,7 @@ jobs:
             answers:
               project_name: ci-win
               stacks: [python]
-              kind: library
+              python_kind: library
               publish_to_pypi: true
               python_api: false
               extras: [cold_install, python_windows, property, mutation]
@@ -950,7 +954,7 @@ jobs:
             answers:
               project_name: ci-win-pipe
               stacks: [python]
-              kind: data-pipeline
+              python_kind: data-pipeline
               extras: [cold_install, python_windows]
     steps:
       - *checkout

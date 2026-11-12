@@ -14,15 +14,19 @@ workflows, with weekly pull requests to bring in template updates.
    for the required tools and commands. Copier asks for your choices, then prints
    the setup steps for your new project.
 3. Use the generated README to finish setup and run `just check`. See
-   [keeping your project up to date](usage.md#keeping-your-project-up-to-date)
+   [keeping your project up to date](updates.md#keeping-your-project-up-to-date)
    when a new template release arrives.
 
 Already have a repository? Follow
-[adopting the template in an existing repo](usage.md#adopting-the-template-in-an-existing-repo).
+[adopting the template in an existing repo](updates.md#adopting-the-template-in-an-existing-repo).
 
 ## Reference
 
-- [Usage](usage.md): the questions, settings, optional features and update instructions.
+- [Usage](usage.md): the questions, settings and optional features.
+- [Setting up the repo](setup.md): public repos, protecting `main`, the About box and publishing.
+- [Hosting](hosting.md): static sites, Cloudflare Workers, previews and the social card.
+- [Updates](updates.md): template and dependency updates, and adopting the template.
+- [Levels](levels.md): what a public repo commits to, and the OpenSSF badge.
 - [Python project kinds](python-kinds.md): libraries, tools, services and data pipelines.
 - [Tooling](tooling.md): the tools and checks in generated projects.
 - [CI baseline](ci-baseline.md): what each workflow checks.

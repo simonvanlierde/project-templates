@@ -1,5 +1,5 @@
 # The practice ladder: what a public repo made from this template does at each level.
-# `just levels-doc` writes the table in docs/usage.md#levels from this file.
+# `just levels-doc` writes the table in docs/levels.md from this file.
 #
 # A repo meets a level when it meets every requirement at that level and below that
 # applies to it. A requirement applies to every repo when `traits` is empty, otherwise to

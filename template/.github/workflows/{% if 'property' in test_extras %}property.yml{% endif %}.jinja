@@ -1,4 +1,4 @@
-{%- set py = 'python' in stacks and kind == 'library' -%}
+{%- set py = 'python' in stacks and python_kind == 'library' -%}
 {%- set ts = 'ts' in stacks and ts_kind == 'library' -%}
 {%- set rs = 'rust' in stacks and rust_kind == 'library' -%}
 {%- set go = 'go' in stacks and go_kind == 'library' -%}

@@ -71,7 +71,7 @@ jobs:
 {%- if site_on_workers %}
 
   # Production: every push to main deploys the build job's artifact to the Worker. Without
-  # the token, it skips with a notice (docs/usage.md#static-site in the template).
+  # the token, it skips with a notice (docs/hosting.md#hosting-on-a-worker in the template).
   deploy:
     name: "site: deploy"
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -187,13 +187,14 @@ jobs:
 
 {%- endif %}
 
-  # The same lifecycle as a web app's previews: docs/usage.md#static-site in the template.
+  # The same lifecycle as a web app's previews: docs/hosting.md#pull-request-previews in the template.
   # Fork pull requests never get the token, so they skip with a notice, as does a repo
   # without the secret.
   preview:
     name: "site: preview"
-    # Bot pull requests (Renovate, Dependabot) get no preview, so their code never sees the token.
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]')
+    # Bot pull requests (Renovate, Dependabot, the update App) and bot pushes to a person's
+    # pull request get no preview, so their code never sees the token.
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]') && !endsWith(github.actor, '[bot]')
     # Shares the site job of preview-retire.yml, so a retire waits for a deploy in flight.
     concurrency:
       group: preview-site-{% raw %}${{ github.event.pull_request.number }}{% endraw %}

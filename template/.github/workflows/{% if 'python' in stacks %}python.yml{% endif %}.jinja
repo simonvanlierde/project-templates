@@ -3,7 +3,7 @@ name: python
 
 on:
 {{- push_and_pr(python_dir, 'python') }}
-{%- if kind == 'data-pipeline' %}
+{%- if python_kind == 'data-pipeline' %}
   # Weekly, to catch a publisher revising its data. This is the only run that sets TRIPWIRE.
   schedule:
     - cron: "0 6 * * 1"
@@ -30,11 +30,11 @@ env:
 
 jobs:
   check:
-    name: "python: lint, types, {% if kind == 'data-pipeline' %}pipeline, {% endif %}tests"
+    name: "python: lint, types, {% if python_kind == 'data-pipeline' %}pipeline, {% endif %}tests"
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 10
-{%- if kind == 'library' %}
+{%- if python_kind == 'library' %}
     # Every version from requires-python up: a library runs on interpreters its
     # author doesn't use.
     strategy:
@@ -61,7 +61,7 @@ jobs:
           enable-cache: true
           save-cache: {% raw %}${{ github.event_name != 'pull_request' }}{% endraw %}
           version: "{{ uv_version }}"
-{%- if kind == 'library' %}
+{%- if python_kind == 'library' %}
           python-version: {% raw %}${{ matrix.python }}{% endraw %}
 {%- endif %}
 
@@ -85,7 +85,7 @@ jobs:
       - run: uv run ruff check --output-format=github
       - run: uv run ruff format --check
       - run: uv run ty check
-{%- if kind == 'data-pipeline' %}
+{%- if python_kind == 'data-pipeline' %}
 
       # The committed fetch log, before fetch appends to it, for the revisions report below.
       - run: cp data/fetches.jsonl "$RUNNER_TEMP/fetches-before.jsonl" 2>/dev/null || touch "$RUNNER_TEMP/fetches-before.jsonl"
@@ -130,7 +130,7 @@ jobs:
 
       # Dependabot pull requests get no secrets, so their upload fails without failing CI.
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-{%- if kind == 'library' %}
+{%- if python_kind == 'library' %}
         # Once per run: every matrix job measures the same code.
         if: matrix.python == '{{ python_version }}'
 {%- endif %}
@@ -141,7 +141,7 @@ jobs:
           flags: python
 {%- endif %}
 {%- endif %}
-{%- if kind == 'data-pipeline' %}
+{%- if python_kind == 'data-pipeline' %}
 
   revisions:
     # Weekly only. Comments on one open issue when a publisher served new bytes for a

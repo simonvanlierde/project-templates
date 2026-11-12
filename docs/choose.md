@@ -57,7 +57,7 @@ Copier command. You can change the template's other settings when Copier asks.
 </form>
 <div data-chooser-static hidden>
 <h2>Start with the static site guide</h2>
-<p>The template offers a plain HTML page or an Astro site alongside a project. The <a href="usage.md#static-site">static site guide</a> explains those choices and hosting.</p>
+<p>The template offers a plain HTML page or an Astro site alongside a project. The <a href="hosting.md#static-site">static site guide</a> explains those choices and hosting.</p>
 </div>
 <section data-chooser-result hidden aria-labelledby="chooser-result-title">
 <h2 id="chooser-result-title" data-chooser-title></h2>
@@ -85,5 +85,5 @@ extra tools your project needs. Then run these commands in order:</p>
 <details>
 <summary>Advanced settings and other combinations</summary>
 <p>This chooser covers one main task at a time. Copier also supports multiple stacks, nested packages, publishing and optional checks. The <a href="usage.md#the-questions">question reference</a> explains the full set of settings.</p>
-<p>For an existing repository, use the <a href="usage.md#adopting-the-template-in-an-existing-repo">adoption guides</a> before rendering over its files.</p>
+<p>For an existing repository, use the <a href="updates.md#adopting-the-template-in-an-existing-repo">adoption guides</a> before rendering over its files.</p>
 </details>

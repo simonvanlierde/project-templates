@@ -1,5 +1,5 @@
 # data
-{% if kind == 'data-pipeline' %}
+{% if python_kind == 'data-pipeline' %}
 `raw/` holds each source exactly as downloaded, beside a `<file>.fetch.json` record:
 the URL, retrieval time, SHA-256 and vintage. `processed/` holds what `just build`
 derives from it, plus `datapackage.json`, a Frictionless Data Package that lists

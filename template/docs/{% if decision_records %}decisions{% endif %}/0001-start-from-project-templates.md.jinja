@@ -19,7 +19,7 @@ costs a day and drifts from the other projects that solve the same problems.
 ## Decision Outcome
 
 Chosen: render it from project-templates. `.copier-answers.yml` records the answers
-{%- if 'python' in stacks %} (Python kind: `{{ kind }}`){% endif %}
+{%- if 'python' in stacks %} (Python kind: `{{ python_kind }}`){% endif %}
 {%- if 'ts' in stacks %} (TypeScript kind: `{{ ts_kind }}`){% endif %}
 {%- if compose_only %} (Compose-only: no image of its own){% endif %}, and `copier update`
 brings later template changes in as a reviewable diff.

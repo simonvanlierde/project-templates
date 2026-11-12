@@ -7,7 +7,7 @@ date: 2026-11-06
 
 ## Context and Problem Statement
 
-The `docs-site` requirement in `docs/usage.md#levels` is a search-indexed site built from the Markdown
+The `docs-site` requirement in `docs/levels.md` is a search-indexed site built from the Markdown
 in `docs/`, never a second copy. Until now the template had no way to render one, and
 `ROADMAP.md` ruled out a docs-site starter. The `docs_site` selection in `extras` adds one. The
 generator is costly to swap: projects write their config and page syntax for it.
