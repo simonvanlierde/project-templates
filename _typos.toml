@@ -9,7 +9,7 @@ WRITEABLE = "WRITEABLE"
 certifi = "certifi"
 # The in-toto bundle suffix `.intoto.jsonl` in the release workflow and its docs.
 intoto = "intoto"
-# A sample typos config in docs/usage.md names this word.
+# A sample typos config in docs/tooling.md names this word.
 ue = "ue"
 
 [files]

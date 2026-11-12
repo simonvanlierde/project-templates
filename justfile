@@ -25,7 +25,7 @@ render:
     trap 'rm -rf "$out"' EXIT
     scripts/check-render.sh "$out"
 
-# Write the Levels table in docs/usage.md from levels.toml; `--check` fails when it is stale.
+# Write the Levels table in docs/levels.md from levels.toml; `--check` fails when it is stale.
 levels-doc *args:
     uv run scripts/levels_doc.py {{ args }}
 

@@ -150,12 +150,12 @@ repos:
         # resolves in the rendered project, where lychee checks it.
         exclude: accessibility-assessment\.md$
 
-  # The Levels table in docs/usage.md is generated: fail when it lags levels.toml.
+  # The Levels table in docs/levels.md is generated: fail when it lags levels.toml.
   - repo: local
     hooks:
       - id: levels-doc
         name: levels table matches levels.toml (just levels-doc)
         entry: python scripts/levels_doc.py --check
         language: python
-        files: ^(levels\.toml|docs/usage\.md|CHANGELOG\.md|scripts/levels_doc\.py)$
+        files: ^(levels\.toml|docs/levels\.md|CHANGELOG\.md|scripts/levels_doc\.py)$
         pass_filenames: false

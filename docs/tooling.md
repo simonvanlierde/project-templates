@@ -36,11 +36,32 @@ Install golangci-lint once per machine. The template pins the golangci-lint vers
 | Every project | file hygiene, `check-toml`, `committed` (commit messages), `typos`, `lychee`, `rumdl` (Markdown), `betterleaks` (secrets), `shellcheck`, `yamlfmt`, `yamllint`, `jsonvet`, `zizmor`, `jactionlint` |
 | Public or licensed | `dco-signoff` (public), `reuse` (licensed) |
 | Citable | `check-citation-file-format`, `citesync` |
-| Python | `ruff-check`, `ruff-format`, `ty`, `nbstripout`, [`sp-repo-review`](usage.md#scientific-python-repo-review) |
+| Python | `ruff-check`, `ruff-format`, `ty`, `nbstripout`, [`sp-repo-review`](levels.md#scientific-python-repo-review) |
 | TypeScript | `biome`, `tsc`, and `vitest` in a web app |
 | Rust | `cargo-fmt`, `cargo-clippy` |
 | Go | `golangci-lint-fmt`, `golangci-lint` |
 | Python image | `hadolint-docker`, which needs a running Docker daemon |
+
+## Spelling and link checks
+
+Two git hooks validate prose:
+
+- `typos`: detects spelling errors in code, comments, and documentation. Add project-specific terms to `_typos.toml` at the repository root:
+
+  ```toml
+  [default.extend-words]
+  ue = "ue"
+  ```
+
+  typos knows English only. The hook skips gettext `.po` files and anything in a `locales/` directory; list other files with text in other languages under `[files] extend-exclude` in `_typos.toml`.
+
+- `lychee`: validates links. The local git hook runs offline and checks relative paths. The weekly workflow `.github/workflows/links.yml` checks both internal and external web links. In a web app, both read `lychee.toml`, which resolves root-relative links such as `/favicon.svg` in the Vite `public/` directory.
+
+## Documentation rules
+
+- **Full URLs in package READMEs:** PyPI, npm, and crates.io render the project's `README.md` on their package pages. Relative links break when viewed on registry sites, so links to repository files and directories use absolute GitHub URLs (`https://github.com/<owner>/<repo>/...`). A render with `publish_to_pypi` or `publish_to_npm` writes its README links this way.
+- **Stable links to documentation on `main`:** When documentation or CLI error messages link to rules or guides, point to `main`. Rule identifiers are permanent; if a rule is deprecated or removed, keep a stub heading so historical links continue to resolve.
+- **Single source of truth:** The README holds the overview and quickstart; code comments and docstrings define API contracts; `docs/` holds extended guides and references.
 
 ## Tasks
 

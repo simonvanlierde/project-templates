@@ -83,13 +83,13 @@ git add -A && git commit -m "chore: scaffold"
 
 Commit the lockfiles: CI installs exactly what they list, so it fails without them.
 After the first push, run `just repo-settings` to protect `main`
-([what it sets](docs/usage.md#protecting-main)).
+([what it sets](docs/setup.md#protecting-main)).
 
 ### Updating
 
 `copier update` pulls a new template release into your project as a merge, and a weekly
 workflow opens that pull request for you
-([how](docs/usage.md#keeping-your-project-up-to-date)). [CHANGELOG.md](CHANGELOG.md) lists
+([how](docs/updates.md#keeping-your-project-up-to-date)). [CHANGELOG.md](CHANGELOG.md) lists
 what each release changes and the upgrade steps a breaking one needs.
 
 ### Your details
@@ -112,9 +112,15 @@ defaults:
 
 ## Docs
 
-- [docs/usage.md](docs/usage.md): the questions, stacks, Compose-only repos, monorepos,
-  updating, publishing, the optional features and levels, and adopting the template in
-  an existing repo.
+- [docs/usage.md](docs/usage.md): the questions, stacks, Compose-only repos, monorepos and
+  the optional features.
+- [docs/setup.md](docs/setup.md): public repos, protecting `main`, the About box and
+  publishing.
+- [docs/hosting.md](docs/hosting.md): static sites, Cloudflare Workers, previews and the
+  social card.
+- [docs/updates.md](docs/updates.md): template and dependency updates, and adopting the
+  template in an existing repo.
+- [docs/levels.md](docs/levels.md): levels and the OpenSSF badge.
 - [docs/python-kinds.md](docs/python-kinds.md): the Python project kinds.
 - [docs/tooling.md](docs/tooling.md): the tools and lint rules per stack, git hooks,
   dependency updates and release workflows.

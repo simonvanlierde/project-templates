@@ -114,7 +114,7 @@ _message_after_copy: |
   After the first push, run `just repo-settings` to protect main.
   {%- for reg, on in [('PyPI', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('ghcr', publish_to_ghcr | default(false))] if on %}
   Before the first {{ reg }} release, set up the trusted publisher and the protected environment:
-  https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#publishing
+  https://github.com/simonvanlierde/project-templates/blob/main/docs/setup.md#publishing
   {%- endfor %}
   To release, run `just release X.Y.Z` (it cuts the CHANGELOG, then signs and pushes the tag).
   It needs an SSH signing key listed in .github/allowed_signers: that file says how to add yours.
@@ -455,7 +455,7 @@ dependency_bot:
 
 # A static page beside the code (a playground, demo or report) in site/. GitHub Pages
 # serves it from main, and each open, ready pull request gets a preview Worker
-# (docs/usage.md#static-site).
+# (docs/hosting.md#static-site).
 site:
   type: str
   ask: "{{ customise }}"
@@ -480,7 +480,7 @@ site_out:
 
 # Where a push to main deploys the site. Pull request previews are Workers either way.
 # Pages serves it under /<repo>/; a Worker serves it from / at site_url, which can be
-# a custom domain, and can run a Worker script for /api/* (docs/usage.md#static-site).
+# a custom domain, and can run a Worker script for /api/* (docs/hosting.md#hosting-on-a-worker).
 site_host:
   type: str
   when: "{{ site != 'none' }}"
@@ -497,13 +497,13 @@ site_on_workers:
   when: false
   default: "{{ site != 'none' and site_host == 'cloudflare' }}"
 
-# The practice ladder in levels.toml (docs/usage.md#levels). The OpenSSF Best Practices
+# The practice ladder in levels.toml (docs/levels.md). The OpenSSF Best Practices
 # badge is for public, open-source projects, so a private or unlicensed repo is off it.
 level:
   type: str
   when: "{{ public and license != 'none' }}"
   ask: "{{ customise }}"
-  help: How much the repo commits to (docs/usage.md#levels); each level adds the documents its requirements ask for
+  help: How much the repo commits to (docs/levels.md); each level adds the documents its requirements ask for
   choices:
     Minimal (a public repo with few users; no badge documents): minimal
     Standard (OpenSSF passing; CONTRIBUTING.md gains a test policy and the coding standards): standard

@@ -6,7 +6,7 @@ name: copier update
 # GITHUB_TOKEN can't push a change to .github/workflows/, which most template releases
 # make, and its PR starts no CI. A token from your own GitHub App fixes both; without one,
 # an update that touches a workflow opens an issue instead. See "The update App"
-# in the template's docs/usage.md.
+# in the template's docs/updates.md.
 
 on:
   schedule:
@@ -191,7 +191,7 @@ jobs:
             title="Update from template $LATEST by hand"
             {
               echo "Template \`$LATEST\` changes files in \`.github/workflows/\`, and \`GITHUB_TOKEN\` can't push those."
-              echo "Run \`copier update --answers-file <file> --vcs-ref <tag>\` locally for each template in it, and open the PR yourself, or set up the update App (see the template's docs/usage.md) so this workflow can."
+              echo "Run \`copier update --answers-file <file> --vcs-ref <tag>\` locally for each template in it, and open the PR yourself, or set up the update App (see the template's docs/updates.md) so this workflow can."
             } >issue.md
             # A closed issue counts too, so closing it stops the weekly reminder for this tag.
             if [ -z "$(gh issue list --state all --search "\"$title\" in:title" --json number --jq '.[0].number')" ]; then

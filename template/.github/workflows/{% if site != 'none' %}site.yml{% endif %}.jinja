@@ -71,7 +71,7 @@ jobs:
 {%- if site_on_workers %}
 
   # Production: every push to main deploys the build job's artifact to the Worker. Without
-  # the token, it skips with a notice (docs/usage.md#static-site in the template).
+  # the token, it skips with a notice (docs/hosting.md#hosting-on-a-worker in the template).
   deploy:
     name: "site: deploy"
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -187,7 +187,7 @@ jobs:
 
 {%- endif %}
 
-  # The same lifecycle as a web app's previews: docs/usage.md#static-site in the template.
+  # The same lifecycle as a web app's previews: docs/hosting.md#pull-request-previews in the template.
   # Fork pull requests never get the token, so they skip with a notice, as does a repo
   # without the secret.
   preview:

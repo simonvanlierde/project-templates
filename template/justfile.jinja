@@ -95,7 +95,7 @@ site-sync:
 {#- Link previews are cached by image URL, so each render puts the PNG's hash into the og:image URL of the page that names it. #}
 {%- macro stamp(png, page) %}sed -E -i.bak "s/og\.png(\?v=[0-9a-f]+)?\"/og.png?v=$(shasum -a 256 {{ png }} | cut -c1-8)\"/" {{ page }} && rm {{ page }}.bak{% endmacro %}
 
-# Needs Chromium: `{{ pw }} install chromium`. Check the result at 300 px wide and cropped to the centre square (docs/usage.md#social-card).
+# Needs Chromium: `{{ pw }} install chromium`. Check the result at 300 px wide and cropped to the centre square (docs/hosting.md#social-card).
 
 # Render docs/og-card.html to the 1200x630 social card image, in each place the page serves it from.
 og-card:
@@ -301,7 +301,7 @@ repo-settings:
 {%- if dependency_bot == 'dependabot' %}
     # copier-update.yml's push job reads the update App's key from this environment, from main only.
     main_only_env copier-update
-    echo "Configured environment 'copier-update'. For template updates that change workflows, add the update App: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#the-update-app"
+    echo "Configured environment 'copier-update'. For template updates that change workflows, add the update App: https://github.com/simonvanlierde/project-templates/blob/main/docs/updates.md#the-update-app"
 {%- endif %}
 {%- set site_on_pages = site != 'none' and not site_on_workers %}
 {%- if site_on_pages or docs_site %}
@@ -319,7 +319,7 @@ repo-settings:
         fail
     fi
 {%- if site_on_pages %}
-    echo "For the site's previews, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the 'preview' environment: https://github.com/simonvanlierde/project-templates/blob/main/docs/usage.md#static-site"
+    echo "For the site's previews, add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the 'preview' environment: https://github.com/simonvanlierde/project-templates/blob/main/docs/hosting.md#cloudflare-setup"
 {%- endif %}
 {%- endif %}
 {%- if publish_to_pypi %}

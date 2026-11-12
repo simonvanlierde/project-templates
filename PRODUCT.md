@@ -24,7 +24,8 @@ the template's options.
 
 Readers use the site alongside Copier, their language toolchain and the generated
 project's README. The repository README owns the quick-start commands; the site
-links to them on GitHub. The usage guide owns settings and update instructions.
+links to them on GitHub. The usage guide owns the questions and settings; the setup, hosting, updates and levels
+pages own those jobs.
 
 ## Capabilities and Constraints
 

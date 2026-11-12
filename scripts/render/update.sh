@@ -239,7 +239,7 @@ echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
   --data python_kind=library "$repo" "$adr_dir"
 test -f "$adr_dir/docs/adr/0001-x.md"
 test ! -e "$adr_dir/docs/decisions"
-grep -q 'docs/adr' "$repo/docs/usage.md"
+grep -q 'docs/adr' "$repo/docs/updates.md"
 
 # Each sample in _skip_if_exists (the entries after its `# Samples:` comment) has an
 # update-only _exclude entry with the same path, and no update-only entry lacks one.

@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Write the Levels table in docs/usage.md from levels.toml.
+"""Write the Levels table in docs/levels.md from levels.toml.
 
 Usage: scripts/levels_doc.py [--check]
 --check writes nothing and exits 1 when the table is stale or levels.toml's version is not
@@ -79,17 +79,17 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    usage = ROOT / "docs" / "usage.md"
-    text = usage.read_text()
+    doc = ROOT / "docs" / "levels.md"
+    text = doc.read_text()
     if START not in text or END not in text:
-        sys.exit(f"docs/usage.md: needs both {START} and {END}")
+        sys.exit(f"docs/levels.md: needs both {START} and {END}")
     new = re.sub(re.escape(START) + ".*?" + re.escape(END), lambda _: table(data), text, count=1, flags=re.S)
     if new == text:
         return 0
     if check:
-        print("docs/usage.md: the Levels table is stale; run `just levels-doc`", file=sys.stderr)
+        print("docs/levels.md: the Levels table is stale; run `just levels-doc`", file=sys.stderr)
         return 1
-    usage.write_text(new)
+    doc.write_text(new)
     return 0
 
 

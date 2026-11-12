@@ -343,7 +343,7 @@ grep -qx '      render: shell' a/.github/ISSUE_TEMPLATE/bug.yml
 grep -qx '    id: environment' a/.github/ISSUE_TEMPLATE/bug.yml
 uvx check-jsonschema --builtin-schema vendor.github-issue-forms \
   a/.github/ISSUE_TEMPLATE/bug.yml d/.github/ISSUE_TEMPLATE/bug.yml
-# Levels (docs/usage.md#levels): standard, the default for a public repo (a, m), adds the
+# Levels (docs/levels.md): standard, the default for a public repo (a, m), adds the
 # test policy and a coding-standards line per stack; community (h) also adds the governance,
 # roadmap and assurance-case skeletons and the decision records. minimal (c) gets neither.
 grep -qx 'level: standard' a/.copier-answers.yml
@@ -438,7 +438,7 @@ lv="$out/levels-copy"
 mkdir -p "$lv/scripts" "$lv/docs"
 cp "$repo/levels.toml" "$repo/CHANGELOG.md" "$lv/"
 cp "$repo/scripts/levels_doc.py" "$lv/scripts/"
-cp "$repo/docs/usage.md" "$lv/docs/"
+cp "$repo/docs/levels.md" "$lv/docs/"
 uv run -q "$lv/scripts/levels_doc.py" --check
 sed -i.bak 's/^text = "A lockfile/text = "One lockfile/' "$lv/levels.toml"
 (! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
@@ -446,5 +446,5 @@ cp "$repo/levels.toml" "$lv/" && sed -i.bak 's/^version = .*/version = "0.0.1"/'
 (! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
 cp "$repo/levels.toml" "$lv/" && sed -i.bak 's/^level = "minimal"/level = "gold"/' "$lv/levels.toml"
 (! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
-cp "$repo/levels.toml" "$lv/" && sed -i.bak '/levels:end/d' "$lv/docs/usage.md"
+cp "$repo/levels.toml" "$lv/" && sed -i.bak '/levels:end/d' "$lv/docs/levels.md"
 (! uv run -q "$lv/scripts/levels_doc.py" --check 2>/dev/null)
