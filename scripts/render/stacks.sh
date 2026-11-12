@@ -7,11 +7,12 @@
 # commit it keeps the local path, since GitHub has no such commit. HEAD may
 # itself be a release tag, so render a is held to whichever its _commit is.
 grep -qx '_src_path: gh:simonvanlierde/project-templates' e/.copier-answers.yml
-grep -qx '_commit: check-render-tag' e/.copier-answers.yml
+grep -qx "_commit: $render_tag" e/.copier-answers.yml
 commit=$(sed -n 's/^_commit: //p' a/.copier-answers.yml)
 # show-ref, not rev-parse: rev-parse reads a describe name such as
 # refs/tags/v1.0.0-3-gabc1234 as commit abc1234, so an untagged commit passed as tagged.
-if git -C "$repo" show-ref --verify -q "refs/tags/$commit"; then
+# Another worktree's render tag on the same commit can win the describe and be gone by now.
+if [[ $commit =~ ^check-render-[0-9]+$ ]] || git -C "$repo" show-ref --verify -q "refs/tags/$commit"; then
   grep -qx '_src_path: gh:simonvanlierde/project-templates' a/.copier-answers.yml
 else
   (lacks -q '^_src_path: gh:' a/.copier-answers.yml)

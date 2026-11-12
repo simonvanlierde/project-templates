@@ -69,6 +69,33 @@ Levels version 0.14.0:
 | `architecture-review` | community | all | The architecture page is reviewed against the code at least once a year, and the review is dated. | review | DLR guidelines v1.0.0 (ESA.10) | 2026-11-11 |
 <!-- levels:end -->
 
+## Checking a repo
+
+`just check-level <path>` checks a checkout against `levels.toml` and prints JSON. It reads the level and traits from the repo's `.copier-answers.yml`. For a repo without one, pass `--level standard` and a `--trait` for each trait. From another folder, run `uv run <this repo>/scripts/check_level.py <path>`. It reads files only: it makes no network calls and runs no tools.
+
+Each requirement gets one status:
+
+- `met`: the evidence names the files that meet it.
+- `missing`: the evidence says what is missing.
+- `not_applicable`: the requirement is above the repo's level, is for traits the repo lacks, or its condition does not hold, such as `lockfile` in a repo with no `pyproject.toml` or `package.json`.
+- `unchecked`: a person has to judge it (`verify = "review"`), or the facts are not in the files: the live site's headers, sp-repo-review's results, whether a linked issue is open, release signatures.
+
+```json
+{
+  "schema_version": 1,
+  "repo": "tide-tables",
+  "level": "standard",
+  "traits": ["numerics"],
+  "levels_version": "0.14.0",
+  "checked_at": "2027-03-01T09:30:00Z",
+  "requirements": [
+    {"id": "lockfile", "area": "supply-chain", "level": "minimal", "since": "2026-11-11", "status": "met", "evidence": "uv.lock"}
+  ]
+}
+```
+
+[`scripts/check_level.schema.json`](https://github.com/simonvanlierde/project-templates/blob/main/scripts/check_level.schema.json) is the schema. A new field does not change `schema_version`; a breaking change does. The script exits 0 when it prints a report, whatever the report finds, 2 on a bad flag and 3 when it cannot read the repo or `levels.toml`.
+
 ## OpenSSF Best Practices badge
 
 The level prepares a public, licensed repo for a level of the [OpenSSF Best Practices badge](https://www.bestpractices.dev): `standard` for passing, `community` for silver, and `minimal` for neither.

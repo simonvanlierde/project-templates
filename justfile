@@ -14,8 +14,8 @@ check: hooks render docs chooser
 hooks:
     prek run -a
 
-# The render includes uncommitted edits. Its commit tag is shared by every worktree of
-# this repo, so don't run it in two worktrees at once.
+# The render includes uncommitted edits. Its tag is named after the worktree, so runs in
+# separate worktrees can overlap, but not two in one worktree.
 
 # Render the answer sets in scripts/render/cases.sh and check the output.
 render:
@@ -28,6 +28,10 @@ render:
 # Write the Levels table in docs/levels.md from levels.toml; `--check` fails when it is stale.
 levels-doc *args:
     uv run scripts/levels_doc.py {{ args }}
+
+# Check a repo against levels.toml and print its results as JSON (docs/levels.md#checking-a-repo).
+check-level *args:
+    uv run scripts/check_level.py {{ args }}
 
 # Keep the docs builder on the version that new projects receive.
 zensical_version := `sed -n '/^zensical_version:/,/^$/s/^  default: //p' copier.yml`
