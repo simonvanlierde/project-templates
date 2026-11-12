@@ -4,7 +4,7 @@
     `description:` front matter wins over the site's. #}
 {% block extrahead %}
   {%- if page is defined and page.canonical_url is defined and page.canonical_url %}
-  {%- set title = page.title ~ " - " ~ config.site_name %}
+  {%- set title = config.site_name if page.canonical_url == config.site_url else page.title ~ " - " ~ config.site_name %}
   {%- set description = page.meta.description if page.meta is defined and page.meta.description is defined else config.site_description %}
   {%- set image = config.site_url ~ config.extra.og_image %}
   <meta property="og:type" content="website">
