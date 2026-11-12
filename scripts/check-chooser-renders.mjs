@@ -45,10 +45,12 @@ try {
       }
       const answers = readFileSync(join(destination, ".copier-answers.yml"), "utf8");
       for (const [key, value] of Object.entries(profile.answers)) {
+        // HEAD stores the renamed answer; released commands still use the old name.
+        const savedKey = key === "kind" && ref === "HEAD" ? "python_kind" : key;
         // These profile values are plain scalars or lists of stack names.
         const expected = Array.isArray(value)
-          ? `${key}:\n${value.map((item) => `- ${item}\n`).join("")}`
-          : `${key}: ${value}\n`;
+          ? `${savedKey}:\n${value.map((item) => `- ${item}\n`).join("")}`
+          : `${savedKey}: ${value}\n`;
         assert.ok(answers.includes(`\n${expected}`), `${label} did not retain ${key}=${JSON.stringify(value)}`);
       }
       assert.ok(profile.files.length > 0, `${label} must name generated files.`);

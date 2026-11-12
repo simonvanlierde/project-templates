@@ -43,10 +43,11 @@ rest wait behind `customise`, and take the defaults below when you answer no:
 | `docker_image` | `docker` and `python` stacks selected | Builds the Python package into an image with a Dockerfile and Compose service; no for a [Compose-only repo](#compose-only-repos) |
 
 Identity answers have no defaults. To skip the prompts, pass answers with `--data` or an
-answers file:
+answers file. The command uses `kind`, which works before and after its rename to
+`python_kind`:
 
 ```sh
-copier copy --data 'stacks=[python]' --data python_kind=research gh:simonvanlierde/project-templates .
+copier copy --data 'stacks=[python]' --data kind=research gh:simonvanlierde/project-templates .
 copier copy --data-file answers.yml gh:simonvanlierde/project-templates .
 ```
 
@@ -86,11 +87,12 @@ the project-kind questions; Copier still asks the identity ones.
 | `uv-research.yml` | A Python research package with notebooks, data and citation files |
 | `compose-deploy.yml` | A [Compose-only](#compose-only-repos) deploy repo with decision records |
 
-Pass one with `--data-file`, which reads a local path:
+Pass one with `--data-file`, which reads a local path. Use the same release tag for
+the preset and the template:
 
 ```sh
-curl -fsSLo /tmp/preset.yml https://raw.githubusercontent.com/simonvanlierde/project-templates/main/presets/rust-cli.yml
-copier copy --data-file /tmp/preset.yml gh:simonvanlierde/project-templates my-tool
+curl -fsSLo /tmp/preset.yml https://raw.githubusercontent.com/simonvanlierde/project-templates/v0.14.0/presets/rust-cli.yml
+copier copy --vcs-ref=v0.14.0 --data-file /tmp/preset.yml gh:simonvanlierde/project-templates my-tool
 ```
 
 `--data` flags after it override single answers. A preset is a starting point, not a

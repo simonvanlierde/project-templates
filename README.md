@@ -59,7 +59,7 @@ Copier installed, `uvx copier` runs it through uv.
 
 ```sh
 mkdir mydata && cd mydata && git init
-copier copy --data 'stacks=[python]' --data python_kind=data-pipeline gh:simonvanlierde/project-templates .
+copier copy --data 'stacks=[python]' --data kind=data-pipeline gh:simonvanlierde/project-templates .
 just pipeline  # fetch, build and validate the example source
 just check
 git add -A && git commit -m "chore: scaffold"

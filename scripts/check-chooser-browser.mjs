@@ -101,9 +101,9 @@ try {
       await expect(codeCopy.last()).toBeVisible();
       await expect(codeCopy.last()).toHaveAttribute("data-clipboard-target", /#__code_1 > code/);
       assert.deepEqual((await page.locator(".md-sidebar--primary > .md-sidebar__scrollwrap > .md-sidebar__inner > nav > ul > li > a").allTextContents()).slice(0, 3).map(text => text.trim()),
-        ["Get started", "Help me choose", "Use and update the template"]);
+        ["Get started", "Help me choose", "Use the template"]);
       await expect(page.locator(".md-footer__link--prev")).toContainText("Get started");
-      await expect(page.locator(".md-footer__link--next")).toContainText("Use and update the template");
+      await expect(page.locator(".md-footer__link--next")).toContainText("Use the template");
       await page.goto(new URL("usage/?h=Copier", url).href);
       await expect(page.locator(".md-content mark").first()).toBeVisible();
       assert.deepEqual([...external], [], "Chooser made external requests");
