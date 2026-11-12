@@ -282,6 +282,34 @@ test -f y/site/dist/about/index.html
 grep -qF '<h1>About</h1>' y/site/dist/about/index.html
 grep -qF 'href="/site-me/about/"' y/site/dist/index.html
 test -f y/site/pnpm-lock.yaml
+# just site-serve serves each starter at the address its comment names. The port must be
+# free first: astro dev leaves the process group, so the cleanup kills what holds the port.
+site_serve() { # render, URL, text the page holds
+  local log=$out/$1-site-serve.log pid rc=0
+  grep -qF "at $2" "$1/justfile"
+  (! curl -s -o /dev/null http://localhost:4321/) || {
+    echo "check-render: port 4321 is in use; stop what serves it" >&2
+    return 1
+  }
+  (cd "$1" && exec setsid just site-serve) >"$log" 2>&1 &
+  pid=$!
+  curl -fsS --retry 60 --retry-connrefused --retry-delay 1 --max-time 10 -o "$log.html" "$2" && grep -qF "$3" "$log.html" || rc=$?
+  kill -- "-$pid" 2>/dev/null || true
+  fuser -s -k -n tcp 4321 || true
+  wait "$pid" || true
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    curl -s -o /dev/null http://localhost:4321/ || break
+    sleep 0.5
+  done
+  [ "$rc" -eq 0 ] || {
+    cat "$log" >&2
+    return 1
+  }
+}
+site_serve y http://localhost:4321/site-me/ 'href="/site-me/about/"'
+# astro dev prints the address without the Pages base, so the recipe prints it whole.
+grep -qxF 'Open http://localhost:4321/site-me/' "$out/y-site-serve.log"
+site_serve x http://localhost:4321/ '<script type="module" src="main.mjs"></script>'
 # The deploy job's gate: it deploys only when Pages deploys from Actions, skips with a
 # notice while Pages is off (404), and fails on any other error. Run against a stub gh.
 gate_sh=$out/fake-pages-gate
