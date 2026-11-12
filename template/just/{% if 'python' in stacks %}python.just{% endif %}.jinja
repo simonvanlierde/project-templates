@@ -6,7 +6,7 @@
 py-sync:
     {{ uv }} sync
 
-# What CI runs: lint, format check, types, tests, dependency audit{% if license != 'none' %} and licenses{% endif %}{% if kind == 'data-pipeline' %}. CI also runs the `just pipeline` stages{% endif %}.
+# What CI runs: lint, format check, types, tests, dependency audit{% if license != 'none' %} and licenses{% endif %}{% if python_kind == 'data-pipeline' %}. CI also runs the `just pipeline` stages{% endif %}.
 py-check:
     {{ uv }} run --locked ruff check
     {{ uv }} run --locked ruff format --check
@@ -29,13 +29,13 @@ py-cov:
 # Tests only; extra arguments reach pytest (`just py-test -k name`).
 py-test *args:
     {{ uv }} run pytest {% raw %}{{ args }}{% endraw %}
-{%- if kind == 'library' %}
+{%- if python_kind == 'library' %}
 
 # The tests on every Python version python.yml tests, each in a throwaway environment.
 py-matrix:
     for v in {% for m in range(python_min.split('.')[1] | int, python_version.split('.')[1] | int + 1) %}3.{{ m }}{% if not loop.last %} {% endif %}{% endfor %}; do {{ uv }} run --isolated --locked --python "$v" pytest || exit 1; done
 {%- endif %}
-{%- if kind == 'library' and 'mutation' in test_extras %}
+{%- if python_kind == 'library' and 'mutation' in test_extras %}
 {%- set cd = '' if python_dir == '.' else 'cd ' ~ python_dir ~ '\n    ' %}
 
 # A mutant that no test reaches counts as missed, unless tests/mutation-baseline.txt
@@ -90,7 +90,7 @@ py-mutation-diff base='origin/main':
 py-profile *args:
     {{ uv }} run --with pyinstrument pyinstrument {% raw %}{{ args }}{% endraw %}
 {%- endif %}
-{%- if kind == 'library' and 'property' in test_extras %}
+{%- if python_kind == 'library' and 'property' in test_extras %}
 
 # The profile is in tests/conftest.py. CI runs it weekly (property.yml).
 
@@ -98,7 +98,7 @@ py-profile *args:
 py-property:
     {{ uv }} run pytest --hypothesis-profile=long
 {%- endif %}
-{%- if kind == 'data-pipeline' %}
+{%- if python_kind == 'data-pipeline' %}
 
 # Download each implemented source in sources.toml to data/raw/, with a fetch record.
 fetch:
@@ -123,7 +123,7 @@ status:
 # The whole chain, from the network to validated output.
 pipeline: fetch build validate
 {%- endif %}
-{%- if kind == 'web-service' %}
+{%- if python_kind == 'web-service' %}
 
 # Serve on 127.0.0.1:{{ app_port }} (HOST and PORT override), outside Docker.
 serve:

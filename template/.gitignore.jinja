@@ -76,7 +76,7 @@ target/
 /{{ d }}{{ (go_module|regex_replace('/v[0-9]+$', '')).split('/')[-1] }}
 {%- endif %}
 {%- endif %}
-{%- if 'python' in stacks and kind == 'data-pipeline' %}
+{%- if 'python' in stacks and python_kind == 'data-pipeline' %}
 {%- set d = '' if python_dir == '.' else python_dir ~ '/' %}
 
 # Never committed: `just pipeline` rebuilds both from sources.toml, so the repo

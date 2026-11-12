@@ -7,7 +7,7 @@ name = "{{ slug }}"
 version = "0.1.0"
 description = {{ project_description | to_json }}
 readme = "README.md"
-requires-python = ">={{ python_min if kind == 'library' else python_version }}"
+requires-python = ">={{ python_min if python_kind == 'library' else python_version }}"
 authors = [{ name = {{ author_name | to_json }}, email = {{ author_email | to_json }} }]
 {%- if license != 'none' %}
 license = "{{ license }}"
@@ -15,7 +15,7 @@ license = "{{ license }}"
 license-files = ["LICENSE"]
 {%- endif %}
 {%- endif %}
-{%- if kind == 'web-service' %}
+{%- if python_kind == 'web-service' %}
 dependencies = [
   "fastapi>=0.162.0",
   "opentelemetry-distro>=0.65b0",
@@ -25,7 +25,7 @@ dependencies = [
   "starlette>=1.10.0",
   "uvicorn>=0.54.0",
 ]
-{%- elif kind == 'data-pipeline' %}
+{%- elif python_kind == 'data-pipeline' %}
 # Parquet outputs. Add the `xlsx` extra to read Excel sources.
 dependencies = [
   "sourceledger[parquet]>=0.5.0",
@@ -43,7 +43,7 @@ classifiers = [
 {%- for m in range(py_min, [py_max, py_min] | max + 1) %}
   "Programming Language :: Python :: 3.{{ m }}",
 {%- endfor %}
-{%- if kind == 'library' %}
+{%- if python_kind == 'library' %}
   "Typing :: Typed",
 {%- endif %}
 ]
@@ -52,15 +52,15 @@ classifiers = [
 # Delete it (and set publish_to_pypi) to publish.
 classifiers = ["Private :: Do Not Upload"]
 {%- endif %}
-{% if kind == 'data-pipeline' %}
+{% if python_kind == 'data-pipeline' %}
 # `{{ slug }} fetch|build|validate`, what the `just` recipes of the same names run.
 [project.scripts]
 {{ slug | to_json }} = "{{ module_name }}.pipeline:entry"
-{% endif %}{% if kind == 'web-service' %}
+{% endif %}{% if python_kind == 'web-service' %}
 # `{{ slug }}` serves on HOST:PORT, as `python -m {{ module_name }}` does in the image.
 [project.scripts]
 {{ slug | to_json }} = "{{ module_name }}.__main__:main"
-{% endif %}{% if kind == 'library' or publish_to_pypi %}
+{% endif %}{% if python_kind == 'library' or publish_to_pypi %}
 [project.urls]
 Homepage = "https://github.com/{{ github_user }}/{{ slug }}"
 Issues = "https://github.com/{{ github_user }}/{{ slug }}/issues"
@@ -77,24 +77,24 @@ dev = [
   "pytest-cov>=7.1.0",
   "ruff>=0.17.3",
   "ty>=0.0.93",
-{%- if kind == 'research' %}
+{%- if python_kind == 'research' %}
   "jupyterlab>=4.6.4",
 {%- endif %}
-{%- if kind == 'web-service' %}
+{%- if python_kind == 'web-service' %}
   "httpx2>=2.16.0", # fastapi.testclient
 {%- endif %}
-{%- if kind == 'library' and 'property' in test_extras %}
+{%- if python_kind == 'library' and 'property' in test_extras %}
   "hypothesis>=6.170.13",
 {%- endif %}
-{%- if kind == 'library' and 'mutation' in test_extras %}
+{%- if python_kind == 'library' and 'mutation' in test_extras %}
   "mutmut>=3.8.1",
 {%- endif %}
 ]
 
-{% if kind == 'data-pipeline' -%}
+{% if python_kind == 'data-pipeline' -%}
 # Packaged, so the `{{ slug }}` script and the tests import `{{ module_name }}`
 # without sys.path edits.
-{% elif kind == 'research' -%}
+{% elif python_kind == 'research' -%}
 # Research projects are packaged too, so notebooks can `import {{ module_name }}`
 # without sys.path edits.
 {% endif -%}
@@ -107,7 +107,7 @@ build-backend = "uv_build"
 # Set here, not user-wide, so every machine writes the same uv.lock.
 [tool.uv]
 exclude-newer = "1 week"
-{%- if kind == 'data-pipeline' %}
+{%- if python_kind == 'data-pipeline' %}
 # sourceledger is released with this template, and a template release can need its newest
 # version on the day it ships.
 exclude-newer-package = { sourceledger = false }
@@ -121,7 +121,7 @@ module-name = "{{ module_name }}"
 # The package sits at the root, not under src/.
 module-root = ""
 {%- endif %}
-{%- if python_layout == 'flat' and kind == 'library' and 'mutation' in test_extras %}
+{%- if python_layout == 'flat' and python_kind == 'library' and 'mutation' in test_extras %}
 
 # mutmut otherwise guesses lib/, src/ or the directory name, and fails on a flat package.
 [tool.mutmut]
@@ -152,7 +152,7 @@ ignore = [
 # annotations, or package __init__.py.
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S101", "D1", "INP001", "PLR2004", "ANN201"]
-{%- if kind == 'research' %}
+{%- if python_kind == 'research' %}
 "*.ipynb" = ["T201", "E402"] # notebooks print and import late
 {%- endif %}
 

@@ -17,12 +17,12 @@
 {#- A nested stack's workflow runs only when its folder changes, so its check can't be required. #}
 {%- if 'python' in stacks and python_dir == '.' %}
 {#- A library's check is a matrix, and GitHub names each run "<name> (3.x)". #}
-{%- if kind == 'library' %}
+{%- if python_kind == 'library' %}
 {%- for m in range(python_min.split('.')[1] | int, python_version.split('.')[1] | int + 1) %},
           { "context": "python: lint, types, tests (3.{{ m }})", "integration_id": 15368 }
 {%- endfor %}
 {%- else %},
-          { "context": "python: lint, types, {% if kind == 'data-pipeline' %}pipeline, {% endif %}tests", "integration_id": 15368 }
+          { "context": "python: lint, types, {% if python_kind == 'data-pipeline' %}pipeline, {% endif %}tests", "integration_id": 15368 }
 {%- endif %}
 {%- if python_windows %},
           { "context": "python: tests (windows)", "integration_id": 15368 }

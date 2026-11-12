@@ -1,6 +1,6 @@
 {%- set exts = ['editorconfig.editorconfig', 'rvben.rumdl', 'tombi-toml.tombi', 'bluebrown.yamlfmt']
      + (['ms-python.python', 'charliermarsh.ruff', 'astral-sh.ty'] if 'python' in stacks else [])
-     + (['ms-toolsai.jupyter'] if 'python' in stacks and kind == 'research' else [])
+     + (['ms-toolsai.jupyter'] if 'python' in stacks and python_kind == 'research' else [])
      + (['biomejs.biome'] if 'ts' in stacks else [])
      + (['rust-lang.rust-analyzer'] if 'rust' in stacks else [])
      + (['golang.go'] if 'go' in stacks else [])

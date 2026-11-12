@@ -241,7 +241,7 @@ test -f k/LICENSES/GPL-3.0-or-later.txt
 (lacks -q 'data/' k/REUSE.toml m/REUSE.toml)
 # n: research data under the code license, so REUSE.toml and LICENSES/ have no data license.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=nodata-me --data 'stacks=[python]' \
-  --data kind=research --data data_license=none "$repo" "$out/n" >/dev/null 2>&1
+  --data python_kind=research --data data_license=none "$repo" "$out/n" >/dev/null 2>&1
 test -f n/data/README.md
 (lacks -q 'data/' n/REUSE.toml)
 test -z "$(find n/LICENSES -name 'CC-*' ! -name CC-BY-SA-4.0.txt)"

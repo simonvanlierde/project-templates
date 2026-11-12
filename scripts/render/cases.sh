@@ -9,7 +9,7 @@
 # so its slug-derived default renders.
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'extras=[codspeed,profiling,cold_install]' --data project_name=render-me --data 'stacks=[python,ts,rust,go,docker]' \
-  --data kind=research --data ts_kind=app \
+  --data python_kind=research --data ts_kind=app \
   --data 'author_name= Ada Lovelace' \
   . "$out/a"
 
@@ -23,7 +23,7 @@
   --data 'project_description=A "quoted" {{ one }}, naïve $USD' \
   --data 'author_name=Ada "X" Lovelace' \
   --data public=false --data level=community --data 'stacks=[python,ts,docker]' \
-  --data kind=web-service --data python_dir=svc \
+  --data python_kind=web-service --data python_dir=svc \
   . "$out/b"
 # Explicit badge answers cannot add public-policy documents to a private project.
 for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do
@@ -57,7 +57,7 @@ grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name
 # It also has the static site, so both kinds of preview share one retire workflow.
 d_args=(
   --data 'extras=[codecov,cold_install,python_windows]' --data project_name=pipe-me --data 'stacks=[python,ts,docker]'
-  --data kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
+  --data python_kind=data-pipeline --data python_dir=pipe --data license=Apache-2.0
   --data ts_dir=web --data ts_kind=web-app --data web_framework=preact --data user_data=accounts
   --data dependency_bot=renovate
   --data site=plain
@@ -107,7 +107,7 @@ grep -q 'project edit' "$out/h/docs/index.md"
 # only BSD-3-Clause render, and the only npm-only publisher.
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'extras=[cold_install,docs_site,property,mutation]' --data project_name=mutate-me --data 'stacks=[python,ts,rust,go]' \
-  --data kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
+  --data python_kind=library --data ts_kind=library --data rust_kind=library --data go_kind=library \
   --data python_dir=py --data ts_dir=web --data rust_dir=crates/lib --data go_dir=svc \
   --data level=standard \
   --data license=BSD-3-Clause --data publish_to_npm=true \
@@ -115,10 +115,10 @@ grep -q 'project edit' "$out/h/docs/index.md"
 # x: a Python library that publishes but answers python_api=false (CLI-only): no api job.
 # x and r have the static site without a package.json. x and d run the tests on Windows.
 "${copier[@]}" --vcs-ref=HEAD --data 'extras=[python_windows,property,mutation]' --data project_name=cli-me --data 'stacks=[python]' \
-  --data kind=library --data publish_to_pypi=true --data python_api=false --data site=plain \
+  --data python_kind=library --data publish_to_pypi=true --data python_api=false --data site=plain \
   --data level=minimal . "$out/x"
 # w: a Python app, the one render no citation file is for.
-"${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data kind=app . "$out/w"
+"${copier[@]}" --vcs-ref=HEAD --data project_name=app-me --data 'stacks=[python]' --data python_kind=app . "$out/w"
 # The practice level still supplies the initial selection when extras is omitted.
 test -f "$out/w/.github/workflows/cold-install.yml"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=minimal-extras --data level=minimal . "$out/minimal-extras"
@@ -142,7 +142,7 @@ echo '<!-- project edit -->' >>"$out/r/docs/og-card.html"
   --data project_name=lib-me --data 'stacks=[ts]' --data publish_to_npm=true --data site=astro . "$out/t"
 # y: the Astro site in a project without the TypeScript stack. Rendered again over edited
 # copies: the starter pages stay the project's, package.json is rewritten.
-y_args=(--data project_name=site-me --data 'stacks=[python]' --data kind=app --data site=astro)
+y_args=(--data project_name=site-me --data 'stacks=[python]' --data python_kind=app --data site=astro)
 "${copier[@]}" --vcs-ref=HEAD "${y_args[@]}" . "$out/y"
 for f in src/layouts/Base.astro src/pages/index.astro src/pages/about.md; do
   echo '<!-- project edit -->' >>"$out/y/site/$f"
@@ -337,7 +337,7 @@ grep -E "^ +grep -vE" "$out/compose2/.github/workflows/cold-install.yml" | grep 
 # pw: a web app with a Python package on PyPI. python-release.yml takes over from
 # release.yml, so it refuses a tag that differs from web/package.json.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=pypi-web --data 'stacks=[python,ts]' \
-  --data kind=library --data publish_to_pypi=true --data ts_kind=web-app --data ts_dir=web \
+  --data python_kind=library --data publish_to_pypi=true --data ts_kind=web-app --data ts_dir=web \
   --data user_data=nothing . "$out/pw" >/dev/null 2>&1
 test ! -e "$out/pw/.github/workflows/release.yml"
 grep -qF 'name: refuse a tag that differs from package.json' "$out/pw/.github/workflows/python-release.yml"
@@ -456,8 +456,8 @@ refuses 'Codecov needs' --data 'stacks=[go]' --data 'extras=[codecov]'
 refuses 'CodSpeed and profiling need' --data 'stacks=[ts]' --data 'extras=[codspeed]'
 refuses 'CodSpeed and profiling need' --data 'stacks=[go]' --data 'extras=[profiling]'
 refuses 'Windows tests need' --data 'stacks=[rust]' --data 'extras=[python_windows]'
-refuses 'need a library kind' --data kind=app --data 'extras=[property]'
-refuses 'need a library kind' --data kind=app --data 'extras=[mutation]'
+refuses 'need a library kind' --data python_kind=app --data 'extras=[property]'
+refuses 'need a library kind' --data python_kind=app --data 'extras=[mutation]'
 # A package directory can't be where the site goes.
 # shellcheck disable=SC2016 # the messages quote with backticks
 {
@@ -466,7 +466,7 @@ refuses 'need a library kind' --data kind=app --data 'extras=[mutation]'
   refuses 'go_dir is `site/api`, where the static site goes' --data 'stacks=[go]' --data go_dir=site/api --data site=astro
   refuses 'python_dir is `_site/pkg`, where the static site goes' --data 'stacks=[python]' --data python_dir=_site/pkg --data site=plain
 }
-refuses 'The flat layout' --data 'stacks=[python]' --data kind=data-pipeline --data python_layout=flat
+refuses 'The flat layout' --data 'stacks=[python]' --data python_kind=data-pipeline --data python_layout=flat
 # One repo has one GitHub Pages site.
 refuses 'one GitHub Pages site' --data 'extras=[docs_site,cold_install]' --data 'stacks=[python]' --data site=plain
 # A root web app's legal pages are in docs/, which the docs site would publish again.
@@ -494,7 +494,7 @@ refuses 'so no path' --data 'stacks=[python]' --data site=plain --data site_host
 refuses 'needs its own contact address' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=accounts --data author_email=Code@duinlab.nl
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
-refuses 'shipped as the python image' --data 'stacks=[python,docker]' --data kind=web-service \
+refuses 'shipped as the python image' --data 'stacks=[python,docker]' --data python_kind=web-service \
   --data docker_image=false
 # A binary never uses the Go package name, so a digit-leading project name is fine.
 # Its gitignored build output drops the module path's /v2.
@@ -535,7 +535,7 @@ grep -q 'What a first visit may keep in the browser, by name, each with a line' 
   --data site=astro --data site_host=cloudflare . "$out/cfa"
 # dp: a data-pipeline at the root, whose python.yml ends on the revisions job's `run:` block.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=dp-me --data 'stacks=[python]' \
-  --data kind=data-pipeline . "$out/dp"
+  --data python_kind=data-pipeline . "$out/dp"
 # cfd: a site on a Worker leaves GitHub Pages to the docs site.
 "${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=cfd-me --data 'stacks=[python]' \
   --data site=plain --data site_host=cloudflare . "$out/cfd"

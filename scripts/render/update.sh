@@ -236,7 +236,7 @@ mkdir -p "$adr_dir/docs/adr"
 echo "# 1. Record" >"$adr_dir/docs/adr/0001-x.md"
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=adr-check --data 'stacks=[python]' \
-  --data kind=library "$repo" "$adr_dir"
+  --data python_kind=library "$repo" "$adr_dir"
 test -f "$adr_dir/docs/adr/0001-x.md"
 test ! -e "$adr_dir/docs/decisions"
 grep -q 'docs/adr' "$repo/docs/usage.md"
@@ -274,7 +274,7 @@ git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
 "${git_t[@]}" add -A
 "${git_t[@]}" commit -q -m base
 "${copier[@]}" --vcs-ref=HEAD \
-  --data project_name=sample-me --data 'stacks=[python,ts]' --data kind=library \
+  --data project_name=sample-me --data 'stacks=[python,ts]' --data python_kind=library \
   --data ts_dir=web --data ts_kind=web-app --data user_data=nothing --data worker=true \
   --data site=astro --data site_host=cloudflare --data decision_records=true \
   "$sample_tpl" "$sample_up" >/dev/null
@@ -322,7 +322,8 @@ test -z "$unpinned" || {
 }
 
 # v0.14.0 optional answers survive the move to extras, including explicit false
-# values at standard. An untagged scratch history keeps updates local.
+# values at standard, and the old `kind` answer survives its rename to python_kind.
+# An untagged scratch history keeps updates local.
 # shellcheck disable=SC2030,SC2031 # each test subshell sets its own environment
 (
   while IFS= read -r git_var; do unset "$git_var"; done < <(git rev-parse --local-env-vars)
@@ -344,6 +345,8 @@ test -z "$unpinned" || {
       flags+=(--data "$feature=$enabled")
     done
     if [ "$selection" = all ]; then flags+=(--data 'test_extras=[property,mutation]'); fi
+    # The old `kind` answer becomes python_kind; research keeps its notebooks/.
+    if [ "$selection" = some ]; then flags+=(--data kind=research); fi
     "${copier[@]}" --vcs-ref=HEAD --quiet --data project_name=extras-check \
       --data 'stacks=[python,ts,rust,go]' "${flags[@]}" "$extras_tpl" "$out/extras-$selection"
     git -C "$out/extras-$selection" -c core.hooksPath=/dev/null init -q
@@ -372,6 +375,9 @@ for selection, expected in [('all', features | {'property', 'mutation'}),
     answers = yaml.safe_load((project / '.copier-answers.yml').read_text())
     assert set(answers['extras']) == expected, (selection, answers)
     assert not (features | {'test_extras'}) & answers.keys(), answers
+    assert answers['python_kind'] == ('research' if selection == 'some' else 'library'), answers
+    assert 'kind' not in answers, answers
+    assert (project / 'notebooks').is_dir() == (selection == 'some'), selection
     for path, feature in [('codecov.yml', 'codecov'), ('zensical.toml', 'docs_site'),
                           ('.github/workflows/cold-install.yml', 'cold_install'),
                           ('.github/workflows/benchmarks.yml', 'codspeed'),
