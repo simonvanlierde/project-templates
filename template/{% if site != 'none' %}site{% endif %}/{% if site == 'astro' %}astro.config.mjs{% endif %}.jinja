@@ -4,6 +4,9 @@ import { defineConfig } from "astro/config";
 // Cloudflare Worker. It serves them from the root of `site`, as do the previews.
 export default defineConfig({
   output: "static",
+  // `just site-serve` prints port 4321, so a busy port is an error, not a silent move.
+  server: { port: 4321 },
+  vite: { server: { strictPort: true } },
   site: "{{ site_url if not web_app else 'https://' ~ worker_slug ~ '-site.' ~ github_user | lower ~ '.workers.dev' }}",
 });
 {%- else %}
@@ -13,6 +16,9 @@ export default defineConfig({
 // the preview job in site.yml to match: it serves the build under /{{ slug }}/.
 export default defineConfig({
   output: "static",
+  // `just site-serve` prints port 4321, so a busy port is an error, not a silent move.
+  server: { port: 4321 },
+  vite: { server: { strictPort: true } },
   site: "https://{{ github_user | lower }}.github.io",
   base: "/{{ slug }}",
 });

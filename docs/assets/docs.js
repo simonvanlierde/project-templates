@@ -10,11 +10,12 @@
 
   // A table wider than the page scrolls; keyboard users can only scroll a focusable region.
   function markScrollingTables() {
+    let number = 0;
     document.querySelectorAll(".md-typeset__scrollwrap").forEach((wrap) => {
       if (wrap.scrollWidth > wrap.clientWidth) {
         wrap.tabIndex = 0;
         wrap.setAttribute("role", "region");
-        wrap.setAttribute("aria-label", "Table, scrolls sideways");
+        wrap.setAttribute("aria-label", `Table ${++number}, scrolls sideways`);
       } else {
         wrap.removeAttribute("tabindex");
         wrap.removeAttribute("role");

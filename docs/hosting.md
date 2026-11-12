@@ -82,6 +82,8 @@ Each pull request that is open, not a draft, not opened by a bot such as Renovat
 - A web app's `preview` job in `ts.yml` deploys `wrangler.jsonc` as `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`.
 - A site's `preview` job in `site.yml` deploys the build job's artifact, not a fresh build, as `<slug>-site-pr-<number>`. The `-site` in the name keeps it apart from a web app's preview in a repo that has both. For a site on Pages, the preview serves the build under `/<repo>/` as Pages does, with a redirect from `/`. For a site on a Worker, it serves the build from `/`, as production does.
 
+A bot's push does not start a preview, so after one the preview keeps the previous build until a person pushes.
+
 The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. With a custom domain, production sends it only on the duplicate workers.dev origin.
 
 When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker through the Cloudflare API. A daily run lists the account's preview Workers and deletes those whose pull request is not open and ready, in case an event was missed. When it cannot read a pull request, it keeps that Worker and fails. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep.
@@ -104,6 +106,18 @@ The first deploy creates each Worker, so there is nothing to set up in Cloudflar
 ## Social card
 
 A web app, a site or a docs site renders `docs/og-card.html`, a 1200x630 poster with the project name, `project_description` and the site's address, and `og:image`, `og:image:width`, `og:image:height`, `og:image:alt` and `twitter:card` tags in the page head that point at it. A docs site sets them from `docs-overrides/main.html` on every page, with `og:title`, `og:description` and `og:url` too, reading `og_image` from `zensical.toml`. The alt text is the name and the description. The file is yours: an update adds it when it is missing and leaves an edited one alone.
+
+A web app's `index.html` and a site's page are yours after the first render too, so an update does not add the tags to them. Add them to the page head by hand, with your own address and alt text:
+
+```html
+<meta property="og:image" content="https://example.org/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Project name: what it does" />
+<meta name="twitter:card" content="summary_large_image" />
+```
+
+A docs site needs the settings in [Documentation site](usage.md#documentation-site) added to its `zensical.toml`, `custom_dir` and `og_image` among them.
 
 Run `just og-card` to render it to a PNG, and commit the PNG: `public/og.png` for a web app, `site/og.png` for `site=plain` and `site/public/og.png` for `site=astro` and `docs/assets/og.png` for a docs site. A web app renders with the Playwright in its devDependencies (`pnpm exec playwright install chromium` once). A site or a docs site runs `pnpm dlx playwright@<pinned version>`, so it needs no Node package of its own, but pnpm and Node must be installed, even in a Python-only project. The recipe also writes the PNG's first 8 hex of SHA-256 into the page's `og:image` URL (`og_image` in `zensical.toml` for a docs site) (`og.png?v=<hash>`), because Facebook, Slack, Discord and iMessage cache a preview by image URL and would keep the old card after a redraw. Commit the page with the PNG. The head tags point at a file that does not exist until you run it.
 

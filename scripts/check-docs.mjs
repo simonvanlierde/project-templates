@@ -72,6 +72,17 @@ try {
             assert.ok(await page.evaluate(focusOnScreen), `${url}: Tab after the header entered closed navigation`);
           }
         }
+        // The theme's palette radio has no box: Tab to it and expect an outline on its visible label.
+        const palette = page.locator("input.md-option").first();
+        if (await palette.count()) {
+          await palette.focus();
+          await page.keyboard.press("Shift+Tab");
+          await page.keyboard.press("Tab");
+          await expect(palette).toBeFocused();
+          assert.notEqual(await page.evaluate(() => getComputedStyle(
+            document.activeElement.parentElement.querySelector("label:not([hidden])")).outlineStyle), "none",
+          `${url} (${width}px): focused palette control has no outline`);
+        }
         await search.focus();
         await page.keyboard.press("Enter");
         const input = page.getByRole("combobox", { name: "Search", exact: true });
@@ -90,7 +101,7 @@ try {
           await menu.focus();
           await page.keyboard.press("Enter");
         }
-        if (width !== 320) {
+        {
           const { violations } = await new AxeBuilder({ page })
             .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"])
             .analyze();

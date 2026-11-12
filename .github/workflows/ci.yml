@@ -39,6 +39,9 @@ env:
   PLAYWRIGHT_VERSION: 1.64.1
   # renovate: datasource=npm depName=@axe-core/playwright
   AXE_PLAYWRIGHT_VERSION: 4.14.0
+  # As in docs.yml: uv checks every package against OSV's malware advisories before its code runs.
+  UV_MALWARE_CHECK: "1"
+  UV_PREVIEW_FEATURES: malware-check
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -180,6 +183,8 @@ jobs:
               project_name: ci-web
               stacks: [python, docker]
               python_kind: web-service
+              # Has runtime dependencies, so `just py-check` runs the `--license AGPL` variant.
+              license: AGPL-3.0-or-later
     steps:
       - *checkout
 
@@ -270,6 +275,7 @@ jobs:
         run: |
           set -euo pipefail
           versions=$(yq -o=tsv '.jobs.check.strategy.matrix.python' "$RUNNER_TEMP/proj/.github/workflows/python.yml")
+          test -n "$versions"
           for v in $versions; do UV_PYTHON=$v just py-sync py-test; done
 
       # Runs the pipeline against the example source's live URL, then the tests that

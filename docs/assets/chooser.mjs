@@ -81,6 +81,7 @@ if (form) {
       }));
     }
     command.textContent = currentCommand;
+    status.textContent = `Recommendation: ${selected.title}`;
   }
 
   form.addEventListener("change", update);

@@ -35,4 +35,6 @@ jobs:
       - name: check the title
         env:
           TITLE: ${{ github.event.pull_request.title }}
+          UV_MALWARE_CHECK: "1"
+          UV_PREVIEW_FEATURES: malware-check
         run: printf '%s\n' "$TITLE" | uvx "committed@$COMMITTED_VERSION" --config committed.toml --commit-file -

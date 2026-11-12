@@ -3,6 +3,7 @@
     and the address stay 60 px clear of every edge. -#}
 {%- set address = card_address | regex_replace('^https://', '') | regex_replace('/$', '') -%}
 <!doctype html>
+<html lang="en">
 <meta charset="utf-8">
 <title>{{ project_name | e }} social card</title>
 <!-- TODO: swap the colours and the font for this project's own, then run `just og-card`.
@@ -65,3 +66,4 @@
   </div>
   <p class="address">{{ address }}</p>
 </main>
+</html>

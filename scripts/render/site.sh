@@ -256,6 +256,8 @@ for r in y t; do
   # The build job sets up node and pnpm from the site's own package.json.
   sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -qx '          package_json_file: site/package.json'
   sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -q 'uses: actions/setup-node@'
+  # Every push and pull request audits the site's dependencies, as each stack's CI job does.
+  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -A1 -x '      - run: pnpm audit --prod --audit-level=moderate' | grep -qx '        working-directory: site'
   # Pages serves the site under /<repo>/, and so does its preview.
   grep -qx "  base: \"/$([ "$r" = y ] && echo site-me || echo lib-me)\"," "$r/site/astro.config.mjs"
   # The lockfile it writes is skipped by the YAML hooks at any depth.
@@ -270,6 +272,7 @@ for r in hush-astro hush-plain x; do
 done
 jq -e '.scripts | has("licenses") | not' hush-astro/site/package.json >/dev/null
 grep -qx '          version: "'"$pnpm_pin"'"' y/.github/workflows/site.yml
+(lacks -q 'pnpm audit' x/.github/workflows/site.yml)
 # shellcheck disable=SC2016
 grep -qF 'tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C site/dist/site-me' y/.github/workflows/site.yml
 grep -qF "printf '/ /site-me/ 302\n' > site/dist/_redirects" y/.github/workflows/site.yml
@@ -305,7 +308,7 @@ test -f y/site/pnpm-lock.yaml
 site_serve() { # render, URL, text the page holds
   local log=$out/$1-site-serve.log pid rc=0
   grep -qF "at $2" "$1/justfile"
-  (! curl -s -o /dev/null http://localhost:4321/) || {
+  (! fuser -s -n tcp 4321) || {
     echo "check-render: port 4321 is in use; stop what serves it" >&2
     return 1
   }
@@ -315,8 +318,8 @@ site_serve() { # render, URL, text the page holds
   kill -- "-$pid" 2>/dev/null || true
   fuser -s -k -n tcp 4321 || true
   wait "$pid" || true
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
-    curl -s -o /dev/null http://localhost:4321/ || break
+  for _ in $(seq 60); do
+    fuser -s -n tcp 4321 || break
     sleep 0.5
   done
   [ "$rc" -eq 0 ] || {
@@ -324,12 +327,58 @@ site_serve() { # render, URL, text the page holds
     return 1
   }
 }
-# setsid and `fuser -n` are Linux-only, so macOS runs skip this; CI runs it.
-if command -v setsid >/dev/null && command -v fuser >/dev/null; then
+# setsid, flock and `fuser -n` are Linux-only, so macOS runs skip this; CI runs it.
+if command -v setsid >/dev/null && command -v fuser >/dev/null && command -v flock >/dev/null; then
+  # The recipe's port is fixed, so runs in other worktrees take turns here.
+  exec {port_lock}>"${TMPDIR:-/tmp}/check-render-port-4321.lock"
+  flock "$port_lock"
   site_serve y http://localhost:4321/site-me/ 'href="/site-me/about/"'
   # astro dev prints the address without the Pages base, so the recipe prints it whole.
   grep -qxF 'Open http://localhost:4321/site-me/' "$out/y-site-serve.log"
   site_serve x http://localhost:4321/ '<script type="module" src="main.mjs"></script>'
+  # A busy port is an error, not a silent move to 4322.
+  # Astro listens on ::1 and the plain recipe on 127.0.0.1, so hold both.
+  python3 -c 'import socket, time
+for family, host in ((socket.AF_INET, "127.0.0.1"), (socket.AF_INET6, "::1")):
+    s = socket.socket(family)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # TIME_WAIT from the curls above
+    s.bind((host, 4321))
+    s.listen()
+    globals()[host] = s
+print("holding", flush=True)
+time.sleep(120)' >"$out/port-holder.log" 2>&1 &
+  holder=$!
+  # The holder must own the port, or a server left from above passes the check for it.
+  for _ in $(seq 50); do
+    grep -q holding "$out/port-holder.log" && break
+    kill -0 "$holder" 2>/dev/null || break
+    sleep 0.2
+  done
+  grep -q holding "$out/port-holder.log" || {
+    cat "$out/port-holder.log" >&2
+    fuser -v -n tcp 4321 >&2 || true
+    exit 1
+  }
+  for r in x y; do
+    # setsid and kill the group: timeout alone stops just and orphans the dev server.
+    (cd "$r" && exec setsid timeout 60 just site-serve) >"$out/$r-site-busy.log" 2>&1 &
+    busy=$!
+    rc=0
+    wait "$busy" || rc=$?
+    # 124 is timeout ending a server that started anyway, on another port.
+    if [ "$rc" -eq 0 ] || [ "$rc" -eq 124 ]; then
+      kill "$holder"
+      # astro dev runs on as a background server; stop the one that moved ports.
+      fuser -s -k -n tcp 4322 || true
+      cat "$out/$r-site-busy.log" >&2
+      echo "just site-serve in $r did not fail with port 4321 taken" >&2
+      exit 1
+    fi
+    kill -- "-$busy" 2>/dev/null || true
+  done
+  kill "$holder"
+  wait "$holder" 2>/dev/null || true
+  exec {port_lock}>&-
 fi
 # The deploy job's gate: it deploys only when Pages deploys from Actions, skips with a
 # notice while Pages is off (404), and fails on any other error. Run against a stub gh.
@@ -520,6 +569,7 @@ for r in m k h ds; do
   cmp "$repo/template/{% if docs_site %}docs-overrides{% endif %}/main.html" "$r/docs-overrides/main.html"
   grep -qx 'og_image = "assets/og.png"' "$r/zensical.toml"
   grep -qF '<h1>' "$r/docs/og-card.html"
+  grep -qx '<html lang="en">' "$r/docs/og-card.html"
   # shellcheck disable=SC2016 # a literal "$PWD" in the recipe body
   grep -qF '"$PWD/docs/assets/og.png"' "$r/justfile"
   grep -qF 'zensical.toml' "$r/justfile"

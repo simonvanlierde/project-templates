@@ -43,6 +43,7 @@ nav = [
     "decisions/0007-the-plain-site-is-a-tool-page.md",
     "decisions/0008-three-audiences-in-order.md",
     "decisions/0009-optional-features-share-one-extras-answer.md",
+    "decisions/0010-a-level-ladder-replaces-the-badge-question.md",
   ] },
 ]
 

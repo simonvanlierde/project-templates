@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{#- Shared social tags follow `template/{% if docs_site %}docs-overrides{% endif %}/main.html`; this site's CSP and announcement live here. #}
+
 {#- Pages cannot set response headers. These hashes allow the pinned theme's four bootstraps;
     scripts/check-docs.mjs catches changes to them on dependency upgrades. #}
 {% block site_meta %}
