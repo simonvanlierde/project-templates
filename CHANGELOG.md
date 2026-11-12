@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- The `readme` requirement in `levels.toml` keeps maintainer-only material, such as deploy and release steps, out of the README: it goes in `docs/` or `CONTRIBUTING.md`.
+
 ### Fixed
 
 - The project chooser and quick-start examples use the released `python_kind` answer in Python commands.

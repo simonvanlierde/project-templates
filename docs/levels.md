@@ -46,7 +46,7 @@ Levels version 0.15.0:
 | `api-break-check` | standard | package | CI checks each pull request for breaks in the public API (griffe, cargo-semver-checks or API Extractor). | automated | Semantic Versioning 2.0.0 | 2026-11-11 |
 | `citation-file` | standard | package, pipeline, numerics | `CITATION.cff` says how to cite the software. | automated | Citation File Format 1.2.0 | 2026-11-11 |
 | `codemeta` | standard | package, pipeline, numerics | `codemeta.json` describes the software for archives and registries. | automated | CodeMeta 3.0 | 2026-11-11 |
-| `readme` | standard | all | `README.md` says what the project is, its status, and how to run or develop it. | review | OpenSSF Best Practices passing (description_good, interact) | 2026-11-11 |
+| `readme` | standard | all | `README.md` says what the project is, its status, and how to run or develop it. Material only maintainers act on, such as deploy and release steps, lives in `docs/` or `CONTRIBUTING.md`. | review | OpenSSF Best Practices passing (description_good, interact) | 2026-11-11 |
 | `cold-install` | standard | all | A CI workflow runs the README's setup steps in a clean container. | automated | project-templates | 2026-11-11 |
 | `docs-structure` | standard | package, cli | `docs/` holds Markdown split into tutorials, how-to guides, reference and explanation, and the reference is generated or tested against the code. | review | Diátaxis | 2026-11-11 |
 | `docs-site` | standard | package, cli | When outside users need search or versioned docs, `docs/` builds a search-indexed site from the same Markdown. | review | project-templates | 2026-11-11 |
