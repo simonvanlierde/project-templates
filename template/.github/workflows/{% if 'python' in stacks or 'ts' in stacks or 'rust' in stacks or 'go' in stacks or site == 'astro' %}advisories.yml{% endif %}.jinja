@@ -1,7 +1,7 @@
 name: advisories
 
-# The stack workflows audit dependencies on push and pull request, and zizmor audits
-# workflows. A new advisory can land against a lockfile or action with no commit here, so
+# The stack workflows{% if site == 'astro' %} and site.yml{% endif %} audit dependencies on push and pull request, and zizmor
+# audits workflows. A new advisory can land against a lockfile or action with no commit here, so
 # this audits again every Monday. A failed scheduled run opens one issue, or comments on the
 # open one.
 on:

@@ -501,6 +501,8 @@ site_on_workers:
 
 # The practice ladder in levels.toml (docs/levels.md). The OpenSSF Best Practices
 # badge is for public, open-source projects, so a private or unlicensed repo is off it.
+# Answers files from before 0.15.0 store openssf_badge instead; copier still passes it
+# in, so an update picks the level that keeps that answer's documents.
 level:
   type: str
   when: "{{ public and license != 'none' }}"
@@ -510,7 +512,9 @@ level:
     Minimal (a public repo with few users; no badge documents): minimal
     Standard (OpenSSF passing; CONTRIBUTING.md gains a test policy and the coding standards): standard
     Community (outside contributors, OpenSSF silver; adds GOVERNANCE.md, docs/roadmap.md and docs/assurance-case.md to fill in): community
-  default: "{{ 'standard' if public and license != 'none' else 'minimal' }}"
+  default: >-
+    {% set badge = {'none': 'minimal', 'passing': 'standard', 'silver': 'community'} -%}
+    {{ badge.get(openssf_badge | default(''), 'standard') if public and license != 'none' else 'minimal' }}
 
 # Computed, never asked: the community level adds the governance documents and the DCO check.
 silver:

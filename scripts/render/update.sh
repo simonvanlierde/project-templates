@@ -43,18 +43,27 @@ for n in copier apply push; do
   f=$(grep -l "^      - name: $name" "$cuh"/step*)
   awk '/^        run: \|-$/{f=1;next} f&&NF&&!/^          /{exit} f{sub(/^          /,"");print}' "$f" >"$cuh/$n.sh"
 done
+# The fake gh keeps only the --json fields a list asks for and applies --jq, as gh does,
+# so a filter on a field the call does not request finds nothing. gh prints null as an empty line.
 cat >"$cuh/gh" <<'FAKE'
 #!/usr/bin/env bash
 echo "$*" >>"$FAKE_LOG"
 case "$1 $2" in
-  "issue list") echo "${FAKE_ISSUE:-}" ;;
+  "issue list") rows=${FAKE_ISSUES:-[]} ;;
   "pr list")
     case " $* " in
-      *" --state closed "*) printf '%s\n' "${FAKE_CLOSED_PRS:-[]}" ;;
-      *) echo "${FAKE_PR:-}" ;;
+      *" --state closed "*) rows=${FAKE_CLOSED_PRS:-[]} ;;
+      *) rows=${FAKE_OPEN_PRS:-[]} ;;
     esac
     ;;
+  *) exit 0 ;;
 esac
+fields='' filter=.
+while [ $# -gt 0 ]; do
+  case $1 in --json) fields=$2 ;; --jq) filter=$2 ;; esac
+  shift
+done
+printf '%s\n' "$rows" | jq -c --arg f "$fields" 'map(with_entries(select(.key as $k | $f | split(",") | index($k))))' | jq -r "$filter" | sed "s/^null$//"
 FAKE
 cat >"$cuh/uvx" <<'FAKE'
 #!/usr/bin/env bash
@@ -96,7 +105,7 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     (
       cd "$p"
       # shellcheck disable=SC2030,SC2031 # each fake run sets its own environment
-      export PATH="$cuh:$PATH" FAKE_LOG="$p.log" FAKE_PR="${pr#-}" FAKE_ISSUE="${issue#-}" \
+      export PATH="$cuh:$PATH" FAKE_LOG="$p.log" \
         FAKE_FILE="${file:-.github/workflows/ci.yml}" \
         GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION="$copier_pin" \
         RUNNER_TEMP="$p-runner"
@@ -105,15 +114,21 @@ chmod +x "$cuh/gh" "$cuh/uvx"
       FAKE_TEXT=''
       if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
       export FAKE_TEXT
-      FAKE_CLOSED_PRS='[]'
+      FAKE_OPEN_PRS='[]' FAKE_ISSUES='[]' FAKE_CLOSED_PRS='[]'
+      if [ "$pr" != - ]; then FAKE_OPEN_PRS=$(printf '[{"number":%s,"isCrossRepository":false}]' "$pr"); fi
+      if [ "$issue" != - ]; then FAKE_ISSUES=$(printf '[{"number":%s}]' "$issue"); fi
       # shellcheck disable=SC2089 # JSON data, never evaluated as shell code.
       case $name in
-      declined*) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.10.0","mergedAt":null}]' ;;
-      older-declined) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.9.0","mergedAt":null}]' ;;
-      merged) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.10.0","mergedAt":"2026-11-11T12:00:00Z"}]' ;;
+      declined*) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.10.0","mergedAt":null,"isCrossRepository":false}]' ;;
+      older-declined) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.9.0","mergedAt":null,"isCrossRepository":false}]' ;;
+      merged) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.10.0","mergedAt":"2026-11-11T12:00:00Z","isCrossRepository":false}]' ;;
+      # A fork can open a PR from its own chore/copier-update branch: gh lists it by
+      # branch name too, but closing it declines nothing, and it is never edited or closed.
+      fork-declined) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.10.0","mergedAt":null,"isCrossRepository":true}]' ;;
+      fork-open*) FAKE_OPEN_PRS='[{"number":9,"isCrossRepository":true}]' ;;
       esac
       # shellcheck disable=SC2090 # The fake gh prints this JSON verbatim.
-      export FAKE_CLOSED_PRS
+      export FAKE_OPEN_PRS FAKE_ISSUES FAKE_CLOSED_PRS
       : >"$p.gho"
       # The copier step gets neither token variable.
       env -u GH_TOKEN -u HAS_TOKEN GITHUB_OUTPUT="$p.gho" bash --noprofile --norc -eo pipefail "$cuh/copier.sh" >"$p.out" 2>&1 || {
@@ -148,6 +163,9 @@ declined-no-token false - -
 declined-plain false - - README.md
 older-declined true - -
 merged true - -
+fork-declined true - -
+fork-open true - -
+fork-open-no-token false - -
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
@@ -163,7 +181,8 @@ CASES
   grep -qx -- '- `README.md`' both-runner/copier-update/body.md
   (lacks -q 'merge conflicts' layer-runner/copier-update/body.md)
   # No token and a workflow change: one issue, the older PR closed, no push.
-  grep -qxF 'issue list --state all --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
+  # Only the issue this workflow opened counts: it runs with GITHUB_TOKEN there.
+  grep -qxF 'issue list --state all --author app/github-actions --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
   grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
   grep -q '^pr close 7 --delete-branch ' issue.log
   (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml 2>/dev/null)
@@ -179,7 +198,7 @@ CASES
   # gh becomes git's credential helper before the push.
   for r in push edit plain; do grep -qx 'auth setup-git' "$r.log"; done
   grep -q '^pr create --head chore/copier-update --base main ' plain.log
-  grep -q '^pr edit chore/copier-update ' edit.log
+  grep -q '^pr edit 7 ' edit.log
   (lacks -q '^pr create' edit.log)
   # Declining a tag suppresses both pushes and manual-update issues for that tag.
   for r in declined declined-no-token declined-plain; do
@@ -187,9 +206,12 @@ CASES
     (! git -C "$r.git" rev-parse --verify refs/heads/chore/copier-update 2>/dev/null)
   done
   # An older declined tag or a merged PR does not suppress a newer update.
-  for r in older-declined merged; do
+  for r in older-declined merged fork-declined fork-open; do
     grep -q '^pr create --head chore/copier-update --base main ' "$r.log"
   done
+  (lacks -q '^pr edit\|^pr close' fork-open.log)
+  grep -q '^issue create' fork-open-no-token.log
+  (lacks -q '^pr close' fork-open-no-token.log)
   # Patch data must never replace Git configuration, and artifact symlinks are refused.
   git clone -q "$cuh/tpl" "$cuh/reject-checkout"
   mkdir -p "$cuh/reject/copier-update"
@@ -321,7 +343,8 @@ test -z "$unpinned" || {
 }
 
 # v0.14.0 optional answers survive the move to extras, including explicit false
-# values at standard, and the old `kind` answer survives its rename to python_kind.
+# values at standard, the old `kind` answer survives its rename to python_kind, and
+# the old openssf_badge answer becomes level.
 # An untagged scratch history keeps updates local.
 # shellcheck disable=SC2030,SC2031 # each test subshell sets its own environment
 (
@@ -352,6 +375,15 @@ test -z "$unpinned" || {
     git -C "$out/extras-$selection" add .
     git -C "$out/extras-$selection" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org commit -qm old
   done
+  # The old openssf_badge answer becomes level: silver keeps its governance documents.
+  for badge in silver none; do
+    "${copier[@]}" --vcs-ref=HEAD --quiet --data project_name=level-check \
+      --data "openssf_badge=$badge" "$extras_tpl" "$out/level-$badge"
+    if [ "$badge" = silver ]; then echo "Edited by the project." >>"$out/level-$badge/GOVERNANCE.md"; fi
+    git -C "$out/level-$badge" -c core.hooksPath=/dev/null init -q
+    git -C "$out/level-$badge" add .
+    git -C "$out/level-$badge" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org commit -qm old
+  done
   cp "$repo/copier.yml" "$extras_tpl/copier.yml"
   cp -R "$repo/includes/." "$extras_tpl/includes/"
   cp -R "$repo/template/." "$extras_tpl/template/"
@@ -359,7 +391,7 @@ test -z "$unpinned" || {
   "${git_extras[@]}" commit -qm extras
   # shellcheck disable=SC2329 # bg runs it.
   update_in() { cd "$1" && uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --vcs-ref=HEAD --defaults --quiet; }
-  for selection in all some none; do bg update_in "$out/extras-$selection"; done
+  for selection in extras-all extras-some extras-none level-silver level-none; do bg update_in "$out/$selection"; done
   bg_wait
   uv run --no-project --with pyyaml python - "$out" <<'PYTEST'
 from pathlib import Path
@@ -385,6 +417,11 @@ for selection, expected in [('all', features | {'property', 'mutation'}),
     assert ('windows-latest' in workflow) == ('python_windows' in expected), selection
     assert not list(project.rglob('*.rej')), selection
 PYTEST
+  grep -qx 'level: community' "$out/level-silver/.copier-answers.yml"
+  grep -qx 'level: minimal' "$out/level-none/.copier-answers.yml"
+  for f in GOVERNANCE.md docs/roadmap.md docs/assurance-case.md; do test -f "$out/level-silver/$f"; done
+  grep -qx 'Edited by the project.' "$out/level-silver/GOVERNANCE.md"
+  (lacks openssf_badge "$out/level-silver/.copier-answers.yml")
   # A later edit replaces the full selection rather than reviving legacy answers.
   git -C "$out/extras-all" add .
   git -C "$out/extras-all" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org commit -qm migrated

@@ -46,6 +46,7 @@ try {
       for (const [value, expected] of [["python", "Python library"], ["ts", "TypeScript library"], ["rust", "Rust library"], ["go", "Go library"]]) {
         await language.selectOption(value);
         await expect(title).toHaveText(expected);
+        await expect(page.locator("[data-chooser-status]")).toHaveText(`Recommendation: ${expected}`);
       }
       await page.getByRole("radio", { name: "A tool or service" }).check();
       await expect(result).toBeHidden();

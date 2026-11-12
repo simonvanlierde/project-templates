@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{#- The template's `template/{% if docs_site %}docs-overrides{% endif %}/main.html` is the reference; this copy is a subset for this site. #}
+
 {#- Link previews read these; the theme writes the plain description tag. A page's own
     `description:` front matter wins over the site's. #}
 {% block extrahead %}

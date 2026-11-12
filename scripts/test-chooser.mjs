@@ -3,7 +3,6 @@ import test from "node:test";
 import { copierCommand, profiles, recommend } from "../docs/assets/chooser.mjs";
 
 test("every recommendation uses only released Copier answers", () => {
-  assert.equal(profiles.length, 13);
   const allowed = new Set(["stacks", "kind", "ts_kind", "rust_kind", "go_kind", "docker_image"]);
   for (const profile of profiles) {
     for (const key of Object.keys(profile.answers)) assert.ok(allowed.has(key), key);

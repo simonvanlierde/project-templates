@@ -131,6 +131,15 @@ if licenses_pass agl GPL-2.0-only; then
   echo "checkLicenses.mjs lets GPL-2.0-only into an AGPL project" >&2
   exit 1
 fi
+# A GPL project takes the GPL but not the AGPL, whose network clause its license lacks.
+licenses_pass gpl GPL-3.0-only || {
+  echo "checkLicenses.mjs refuses GPL-3.0-only in a GPL project" >&2
+  exit 1
+}
+if licenses_pass gpl AGPL-3.0-only; then
+  echo "checkLicenses.mjs lets AGPL-3.0-only into a GPL project" >&2
+  exit 1
+fi
 recipe_has a/just/rust.just rs-check '    cargo deny list'
 # webpki-roots (via reqwest) is CDLA-Permissive-2.0, target-lexicon Apache-2.0 WITH
 # LLVM-exception; cargo-deny wants a WITH expression listed whole.

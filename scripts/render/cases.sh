@@ -521,6 +521,9 @@ done
 # agl: every stack under the AGPL, the only render whose license checks take the GPL family.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=agl-me --data 'stacks=[python,ts,rust,go]' \
   --data license=AGPL-3.0-or-later . "$out/agl" >/dev/null
+# gpl: a TypeScript stack under the GPL, whose check refuses the AGPL (agl accepts it).
+"${copier[@]}" --vcs-ref=HEAD --data project_name=gpl-me --data 'stacks=[ts]' \
+  --data license=GPL-3.0-or-later . "$out/gpl" >/dev/null
 # j: a private web app, so its legal pages must not link a repo visitors can't open.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=browser --data public=false . "$out/j"
