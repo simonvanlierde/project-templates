@@ -399,3 +399,8 @@ PYTEST
   test ! -e "$out/extras-all/.github/workflows/cold-install.yml"
   test ! -e "$out/extras-all/zensical.toml"
 )
+
+# Where rulesets fail for the plan, repo-settings also says the update App's key is readable
+# from any branch. Renovate projects have no App key.
+grep -qF 'cannot limit branches either' "$out/a/justfile"
+(lacks -F 'cannot limit branches either' "$out/d/justfile")

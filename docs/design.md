@@ -64,7 +64,7 @@ Defended threats:
 - Crafted Copier answers designed to break out of templated files.
 - Accidental secret commits.
 
-Out of scope: maintainer account compromise, deliberate weakening of workflows by maintainers, and infrastructure compromise of GitHub itself.
+Out of scope: maintainer account compromise, deliberate weakening of workflows by maintainers, and a compromise of the platforms themselves: GitHub, Cloudflare, and the PyPI, npm and GHCR registries.
 
 ### Trust boundaries
 
@@ -106,7 +106,7 @@ Reviewed 2026-11-12 for release 0.15.0:
 | Copier compromises update workflow | Unauthorized commit pushed to repository | Copier runs read-only; patch applied in separate push job without hook execution |
 | Compromised package or action release | Malicious code in CI or runtime | Pinned action SHAs, committed lockfiles, and 7-day update cooldown |
 | Crafted answer escapes template syntax | Malformed or insecure project structure | Validators in `copier.yml` validate types, formats, and escape sequences |
-| Branch code reads the Cloudflare token in a `preview` job | Anyone who can push a branch (people, agents, the update token) can replace or delete the production Worker, or copy the token until it is rotated | Fork and bot pull requests get no token. Accepted while the Worker serves only static files: the harm is a replaced site, as with a bad dependency merged to `main`. Give previews their own Cloudflare account before a Worker gets bindings (KV, D1, secrets), since those reach every preview |
-| Update App key read from another branch | Anyone who can push a branch can mint a token with Contents, Pull requests and Workflows write | The `copier-update` environment is limited to `main`. On a private repo on GitHub Free there are no environment branch policies, so the key is readable from any branch: use one App per repo there, or the `GITHUB_TOKEN` path ([The update App](updates.md#the-update-app)) |
+| Branch code reads the Cloudflare token in a `preview` job | Anyone who can push a branch to a pull request a person opened can replace or delete the production Worker, or copy the token until it is rotated | Fork pull requests, pull requests a bot opened (Renovate, Dependabot, the update App) and bot pushes get no token, nor does the Copier update branch. Accepted while the Worker serves only static files: the harm is a replaced site, as with a bad dependency merged to `main`. Give previews their own Cloudflare account before a Worker gets bindings (KV, D1, secrets), since those reach every preview |
+| Update App key read from another branch | Anyone who can push a branch can mint a token with Contents, Pull requests and Workflows write | The `copier-update` environment is limited to `main`. On a private repo on GitHub Free there are no environment branch policies, so the key is readable from any branch: use one App per repo there, or the `GITHUB_TOKEN` path ([The update App](updates.md#the-update-app)). `just repo-settings` says so when the plan refuses its rulesets |
 | Release tag signed by the wrong person | A package published from a tag no maintainer signed | `verify-tag.sh` checks the SSH signature against `allowed_signers` on `main`. It holds only with the `v*` tag ruleset, since a tag runs its own commit's workflow. Template updates follow the newest `v*` tag whether or not `release.yml` accepted it |
 | Accidental secret commit | Leaked credentials | betterleaks hook blocks local commits; on public repos, GitHub secret scanning with push protection covers remotes |

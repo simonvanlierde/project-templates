@@ -22,7 +22,7 @@ Upgrade steps:
 
 - Docs sites keep mobile navigation reachable by keyboard and selected links readable. New sites use system fonts and a plain repository link without remote statistics; existing sites can adopt the [theme settings](docs/usage.md#documentation-site) after updating.
 - Closing a Copier update PR unmerged skips that tag on later weekly runs; a newer tag can still open a PR.
-- Worker previews skip Copier update branches, including updates opened by a user account. Web app deploys keep hidden build files such as `.well-known/security.txt`.
+- Worker previews skip Copier update branches, including updates opened by a user account. They also skip runs that a bot started by pushing to a pull request a person opened, so bot-pushed code never sees the Cloudflare token. Web app deploys keep hidden build files such as `.well-known/security.txt`.
 - Workers explicitly disable observability. With a custom domain, production adds `noindex` only to its duplicate workers.dev origin.
 - Generated hooks check shell scripts, and Dependabot projects explain how template updates refresh their prek pin.
 
@@ -37,6 +37,7 @@ Upgrade steps:
 
 ### Changed
 
+- When `just repo-settings` stops because the plan has no rulesets, a Dependabot project also hears that the update App's key would be readable from any branch, with the link to set it up safely.
 - The usage guide is split by job into [setup](docs/setup.md), [hosting](docs/hosting.md), [updates](docs/updates.md) and [levels](docs/levels.md) pages. Links in a new render's README, justfile, CONTRIBUTING and workflows point at them; the old `docs/usage.md` anchors still lead there.
 
 ## [0.14.0] - 2026-11-11

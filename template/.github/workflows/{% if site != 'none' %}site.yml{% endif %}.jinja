@@ -192,8 +192,9 @@ jobs:
   # without the secret.
   preview:
     name: "site: preview"
-    # Bot pull requests (Renovate, Dependabot) get no preview, so their code never sees the token.
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]')
+    # Bot pull requests (Renovate, Dependabot, the update App) and bot pushes to a person's
+    # pull request get no preview, so their code never sees the token.
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]') && !endsWith(github.actor, '[bot]')
     # Shares the site job of preview-retire.yml, so a retire waits for a deploy in flight.
     concurrency:
       group: preview-site-{% raw %}${{ github.event.pull_request.number }}{% endraw %}
