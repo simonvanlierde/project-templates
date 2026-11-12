@@ -44,21 +44,25 @@ done
 # Every Python render passes Scientific Python's repo-review, bar the checks its
 # pyproject.toml ignores with a reason. Those depend on the answers: the bot, the
 # license and a nested package each change the list.
+repo_review() {
+  rm -rf "rr-$1"
+  cp -R "$1" "rr-$1"
+  git -C "rr-$1" init -q
+  git -C "rr-$1" add -A
+  (cd "rr-$1" && "${prek[@]}" sp-repo-review >"../rr-$1.log" 2>&1) || {
+    cat "rr-$1.log" >&2
+    return 1
+  }
+}
 rr_runs=0
 for cfg in */.pre-commit-config.yaml; do
   r=${cfg%%/*}
   case $r in *-hooks | rr-*) continue ;; esac
   grep -q 'id: sp-repo-review$' "$cfg" || continue
-  rm -rf "rr-$r"
-  cp -R "$r" "rr-$r"
-  git -C "rr-$r" init -q
-  git -C "rr-$r" add -A
-  (cd "rr-$r" && "${prek[@]}" sp-repo-review >"../rr-$r.log" 2>&1) || {
-    cat "rr-$r.log" >&2
-    exit 1
-  }
+  bg repo_review "$r"
   rr_runs=$((rr_runs + 1))
 done
+bg_wait
 [ "$rr_runs" -ge 10 ]
 # The hook is Python-only, and a nested package points it at its own directory.
 (lacks -q 'sp-repo-review' h/.pre-commit-config.yaml compose/.pre-commit-config.yaml)

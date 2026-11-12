@@ -211,7 +211,7 @@ grep -qF 'close it and reopen it to run them' "$out/k/.github/workflows/copier-u
 
 # e: released scaffolds render from a tag, the throwaway one check-render.sh puts on
 # HEAD. Also the only AGPL-3.0-or-later render.
-"${copier[@]}" --vcs-ref=check-render-tag \
+"${copier[@]}" --vcs-ref="$render_tag" \
   --data project_name=tag-me --data 'stacks=[python]' --data license=AGPL-3.0-or-later . "$out/e"
 
 # compose: a deploy repo that only composes upstream images. `stacks=[docker]` without
@@ -426,11 +426,12 @@ fi
 grep -q 'Give the GitHub user or org' "$out/f.log"
 
 # Each answer below must be refused, with the validator's own message. A refusal for
-# another reason, or a render that goes through, fails the check.
-refuses() {
+# another reason, or a render that goes through, fails the check. They run in parallel.
+refuses() { bg refused "$@"; }
+refused() {
   local needle=$1 log
   shift
-  if log=$("${copier[@]}" --vcs-ref=HEAD --data project_name=refuse-me "$@" . "$out/refused" 2>&1); then
+  if log=$("${copier[@]}" --vcs-ref=HEAD --data project_name=refuse-me "$@" . "$out/refused-$BASHPID" 2>&1); then
     echo "rendered with $*: its validator is gone" >&2
     exit 1
   fi
@@ -506,6 +507,7 @@ refuses 'needs its own contact address' --data 'stacks=[ts]' --data ts_kind=web-
 refuses 'Give a port' --data 'stacks=[python,docker]' --data app_port=0
 refuses 'shipped as the python image' --data 'stacks=[python,docker]' --data python_kind=web-service \
   --data docker_image=false
+bg_wait
 # A binary never uses the Go package name, so a digit-leading project name is fine.
 # Its gitignored build output drops the module path's /v2.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=1tool --data 'stacks=[go]' \
@@ -573,8 +575,9 @@ while IFS= read -r f; do
 done <"$probe/files.txt"
 for answers in "$out"/*/.copier-answers.yml; do
   case_dir=${answers%/.copier-answers.yml}
-  "${copier[@]}" --quiet --data-file "$answers" "$probe" "$probe/out/${case_dir##*/}" >/dev/null
+  bg "${copier[@]}" --quiet --data-file "$answers" "$probe" "$probe/out/${case_dir##*/}" >/dev/null
 done
+bg_wait
 missing=$(comm -23 <(seq "$n" | sort) <(find "$probe/out" -type f -exec cat {} + | sort -u))
 if [ -n "$missing" ]; then
   echo "no render produces these template files; add a case or a --data that does:" >&2
