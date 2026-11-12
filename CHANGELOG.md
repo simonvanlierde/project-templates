@@ -20,6 +20,7 @@ Upgrade steps:
 
 ### Fixed
 
+- Docs sites use Zensical 0.0.74, which escapes quotes and markup in site and page descriptions before writing the HTML meta tag.
 - On a narrow screen, Tab no longer reaches the links of an open section in the closed navigation drawer of a docs site.
 - A docs site with breadcrumbs labels them "Breadcrumb", so screen readers no longer hear two landmarks called "Navigation".
 - Docs-site code blocks drop the empty line-number links screen readers announced without a name (`anchor_linenums = false` in `zensical.toml`; add it by hand after updating), and a table wider than the page becomes a focusable region, so it scrolls from the keyboard.
@@ -35,6 +36,7 @@ Upgrade steps:
 
 ### Added
 
+- A licensed Astro site checks production dependency licenses during `just site` and its CI build, using the same checker and allow-list as TypeScript projects. Astro itself is a development dependency because it builds the static files.
 - An Astro site's `site/pnpm-lock.yaml` gets its own `pnpm audit` job in the weekly `advisories.yml`, also in a repo whose stacks have no audit of their own.
 - `just site-serve` serves the site locally: Astro's dev server at the address that includes the Pages base, or a plain site over HTTP, since a browser refuses its modules from a file.
 - Web-service tests exercise an unavailable OTLP HTTP collector, check that requests still succeed and bound shutdown after SIGTERM.

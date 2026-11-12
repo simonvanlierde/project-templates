@@ -78,6 +78,9 @@ site:
 {%- endif %}
 {%- elif site == 'astro' %}
     pnpm -C site install --frozen-lockfile
+{%- if license != 'none' %}
+    pnpm -C site run licenses
+{%- endif %}
     ASTRO_TELEMETRY_DISABLED=1 pnpm -C site run build
 {%- endif %}
 {%- endif %}

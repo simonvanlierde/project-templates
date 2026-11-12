@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 
-{#- Link previews read these; the theme writes the plain description tag. A page's own
+{#- Pages cannot set response headers. These hashes allow the pinned theme's four bootstraps;
+    scripts/check-docs.mjs catches changes to them on dependency upgrades. #}
+{% block site_meta %}
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-qCtEwDc0wB8Z5fjFeQMjC8FZC2QsLYxm3dr5U8U/rBE=' 'sha256-5EHb3eWgUBuZUnu0Q9hodd97GgLtFd937Ze0yCNOS3A=' 'sha256-DrEMJJ29sL7vIloQzly+VUGMxKcBTMII+OfW7Y8AkG4=' 'sha256-/8wPdzX9q0NNJXyA5lzsLojXFpkeaXVxhbfkUOQaWy8='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+  {{ super() }}
+{% endblock %}
+
+{#- Link previews read these; the theme escapes the plain description tag. A page's own
     `description:` front matter wins over the site's. #}
 {% block extrahead %}
   {%- if page is defined and page.canonical_url is defined and page.canonical_url %}

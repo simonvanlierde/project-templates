@@ -406,9 +406,10 @@ jobs:
           cp "$GITHUB_WORKSPACE/scripts/check-docs.mjs" .
           # A decision page opens a nested section in the drawer, which the theme makes visible.
           # The tooling page has code blocks and a table wider than a phone.
-          node check-docs.mjs http://127.0.0.1:8102/project-templates/ \
+          node check-docs.mjs --require-csp http://127.0.0.1:8102/project-templates/ \
             http://127.0.0.1:8102/project-templates/decisions/0006-zensical-builds-the-docs-site/ \
-            http://127.0.0.1:8102/project-templates/tooling/ http://127.0.0.1:8102/mutate-me/
+            http://127.0.0.1:8102/project-templates/tooling/
+          node check-docs.mjs http://127.0.0.1:8102/mutate-me/
           cp "$GITHUB_WORKSPACE/scripts/check-chooser-browser.mjs" .
           node check-chooser-browser.mjs http://127.0.0.1:8102/project-templates/
 

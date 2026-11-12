@@ -17,9 +17,6 @@ Last reviewed: 2026-11-12
 - Add a release path for Rust: a `publish_to_crates` answer, crates.io trusted publishing,
   binaries that `cargo binstall` can find, and attestations.
   Tracked in [#292](https://github.com/simonvanlierde/project-templates/issues/292).
-- Register one generated project for the OpenSSF Best Practices badge before the README
-  says a fresh render meets it.
-  Tracked in [#293](https://github.com/simonvanlierde/project-templates/issues/293).
 
 ## Not planned
 

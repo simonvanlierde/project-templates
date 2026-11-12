@@ -52,6 +52,8 @@ nav = [
 release = "0.14.0"
 og_image = "assets/og.png?v=6f68f2a2"
 generator = false
+# A fixed storage scope gives the theme bootstrap the same CSP hash at every URL depth.
+scope = "/project-templates/"
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"

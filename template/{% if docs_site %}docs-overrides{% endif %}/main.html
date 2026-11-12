@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{#- Link previews read these; the theme writes the plain description tag. A page's own
+{#- Link previews read these; the theme escapes the plain description tag. A page's own
     `description:` front matter wins over the site's. Zensical has no page.is_homepage, so the
     homepage is the page whose canonical URL is the site URL. Undefined values fail the build. #}
 {% block extrahead %}
