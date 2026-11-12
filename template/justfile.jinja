@@ -338,12 +338,13 @@ repo-settings:
     if [ -f .github/first-release.md ]; then echo "First-release checklist: gh issue create --title 'First release' --body-file .github/first-release.md"; fi
 {%- endif %}
 
-# Set the GitHub About box from your answers: description{% if web_app or site_on_workers %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
+{%- set homepage = site_url if web_app or site_on_workers else (site_address if site != 'none' else ('https://' ~ github_user | lower ~ '.github.io/' ~ slug ~ '/' if docs_site else '')) %}
+# Set the GitHub About box from your answers: description{% if homepage %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
 repo-about:
     gh repo edit
 {%- if project_description %} --description {{ "'" ~ project_description | replace("'", "'\\''") | replace("{{", "{{{{") ~ "'" }}
 {%- endif %}
-{%- if web_app or site_on_workers %} --homepage '{{ site_url }}'
+{%- if homepage %} --homepage '{{ homepage }}'
 {%- endif %}
 {%- for t in [('python' in stacks, 'python'), ('ts' in stacks, 'typescript'), ('rust' in stacks, 'rust'), ('go' in stacks, 'go'), ('docker' in stacks, 'docker')] if t[0] %} --add-topic {{ t[1] }}
 {%- endfor %}

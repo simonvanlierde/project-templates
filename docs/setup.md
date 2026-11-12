@@ -57,7 +57,7 @@ Execute `just repo-settings` once after creating the repository and again whenev
 `just repo-about` syncs repository metadata with `gh repo edit`:
 
 - Updates repository description from `project_description`.
-- Sets homepage URL from `site_url` for web apps.
+- Sets the homepage: `site_url` for a web app or a site on a Worker, else the GitHub Pages address of the site or the documentation site.
 - Adds stack topics (`python`, `typescript`, `rust`, `go`, `docker`). Existing manual topics are preserved.
 
 ## Publishing

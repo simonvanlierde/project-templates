@@ -286,7 +286,7 @@ jq -e '(.rules[] | select(.type == "pull_request").parameters
 (lacks -q code-scanning b/justfile)
 # repo-about: the About box comes from the answers. No description answer leaves the description alone;
 # a quote in it survives the shell and braces survive just; topics only get added.
-for r in a b d cfp x; do
+for r in a b d cfp x m; do
   # shellcheck disable=SC2031 # $fake/gh from the repo-settings test, logging every call
   (cd "$r" && FAKE_LOG="$fake/about-$r" PATH="$fake:$PATH" just repo-about >/dev/null)
 done
@@ -295,6 +295,8 @@ grep -qxF -- "repo edit --description A \"quoted\" {{ one }}, naïve \$USD --add
 grep -qxF -- 'repo edit --homepage https://pipe-me.example-org.workers.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
 grep -qxF -- 'repo edit --homepage https://demo.example.org --add-topic python' "$fake/about-cfp"
 grep -qxF -- 'repo edit --add-topic python' "$fake/about-x"
+# A docs site on GitHub Pages is the homepage when there is no app or Worker site.
+grep -qE -- '^repo edit .*--homepage https://[a-z0-9-]+\.github\.io/[a-z0-9.-]+/ ' "$fake/about-m"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
   r=${answers%%/*}
@@ -408,6 +410,12 @@ missing = [k for k, v in questions.items() if not k.startswith("_") and isinstan
            and v.get("when") is not False and f"`{k}`" not in doc]
 sys.exit(f"questions missing from docs/usage.md: {missing}" if missing else 0)' \
   "$repo/copier.yml" "$repo/docs/usage.md"
+# The docs site's announcement bar names the newest release in CHANGELOG.md.
+newest=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' "$repo/CHANGELOG.md" | head -n 1)
+grep -qx "release = \"$newest\"" "$repo/zensical.toml" || {
+  echo "zensical.toml: set release = \"$newest\", the newest CHANGELOG release" >&2
+  exit 1
+}
 # Its jq filter, run on a commits API fixture, lists the unsigned commit and the sign-off
 # without an email, and skips the merge. Trailing whitespace and CRLF still count as signed.
 dco_filter=$(uv run --no-project --with pyyaml python -c '
