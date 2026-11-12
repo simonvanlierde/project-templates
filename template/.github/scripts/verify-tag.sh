@@ -4,11 +4,28 @@
 # started, the tag must also still mark GITHUB_SHA, the commit the workflow builds. REF is the default branch, never the tag:
 # the tagged commit's copy of the list is whatever the tag's pusher wrote. GitHub's
 # "Verified" mark is no substitute, since it accepts a key registered to any account.
-# Usage: verify-tag.sh TAG REF
+# --fetch first fetches the tag and REF's branch from origin, for a workflow: checkout
+# fetches the tagged commit, not the annotated tag object that holds the signature.
+# Usage: verify-tag.sh [--fetch] TAG origin/BRANCH
 set -euo pipefail
 
-tag=${1:?usage: verify-tag.sh TAG REF}
-ref=${2:?usage: verify-tag.sh TAG REF}
+fetch=
+if [ "${1:-}" = --fetch ]; then
+  fetch=1
+  shift
+fi
+tag=${1:?usage: verify-tag.sh [--fetch] TAG origin/BRANCH}
+ref=${2:?usage: verify-tag.sh [--fetch] TAG origin/BRANCH}
+
+if [ -n "$fetch" ]; then
+  [ "${ref#origin/}" != "$ref" ] || {
+    echo "--fetch needs origin/BRANCH, not $ref" >&2
+    exit 2
+  }
+  # gh lends its token (GH_TOKEN) to this fetch alone, which a private repo needs.
+  git -c credential.helper= -c 'credential.helper=!gh auth git-credential' fetch --quiet --no-tags --depth=1 --force origin \
+    "refs/tags/$tag:refs/tags/$tag" "refs/heads/${ref#origin/}:refs/remotes/$ref"
+fi
 
 if [ "$(git cat-file -t "refs/tags/$tag")" != tag ]; then
   echo "$tag is a lightweight tag; make it with .github/scripts/tag-release.sh" >&2

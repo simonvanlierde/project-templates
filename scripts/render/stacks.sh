@@ -106,8 +106,10 @@ test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 1
 n=0
 for wf in */.github/workflows/{release,python-release,ts-release}.yml c/.github/workflows/docker.yml; do
   [ -e "$wf" ] && [ "${wf%%/*}" != e ] || continue
+  # One call line: the script fetches the tag object itself.
   # shellcheck disable=SC2016 # literal workflow text
-  grep -qF '/.github/scripts/verify-tag.sh" "$TAG" "origin/$DEFAULT_BRANCH"' "$wf"
+  test "$(grep -cF 'run: bash "$GITHUB_WORKSPACE/.github/scripts/verify-tag.sh" --fetch "$TAG" "origin/$DEFAULT_BRANCH"' "$wf")" = 1
+  (lacks -qF 'gh auth git-credential' "$wf")
   (lacks -qF '.verification.verified' "$wf")
   test -x "${wf%%/*}/.github/scripts/verify-tag.sh"
   test -f "${wf%%/*}/.github/allowed_signers"
@@ -159,6 +161,8 @@ grep -qx '      - run: uv run pytest' windows-job.yml
 jq -e '.rules[0].parameters.required_status_checks | any(.context == "python: tests (windows)")' x/.github/rulesets/main-checks.json >/dev/null
 # Nested: the git config step runs before checkout creates the folder.
 sed -n '/^  windows:/,/^  [a-z]/p' d/.github/workflows/python.yml | grep -A2 'core.autocrlf false' | grep -qx '        working-directory: \.'
+# A nested stack's jobs are path-filtered, so none is required: a skipped required check blocks the merge.
+(lacks -q 'python: ' d/.github/rulesets/main-checks.json)
 (lacks -q 'windows' e/.github/workflows/python.yml a/.github/workflows/python.yml)
 (lacks -q 'windows' e/.github/rulesets/main-checks.json)
 # Not in py-check: a deliberate break would keep local checks red until the next tag.

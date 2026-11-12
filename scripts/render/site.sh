@@ -134,6 +134,9 @@ done
 # A real strict build: the API reference from the docstrings, and the badge pages.
 (cd m && just docs >/dev/null 2>&1)
 grep -qF 'Add two numbers' m/_docs/reference/index.html
+# Code blocks carry no empty line-anchor links, which axe flags as links without a name.
+grep -qF '<code>' m/_docs/reference/index.html
+(lacks -q '__codelineno' m/_docs/reference/index.html)
 (cd h && just docs >/dev/null 2>&1)
 test -f h/_docs/assurance-case/index.html
 # k's flat package: mkdocstrings finds the module at the root, through paths = ["."].
@@ -177,13 +180,33 @@ test "$(grep -c '^          - {slug: ' s/.github/workflows/preview-retire.yml)" 
 grep -qxF "          version: \"$pnpm_pin\"" x/.github/workflows/site.yml
 grep -qx '          package_json_file: web/package.json' d/.github/workflows/site.yml
 # The starter page builds as it is.
-(cd x && just site >/dev/null)
+(cd x && just site) >site-build.log 2>&1 || {
+  cat site-build.log >&2
+  exit 1
+}
 test -f x/_site/index.html
 test -f x/_site/main.mjs
-# deploy-worker.sh with the site's wrangler command and config.
+# deploy-worker.sh with the site's wrangler command and config, as the workflow sets it.
+site_wrangler=$(sed -n 's/^ *WRANGLER: //p' x/.github/workflows/site.yml | sort -u)
+test "$(wc -l <<<"$site_wrangler")" = 1
+# The preview job's assembly step runs on a fake Pages artifact: the build under /<repo>/,
+# a redirect to it and the noindex header.
+assemble=$out/fake-preview-assemble
+rm -rf "$assemble" && mkdir -p "$assemble/pages" "$assemble/art"
+echo '<h1>hi</h1>' >"$assemble/art/index.html"
+tar -cf "$assemble/pages/artifact.tar" -C "$assemble/art" .
+uv run --no-project --with pyyaml python -I -c '
+import sys, yaml
+steps = yaml.safe_load(open(sys.argv[1]))["jobs"]["preview"]["steps"]
+(run,) = [s["run"] for s in steps if "artifact.tar" in s.get("run", "")]
+print(run)' x/.github/workflows/site.yml >"$assemble/step.sh"
+(cd "$assemble" && RUNNER_TEMP=$assemble bash -e step.sh)
+grep -qx '<h1>hi</h1>' "$assemble/_site/cli-me/index.html"
+grep -qx '/ /cli-me/ 302' "$assemble/_site/_redirects"
+grep -qx '  X-Robots-Tag: noindex' "$assemble/_site/_headers"
 (cd "$dstub/work" && env STUB="$dstub" PATH="$dstub:$PATH" GITHUB_OUTPUT="$dstub/gho" GITHUB_STEP_SUMMARY="$dstub/sum" \
-  WRANGLER="pnpm dlx wrangler@$wrangler_pin" "$deploy_sh" Preview cli-me-site-pr-4 --config wrangler.site.jsonc >"$dstub/out" 2>&1)
-test "$(tail -n 1 "$dstub/calls")" = "pnpm dlx wrangler@$wrangler_pin deploy --name cli-me-site-pr-4 --config wrangler.site.jsonc"
+  WRANGLER="$site_wrangler" "$deploy_sh" Preview cli-me-site-pr-4 --config wrangler.site.jsonc >"$dstub/out" 2>&1)
+test "$(tail -n 1 "$dstub/calls")" = "$site_wrangler deploy --name cli-me-site-pr-4 --config wrangler.site.jsonc"
 # A nested package's knip never sees the page's files.
 jq -e '.knip | has("ignoreFiles") | not' d/web/package.json >/dev/null
 # The preview serves the build under /<repo>/, as Pages does.
@@ -252,13 +275,47 @@ done
 (lacks -q 'project edit' y/site/package.json)
 # It builds: every page, Markdown included, inside the layout.
 astro_start=$SECONDS
-(cd y && just site-sync >/dev/null 2>&1 && just site >/dev/null 2>&1)
+(cd y && just site-sync && just site) >astro-build.log 2>&1 || {
+  cat astro-build.log >&2
+  exit 1
+}
 echo "check-render: the Astro build took $((SECONDS - astro_start)) s" >&2
 test -f y/site/dist/index.html
 test -f y/site/dist/about/index.html
 grep -qF '<h1>About</h1>' y/site/dist/about/index.html
 grep -qF 'href="/site-me/about/"' y/site/dist/index.html
 test -f y/site/pnpm-lock.yaml
+# just site-serve serves each starter at the address its comment names. The port must be
+# free first: astro dev leaves the process group, so the cleanup kills what holds the port.
+site_serve() { # render, URL, text the page holds
+  local log=$out/$1-site-serve.log pid rc=0
+  grep -qF "at $2" "$1/justfile"
+  (! curl -s -o /dev/null http://localhost:4321/) || {
+    echo "check-render: port 4321 is in use; stop what serves it" >&2
+    return 1
+  }
+  (cd "$1" && exec setsid just site-serve) >"$log" 2>&1 &
+  pid=$!
+  curl -fsS --retry 60 --retry-connrefused --retry-delay 1 --max-time 10 -o "$log.html" "$2" && grep -qF "$3" "$log.html" || rc=$?
+  kill -- "-$pid" 2>/dev/null || true
+  fuser -s -k -n tcp 4321 || true
+  wait "$pid" || true
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    curl -s -o /dev/null http://localhost:4321/ || break
+    sleep 0.5
+  done
+  [ "$rc" -eq 0 ] || {
+    cat "$log" >&2
+    return 1
+  }
+}
+# setsid and `fuser -n` are Linux-only, so macOS runs skip this; CI runs it.
+if command -v setsid >/dev/null && command -v fuser >/dev/null; then
+  site_serve y http://localhost:4321/site-me/ 'href="/site-me/about/"'
+  # astro dev prints the address without the Pages base, so the recipe prints it whole.
+  grep -qxF 'Open http://localhost:4321/site-me/' "$out/y-site-serve.log"
+  site_serve x http://localhost:4321/ '<script type="module" src="main.mjs"></script>'
+fi
 # The deploy job's gate: it deploys only when Pages deploys from Actions, skips with a
 # notice while Pages is off (404), and fails on any other error. Run against a stub gh.
 gate_sh=$out/fake-pages-gate
@@ -442,3 +499,30 @@ for path in root.glob('*/.github/workflows/*.yml'):
             checked.add(path.name)
 assert checked == {'ts.yml', 'site.yml'}, checked
 PYTEST
+# Docs-site link previews: the override, the card recipe, and a real build. m is a docs site
+# alone; the card goes to docs/assets/og.png and its hash into og_image.
+for r in m k h ds; do
+  cmp "$repo/template/{% if docs_site %}docs-overrides{% endif %}/main.html" "$r/docs-overrides/main.html"
+  grep -qx 'og_image = "assets/og.png"' "$r/zensical.toml"
+  grep -qF '<h1>' "$r/docs/og-card.html"
+  # shellcheck disable=SC2016 # a literal "$PWD" in the recipe body
+  grep -qF '"$PWD/docs/assets/og.png"' "$r/justfile"
+  grep -qF 'zensical.toml' "$r/justfile"
+done
+grep -qF 'mutate-me' m/docs/og-card.html
+grep -qF 'example-org.github.io/mutate-me</p>' m/docs/og-card.html
+(lacks -rq 'og_image' a/)
+for t in 'og:title" content="mutate-me"' 'og:image" content="https://example-org.github.io/mutate-me/assets/og.png' 'og:image:alt"' 'twitter:card" content="summary_large_image"'; do
+  grep -qF "$t" m/_docs/index.html
+done
+# With a description set (k), the head carries it and the alt text; without one (m) neither prints None.
+(lacks -q 'content="None"' m/_docs/index.html)
+grep -qF 'og:description" content="Mutates &quot;the&quot; tests &amp; more."' k/_docs/index.html
+grep -qF 'og:image:alt" content="adopt-me: Mutates &quot;the&quot; tests &amp; more."' k/_docs/index.html
+# A site_url without its trailing slash still gives an absolute image URL and the bare home title.
+cp -R m "$out/m-noslash"
+sed -i.bak 's#^site_url = "\(.*\)/"$#site_url = "\1"#' "$out/m-noslash/zensical.toml"
+grep -qx 'site_url = "https://example-org.github.io/mutate-me"' "$out/m-noslash/zensical.toml"
+(cd "$out/m-noslash" && just docs >/dev/null 2>&1)
+grep -qF 'og:image" content="https://example-org.github.io/mutate-me/assets/og.png' "$out/m-noslash/_docs/index.html"
+grep -qF 'og:title" content="mutate-me"' "$out/m-noslash/_docs/index.html"

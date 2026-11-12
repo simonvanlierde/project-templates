@@ -25,6 +25,13 @@ nav = [
     { "Architecture and security" = "design.md" },
     { "Web legal pages" = "web-legal.md" },
   ] },
+  { "Roadmap" = "roadmap.md" },
+  { "Project" = [
+    { "Changelog and upgrade steps" = "https://github.com/simonvanlierde/project-templates/blob/main/CHANGELOG.md" },
+    { "Contributing" = "https://github.com/simonvanlierde/project-templates/blob/main/CONTRIBUTING.md" },
+    { "Security" = "https://github.com/simonvanlierde/project-templates/blob/main/SECURITY.md" },
+    { "Governance" = "https://github.com/simonvanlierde/project-templates/blob/main/GOVERNANCE.md" },
+  ] },
   { "Decisions" = [
     { "Decision index" = "decisions/README.md" },
     "decisions/0001-pr-previews-use-the-production-cloudflare-account.md",
@@ -137,3 +144,7 @@ toggle.name = "Switch to system preference"
 "usage.md#production" = "hosting.md#hosting-on-a-worker"
 "usage.md#workers-hosting" = "hosting.md#hosting-on-a-worker"
 "usage.md#levels" = "levels.md"
+
+# Line anchors are empty links, which screen readers announce without a name.
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = false

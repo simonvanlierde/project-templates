@@ -20,6 +20,9 @@ Upgrade steps:
 
 ### Fixed
 
+- On a narrow screen, Tab no longer reaches the links of an open section in the closed navigation drawer of a docs site.
+- A docs site with breadcrumbs labels them "Breadcrumb", so screen readers no longer hear two landmarks called "Navigation".
+- Docs-site code blocks drop the empty line-number links screen readers announced without a name (`anchor_linenums = false` in `zensical.toml`; add it by hand after updating), and a table wider than the page becomes a focusable region, so it scrolls from the keyboard.
 - Quick-start commands and preset examples select the intended Python project type with released templates.
 - Docs sites that enable code-copy buttons keep their actions from adding duplicate navigation landmarks.
 - Docs sites keep mobile navigation reachable by keyboard and selected links readable. Code names in tables no longer break mid-word, and a wide table shows a shadow on the side it scrolls to. New sites use system fonts and a plain repository link without remote statistics; existing sites can adopt the [theme settings](docs/usage.md#documentation-site) after updating.
@@ -27,18 +30,23 @@ Upgrade steps:
 - Worker previews skip Copier update branches, including updates opened by a user account. They also skip runs that a bot started by pushing to a pull request a person opened, so bot-pushed code never sees the Cloudflare token. Web app deploys keep hidden build files such as `.well-known/security.txt`.
 - Workers explicitly disable observability. With a custom domain, production adds `noindex` only to its duplicate workers.dev origin.
 - Generated hooks check shell scripts, and Dependabot projects explain how template updates refresh their prek pin.
+- The CodSpeed, property and mutation Python jobs check dependencies against OSV's malware advisories, as the test job does.
+- `tests/test_benchmarks.py` belongs to the project once written. An update or a render into an existing repo keeps the project's own benchmarks, also when it turns `codspeed` on. A deleted one comes back, since the benchmarks workflow runs it.
 
 ### Added
 
+- An Astro site's `site/pnpm-lock.yaml` gets its own `pnpm audit` job in the weekly `advisories.yml`, also in a repo whose stacks have no audit of their own.
+- `just site-serve` serves the site locally: Astro's dev server at the address that includes the Pages base, or a plain site over HTTP, since a browser refuses its modules from a file.
 - Web-service tests exercise an unavailable OTLP HTTP collector, check that requests still succeed and bound shutdown after SIGTERM.
 - [Levels](docs/levels.md): the requirements a public repo meets at each level, by the traits that make a requirement apply, with the standard each comes from and the date it starts to count. `levels.toml` holds them, versioned with the template's releases.
 - A license check in each stack's CI job and check recipe, for a project with a license: licensecheck for Python, `pnpm run licenses` (`scripts/checkLicenses.mjs`) for TypeScript, `cargo deny list` beside `cargo deny check` for Rust and go-licenses for Go. Each lists the licenses of the dependencies that ship, not dev tooling, and fails on one the project's license cannot take. TypeScript, Rust and Go share one allow-list that follows the `license` answer: permissive licenses (BlueOak-1.0.0, BSL-1.0, CDLA-Permissive-2.0, PSF-2.0, Python-2.0 and Unlicense among them) and MPL-2.0 for every project, the GPL family for a GPL or AGPL one. Python uses licensecheck's own compatibility table instead, which lets LGPL into a permissive project, refuses Zlib and Unicode-3.0 as unknown, and reads an `AGPL-3.0-*` dependency as the GPL, so a GPL project's check lets it in. `deny.toml` now takes the shared list too, plus `Apache-2.0 WITH LLVM-exception`. If you edited that list, `copier update` may leave a conflict there to resolve.
 - Four requirements in [Levels](docs/levels.md): `ci-tests` and `dependency-licenses` at `standard`, `release-build` and `architecture-review` at `community`.
 - The roadmap skeleton at level `community` asks for each planned theme to link the open issue that tracks it.
-- A web app or a site gets `docs/og-card.html`, a social card poster built from the project name, description and address, `just og-card` to render it to `og.png`, and `og:image`, size, alt and `twitter:card` tags in the page head. Run `just og-card` and commit the PNG, or the tags point at a missing file. `just og-card` also rewrites the `?v=<hash of the PNG>` on the `og:image` URL in the page head, so link previews that cache by image URL pick up a redrawn card; commit the page with the PNG. The card source is a starter file: an update leaves it alone. An update adds the tags to a web app's `index.html`; add them by hand to a site's page, and the card source and recipe if you want them.
+- A web app, a site or a docs site gets `docs/og-card.html`, a social card poster built from the project name, description and address, `just og-card` to render it to `og.png`, and `og:image`, size, alt and `twitter:card` tags in the page head. Run `just og-card` and commit the PNG, or the tags point at a missing file. `just og-card` also rewrites the `?v=<hash of the PNG>` on the `og:image` URL in the page head, so link previews that cache by image URL pick up a redrawn card; commit the page with the PNG. A docs site renders the same image to `docs/assets/og.png`, and `docs-overrides/main.html` writes `og:title` (the site name on the home page), `og:description`, `og:url`, `og:image`, size, alt and `twitter:card` on every page from `site_url`, `site_description` and `og_image` in `zensical.toml`; it does nothing without `og_image`. The card source belongs to the project once written: an update adds it when it is missing and leaves an edited one alone. An update also adds the tags to a web app's `index.html` and `docs-overrides/main.html` to a docs site; add `[project.extra] og_image = "assets/og.png"` to its `zensical.toml`, and the tags to a site's page, by hand.
 
 ### Changed
 
+- The release workflows' tag check is one call, `verify-tag.sh --fetch`, which fetches the tag object and the default branch itself.
 - `just repo-about` also sets the homepage of a project whose site or documentation site is on GitHub Pages, to its github.io address.
 - When `just repo-settings` stops because the plan has no rulesets, a Dependabot project also hears that the update App's key would be readable from any branch, with the link to set it up safely.
 - The usage guide is split by job into [setup](docs/setup.md), [hosting](docs/hosting.md), [updates](docs/updates.md) and [levels](docs/levels.md) pages. Links in a new render's README, justfile, CONTRIBUTING and workflows point at them; the old `docs/usage.md` anchors still lead there.

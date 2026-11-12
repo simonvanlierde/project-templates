@@ -15,7 +15,7 @@ open. [CONTRIBUTING.md](CONTRIBUTING.md) says how to make one, and
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) covers how people treat each other. When the
 maintainer turns a proposal down, he says why in the issue or pull request. [docs/design.md](docs/design.md)
 records the design: who acts on a generated project and what render and update do. The
-planned work is in the [roadmap](ROADMAP.md).
+planned work is in the [roadmap](https://simonvanlierde.com/project-templates/roadmap/).
 
 ## Who has access
 

@@ -6,7 +6,7 @@ The tools each stack uses, their default settings, and how releases are built.
 
 ## Tools per stack
 
-|            | Lint and format                          | Types                       | Tests                                    | Packaging                            |
+| Stack      | Lint and format                          | Types                       | Tests                                    | Packaging                            |
 | ---------- | ---------------------------------------- | --------------------------- | ---------------------------------------- | ------------------------------------ |
 | Python     | `ruff`                                   | `ty`                        | `pytest`                                 | `uv`, locked, `uv_build` backend     |
 | TypeScript | `biome`                                  | `tsc`                       | `vitest`, plus Playwright and axe for a `web-app` | `pnpm`, plus Vite for a `web-app` |

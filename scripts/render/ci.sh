@@ -152,6 +152,15 @@ grep -q 'cron: "0 6 \* \* 1"' d/.github/workflows/python.yml
 (lacks -q 'cron:' a/.github/workflows/python.yml)
 test -f h/.github/workflows/advisories.yml
 (lacks -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
+# An Astro site's own lockfile gets audited too, beside a stack (y) or alone (compose-astro).
+for r in y compose-astro; do
+  wf=$r/.github/workflows/advisories.yml
+  sed -n '/^  site:$/,/^  notify:$/p' "$wf" | grep -qx '        working-directory: site'
+  sed -n '/^  site:$/,/^  notify:$/p' "$wf" | grep -qx '      - run: pnpm audit --prod --audit-level=moderate'
+  grep -qx '    needs: \[.*'"'"'site'"'"'\]' "$wf"
+done
+test ! -e compose-site/.github/workflows/advisories.yml
+(lacks -q '^  site:' a/.github/workflows/advisories.yml)
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
 # Decision records default on for a web service (b), a data pipeline or web app (d) and a
 # Silver badge (h); off for research (a), a monorepo of libraries (c) and an unlicensed tool (i).
@@ -253,6 +262,17 @@ grep -q 'package = "codspeed-divan-compat"' a/Cargo.toml
 grep -qx 'name = "codspeed"' c/crates/cli/Cargo.toml
 grep -q 'working-directory: crates/cli' c/.github/workflows/benchmarks.yml
 grep -q 'working-directory: api' c/.github/workflows/benchmarks.yml
+# Every workflow that installs the locked dependencies checks them for malware first, as
+# python.yml does. The sweep must see benchmarks, property and mutation runs to count.
+mapfile -t synced < <(grep -rl --include='*.yml' -e '- run: uv sync' ./*/.github/workflows)
+for f in benchmarks property mutation; do
+  printf '%s\n' "${synced[@]}" | grep -q "/$f.yml$"
+done
+unchecked=$(grep -L 'UV_MALWARE_CHECK: "1"' "${synced[@]}" || true)
+test -z "$unchecked" || {
+  echo "uv sync without UV_MALWARE_CHECK: $unchecked" >&2
+  exit 1
+}
 for r in b d; do
   test ! -e "$r/.github/workflows/benchmarks.yml"
   test ! -e "$r/tests/test_benchmarks.py"
@@ -331,6 +351,11 @@ mkdir -p "$mutdiff/src/pkg" && cp m/just/mutation_diff.py "$mutdiff/"
   sed -i -e '7s/1/2/' -e '14s/1/2/' -e '19s/1/2/' src/pkg/a.py
   test "$(python3 -I mutation_diff.py HEAD 2>stderr.txt)" = "$(printf 'pkg.a.xǁCǁm__mutmut_*\npkg.a.xǁCǁs__mutmut_*')"
   test "$(cat stderr.txt)" = 'skipped (decorated): pkg.a.g'
+  # A new file git does not track yet counts whole. mutmut strips only a leading src from
+  # module names, so lib/pkg/d.py is module lib.pkg.d.
+  printf '[tool.mutmut]\nsource_paths = ["lib"]\n' >pyproject.toml
+  mkdir -p lib/pkg && printf 'def h():\n    return 1\n' >lib/pkg/d.py
+  test "$(python3 -I mutation_diff.py HEAD)" = 'lib.pkg.d.x_h__mutmut_*'
 )
 # just --list shows only the comment line directly above a recipe: a block of two or more
 # lines there would show its last line alone, so the detail sits behind a blank line.

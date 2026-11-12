@@ -89,7 +89,19 @@ site:
 site-sync:
     pnpm -C site install
 {%- endif %}
-{%- if web_app or site != 'none' %}
+{%- if site == 'astro' %}
+
+# Serve the site at http://localhost:4321/{{ '' if site_on_workers else slug ~ '/' }}, rebuilt on each save.
+site-serve: site-sync
+    @echo "Open http://localhost:4321/{{ '' if site_on_workers else slug ~ '/' }}"
+    ASTRO_TELEMETRY_DISABLED=1 pnpm -C site run dev
+{%- elif site == 'plain' %}
+
+# Serve site/ at http://localhost:4321/. Opened as a file, the browser refuses its modules.
+site-serve:
+    python3 -m http.server --bind 127.0.0.1 --directory site 4321
+{%- endif %}
+{%- if web_app or site != 'none' or docs_site %}
 {%- set pw = ('pnpm' if ts_dir == '.' else 'pnpm -C ' ~ ts_dir) ~ ' exec playwright' if web_app else 'pnpm dlx playwright@' ~ playwright_version %}
 {%- set shot = pw ~ ' screenshot --viewport-size=1200,630 "file://$PWD/docs/og-card.html"' %}
 {#- Link previews are cached by image URL, so each render puts the PNG's hash into the og:image URL of the page that names it. #}
@@ -103,12 +115,16 @@ og-card:
     {{ shot }} "$PWD/{{ '' if ts_dir == '.' else ts_dir ~ '/' }}public/og.png"
     {{ stamp((ts_dir ~ '/' if ts_dir != '.' else '') ~ 'public/og.png', (ts_dir ~ '/' if ts_dir != '.' else '') ~ 'index.html') }}
 {%- endif %}
-{%- if site != 'none' %}
 {%- if not web_app %}
     {{ pw }} install chromium
 {%- endif %}
+{%- if site != 'none' %}
     {{ shot }} "$PWD/site/{{ 'public/' if site == 'astro' else '' }}og.png"
     {{ stamp('site/' ~ ('public/' if site == 'astro' else '') ~ 'og.png', 'site/' ~ ('src/layouts/Base.astro' if site == 'astro' else 'index.html')) }}
+{%- endif %}
+{%- if docs_site %}
+    {{ shot }} "$PWD/docs/assets/og.png"
+    {{ stamp('docs/assets/og.png', 'zensical.toml') }}
 {%- endif %}
 {%- endif %}
 {%- if docs_site %}

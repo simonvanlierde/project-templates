@@ -165,7 +165,7 @@ echo '# project citation' >"$out/k/CITATION.cff"
 echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'extras=[codspeed,cold_install,docs_site,mutation]' --data project_name=adopt-me --data customise=true --data python_layout=flat \
-  --data license=GPL-3.0-or-later \
+  --data 'project_description=Mutates "the" tests & more.' --data license=GPL-3.0-or-later \
   --data publish_to_pypi=true . "$out/k"
 grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
@@ -175,6 +175,13 @@ test ! -e "$out/k/src"
 grep -qx '      - "adopt_me/\*\*"' "$out/k/.github/workflows/benchmarks.yml"
 test ! -e "$out/k/tests/test_add.py"
 (lacks -q 'import add' "$out/k/tests/test_benchmarks.py")
+# The benchmarks are the project's once written: rendering k again keeps its own.
+echo '# project edit' >>"$out/k/tests/test_benchmarks.py"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data 'extras=[codspeed,cold_install,docs_site,mutation]' --data project_name=adopt-me --data customise=true --data python_layout=flat \
+  --data license=GPL-3.0-or-later \
+  --data publish_to_pypi=true . "$out/k" >/dev/null 2>&1
+grep -qx '# project edit' "$out/k/tests/test_benchmarks.py"
 grep -qx 'module-root = ""' "$out/k/pyproject.toml"
 grep -qx 'source = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/k/LICENSE"
@@ -224,6 +231,9 @@ c=$out/compose
 grep -qx ' *Then commit\.' "$out/compose-site.log"
 (lacks -e 'lockfiles' -e 'package manifest' "$out/compose-site.log")
 test -f "$out/compose-site/.github/scripts/preview-retire.sh"
+# An Astro site has a lockfile to audit even when no stack does.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-astro --data 'stacks=[docker]' \
+  --data site=astro . "$out/compose-astro" >/dev/null 2>&1
 # A fresh render passes its own git hooks.
 git -C "$c" init -q
 git -C "$c" add -A
@@ -536,6 +546,9 @@ grep -q 'What a first visit may keep in the browser, by name, each with a line' 
 # dp: a data-pipeline at the root, whose python.yml ends on the revisions job's `run:` block.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=dp-me --data 'stacks=[python]' \
   --data python_kind=data-pipeline . "$out/dp"
+# nw: a nested web app beside the docs site, the allowed twin of the root-web-app refusal.
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=nw-me --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data ts_dir=web --data web_framework=preact --data user_data=nothing . "$out/nw"
 # cfd: a site on a Worker leaves GitHub Pages to the docs site.
 "${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=cfd-me --data 'stacks=[python]' \
   --data site=plain --data site_host=cloudflare . "$out/cfd"

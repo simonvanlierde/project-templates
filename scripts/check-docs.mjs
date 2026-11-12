@@ -4,6 +4,13 @@ import { chromium, expect } from "@playwright/test";
 
 const urls = process.argv.slice(2);
 assert.ok(urls.length, "Pass the built documentation URLs");
+// The theme's palette radio has no size: its focus ring shows on the label after it.
+const focusOnScreen = () => {
+  const el = document.activeElement;
+  const shown = el.matches("input.md-option") ? el.nextElementSibling : el;
+  const rect = shown.getBoundingClientRect();
+  return rect.left >= 0 && rect.right <= innerWidth && rect.bottom > rect.top && shown.checkVisibility({ visibilityProperty: true });
+};
 const browser = await chromium.launch();
 try {
   for (const url of urls) {
@@ -34,10 +41,7 @@ try {
           // An announcement bar's link and dismiss button come before the header.
           for (let tab = 0; tab < 4 && !(await menu.evaluate((el) => el === document.activeElement)); tab++) {
             await page.keyboard.press("Tab");
-            assert.ok(await page.evaluate(() => {
-              const rect = document.activeElement.getBoundingClientRect();
-              return rect.left >= 0 && rect.right <= innerWidth && rect.bottom > rect.top;
-            }), `${url}: Tab entered invisible closed navigation`);
+            assert.ok(await page.evaluate(focusOnScreen), `${url}: Tab entered invisible closed navigation`);
           }
           await expect(menu).toBeFocused();
           for (const key of ["Enter", "Space"]) {
@@ -47,6 +51,11 @@ try {
             await page.keyboard.press("Escape");
             await expect(page.locator("#__drawer")).not.toBeChecked();
             await expect(menu).toBeFocused();
+          }
+          // Past the header, focus reaches the page, not the links of the closed drawer.
+          for (let tab = 0; tab < 4; tab++) {
+            await page.keyboard.press("Tab");
+            assert.ok(await page.evaluate(focusOnScreen), `${url}: Tab after the header entered closed navigation`);
           }
         }
         await search.focus();

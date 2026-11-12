@@ -97,6 +97,9 @@ recipe_has agl/just/python.just py-check "    d=\$(mktemp -d) && trap 'rm -rf \"
 recipe_has a/just/ts.just ts-check '    pnpm run licenses'
 grep -qF '"licenses": "pnpm licenses list --prod --json | node scripts/checkLicenses.mjs"' a/package.json
 lacks -F 'GPL' a/scripts/checkLicenses.mjs a/deny.toml
+# The repo's own CI runs a copy of the MIT render's script; only its header and file name differ.
+diff <(sed 1,2d a/scripts/checkLicenses.mjs | grep -v allow-list) \
+  <(sed 1,2d "$repo/scripts/check-licenses.mjs" | grep -v allow-list)
 # The TypeScript check on `pnpm licenses list --json` output: one package per license.
 licenses_pass() {
   printf '{"%s":[{"name":"p","versions":["1.0.0"]}]}' "$2" | node "$1/scripts/checkLicenses.mjs" >/dev/null 2>&1

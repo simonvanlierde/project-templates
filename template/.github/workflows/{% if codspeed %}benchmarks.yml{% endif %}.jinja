@@ -53,6 +53,11 @@ jobs:
     permissions:
       contents: read
       id-token: write # OpenID Connect sign-in to CodSpeed
+    env:
+      # As in python.yml: uv checks every package against OSV's malware advisories before
+      # its code runs. The preview flag only silences the "experimental" warning.
+      UV_MALWARE_CHECK: "1"
+      UV_PREVIEW_FEATURES: malware-check
 {%- if python_dir != '.' %}
     defaults:
       run:

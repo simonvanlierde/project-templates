@@ -14,6 +14,8 @@ The two choices differ only in what is in `site/` and how `just site` builds it:
 - `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a working [tool page](#the-plain-tool-page). Plain HTML, CSS and an ES module, no build step or framework. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
 - `site=astro`: a small Astro project. `package.json` pins astro at the version in `copier.yml`, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once and commit the `site/pnpm-lock.yaml` it writes. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. On a Worker (`site_host=cloudflare`) the site is served from `/`: `site` is the Worker's address and there is no `base`.
 
+`just site-serve` serves either one at `http://localhost:4321/`, under `/<repo>/` for an Astro site on Pages, as Pages does.
+
 The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
 
 - `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`. [On a Worker](#hosting-on-a-worker), it deploys to the Worker instead.
@@ -64,14 +66,12 @@ The script and its test are the project's after the first render. A binding beyo
 
 ### Moving an app off Cloudflare Pages
 
-An app made before this template deployed from CI was deployed by Cloudflare Pages. To move it:
+An app made before this template deployed from CI was deployed by Cloudflare Pages. Check first that the account has no Worker named `<slug>`: the first deploy overwrites it. Expect a short gap while the domain moves from Pages to the Worker. To move the app:
 
 1. Delete any Pages `public/_redirects` rule with status `200!`: Workers refuses it with error `100324`. Merge the `copier update`, then run `just repo-settings` and add both secrets to the new `production` environment.
 2. The next push to `main` deploys the Worker. Check the app at its workers.dev address.
 3. Remove the custom domain from the Pages project. With `site_url` set to it, the next production deploy attaches it to the Worker.
 4. Delete the Pages project, now that the Worker serves production.
-
-Before step 2, check that the account has no Worker named `<slug>`: the first deploy overwrites it. Expect a short gap while the domain moves from Pages to the Worker.
 
 Without a custom domain, the app's address changes: set the new one with `copier update --data site_url=https://<slug>.<subdomain>.workers.dev`.
 
@@ -103,13 +103,13 @@ The first deploy creates each Worker, so there is nothing to set up in Cloudflar
 
 ## Social card
 
-A web app or a site renders `docs/og-card.html`, a 1200x630 poster with the project name, `project_description` and the site's address, and `og:image`, `og:image:width`, `og:image:height`, `og:image:alt` and `twitter:card` tags in the page head that point at it. The alt text is the name and the description. The file is yours: an update leaves it alone.
+A web app, a site or a docs site renders `docs/og-card.html`, a 1200x630 poster with the project name, `project_description` and the site's address, and `og:image`, `og:image:width`, `og:image:height`, `og:image:alt` and `twitter:card` tags in the page head that point at it. A docs site sets them from `docs-overrides/main.html` on every page, with `og:title`, `og:description` and `og:url` too, reading `og_image` from `zensical.toml`. The alt text is the name and the description. The file is yours: an update adds it when it is missing and leaves an edited one alone.
 
-Run `just og-card` to render it to a PNG, and commit the PNG: `public/og.png` for a web app, `site/og.png` for `site=plain` and `site/public/og.png` for `site=astro`. A web app renders with the Playwright in its devDependencies (`pnpm exec playwright install chromium` once). A site runs `pnpm dlx playwright@<pinned version>`, so it needs no Node package of its own. The recipe also writes the PNG's first 8 hex of SHA-256 into the page's `og:image` URL (`og.png?v=<hash>`), because Facebook, Slack, Discord and iMessage cache a preview by image URL and would keep the old card after a redraw. Commit the page with the PNG. The head tags point at a file that does not exist until you run it.
+Run `just og-card` to render it to a PNG, and commit the PNG: `public/og.png` for a web app, `site/og.png` for `site=plain` and `site/public/og.png` for `site=astro` and `docs/assets/og.png` for a docs site. A web app renders with the Playwright in its devDependencies (`pnpm exec playwright install chromium` once). A site or a docs site runs `pnpm dlx playwright@<pinned version>`, so it needs no Node package of its own, but pnpm and Node must be installed, even in a Python-only project. The recipe also writes the PNG's first 8 hex of SHA-256 into the page's `og:image` URL (`og_image` in `zensical.toml` for a docs site) (`og.png?v=<hash>`), because Facebook, Slack, Discord and iMessage cache a preview by image URL and would keep the old card after a redraw. Commit the page with the PNG. The head tags point at a file that does not exist until you run it.
 
 Replace the card's colours and font with the project's own, then check it before you commit:
 
 - View it at 300 px wide. The name and the one-line job must still read.
 - Crop it to the centre 630 px square. Small square thumbnails (LinkedIn posts, X `summary`, WhatsApp) cut it that way, so the name and any mark must survive there. The job line and the address only need to stay 60 px clear of every edge, since no thumbnail is big enough to read them.
 
-Keep the text at 36 px or more at 1200 px wide, one idea on the card and no label above the name. Never use a screenshot of the app: it is illegible at preview size. Keep the job line and the address on the card even though `og:description` and the alt text say the same, because X shows only the image, LinkedIn hides the description, and a shared screenshot carries no preview text. One real result or short example may go under the job line to prove it. A repo with both a web app and a site prints the app's address on the one card.
+Keep the text at 36 px or more at 1200 px wide, one idea on the card and no label above the name. Never use a screenshot of the app: it is illegible at preview size. Keep the job line and the address on the card even though `og:description` and the alt text say the same, because X shows only the image, LinkedIn hides the description, and a shared screenshot carries no preview text. One real result or short example may go under the job line to prove it. A repo with several of them has one card source, `docs/og-card.html`, and `just og-card` renders the same image into each place. The card prints the web app's address, else the site's, else the docs site's. Every page head that names a card gets it: the app, the site and each docs page. The docs site's copy is in `docs/assets/`, so the build publishes the card source (`og-card.html`) beside it.

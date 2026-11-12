@@ -339,6 +339,7 @@ Select `docs_site` in `extras` (under `customise`) when outside users need searc
 A render with `docs_site` gets:
 
 - `zensical.toml` and `docs/index.md`, the home page. Both are yours: an update leaves them alone.
+- `docs/og-card.html`, the social card, and `docs/assets/og.png` once you run `just og-card`. Commit the PNG.
 - `docs/reference.md`, for a Python library with `python_api`. It holds one `::: <module>` line, which mkdocstrings expands into the API reference from the docstrings. It reads the source without importing the package.
 - `just docs`, which builds into `_docs/` (gitignored), and `just docs-serve`, which serves the site on port 8000 and rebuilds it on each save. Both run the Zensical that `copier.yml` pins with `uvx`, so the project needs no docs dependencies. Like the project's own installs, uvx resolves only releases at least a week old. `copier update` brings a newer pin.
 - `.github/workflows/docs.yml`. Every pull request and push to `main` runs `just docs`. In a public repo, `docs: build` is a required check. The `deploy` job publishes the build to Pages on a push to `main`. `just repo-settings` sets Pages to deploy from Actions.
@@ -348,6 +349,8 @@ The build is strict: a warning fails it. A link to a page that does not exist is
 TypeScript, Rust and Go projects get the site too, without an API reference. A Rust crate has one on docs.rs and a Go module on pkg.go.dev. The template has none for TypeScript yet.
 
 The site uses system fonts and a plain repository link. It makes no font or repository-statistics requests to third parties. Search runs locally in the browser. `docs/assets/docs.css`, `docs/assets/docs.js` and `docs-overrides/partials/source.html` keep the theme's selected links readable and its mobile controls keyboard-accessible.
+
+`docs-overrides/main.html` adds link-preview tags to every page: `og:title`, `og:description`, `og:image` (with size and alt text), `og:url` and `twitter:card`. The home page's title is the site name alone, and another page's is `<page> - <site name>`. A page's `description:` front matter replaces the site description. The tags read `site_url`, `site_description` and `og_image` from `zensical.toml` and are skipped when there is no `og_image`. Run `just og-card` to render the card ([Social card](hosting.md#social-card)).
 
 An existing `zensical.toml` is yours, so updates leave it alone. To use these defaults after an update, add the assets under `[project]` and the theme settings under `[project.theme]`. Keep any other entries in those tables:
 
@@ -359,9 +362,12 @@ extra_javascript = ["assets/docs.js"]
 [project.theme]
 font = false
 custom_dir = "docs-overrides"
+
+[project.extra]
+og_image = "assets/og.png"
 ```
 
-If you already list stylesheets or scripts, append the new paths instead of replacing those lists. If you use another `custom_dir`, copy the plain-link partial into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
+If you already list stylesheets or scripts, append the new paths instead of replacing those lists. If you use another `custom_dir`, copy the plain-link partial and `main.html` into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
 
 One repo has one Pages site, so the template refuses `docs_site` together with a `site` on Pages. A `site` [on a Worker](hosting.md#hosting-on-a-worker) leaves Pages to the docs. Otherwise, a playground page can go in `docs/` as Markdown or HTML.
 
