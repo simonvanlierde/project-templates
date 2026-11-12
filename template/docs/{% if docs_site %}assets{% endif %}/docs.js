@@ -3,6 +3,8 @@
   // Code actions are controls, not page navigation landmarks.
   window.document$?.subscribe(() => {
     document.querySelectorAll("nav.md-code__nav").forEach((nav) => nav.setAttribute("role", "presentation"));
+    // The theme labels the breadcrumbs "Navigation", the same as the main navigation.
+    document.querySelector("nav.md-path")?.setAttribute("aria-label", "Breadcrumb");
   });
 
   function toggleButton(id) {

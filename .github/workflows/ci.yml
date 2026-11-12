@@ -404,7 +404,9 @@ jobs:
           cp -R "$GITHUB_WORKSPACE/_docs" srv/project-templates
           cp -R "$RUNNER_TEMP/m/_docs" srv/mutate-me
           cp "$GITHUB_WORKSPACE/scripts/check-docs.mjs" .
-          node check-docs.mjs http://127.0.0.1:8102/project-templates/ http://127.0.0.1:8102/mutate-me/
+          # A decision page opens a nested section in the drawer, which the theme makes visible.
+          node check-docs.mjs http://127.0.0.1:8102/project-templates/ \
+            http://127.0.0.1:8102/project-templates/decisions/0006-zensical-builds-the-docs-site/ http://127.0.0.1:8102/mutate-me/
           cp "$GITHUB_WORKSPACE/scripts/check-chooser-browser.mjs" .
           node check-chooser-browser.mjs http://127.0.0.1:8102/project-templates/
 
