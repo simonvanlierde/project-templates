@@ -2,9 +2,14 @@
 name: project-templates documentation
 description: A practical reference with a short path for first-time readers
 colors:
-  primary: "#4051b5"
-  primary-muted: "#4051b51a"
+  primary: "#5b2d6e"
+  link: "#7b3f94"
+  link-dark: "#d3a6e8"
+  accent: "#f5b942"
   neutral-bg: "#ffffff"
+  card-bg: "#f8f5fa"
+  card-ink: "#17191c"
+  card-ink-muted: "#3c424a"
 ---
 
 # Design System: project-templates documentation
@@ -20,17 +25,21 @@ the reference pages.
 
 ## Colors
 
-Use the theme's indigo accent for links and active controls, with its muted accent
-for highlights, in both the light and the dark scheme. The site follows the reader's
-system setting until they pick one with the header toggle. `zensical.toml` selects the
-theme; theme styles own the remaining colors.
+Plum and gold, in place of the theme's default indigo. Plum (`primary`) fills the
+release bar and the mark's tile; links and active controls use a lighter plum (`link`),
+and `link-dark` in the dark scheme, whose surfaces lean toward plum. Gold (`accent`)
+marks only the mark's seed and paths and the version in the release bar, never body
+text. The site follows the reader's system setting until they pick one with the header
+toggle. `docs/assets/brand.css` holds these colours and stays out of the template, so
+generated docs sites keep the theme's own; theme styles own the remaining colors.
 
 ## Mark and social card
 
-The mark is `docs/assets/logo.svg`: an indigo tile with two offset squares, a copy made
-from a template. It is the header logo and the favicon. `scripts/og-card.html` is the
-1200x630 link-preview card, centred so the mark and the name survive a square crop;
-`just og-card` renders it to `docs/assets/og.png`.
+The mark is `docs/assets/logo.svg`: a white Copier C around a gold seed, with gold paths
+leaving through its opening to a square, a circle and a triangle. One start, several
+different stacks. It is the header logo and the favicon, and it stays legible at 16 px.
+`scripts/og-card.html` is the 1200x630 link-preview card, centred so the mark and the
+name survive a square crop; `just og-card` renders it to `docs/assets/og.png`.
 
 ## Typography
 

@@ -8,7 +8,7 @@ repo_url = "https://github.com/simonvanlierde/project-templates"
 repo_name = "simonvanlierde/project-templates"
 edit_uri = "edit/main/docs/"
 site_dir = "_docs"
-extra_css = ["assets/docs.css", "assets/chooser.css"]
+extra_css = ["assets/docs.css", "assets/brand.css", "assets/chooser.css"]
 extra_javascript = ["assets/docs.js", "assets/chooser.mjs"]
 nav = [
   { "Get started" = "index.md" },
@@ -43,7 +43,7 @@ nav = [
 # carries the card's hash (`just og-card`), since link previews cache by URL.
 [project.extra]
 release = "0.14.0"
-og_image = "assets/og.png?v=26371728"
+og_image = "assets/og.png?v=6f68f2a2"
 generator = false
 
 [[project.extra.social]]
@@ -91,16 +91,16 @@ toggle.name = "Switch to light mode"
 [[project.theme.palette]]
 media = "(prefers-color-scheme: light)"
 scheme = "default"
-primary = "indigo"
-accent = "indigo"
+primary = "custom"
+accent = "custom"
 toggle.icon = "lucide/sun"
 toggle.name = "Switch to dark mode"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: dark)"
 scheme = "slate"
-primary = "indigo"
-accent = "indigo"
+primary = "custom"
+accent = "custom"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to system preference"
 

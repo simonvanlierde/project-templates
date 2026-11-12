@@ -22,6 +22,6 @@
 
 {#- `release` in zensical.toml; a render check keeps it on the newest CHANGELOG release. #}
 {% block announce %}
-  project-templates {{ config.extra.release }} is out:
+  project-templates <strong>{{ config.extra.release }}</strong> is out:
   <a href="https://github.com/simonvanlierde/project-templates/releases/tag/v{{ config.extra.release }}">what changed</a>
 {% endblock %}
