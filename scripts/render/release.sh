@@ -124,6 +124,11 @@ cp -R k "$rel/w"
   # key to the tagged commit's own copy of the file counts for nothing. In the run a tag
   # push starts, the tag must still mark the commit being built.
   .github/scripts/verify-tag.sh v0.1.0 origin/main 2>/dev/null
+  # --fetch brings the tag back from origin, as in a workflow whose checkout lacks it.
+  git tag -d v0.1.0 >/dev/null
+  .github/scripts/verify-tag.sh --fetch v0.1.0 origin/main 2>/dev/null
+  (! .github/scripts/verify-tag.sh --fetch v0.1.0 main >release.log 2>&1)
+  grep -qxF -- '--fetch needs origin/BRANCH, not main' release.log
   (! GITHUB_REF=refs/tags/v0.1.0 GITHUB_SHA=0000000000000000000000000000000000000000 .github/scripts/verify-tag.sh v0.1.0 origin/main >release.log 2>&1)
   grep -qxF 'v0.1.0 moved after this run started: it no longer marks 0000000000000000000000000000000000000000' release.log
   # A ref renamed to point at an older signed tag object, and an unsigned annotated tag.

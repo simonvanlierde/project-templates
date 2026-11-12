@@ -106,8 +106,10 @@ test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 1
 n=0
 for wf in */.github/workflows/{release,python-release,ts-release}.yml c/.github/workflows/docker.yml; do
   [ -e "$wf" ] && [ "${wf%%/*}" != e ] || continue
+  # One call line: the script fetches the tag object itself.
   # shellcheck disable=SC2016 # literal workflow text
-  grep -qF '/.github/scripts/verify-tag.sh" "$TAG" "origin/$DEFAULT_BRANCH"' "$wf"
+  test "$(grep -cF 'run: bash "$GITHUB_WORKSPACE/.github/scripts/verify-tag.sh" --fetch "$TAG" "origin/$DEFAULT_BRANCH"' "$wf")" = 1
+  (lacks -qF 'gh auth git-credential' "$wf")
   (lacks -qF '.verification.verified' "$wf")
   test -x "${wf%%/*}/.github/scripts/verify-tag.sh"
   test -f "${wf%%/*}/.github/allowed_signers"
