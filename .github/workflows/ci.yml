@@ -575,6 +575,14 @@ jobs:
               ts_kind: library
               publish_to_npm: true
               site: plain
+          # The Astro site beside a root package: root biome and knip must leave site/ alone,
+          # and the site itself installs, lints and builds.
+          - name: library (astro site)
+            answers:
+              project_name: ci-ts-astro
+              stacks: [ts]
+              ts_kind: library
+              site: astro
           # Nested, so a report the mutation run writes beside the package must be
           # gitignored there too: ts-check runs again after it.
           - name: library (test extras)
@@ -663,6 +671,12 @@ jobs:
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just ts-sync check
+
+      # The site's own install, then the root checks again and the site build: root biome and
+      # knip see site/node_modules and the generated site/.astro.
+      - if: matrix.answers.site == 'astro'
+        working-directory: ${{ runner.temp }}/proj
+        run: just site-sync check site
 
       # Then the checks again: biome reads .gitignore, so a report left unignored fails them.
       - if: contains(matrix.answers.extras, 'mutation')
