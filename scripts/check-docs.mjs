@@ -31,11 +31,14 @@ try {
         if (width < 1220) {
           await page.keyboard.press("Tab");
           await expect(page.locator(".md-skip")).toBeFocused();
-          await page.keyboard.press("Tab");
-          assert.ok(await page.evaluate(() => {
-            const rect = document.activeElement.getBoundingClientRect();
-            return rect.left >= 0 && rect.right <= innerWidth && rect.bottom > rect.top;
-          }), `${url}: second Tab entered invisible closed navigation`);
+          // An announcement bar's link and dismiss button come before the header.
+          for (let tab = 0; tab < 4 && !(await menu.evaluate((el) => el === document.activeElement)); tab++) {
+            await page.keyboard.press("Tab");
+            assert.ok(await page.evaluate(() => {
+              const rect = document.activeElement.getBoundingClientRect();
+              return rect.left >= 0 && rect.right <= innerWidth && rect.bottom > rect.top;
+            }), `${url}: Tab entered invisible closed navigation`);
+          }
           await expect(menu).toBeFocused();
           for (const key of ["Enter", "Space"]) {
             await page.keyboard.press(key);
