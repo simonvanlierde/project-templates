@@ -13,13 +13,13 @@ Last reviewed: 2026-11-12
 
 - Let the `data-pipeline` kind release its data: a `just release` recipe that publishes
   the pipeline's outputs, with CI checks, once sourceledger has a release step.
-  Tracked in [#ISSUE-1](https://github.com/simonvanlierde/project-templates/issues/ISSUE-1).
+  Tracked in [#291](https://github.com/simonvanlierde/project-templates/issues/291).
 - Add a release path for Rust: a `publish_to_crates` answer, crates.io trusted publishing,
   binaries that `cargo binstall` can find, and attestations.
-  Tracked in [#ISSUE-2](https://github.com/simonvanlierde/project-templates/issues/ISSUE-2).
+  Tracked in [#292](https://github.com/simonvanlierde/project-templates/issues/292).
 - Register one generated project for the OpenSSF Best Practices badge before the README
   says a fresh render meets it.
-  Tracked in [#ISSUE-3](https://github.com/simonvanlierde/project-templates/issues/ISSUE-3).
+  Tracked in [#293](https://github.com/simonvanlierde/project-templates/issues/293).
 
 ## Not planned
 
