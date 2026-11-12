@@ -516,3 +516,10 @@ done
 (lacks -q 'content="None"' m/_docs/index.html)
 grep -qF 'og:description" content="Mutates &quot;the&quot; tests &amp; more."' k/_docs/index.html
 grep -qF 'og:image:alt" content="adopt-me: Mutates &quot;the&quot; tests &amp; more."' k/_docs/index.html
+# A site_url without its trailing slash still gives an absolute image URL and the bare home title.
+cp -R m "$out/m-noslash"
+sed -i.bak 's#^site_url = "\(.*\)/"$#site_url = "\1"#' "$out/m-noslash/zensical.toml"
+grep -qx 'site_url = "https://example-org.github.io/mutate-me"' "$out/m-noslash/zensical.toml"
+(cd "$out/m-noslash" && just docs >/dev/null 2>&1)
+grep -qF 'og:image" content="https://example-org.github.io/mutate-me/assets/og.png' "$out/m-noslash/_docs/index.html"
+grep -qF 'og:title" content="mutate-me"' "$out/m-noslash/_docs/index.html"

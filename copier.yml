@@ -105,7 +105,7 @@ _message_after_copy: |
     just site-sync
   {%- endif %}
   {%- if web_app or site != 'none' or docs_site %}
-    just og-card
+    just og-card{{ '   # needs pnpm and Node' if 'ts' not in stacks and site != 'astro' }}
   {%- endif %}
     just check
   {%- if stacks | reject('equalto', 'docker') | list or site == 'astro' %}
