@@ -257,7 +257,7 @@ for r in y t; do
   sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -qx '          package_json_file: site/package.json'
   sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -q 'uses: actions/setup-node@'
   # Every push and pull request audits the site's dependencies, as each stack's CI job does.
-  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -A1 -x '      - run: pnpm audit --prod --audit-level=moderate' | grep -qx '        working-directory: site'
+  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -A1 -x '      - run: pnpm audit --audit-level=moderate' | grep -qx '        working-directory: site'
   # Pages serves the site under /<repo>/, and so does its preview.
   grep -qx "  base: \"/$([ "$r" = y ] && echo site-me || echo lib-me)\"," "$r/site/astro.config.mjs"
   # The lockfile it writes is skipped by the YAML hooks at any depth.

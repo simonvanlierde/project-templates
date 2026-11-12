@@ -156,7 +156,7 @@ test -f h/.github/workflows/advisories.yml
 for r in y compose-astro; do
   wf=$r/.github/workflows/advisories.yml
   sed -n '/^  site:$/,/^  notify:$/p' "$wf" | grep -qx '        working-directory: site'
-  sed -n '/^  site:$/,/^  notify:$/p' "$wf" | grep -qx '      - run: pnpm audit --prod --audit-level=moderate'
+  sed -n '/^  site:$/,/^  notify:$/p' "$wf" | grep -qx '      - run: pnpm audit --audit-level=moderate'
   grep -qx '    needs: \[.*'"'"'site'"'"'\]' "$wf"
 done
 test ! -e compose-site/.github/workflows/advisories.yml

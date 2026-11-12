@@ -36,7 +36,7 @@ Upgrade steps:
 
 ### Added
 
-- A licensed Astro site checks production dependency licenses during `just site` and its CI build, using the same checker and allow-list as TypeScript projects. Astro itself is a development dependency because it builds the static files.
+- A licensed Astro site checks production dependency licenses during `just site` and its CI build, using the same checker and allow-list as TypeScript projects. Astro itself is a development dependency because it builds the static files; the site’s security audits include development dependencies.
 - An Astro site's `site/pnpm-lock.yaml` gets its own `pnpm audit` job in the weekly `advisories.yml`, also in a repo whose stacks have no audit of their own. The build job in `site.yml` runs the same audit on every push and pull request.
 - `just site-serve` serves the site locally: Astro's dev server at the address that includes the Pages base, or a plain site over HTTP, since a browser refuses its modules from a file. It fails when port 4321 is taken instead of moving to another port.
 - Web-service tests exercise an unavailable OTLP HTTP collector, check that requests still succeed and bound shutdown after SIGTERM.
