@@ -386,5 +386,7 @@ These sections now live on their own pages. The anchors keep links from rendered
 - <a id="social-card"></a>Social card: see [hosting](hosting.md#social-card).
 - <a id="publishing"></a>Publishing: see [setting up the repo](setup.md#publishing).
 - <a id="the-update-app"></a>The update App: see [updates](updates.md#the-update-app).
+- <a id="protecting-main"></a>Protecting `main`: see [setting up the repo](setup.md#protecting-main).
+- <a id="keeping-your-project-up-to-date"></a>Keeping your project up to date: see [updates](updates.md#keeping-your-project-up-to-date).
 - <a id="levels"></a>Levels: see [levels](levels.md).
 <!-- rumdl-enable MD033 -->

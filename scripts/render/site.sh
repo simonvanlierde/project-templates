@@ -293,7 +293,7 @@ test -f y/site/pnpm-lock.yaml
 site_serve() { # render, URL, text the page holds
   local log=$out/$1-site-serve.log pid rc=0
   grep -qF "at $2" "$1/justfile"
-  (! curl -s -o /dev/null http://localhost:4321/) || {
+  (! fuser -s -n tcp 4321) || {
     echo "check-render: port 4321 is in use; stop what serves it" >&2
     return 1
   }
@@ -304,7 +304,7 @@ site_serve() { # render, URL, text the page holds
   fuser -s -k -n tcp 4321 || true
   wait "$pid" || true
   for _ in 1 2 3 4 5 6 7 8 9 10; do
-    curl -s -o /dev/null http://localhost:4321/ || break
+    fuser -s -n tcp 4321 || break
     sleep 0.5
   done
   [ "$rc" -eq 0 ] || {
@@ -318,6 +318,19 @@ if command -v setsid >/dev/null && command -v fuser >/dev/null; then
   # astro dev prints the address without the Pages base, so the recipe prints it whole.
   grep -qxF 'Open http://localhost:4321/site-me/' "$out/y-site-serve.log"
   site_serve x http://localhost:4321/ '<script type="module" src="main.mjs"></script>'
+  # A busy port is an error, not a silent move to 4322.
+  python3 -m http.server --bind 127.0.0.1 4321 >/dev/null 2>&1 &
+  holder=$!
+  sleep 1
+  for r in x y; do
+    if (cd "$r" && timeout 60 just site-serve >"$out/$r-site-busy.log" 2>&1); then
+      kill "$holder"
+      echo "just site-serve in $r did not fail with port 4321 taken" >&2
+      exit 1
+    fi
+  done
+  kill "$holder"
+  wait "$holder" 2>/dev/null || true
 fi
 # The deploy job's gate: it deploys only when Pages deploys from Actions, skips with a
 # notice while Pages is off (404), and fails on any other error. Run against a stub gh.

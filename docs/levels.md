@@ -4,7 +4,7 @@
 
 - `minimal`: a public repo with few users. Locked and updated dependencies, hardened workflows, the Scorecard workflow and `SECURITY.md`.
 - `standard`, the default: every `minimal` and `standard` requirement that applies to the repo. The render adds the test policy and coding standards to `.github/CONTRIBUTING.md`, a `## Usage` section to a new render's README, `.github/first-release.md` with the OpenSSF badge step ([OpenSSF badge](#openssf-best-practices-badge)), and `cold-install.yml`.
-- `community`: a repo that wants outside contributors. The render adds `GOVERNANCE.md`, `docs/roadmap.md`, `docs/assurance-case.md` and `docs/decisions/`, and the `dco` workflow checks every pull request.
+- `community`: a repo that wants outside contributors. The render adds `GOVERNANCE.md`, `docs/roadmap.md`, `docs/assurance-case.md` and `docs/decisions/`, and the `dco` workflow, which every public repo gets, checks every pull request, maintainers' included.
 
 A private repo, or a public one without a license, is not on the ladder: copier skips the question.
 

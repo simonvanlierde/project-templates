@@ -180,6 +180,8 @@ jobs:
               project_name: ci-web
               stacks: [python, docker]
               python_kind: web-service
+              # Has runtime dependencies, so `just py-check` runs the `--license AGPL` variant.
+              license: AGPL-3.0-or-later
     steps:
       - *checkout
 
@@ -270,6 +272,7 @@ jobs:
         run: |
           set -euo pipefail
           versions=$(yq -o=tsv '.jobs.check.strategy.matrix.python' "$RUNNER_TEMP/proj/.github/workflows/python.yml")
+          test -n "$versions"
           for v in $versions; do UV_PYTHON=$v just py-sync py-test; done
 
       # Runs the pipeline against the example source's live URL, then the tests that
