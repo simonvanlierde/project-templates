@@ -1,0 +1,71 @@
+.chooser fieldset {
+  border: 0;
+  margin: 1.5em 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.chooser legend {
+  font-weight: 700;
+  margin-bottom: 0.6em;
+}
+
+.chooser label {
+  display: block;
+  margin: 0.35em 0;
+}
+
+.chooser label:has(input) {
+  align-items: baseline;
+  display: flex;
+  gap: 0.6em;
+  padding: 0.3em 0;
+}
+
+.chooser input {
+  accent-color: var(--md-primary-fg-color);
+  flex: none;
+}
+
+.chooser select,
+.chooser [data-chooser-copy] {
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--light);
+  border-radius: 0.2rem;
+  color: var(--md-default-fg-color);
+  font: inherit;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0.5em 0.75em;
+}
+
+.chooser select {
+  width: 100%;
+}
+
+.chooser [data-chooser-copy] {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.chooser [data-chooser-copy]:hover {
+  background: var(--md-accent-fg-color--transparent);
+}
+
+.chooser :is(input, select, [data-chooser-copy]):focus-visible {
+  outline: 2px solid var(--md-accent-fg-color);
+  outline-offset: 3px;
+}
+
+.chooser [hidden] {
+  display: none;
+}
+
+.chooser-command code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chooser [role="status"]:empty {
+  display: none;
+}

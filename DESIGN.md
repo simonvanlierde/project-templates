@@ -39,7 +39,9 @@ Let the theme adapt navigation to smaller screens.
 ## Components
 
 Use the built-in navigation, search, links, tables and code blocks. Preserve their
-keyboard behavior and visible focus indicators. Check normal text against its
+keyboard behavior and visible focus indicators. The chooser uses native radio
+buttons, selects and a copy button, revealing only the questions relevant to the
+reader’s task. Check normal text against its
 background for at least 4.5:1 contrast when changing colors.
 
 ## Do's and Don'ts
