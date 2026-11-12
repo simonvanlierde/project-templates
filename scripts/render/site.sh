@@ -306,10 +306,13 @@ site_serve() { # render, URL, text the page holds
     return 1
   }
 }
-site_serve y http://localhost:4321/site-me/ 'href="/site-me/about/"'
-# astro dev prints the address without the Pages base, so the recipe prints it whole.
-grep -qxF 'Open http://localhost:4321/site-me/' "$out/y-site-serve.log"
-site_serve x http://localhost:4321/ '<script type="module" src="main.mjs"></script>'
+# setsid and `fuser -n` are Linux-only, so macOS runs skip this; CI runs it.
+if command -v setsid >/dev/null && command -v fuser >/dev/null; then
+  site_serve y http://localhost:4321/site-me/ 'href="/site-me/about/"'
+  # astro dev prints the address without the Pages base, so the recipe prints it whole.
+  grep -qxF 'Open http://localhost:4321/site-me/' "$out/y-site-serve.log"
+  site_serve x http://localhost:4321/ '<script type="module" src="main.mjs"></script>'
+fi
 # The deploy job's gate: it deploys only when Pages deploys from Actions, skips with a
 # notice while Pages is off (404), and fails on any other error. Run against a stub gh.
 gate_sh=$out/fake-pages-gate
