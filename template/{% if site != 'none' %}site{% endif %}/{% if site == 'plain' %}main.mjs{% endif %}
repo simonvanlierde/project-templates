@@ -31,7 +31,7 @@ const show = (next, output, problem = "") => {
   copied.value = "";
   error.textContent = problem;
   error.hidden = !problem;
-  input.toggleAttribute("aria-invalid", Boolean(problem));
+  input.setAttribute("aria-invalid", String(Boolean(problem)));
   // The result and its action go with the newest input only: a stale result cannot be copied.
   copy.disabled = next === "empty" || next === "invalid";
   if (changed && next !== "sample") said.textContent = problem || labels[next];

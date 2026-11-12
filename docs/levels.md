@@ -24,12 +24,12 @@ A requirement applies to every repo, or only to repos with one of its traits. Th
 
 The requirements live in [`levels.toml`](https://github.com/simonvanlierde/project-templates/blob/main/levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement that applies to it at that level and below. "Counts from" is the date a requirement starts to count: before then, a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
 
-The table says what a repo must have to meet a level, not only what the render adds. Every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site` in `extras` once its trigger holds.
+The table says what a repo must have to meet a level, not only what the render adds. Every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. The render supplies configuration and checks for the `automated` requirements. Finish setup, commit the lockfiles and configure repository settings before checking compliance. The `review` ones need you, and `docs-site` needs `docs_site` in `extras` once its trigger holds.
 
 <!-- levels:start -->
 <!-- Generated from levels.toml by `just levels-doc`; edit that file, not this table. -->
 
-Levels version 0.14.0:
+Levels version 0.15.0:
 
 | Requirement | Level | Applies to | What it asks | Verified by | Source | Counts from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -86,7 +86,7 @@ Each requirement gets one status:
   "repo": "tide-tables",
   "level": "standard",
   "traits": ["numerics"],
-  "levels_version": "0.14.0",
+  "levels_version": "0.15.0",
   "checked_at": "2027-03-01T09:30:00Z",
   "requirements": [
     {"id": "lockfile", "area": "supply-chain", "level": "minimal", "since": "2026-11-11", "status": "met", "evidence": "uv.lock"}

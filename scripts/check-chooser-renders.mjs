@@ -12,10 +12,15 @@ const version = process.env.COPIER_VERSION || workflow.match(/^  COPIER_VERSION:
 assert.match(version ?? "", /^\d+\.\d+\.\d+$/, "Set COPIER_VERSION to the CI Copier pin.");
 assert.ok(profiles.length > 0, "The chooser must have recommendations to render.");
 
+const tags = spawnSync("git", ["tag", "--list", "--sort=-version:refname"], { cwd: repo, encoding: "utf8" });
+assert.equal(tags.status, 0, tags.stderr);
+const releasedRef = tags.stdout.split("\n").find((tag) => /^v\d+\.\d+\.\d+$/.test(tag));
+assert.ok(releasedRef, "Fetch release tags before checking chooser recommendations.");
+
 const temporary = mkdtempSync(join(tmpdir(), "chooser-renders-"));
 let passed = 0;
 try {
-  for (const ref of ["v0.14.0", "HEAD"]) {
+  for (const ref of [releasedRef, "HEAD"]) {
     for (const profile of profiles) {
       const label = `${ref}: ${profile.id}`;
       const destination = join(temporary, `${ref}-${profile.id}`);
@@ -45,8 +50,8 @@ try {
       }
       const answers = readFileSync(join(destination, ".copier-answers.yml"), "utf8");
       for (const [key, value] of Object.entries(profile.answers)) {
-        // HEAD stores the renamed answer; released commands still use the old name.
-        const savedKey = key === "kind" && ref === "HEAD" ? "python_kind" : key;
+        // The stored name changed in 0.15; commands using the old name still work.
+        const savedKey = key === "kind" && answers.includes("\npython_kind:") ? "python_kind" : key;
         // These profile values are plain scalars or lists of stack names.
         const expected = Array.isArray(value)
           ? `${savedKey}:\n${value.map((item) => `- ${item}\n`).join("")}`

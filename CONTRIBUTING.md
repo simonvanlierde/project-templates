@@ -77,8 +77,8 @@ Before you tag, move the `[Unreleased]` entries under a `## [X.Y.Z] - YYYY-MM-DD
 heading and add its compare link. Set `version` in `levels.toml` to `X.Y.Z` and run
 `just levels-doc`: the `levels-doc` hook fails until they match. Set `release` in
 `zensical.toml` to `X.Y.Z` too, for the docs site's announcement bar. Bump the release tag
-in the preset URL and `--vcs-ref` of `docs/usage.md` ("Presets") and the released ref in
-`scripts/check-chooser-renders.mjs`. Merge that. Then run `template/.github/scripts/tag-release.sh X.Y.Z`.
+in the preset URL and `--vcs-ref` of `docs/usage.md` ("Presets"). The chooser checks
+automatically use the newest stable local tag, so fetch the release tags first. Merge that. Then run `template/.github/scripts/tag-release.sh X.Y.Z`.
 It signs the tag `vX.Y.Z` on `origin/main` with your SSH signing key and pushes it, which
 runs the release workflow. The workflow publishes a GitHub release with that version's
 section as its notes. It refuses a tag not signed with a key in `.github/allowed_signers` on
