@@ -235,7 +235,15 @@ for r in y t; do
     test -f "$r/site/$f"
   done
   test ! -e "$r/site/index.html"
-  jq -e --arg v "$astro_pin" '.dependencies.astro == $v' "$r/site/package.json" >/dev/null
+  test -f "$r/site/scripts/checkLicenses.mjs"
+  jq -e '.scripts.licenses == "pnpm licenses list --prod --json | node scripts/checkLicenses.mjs"' "$r/site/package.json" >/dev/null
+  grep -qx '    pnpm -C site run licenses' "$r/justfile"
+  printf '{"MIT":[{"name":"p","versions":["1.0.0"]}]}' | node "$r/site/scripts/checkLicenses.mjs" >/dev/null
+  if printf '{"GPL-3.0-only":[{"name":"p","versions":["1.0.0"]}]}' | node "$r/site/scripts/checkLicenses.mjs" >/dev/null 2>&1; then
+    echo "Astro license check allowed GPL-3.0-only in an MIT project" >&2
+    exit 1
+  fi
+  jq -e --arg v "$astro_pin" '.devDependencies.astro == $v' "$r/site/package.json" >/dev/null
   jq -e --arg v "pnpm@$pnpm_pin" '.packageManager == $v' "$r/site/package.json" >/dev/null
   grep -qx 'minimumReleaseAge: 10080' "$r/site/pnpm-workspace.yaml"
   grep -qx '/site/dist/' "$r/.gitignore"
@@ -249,13 +257,20 @@ for r in y t; do
   sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -qx '          package_json_file: site/package.json'
   sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -q 'uses: actions/setup-node@'
   # Every push and pull request audits the site's dependencies, as each stack's CI job does.
-  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -A1 -x '      - run: pnpm audit --prod --audit-level=moderate' | grep -qx '        working-directory: site'
+  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -A1 -x '      - run: pnpm audit --audit-level=moderate' | grep -qx '        working-directory: site'
   # Pages serves the site under /<repo>/, and so does its preview.
   grep -qx "  base: \"/$([ "$r" = y ] && echo site-me || echo lib-me)\"," "$r/site/astro.config.mjs"
   # The lockfile it writes is skipped by the YAML hooks at any depth.
   grep -qxF '  - "**/pnpm-lock.yaml"' "$r/.yamlfmt"
   test "$(grep -cxF '        exclude: (^|/)pnpm-lock\.yaml$' "$r/.pre-commit-config.yaml")" -ge 2
 done
+# The TypeScript package and Astro site use the same checker; unlicensed and plain sites have none.
+cmp t/scripts/checkLicenses.mjs t/site/scripts/checkLicenses.mjs
+for r in hush-astro hush-plain x; do
+  test ! -e "$r/site/scripts/checkLicenses.mjs"
+  (lacks -q 'pnpm -C site run licenses' "$r/justfile")
+done
+jq -e '.scripts | has("licenses") | not' hush-astro/site/package.json >/dev/null
 grep -qx '          version: "'"$pnpm_pin"'"' y/.github/workflows/site.yml
 (lacks -q 'pnpm audit' x/.github/workflows/site.yml)
 # shellcheck disable=SC2016
@@ -567,12 +582,43 @@ for t in 'og:title" content="mutate-me"' 'og:image" content="https://example-org
 done
 # With a description set (k), the head carries it and the alt text; without one (m) neither prints None.
 (lacks -q 'content="None"' m/_docs/index.html)
+grep -qF 'name="description" content="Mutates &quot;the&quot; tests &amp; more."' k/_docs/index.html
 grep -qF 'og:description" content="Mutates &quot;the&quot; tests &amp; more."' k/_docs/index.html
 grep -qF 'og:image:alt" content="adopt-me: Mutates &quot;the&quot; tests &amp; more."' k/_docs/index.html
 # A site_url without its trailing slash still gives an absolute image URL and the bare home title.
 cp -R m "$out/m-noslash"
 sed -i.bak 's#^site_url = "\(.*\)/"$#site_url = "\1"#' "$out/m-noslash/zensical.toml"
 grep -qx 'site_url = "https://example-org.github.io/mutate-me"' "$out/m-noslash/zensical.toml"
+uv run python - "$out/m-noslash/docs/index.md" <<'PYTEST'
+from pathlib import Path
+import sys
+page = Path(sys.argv[1])
+page.write_text("""---
+description: 'Page "<b>" tags & more'
+---
+""" + page.read_text())
+PYTEST
 (cd "$out/m-noslash" && just docs >/dev/null 2>&1)
 grep -qF 'og:image" content="https://example-org.github.io/mutate-me/assets/og.png' "$out/m-noslash/_docs/index.html"
 grep -qF 'og:title" content="mutate-me"' "$out/m-noslash/_docs/index.html"
+
+uv run python - "$out/m-noslash/_docs/index.html" k/_docs/index.html <<'PYTEST'
+from html.parser import HTMLParser
+from pathlib import Path
+import sys
+
+class Descriptions(HTMLParser):
+    def __init__(self, path):
+        super().__init__(convert_charrefs=True)
+        self.values = []
+        self.feed(Path(path).read_text())
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == 'meta' and attrs.get('name') == 'description':
+            assert set(attrs) == {'name', 'content'}, attrs
+            self.values.append(attrs['content'])
+
+assert Descriptions(sys.argv[1]).values == ['Page "<b>" tags & more']
+assert Descriptions(sys.argv[2]).values == ['Mutates "the" tests & more.']
+PYTEST

@@ -102,7 +102,7 @@ The level prepares a public, licensed repo for a level of the [OpenSSF Best Prac
 
 [Levels](#requirements) lists what each level adds. For the badge, the `## Usage` section of `README.md` links the releases and the package registry, with a TODO for what the software does and how to use it. The `dco-signoff` commit-msg hook (`git commit -s`) comes with every public render.
 
-A public render at `standard` meets every MUST criterion of the passing level that a file or a repository setting can meet. The rest depend on you, or on the project's history.
+The template supplies the files and settings for the passing criteria. Registration still needs evidence from the project and its maintainer. [sourceledger](https://github.com/simonvanlierde/sourceledger), generated from v0.13.0, [earned the passing badge on 10 November 2026](https://www.bestpractices.dev/en/projects/16545). Its assessment records the criterion answers, evidence links and maintainer attestations that the render cannot supply; the badge was then added to its README. A fresh render still needs its own assessment.
 
 ### Before you register
 

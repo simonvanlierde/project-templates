@@ -23,6 +23,8 @@ has the guides and a chooser that suggests a project type. Every project gets:
 
 When the template improves, `copier update` pulls the changes in.
 
+The [OpenSSF badge guide](https://simonvanlierde.com/project-templates/levels/#openssf-best-practices-badge) includes a generated project that has passed and the registration steps you still do by hand.
+
 ## Data pipelines
 
 The `data-pipeline` kind builds a dataset from public sources, and every row says which

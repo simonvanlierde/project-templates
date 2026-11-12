@@ -849,7 +849,7 @@ griffe_version:
 zensical_version:
   type: str
   when: false
-  default: 0.0.73
+  default: 0.0.74
 
 # renovate: datasource=pypi depName=mkdocstrings-python
 mkdocstrings_python_version:

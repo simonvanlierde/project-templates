@@ -51,7 +51,7 @@ jobs:
           node-version: "{{ node_version }}"
 
       # The lockfile alone: advisories.yml repeats this weekly.
-      - run: pnpm audit --prod --audit-level=moderate
+      - run: pnpm audit --audit-level=moderate
         working-directory: site
 {%- elif site_on_workers and worker %}
 

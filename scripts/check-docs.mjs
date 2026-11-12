@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium, expect } from "@playwright/test";
 
-const urls = process.argv.slice(2);
+const requireCsp = process.argv.includes("--require-csp");
+const urls = process.argv.slice(2).filter((arg) => arg !== "--require-csp");
 assert.ok(urls.length, "Pass the built documentation URLs");
 // The theme's palette radio has no size: its focus ring shows on the label after it.
 const focusOnScreen = () => {
@@ -17,6 +18,8 @@ try {
     for (const colorScheme of ["light", "dark"]) {
       const context = await browser.newContext({ colorScheme });
       const external = new Set();
+      const cspViolations = [];
+      const errors = [];
       await context.route("**/*", (route) => {
         const requested = new URL(route.request().url());
         if (requested.origin === new URL(url).origin) return route.continue();
@@ -24,10 +27,21 @@ try {
         return route.abort();
       });
       const page = await context.newPage();
+      page.on("pageerror", (error) => errors.push(error.message));
       page.setDefaultTimeout(10_000);
+      await page.exposeFunction("reportCspViolation", (violation) => cspViolations.push(violation));
+      await page.addInitScript(() => {
+        document.addEventListener("securitypolicyviolation", (event) => {
+          window.reportCspViolation(`${event.effectiveDirective}: ${event.blockedURI}`);
+        });
+      });
       for (const width of [320, 390, 1440]) {
         await page.setViewportSize({ width, height: 844 });
         const response = await page.goto(url);
+        const policy = page.locator('meta[http-equiv="Content-Security-Policy"]');
+        if (requireCsp) {
+          await expect(policy).toHaveCount(1);
+        }
         assert.ok(response?.ok(), `${url}: HTTP ${response?.status()}`);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
           `${url} (${width}px): horizontal overflow`);
@@ -94,9 +108,39 @@ try {
           assert.deepEqual(violations.map(({ id, nodes }) => ({ id, targets: nodes.map((node) => node.target) })),
             [], `${url} (${width}px, ${colorScheme}): accessibility violations`);
         }
+        if (width < 1220) await page.keyboard.press("Escape");
+        const copy = page.locator("button.md-code__button").first();
+        if (await copy.count()) {
+          await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+          await page.evaluate(() => navigator.clipboard.writeText(""));
+          const target = await copy.getAttribute("data-clipboard-target");
+          const expected = (await page.locator(target).innerText()).trimEnd();
+          await copy.click();
+          await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+        }
+        assert.deepEqual(errors, [], `${url}: JavaScript errors`);
+        assert.deepEqual(cspViolations, [], `${url}: Content-Security-Policy violations`);
+        if (await policy.count()) {
+          await page.evaluate(() => {
+            const script = document.createElement("script");
+            script.textContent = "window.unapprovedInlineScript = true";
+            document.head.append(script);
+          });
+          await expect.poll(() => cspViolations.length).toBe(1);
+          assert.equal(await page.evaluate(() => window.unapprovedInlineScript), undefined,
+            `${url}: CSP allowed an unapproved inline script`);
+          assert.deepEqual(cspViolations.splice(0), ["script-src-elem: inline"]);
+        }
         assert.deepEqual([...external], [], `${url}: external requests during load or local search`);
         console.log(`${url} (${width}px, ${colorScheme}): docs checks passed`);
       }
+      const destination = await page.locator('.md-sidebar--primary a.md-nav__link[href]').evaluateAll((links) =>
+        links.find((link) => new URL(link.href).pathname !== location.pathname && new URL(link.href).origin === location.origin)?.getAttribute("href"));
+      assert.ok(destination, `${url}: no local navigation link`);
+      const link = page.locator(`.md-sidebar--primary a.md-nav__link[href="${destination}"]`).first();
+      await Promise.all([page.waitForURL(new URL(destination, page.url()).href), link.click()]);
+      assert.deepEqual(errors, [], `${url}: JavaScript errors after navigation`);
+      assert.deepEqual(cspViolations, [], `${url}: CSP violations after navigation`);
       await context.close();
     }
   }
