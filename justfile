@@ -29,6 +29,10 @@ render:
 levels-doc *args:
     uv run scripts/levels_doc.py {{ args }}
 
+# Check a repo against levels.toml and print its results as JSON (docs/levels.md#checking-a-repo).
+check-level *args:
+    uv run scripts/check_level.py {{ args }}
+
 # Keep the docs builder on the version that new projects receive.
 zensical_version := `sed -n '/^zensical_version:/,/^$/s/^  default: //p' copier.yml`
 
