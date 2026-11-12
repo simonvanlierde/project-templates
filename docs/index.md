@@ -7,8 +7,9 @@ workflows, with weekly pull requests to bring in template updates.
 
 ## Start your first project
 
-1. [Choose your stacks](usage.md#choosing-your-stacks). For Python, compare the
-   [project kinds](python-kinds.md) to find the layout that fits your work.
+1. [Help me choose](choose.md) suggests a project type and a command to create it.
+   Already know what you need? [Choose your stacks](usage.md#choosing-your-stacks)
+   or compare the [Python project kinds](python-kinds.md).
 2. Follow the [quick start on GitHub](https://github.com/simonvanlierde/project-templates#quick-start)
    for the required tools and commands. Copier asks for your choices, then prints
    the setup steps for your new project.

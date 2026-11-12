@@ -1,5 +1,10 @@
 // Native buttons activate the theme's existing checkbox state on every input method.
 (() => {
+  // Code actions are controls, not page navigation landmarks.
+  window.document$?.subscribe(() => {
+    document.querySelectorAll("nav.md-code__nav").forEach((nav) => nav.setAttribute("role", "presentation"));
+  });
+
   function toggleButton(id) {
     const label = document.querySelector(`.md-header label[for="${id}"]`);
     if (!label) return null;

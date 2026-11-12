@@ -31,6 +31,9 @@ pages own those jobs.
 
 - The template supports Python, TypeScript, Rust, Go and Docker, including projects
   that combine stacks.
+- Help me choose maps a reader’s main task to a project kind and a Copier command.
+  It explains the starting files and checks, without storing answers or creating a
+  project in the browser.
 - Zensical builds the Markdown in `docs/`. Each document has one source for both
   GitHub and the documentation site, as recorded in
   [decision 0006](docs/decisions/0006-zensical-builds-the-docs-site.md).

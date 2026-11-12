@@ -32,7 +32,7 @@ root: the output would land among the template files.
 
 ## Run the checks before you push
 
-`just check` runs the git hooks, render checks and strict docs build CI runs. The render includes
+`just check` runs the git hooks, render checks, strict docs build and chooser checks CI runs. The render includes
 uncommitted edits. CI also runs zizmor, jactionlint and the CITATION.cff schema check on
 the rendered output, because `.jinja` files aren't YAML:
 
@@ -40,7 +40,8 @@ the rendered output, because `.jinja` files aren't YAML:
 just check
 ```
 
-`just hooks`, `just render` and `just docs` run each part alone.
+`just hooks`, `just render`, `just docs` and `just chooser` run each part alone.
+The chooser checks every recommendation against the released template and current code.
 `just docs-serve` previews the documentation at <http://localhost:8000>.
 The docs workflow deploys `docs/` to GitHub Pages on pushes to `main`.
 Enable Settings > Pages > Build and deployment > Source: GitHub Actions for the first deploy.
