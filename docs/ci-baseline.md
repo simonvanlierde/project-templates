@@ -1,6 +1,6 @@
 # CI baseline
 
-What CI and the git hooks check in a generated project, why, and what the template leaves out.
+What CI and the git hooks check in a generated project, why, and what the template leaves out. A condition in parentheses is the answer that turns the piece on; a value in `extras` is an [optional feature](usage.md#optional-features).
 
 ## What every scaffold gets
 
@@ -14,7 +14,7 @@ What CI and the git hooks check in a generated project, why, and what the templa
 | Caches saved only from `main` | Caching workflows | PRs restore caches saved on `main` without saving new ones, preventing cache eviction within the 10 GB limit |
 | `persist-credentials: false` on checkout | Every workflow | Prevents subsequent job steps from reusing the runner checkout token |
 | Stack validation checks | `python.yml`, `ts.yml`, `rust.yml`, `go.yml` | Executes lint, format, type-check, test, and dependency audits matching `just check` |
-| Git hooks executed in CI | `checks.yml` | Enforces hook compliance even if local contributors omit `prek install`. |
+| Git hooks executed in CI | `checks.yml` | Enforces hook compliance even if local contributors omit `prek install` |
 | Conventional commit and PR title checks | `committed.toml`, commit-msg hook, `pr-title.yml` | Enforces clean git history for squash merges to `main` |
 | zizmor workflow auditor | Git hook and CI | Scans workflows for injection vulnerabilities, leaked secrets, and compromised actions |
 | jactionlint | Git hook and CI | Validates workflow syntax, expressions, and shell commands in `run:` blocks |
@@ -28,14 +28,15 @@ What CI and the git hooks check in a generated project, why, and what the templa
 | `CITATION.cff`, `codemeta.json` | Licensed `library` kinds, plus licensed Python `research` and `data-pipeline` | Maintained for Zenodo, Software Heritage, and GitHub citation. `citesync` verifies consistency |
 | REUSE licensing check | `reuse` git hook (when licensed) | Fails while a file has no copyright and license in `REUSE.toml` or `LICENSES/` |
 | Multi-version Python testing | `python.yml` (`library` kind) | Tests packages across all supported minor versions from `python_min` to `python_version` |
-| Python tests on Windows | `python.yml` (`python_windows` option) | Runs the tests on `windows-latest` with `python_version`, without lint or type checks |
-| Code coverage reporting | `python.yml`, `ts.yml`, `codecov.yml` (`codecov` option) | Uploads coverage to Codecov; flags PR regressions exceeding 2 percentage points |
+| Python tests on Windows | `python.yml` (`python_windows` extra) | Runs the tests on `windows-latest` with `python_version`, without lint or type checks |
+| Code coverage reporting | `python.yml`, `ts.yml`, `codecov.yml` (`codecov` extra) | Uploads coverage to Codecov; flags PR regressions exceeding 2 percentage points |
 | Scheduled extended property tests | `property.yml` (`property` extra) | Runs 10,000 cases per property (or 10 minutes of Go fuzzing) weekly; excluded from PRs |
 | Scheduled mutation testing | `mutation.yml` (`mutation` extra) | Measures test resilience against injected bugs weekly; excluded from PRs |
-| Pull request benchmarks | `benchmarks.yml` (`codspeed` option) | Runs CodSpeed instruction-count benchmarks on PRs that touch benchmarked code and on every push to `main`, using OIDC authentication |
+| Failure issues for scheduled runs | `report-failure.yml`, called by `property.yml`, `mutation.yml`, `copier-update.yml`, `advisories.yml` and the daily `preview-retire.yml` sweep | Opens an issue when a scheduled run fails, or comments on the one already open, so a failure reaches the maintainer |
+| Pull request benchmarks | `benchmarks.yml` (`codspeed` extra) | Runs CodSpeed instruction-count benchmarks on PRs that touch benchmarked code and on every push to `main`, using OIDC authentication |
 | Production deploy from CI | `ts.yml` (`web-app` kind) | Deploys the build the checks ran on to a Cloudflare Worker on each push to `main`, through a `production` environment limited to `main` |
-| Pull request previews | `ts.yml` and `site.yml` preview jobs, `preview-retire.yml` (`web-app` kind, `site` option) | Deploys each open, ready pull request to its own Worker, and deletes it when the pull request closes, merges or turns draft |
-| Static site on GitHub Pages or a Worker | `site.yml` (`site` option) | Builds `site/` with `just site` on every pull request and push to `main`, and deploys that build from `main` to GitHub Pages, or to a Cloudflare Worker with `site_host=cloudflare` |
+| Pull request previews | `ts.yml` and `site.yml` preview jobs, `preview-retire.yml` (`web-app` kind, or a `site`) | Deploys each open, ready pull request to its own Worker, and deletes it when the pull request closes, merges or turns draft |
+| Static site on GitHub Pages or a Worker | `site.yml` (`site`) | Builds `site/` with `just site` on every pull request and push to `main`, and deploys that build from `main` to GitHub Pages, or to a Cloudflare Worker with `site_host=cloudflare` |
 | Browser tests in Playwright container | `ts.yml` (`web-app` kind) | Runs end-to-end tests against production builds using the pinned Playwright container |
 | Automated accessibility tests (axe) | `tests/e2e/a11y.spec.ts` (`web-app` kind) | Tests routes in light and dark modes against WCAG 2.0–2.2 Levels A and AA |
 | Content-Security-Policy enforcement | `public/_headers`, `tests/e2e/csp.spec.ts` | Validates strict CSP (`script-src 'self'`), HSTS, and frame protection without inline scripts |
@@ -47,9 +48,9 @@ What CI and the git hooks check in a generated project, why, and what the templa
 | Publication provenance | Release workflows | Generates Sigstore attestations and provenance bundles for PyPI, npm, and GHCR artifacts |
 | Container security scans | `docker.yml` (`docker` stack with `docker_image`) | Trivy scans images for HIGH/CRITICAL vulnerabilities; weekly scheduled rebuilds check base updates |
 | Compose and shell lint | `compose.yml` (Compose-only repo) | Validates the Compose files against `.env.example`, then runs shellcheck and shfmt on the tracked shell scripts |
-| Public API break detection | `python.yml` (griffe), `ts.yml` (API Extractor), `rust.yml` (cargo-semver-checks) | Compares public APIs against prior releases to detect breaking changes before publication |
-| Documentation site build | `docs.yml` (`docs_site` option) | Builds `docs/` with Zensical in `--strict` mode on every pull request and push to `main`, and deploys that build from `main` to GitHub Pages |
-| Cold-install setup verification | `cold-install.yml` (when `cold_install`) | Executes README development instructions in a minimal Debian container to catch missing prerequisites. Also runs when `pyproject.toml`, `uv.lock` or `.python-version` change |
+| Public API break detection | `python.yml` (griffe, with `publish_to_pypi`), `ts.yml` (API Extractor, with `publish_to_npm`), `rust.yml` (cargo-semver-checks, Rust libraries) | Compares the public API with the last release and fails on a break ([API-break check](usage.md#api-break-check)) |
+| Documentation site build | `docs.yml` (`docs_site` extra) | Builds `docs/` with Zensical in `--strict` mode on every pull request and push to `main`, and deploys that build from `main` to GitHub Pages |
+| Cold-install setup verification | `cold-install.yml` (`cold_install` extra) | Executes README development instructions in a minimal Debian container to catch missing prerequisites. Also runs when `pyproject.toml`, `uv.lock` or `.python-version` change |
 | Dependency license check | `python.yml` (licensecheck), `ts.yml` (`scripts/checkLicenses.mjs`), `rust.yml` (`cargo deny`), `go.yml` (go-licenses); not with `license=none` | Lists the license of each dependency that ships, not dev tooling, on every pull request and fails on one the project's license cannot take. For TypeScript, Rust and Go the allow-list follows the `license` answer: permissive licenses and MPL-2.0 for every project, the GPL family for a GPL or AGPL one. Python uses licensecheck's own compatibility table |
 | Scheduled dependency audits | `advisories.yml` | Runs weekly scans (`uv audit`, `pnpm audit`, `cargo deny`, `govulncheck`, `zizmor`) without commits |
 | Scheduled link validation | `links.yml` | Validates internal and external links weekly via lychee and reports broken URLs |
@@ -60,7 +61,7 @@ What CI and the git hooks check in a generated project, why, and what the templa
 Rendered workflows default to `contents: read` or `{}`. Docker containers execute as non-root users ([Docker images](tooling.md#docker-images)).
 
 > [!NOTE]
-> GitHub automatically disables scheduled workflows in public repositories after 60 days of inactivity. Push a commit or re-enable them in the Actions tab.
+> GitHub disables scheduled workflows in a public repository after 60 days without activity. Push a commit or re-enable them in the Actions tab.
 
 CI skips hooks that require the local runtime environment (`ruff`, `ty`, `biome`, `tsc`, `cargo fmt`, `cargo clippy`, `golangci-lint`), as stack workflows run them directly. It also skips `betterleaks`, which operates only on staged files.
 

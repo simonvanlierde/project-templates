@@ -12,21 +12,22 @@ Start a Python, TypeScript, Rust, Go or Docker repo that is secure by default an
 current by a weekly update PR. Research code comes citable: `CITATION.cff`, a Zenodo DOI
 and a Software Heritage archive from the first release.
 
-This is a [Copier](https://copier.readthedocs.io) template. It starts Python, TypeScript,
-Rust, Go and Docker projects, in any mix ([quick start](#quick-start)).
+This is a [Copier](https://copier.readthedocs.io) template. Combine the stacks as your
+project needs ([quick start](#quick-start)). Every project gets:
 
-Every project gets a passing test on day one, `just check` running
-the same checks as CI, actions pinned to exact commits, and optional releases to PyPI, npm
-and the GitHub Container Registry with no tokens to store. When the template improves,
-`copier update` pulls the changes in.
+- a passing test on day one;
+- `just check`, which runs the same checks as CI;
+- actions pinned to exact commits;
+- optional releases to PyPI, npm and the GitHub Container Registry, with no tokens to store.
+
+When the template improves, `copier update` pulls the changes in.
 
 ## Data pipelines
 
-The `data-pipeline` kind builds a dataset from public sources where every row says
-which download it came from. It writes a Python project around one manifest,
-`sources.toml`, which lists each input with its URL and the publisher's reuse terms.
-Three steps from the [sourceledger](https://github.com/simonvanlierde/sourceledger)
-library then run over it:
+The `data-pipeline` kind builds a dataset from public sources, and every row says which
+download it came from. The Python project centres on one manifest, `sources.toml`, which
+lists each input with its URL and the publisher's reuse terms. Three steps from the
+[sourceledger](https://github.com/simonvanlierde/sourceledger) library run over it:
 
 - `just fetch` downloads each source and writes a record beside it: the URL, when it
   was fetched, the SHA-256 and size of the bytes, the vintage you expect, and the
@@ -47,8 +48,8 @@ library then run over it:
 CI runs the whole pipeline against the live URLs. A weekly run comments on an issue when
 a publisher serves new bytes for a source, and fails when a value the tests pinned
 changed. The raw and processed data stay out of git, so the repository never
-redistributes a source. `CITATION.cff` and `codemeta.json` come from the
-same answers, ready for a Zenodo DOI.
+redistributes a source. `CITATION.cff` and `codemeta.json` come from the same answers,
+ready for a Zenodo DOI.
 
 ## Quick start
 
@@ -58,7 +59,7 @@ Copier installed, `uvx copier` runs it through uv.
 
 ```sh
 mkdir mydata && cd mydata && git init
-copier copy --data 'stacks=[python]' --data kind=data-pipeline gh:simonvanlierde/project-templates .
+copier copy --data 'stacks=[python]' --data python_kind=data-pipeline gh:simonvanlierde/project-templates .
 just pipeline  # fetch, build and validate the example source
 just check
 git add -A && git commit -m "chore: scaffold"
@@ -68,10 +69,9 @@ Then replace the example source in `sources.toml` with your own.
 
 ### Any other project
 
-Leave out the `--data` answers and Copier asks which stacks and kinds you want.
-[The questions](docs/usage.md#the-questions) says what each one does. Each language
-needs its own toolchain: `uv` for Python, `pnpm` for TypeScript, `cargo` for Rust, or `go`
-for Go.
+Leave out the `--data` answers and Copier asks which stacks and kinds you want
+([the questions](docs/usage.md#the-questions) says what each does). Each stack needs its
+own toolchain: `uv` for Python, `pnpm` for TypeScript, `cargo` for Rust, `go` for Go.
 
 ```sh
 mkdir myproject && cd myproject && git init
@@ -82,7 +82,7 @@ git add -A && git commit -m "chore: scaffold"
 ```
 
 Commit the lockfiles: CI installs exactly what they list, so it fails without them.
-After the first push, `just repo-settings` protects `main`
+After the first push, run `just repo-settings` to protect `main`
 ([what it sets](docs/usage.md#protecting-main)).
 
 ### Updating
@@ -94,9 +94,10 @@ what each release changes and the upgrade steps a breaking one needs.
 
 ### Your details
 
-Copier asks for your GitHub user, name and email, and for a licensed library or a
-Python research or data-pipeline project your ORCID iD. They have no defaults, so
-nobody publishes the template author's details by accident. To fill them in for you, save your answers once in Copier's
+Copier asks for your GitHub user, name and email. A licensed library, or a Python
+research or data-pipeline project, also asks for your ORCID iD. These answers have no
+defaults, so nobody publishes the template author's details by accident. To have Copier
+fill them in, save them once in its
 [settings file](https://copier.readthedocs.io/en/stable/settings/):
 `~/.config/copier/settings.yml` on Linux, `~/Library/Application Support/copier/settings.yml`
 on macOS, or wherever `COPIER_SETTINGS_PATH` points.
@@ -112,8 +113,8 @@ defaults:
 ## Docs
 
 - [docs/usage.md](docs/usage.md): the questions, stacks, Compose-only repos, monorepos,
-  updating, publishing and the optional features, and adopting the template in an
-  existing repo.
+  updating, publishing, the optional features and levels, and adopting the template in
+  an existing repo.
 - [docs/python-kinds.md](docs/python-kinds.md): the Python project kinds.
 - [docs/tooling.md](docs/tooling.md): the tools and lint rules per stack, git hooks,
   dependency updates and release workflows.

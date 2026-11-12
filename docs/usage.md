@@ -14,33 +14,40 @@ reference for what comes after, in the order you are likely to need it:
   [publishing](#publishing), [tests on Windows](#tests-on-windows), [Codecov](#coverage-on-codecov),
   [CodSpeed](#benchmarks-on-codspeed), [profiling](#profiling),
   [test extras](#test-extras), a [static site](#static-site),
-  [Workers hosting](#workers-hosting), a [documentation site](#documentation-site), the
-  [practice level](#levels), the [OpenSSF badge](#openssf-best-practices-badge) and the
+  [Workers hosting](#workers-hosting), a [documentation site](#documentation-site),
+  the [level](#levels), the [OpenSSF badge](#openssf-best-practices-badge) and the
   [dependency bot](#dependency-updates).
 - **Existing code:** [adopt the template](#adopting-the-template-in-an-existing-repo) in a
   repo you already have.
 
 ## The questions
 
-A new project asks at most ten questions for a single stack (eleven for a web app):
+A new project asks at most ten questions for a single stack (eleven for a web app). The
+rest wait behind `customise`, and take the defaults below when you answer no:
 
 | Question | Prompted when | Effect |
 | --- | --- | --- |
 | `project_name` | Always | Repository, directory, package, crate, and image names |
 | `project_description` | Always | One-line summary for README, package metadata, and citation files |
 | `stacks` | Always | Selected packages, CI workflows, and `just` recipes |
-| `kind`, `ts_kind`, `rust_kind`, `go_kind` | Respective stack selected | Package architecture, directory layout, and CI configuration |
+| `python_kind`, `ts_kind`, `rust_kind`, `go_kind` | Respective stack selected | Package architecture, directory layout, and CI configuration |
 | `web_framework` | `ts_kind=web-app` | React, or Preact for reduced bundle size |
-| `user_data` | `ts_kind=web-app` | Configures privacy statement content and terms page ([legal pages](#legal-pages)) |
+| `user_data` | `ts_kind=web-app` | Sets the content of the privacy statement and the terms page ([legal pages](#legal-pages)) |
 | `public` | Always | Adds `.github/` community files and sets default license |
 | `github_user`, `author_name`, `author_email` | Always | Repository URLs, badges, licenses, and package metadata |
-| `customise` | Always | `yes` prompts for advanced settings; `no` accepts defaults |
+| `customise` | Always | `yes` asks the advanced questions; `no` accepts their defaults |
 | `author_orcid` | Licensed `library`, or Python `research`/`data-pipeline` | Citation metadata |
 | `docker_image` | `docker` and `python` stacks selected | Builds the Python package into an image with a Dockerfile and Compose service; no for a [Compose-only repo](#compose-only-repos) |
 
-Identity answers have no defaults.
+Identity answers have no defaults. To skip the prompts, pass answers with `--data` or an
+answers file:
 
-When `customise` is `no`, advanced questions take these defaults:
+```sh
+copier copy --data 'stacks=[python]' --data python_kind=research gh:simonvanlierde/project-templates .
+copier copy --data-file answers.yml gh:simonvanlierde/project-templates .
+```
+
+The advanced questions and their defaults:
 
 | Question | Default |
 | --- | --- |
@@ -61,33 +68,32 @@ When `customise` is `no`, advanced questions take these defaults:
 | `python_api` | Enabled ([API-break check](#api-break-check)) |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](#publishing)) |
 | `app_port` | 8000 |
-| `site_url` | `https://<project>.<github_user>.workers.dev`, or `<project>-site` for a site on Cloudflare (the Worker's workers.dev address, if the account's subdomain is the GitHub user). Another host is a custom domain ([Workers hosting](#workers-hosting)) |
+| `site_url` | `https://<project>.<github_user>.workers.dev` (`<project>-site` for a site on Cloudflare), which is right when the account's subdomain is the GitHub user. Another host is a custom domain ([Workers hosting](#workers-hosting)) |
 
-During `copier update`, previously configured answers are preserved even when `customise` is `no`. Change an individual setting with `copier update --data <key>=<value>` or prompt for a single setting with `copier update --ask <key>`.
+During `copier update`, earlier answers stay even when `customise` is `no`. Change one setting with `copier update --data <key>=<value>`, or be asked for one with `copier update --ask <key>`.
 
 ### Optional features
 
-`extras` is one multiselect under `customise`. Select every feature the project needs:
-`codecov`, `codspeed`, `profiling`, `cold_install`, `python_windows`, `docs_site`,
-`property` and `mutation`. Stack-specific features require their stack; property and
-mutation tests require a library kind. Publishing and hosting keep their own questions.
+`extras` is one multiselect under `customise`. Its values are `codecov`, `codspeed`,
+`profiling`, `cold_install`, `python_windows`, `docs_site`, `property` and `mutation`.
+Stack-specific values need their stack, and `property` and `mutation` need a library kind.
+Publishing and hosting keep their own questions.
 
 New public, licensed projects at `standard` or `community` start with `cold_install`.
-An explicit list replaces the whole selection, including that default. To change the
-selection interactively, run `copier update --ask extras`. Keep the current selections
-and select the features to add. In scripts, list every feature
-to keep, for example:
 
-```sh
-copier update --data 'extras=[cold_install,codecov,property]'
-```
+To change the selection on an existing project:
 
-An update from v0.14.0 seeds this list from the old yes/no answers and `test_extras`.
-It preserves disabled features too, including `cold_install: false` at `standard`.
-The next answers file stores only `extras`. Replace old `--data codecov=true` and
-`--data 'test_extras=[...]'` arguments with the full `extras` selection.
+- **Interactively:** run `copier update --ask extras`. The prompt starts from the current selection, so select what to add.
+- **In a script:** pass the whole list. An explicit list replaces the selection, the `cold_install` default included.
 
-To bypass prompts during initial generation, supply values via `--data-file answers.yml` or pass flags with `--data`.
+  ```sh
+  copier update --data 'extras=[cold_install,codecov,property]'
+  ```
+
+An update from v0.14.0 builds this list from the old yes/no answers and `test_extras`, and
+keeps disabled features disabled, including `cold_install: false` at `standard`. The
+answers file then stores only `extras`. Replace old `--data codecov=true` and
+`--data 'test_extras=[...]'` arguments with the full `extras` list.
 
 ### Presets
 
@@ -130,9 +136,9 @@ Select any combination of stacks:
 | `go` | Go module (library or binary) with golangci-lint |
 | `docker` | Dockerfile for the Python package and root `compose.yaml`; without `python`, a [Compose-only repo](#compose-only-repos) |
 
-Each stack includes a CI workflow in `.github/workflows/` and recipes in `just/<stack>.just`. All projects receive `README.md`, `CHANGELOG.md`, `.gitignore`, `.editorconfig`, dependency bot configuration, git hooks, and `AGENTS.md`. Projects with a license also get `LICENSE` and `REUSE.toml`. Python projects select a [kind](python-kinds.md).
+Each stack adds a CI workflow in `.github/workflows/` and recipes in `just/<stack>.just`. Every project gets `README.md`, `CHANGELOG.md`, `.gitignore`, `.editorconfig`, dependency bot configuration, git hooks and `AGENTS.md`. A licensed project also gets `LICENSE` and `REUSE.toml`. A Python project picks a [kind](python-kinds.md).
 
-CLI binaries (Rust, Go, or Python `data-pipeline`) include `docs/accessibility.md`, documenting terminal output standards (`NO_COLOR` support, plain output redirection, error formats). Review and edit these claims to reflect your application.
+A command-line binary (Rust, Go, or Python `data-pipeline`) gets `docs/accessibility.md`, which documents its terminal output (`NO_COLOR` support, plain output when redirected, error formats). Edit its claims to match your application.
 
 With `decision_records` on, a project keeps its architectural choices in `docs/decisions/` ([Decision records](#decision-records)).
 
@@ -185,7 +191,7 @@ Fork pull requests and repos without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOU
 1. Run `just repo-settings`. It creates the `preview` and `production` environments in GitHub (or create them under Settings > Environments, with `production` limited to `main`).
 2. Create a custom Cloudflare API token with the permission Account > Workers Scripts: Edit. Add it to both environments as the secret `CLOUDFLARE_API_TOKEN`, and add your account ID as `CLOUDFLARE_ACCOUNT_ID`.
 
-The `preview` job runs the pull request's code with the `preview` environment's Cloudflare token. If both environments hold one account-wide token, anyone who can push a branch can deploy over the production Worker. To keep them apart, give previews a token from a second Cloudflare account.
+The `preview` job runs the pull request's code with the `preview` environment's Cloudflare token. If both environments hold one account-wide token, anyone who can push a branch can deploy over the production Worker. To keep them apart, give previews a token from a second Cloudflare account ([why](design.md#security-assessment)).
 
 The first deploy creates each Worker, so there is nothing to set up in Cloudflare except the token. The account needs a workers.dev subdomain. wrangler is an exact devDependency in `package.json` ([why](decisions/0002-wrangler-is-an-exact-dev-dependency.md)), and the dependency bot bumps it.
 
@@ -209,10 +215,10 @@ Legal documents reside in `docs/` and compile to HTML at build time:
 ## Compose-only repos
 
 A repo that only composes upstream images, with shell scripts and Compose files but no
-Dockerfile of its own, answers `stacks=[docker]`. Any `stacks` with `docker` but not
-`python` renders a Compose-only repo, because the only image the template builds is the Python one. With
-the python stack, answer no to `docker_image` (`--data docker_image=false`) to keep the
-package without an image.
+Dockerfile of its own, answers `stacks=[docker]`. Any `stacks` with `docker` and without
+`python` gives a Compose-only repo, since the template builds only a Python image. With the
+python stack, answer no to `docker_image` (`--data docker_image=false`) to keep the package
+without an image.
 
 The render has no Dockerfile, no image build and no `docker.yml`. It gets:
 
@@ -241,7 +247,7 @@ asked: there is no image to expose or push.
 
 ## One package or a monorepo
 
-By default, packages reside at the repository root. To host multiple packages, enable `customise` and assign distinct directory paths (for example, `python_dir: apps/api` and `ts_dir: apps/web`):
+Packages sit at the repository root by default. To host several, answer yes to `customise` and give each stack its own directory, for example `python_dir: apps/api` and `ts_dir: apps/web`:
 
 ```text
 apps/api/{pyproject.toml,src,tests,Dockerfile,.dockerignore}
@@ -251,7 +257,7 @@ compose.yaml
 justfile, just/, .pre-commit-config.yaml, .copier-answers.yml
 ```
 
-Workflows and configuration files remain at the repository root. Two packages may share the root directory.
+Workflows and configuration stay at the repository root. Two packages may share the root directory.
 
 ## Licenses
 
@@ -334,11 +340,11 @@ Known limit: once a project has deleted any file the template renders, copier 9.
 
 Updates skip the sample code and pages (the package's `__init__.py`, `tests/test_add.py`, the web app's components, the site's pages and Worker scripts), so a sample you deleted stays deleted. So does a feature you turn on later with `copier update --data`: it comes without its samples, which a fresh `copier copy` into a scratch directory shows. Delete a file the project owns, such as `README.md`, and the update writes it again.
 
-To relocate a package directory, execute `copier update` with the new path and delete the old directory manually.
+To move a package directory, run `copier update` with the new path, then delete the old directory yourself.
 
-If upgrading from pre-v0.12.0 projects with `docs/adr/`, move existing records to `docs/decisions/` and remove `docs/adr/`.
+A project from before v0.12.0 with `docs/adr/` moves its records to `docs/decisions/` and removes `docs/adr/`.
 
-After updating, refresh and commit project lockfiles (`uv lock`, `pnpm install`, `just go-sync`).
+After an update, refresh and commit the lockfiles (`uv lock`, `pnpm install`, `just go-sync`).
 
 ### Hearing about new releases
 
@@ -369,7 +375,7 @@ A private repo on GitHub Free has no environment secrets. There, leave `--env co
 
 To publish a release:
 
-1. Set the version in `pyproject.toml` and `package.json` to `X.Y.Z` (only the one you publish). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts with no `version`, so citesync skips it; once you add one, after the first release, set it there too, or citesync fails with `version-mismatch`.
+1. Set the version `X.Y.Z` in the manifest you publish (`pyproject.toml` or `package.json`). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts without a `version`, which citesync skips. Once you add one, after the first release, keep it in step, or citesync fails with `version-mismatch`.
 2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits. In a web app it also sets the version in `package.json` itself and commits both files.
 3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it against `.github/allowed_signers` on `origin/main` and pushes it. A web app's run first refuses a `package.json` on `origin/main` at another version, and its `release.yml` refuses such a tag again before it publishes. See [Signed release tags](#signed-release-tags) for the key it needs.
 
@@ -431,15 +437,11 @@ A Rust library always gets an `api` job in `rust.yml`, and `just rs-api` runs th
 
 ## Tests on Windows
 
-`python_windows` adds a `windows` job to `python.yml`. It runs `uv run pytest` on `windows-latest` with `python_version`, so a text file opened without `encoding="utf-8"`, a path built with `/`, or a POSIX-only module such as `fcntl` fails CI instead of a Windows user. Ruff and ty read the same code on every OS, so the job skips them, and it checks out the committed bytes (no CRLF conversion) so a test that hashes a committed file passes. It costs one more job on every push and pull request; Windows runners are also slower to start. With the Python package at the repo root, its check `python: tests (windows)` is required like the Linux ones.
+`python_windows` adds a `windows` job to `python.yml`. It runs `uv run pytest` on `windows-latest` with `python_version`. A text file opened without `encoding="utf-8"`, a path built with `/`, or a POSIX-only module such as `fcntl` then fails CI, not a Windows user.
 
-Keep the current selections and select `python_windows` in the prompt:
+The job skips ruff and ty, which read the same code on every OS. It checks out the committed bytes, with no CRLF conversion, so a test that hashes a committed file passes. It costs one more job on every push and pull request, and Windows runners start slowly. With the Python package at the repo root, its check `python: tests (windows)` is required like the Linux ones.
 
-```sh
-copier update --ask extras
-```
-
-Run `just repo-settings` after the update, so a public repo requires the new check.
+Select `python_windows` in `extras` ([how](#optional-features)). Then run `just repo-settings`, so a public repo requires the new check.
 
 ## Coverage on Codecov
 
@@ -449,11 +451,7 @@ Setup:
 
 1. Register the repository on Codecov and retrieve the upload token.
 2. Save it as repository secret `CODECOV_TOKEN` (`gh secret set CODECOV_TOKEN`).
-3. Keep the current selections and select `codecov` in the prompt:
-
-   ```sh
-   copier update --ask extras
-   ```
+3. Select `codecov` in `extras` ([how](#optional-features)).
 
 ## Benchmarks on CodSpeed
 
@@ -463,11 +461,7 @@ Setup:
 
 1. Import the repository on [codspeed.io](https://codspeed.io).
 2. Set Pull Request comments to "On Change" in CodSpeed repository settings.
-3. Keep the current selections and select `codspeed` in the prompt:
-
-   ```sh
-   copier update --ask extras
-   ```
+3. Select `codspeed` in `extras` ([how](#optional-features)).
 
 ## Profiling
 
@@ -476,15 +470,11 @@ Setup:
 - **Python:** `just py-profile <script or -m module> <args>` runs pyinstrument on demand via `uv run --with` without modifying dependencies.
 - **Rust:** `Cargo.toml` adds a `[profile.profiling]` profile. `just rs-profile <command>` records performance profiles using [samply](https://github.com/mstange/samply); `just rs-counters <command>` executes `perf stat` five times to measure CPU cycles and branch misses. Requires local kernel perf event support.
 
-Keep the current selections and select `profiling` in the prompt:
-
-```sh
-copier update --ask extras
-```
+Select `profiling` in `extras` ([how](#optional-features)).
 
 ## Test extras
 
-Library kinds select `property` and `mutation` in `extras` under `customise`:
+A library kind can select `property` and `mutation` in `extras`:
 
 | Option | Python | TypeScript | Rust | Go |
 | --- | --- | --- | --- | --- |
@@ -495,7 +485,7 @@ Property tests run fast suites locally and in CI. Weekly scheduled jobs (`.githu
 
 Mutation testing runs weekly via `.github/workflows/mutation.yml` and on demand via `just <stack>-mutation`. The Python and Rust jobs fail on a surviving mutant. The TypeScript and Go tools exit 0 when a mutant survives, so those jobs only print survivors.
 
-Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change. Mutant numbers shift when their function changes, so recheck the lines then. `copier update` adds the file with no entries; run the recipe once and list what it reports. Give it mutmut patterns, e.g. `just py-mutation 'mypkg.core.x_parse__mutmut_*'`, to run only those mutants; that run skips the check for listed ones that no longer survive.
+Python: `just py-mutation` fails on a survivor (a mutant the tests miss, or that no test reaches) that is not in `tests/mutation-baseline.txt`. It also fails on a listed mutant that no longer survives, so the list stays true. Each line is the mutant name, then the reason. List a mutant only when no test could see the change, and recheck the lines when a function changes, since mutant numbers shift. `copier update` adds the file with no entries: run the recipe once and list what it reports. To run only some mutants, give it mutmut patterns, such as `just py-mutation 'mypkg.core.x_parse__mutmut_*'`. That run skips the check for listed mutants that no longer survive.
 
 A full run takes minutes to hours, so check each change with the diff recipe instead and keep the full run for the weekly job and before a release:
 
@@ -508,12 +498,7 @@ A full run takes minutes to hours, so check each change with the diff recipe ins
 
 Each takes another git ref, e.g. `just py-mutation-diff main`.
 
-To add tests to an existing project, keep the current selections and select `property`
-or `mutation` in the prompt:
-
-```sh
-copier update --ask extras
-```
+To add these tests to an existing project, select `property` or `mutation` in `extras` ([how](#optional-features)).
 
 ## Static site
 
@@ -522,7 +507,7 @@ Answer `site` (under `customise`) to give any project a static page beside its c
 The two choices differ only in what is in `site/` and how `just site` builds it:
 
 - `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a working [tool page](#the-plain-tool-page). Plain HTML, CSS and an ES module, no build step or framework. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
-- `site=astro`: a small Astro project. `package.json` has astro at the version `copier.yml` pins, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once to write `site/pnpm-lock.yaml`, and commit it. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. On a Worker (`site_host=cloudflare`), the site is served from `/`: `site` is the Worker's address and there is no `base`.
+- `site=astro`: a small Astro project. `package.json` pins astro at the version in `copier.yml`, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once and commit the `site/pnpm-lock.yaml` it writes. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. On a Worker (`site_host=cloudflare`) the site is served from `/`: `site` is the Worker's address and there is no `base`.
 
 The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
 
@@ -540,18 +525,18 @@ The daily sweep finds preview Workers by name alone. In one Cloudflare account, 
 
 ### The plain tool page
 
-`site=plain` starts from a small working tool: it formats JSON. It's there to show the layout and the states, and you replace the job with your own. The page has four parts, top to bottom:
+`site=plain` starts from a small working tool that formats JSON. It shows the layout and the states, and you replace the job with your own. Top to bottom, the page has:
 
-1. A header with the project name, `project_description` as the one sentence that names the job, and a Docs link to the README. Without a description, a TODO marks where the sentence goes.
-2. The workspace: an input with an Open a file button, and beside it the result with one action, Copy result. They sit side by side from 48rem and stack on a phone. The result updates 250 ms after the visitor stops typing. A label beside the result shows its state: Sample, Empty, Needs a fix or Ready. An error shows under the input, and Copy result is off until the input is valid again, so nobody copies a stale result. Screen readers hear a state change or the copy outcome, not every refresh.
-3. Two disclosures: Settings, with an indent choice, and Use it elsewhere, a TODO for the command-line or CI use of the same job.
+1. A header with the project name, `project_description` as the one sentence that names the job, and a Docs link to the README. Without a description, a TODO marks the spot.
+2. The workspace: an input with an Open a file button, and beside it the result with one action, Copy result. They sit side by side from 48rem and stack on a phone. The result updates 250 ms after the visitor stops typing, and a label shows its state: Sample, Empty, Needs a fix or Ready. An error shows under the input, and Copy result stays off until the input is valid, so nobody copies a stale result.
+3. Two disclosures: Settings, with an indent choice, and Use it elsewhere, a TODO for command-line or CI use of the same job.
 4. A footer with one privacy line, then the licence, the source and the issue tracker. A private repo's page has no links into the repo.
 
-To make it your tool, change `convert()` at the top of `main.mjs`, the labels in `index.html`, and the colours at the top of `style.css`. `convert()` returns the result text, or throws an error whose message the page shows under the input.
+To make it your tool, change `convert()` at the top of `main.mjs`, the labels in `index.html` and the colours at the top of `style.css`. `convert()` returns the result text, or throws an error whose message the page shows under the input.
 
 The privacy line says that what the visitor types never leaves the page. The page's Content-Security-Policy has no `connect-src`, so the browser blocks any request the script makes, and the line stays true. A page that calls an API, such as a `worker` route, adds that origin to `connect-src` and changes the line to say what it sends.
 
-The page has a skip link, labelled controls, a visible focus ring and targets at least 44 px tall. It follows the system's dark mode and reduced-motion setting, and keeps the primary action visible in forced colours.
+For accessibility, the page has a skip link, labelled controls, a visible focus ring, targets at least 44 px tall, and screen reader announcements for a state change or the copy outcome. It follows the system's dark mode and reduced-motion setting, and keeps the primary action visible in forced colours.
 
 ### Hosting on a Worker
 
@@ -572,7 +557,7 @@ Replace the card's colours and font with the project's own, then check it before
 - View it at 300 px wide. The name and the one-line job must still read.
 - Crop it to the centre 630 px square. Small square thumbnails (LinkedIn posts, X `summary`, WhatsApp) cut it that way, so the name and any mark must survive there. The job line and the address only need to stay 60 px clear of every edge, since no thumbnail is big enough to read them.
 
-Keep the text at 36 px or more at 1200 px wide, one idea on the card, no label above the name, and never a screenshot of the app: it is illegible at preview size. Keep the job line and the address on the card even though `og:description` and the alt text say the same: X shows only the image, LinkedIn hides the description, and a shared screenshot carries no preview text. One real result or short example may go under the job line to prove it. A repo with both a web app and a site prints the app's address on the one card.
+Keep the text at 36 px or more at 1200 px wide, one idea on the card and no label above the name. Never use a screenshot of the app: it is illegible at preview size. Keep the job line and the address on the card even though `og:description` and the alt text say the same, because X shows only the image, LinkedIn hides the description, and a shared screenshot carries no preview text. One real result or short example may go under the job line to prove it. A repo with both a web app and a site prints the app's address on the one card.
 
 ## Workers hosting
 
@@ -628,8 +613,7 @@ The template also refuses `docs_site` for a web app at the repo root (`ts_dir` i
 
 The [level](#levels) prepares a public, licensed repo for a level of the [OpenSSF Best Practices badge](https://www.bestpractices.dev): `standard` for passing, `community` for silver, and `minimal` for neither.
 
-- `standard` (passing): adds testing and style sections to `.github/CONTRIBUTING.md`, and a `## Usage` section to `README.md` that links the releases and the package registry, with a TODO for what the software does and how to use it.
-- `community` (silver): adds `GOVERNANCE.md`, `docs/roadmap.md`, and `docs/assurance-case.md`, and the `dco` workflow checks every pull request, not only fork ones. The `dco-signoff` commit-msg hook (`git commit -s`) comes with every public render.
+[Levels](#levels) lists what each level adds. For the badge, the `## Usage` section of `README.md` links the releases and the package registry, with a TODO for what the software does and how to use it. The `dco-signoff` commit-msg hook (`git commit -s`) comes with every public render.
 
 A public render at `standard` meets every MUST criterion of the passing level that a file or a repository setting can meet. The rest depend on you, or on the project's history.
 
@@ -730,12 +714,12 @@ A requirement applies to every repo, or only to repos with one of its traits. Th
 | `web` | `ts_kind=web-app`, or a `site` |
 | `cli` | A Rust or Go binary, or a Python `data-pipeline` (the computed `cli` answer) |
 | `package` | `publish_to_pypi`, `publish_to_npm`, or `rust_kind=library` (a crate for crates.io) |
-| `pipeline` | Python `kind=data-pipeline` |
-| `numerics` | Python `kind=research` |
+| `pipeline` | `python_kind=data-pipeline` |
+| `numerics` | `python_kind=research` |
 
-The requirements live in [`levels.toml`](https://github.com/simonvanlierde/project-templates/blob/main/levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
+The requirements live in [`levels.toml`](https://github.com/simonvanlierde/project-templates/blob/main/levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement that applies to it at that level and below. "Counts from" is the date a requirement starts to count: before then, a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
 
-The table says what a repo must have to count as meeting a level, not only what the render adds: every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site` in `extras` once its trigger holds.
+The table says what a repo must have to meet a level, not only what the render adds. Every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site` in `extras` once its trigger holds.
 
 <!-- levels:start -->
 <!-- Generated from levels.toml by `just levels-doc`; edit that file, not this table. -->
