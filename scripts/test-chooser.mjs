@@ -3,7 +3,7 @@ import test from "node:test";
 import { copierCommand, profiles, recommend } from "../docs/assets/chooser.mjs";
 
 test("every recommendation uses only released Copier answers", () => {
-  const allowed = new Set(["stacks", "kind", "ts_kind", "rust_kind", "go_kind", "docker_image"]);
+  const allowed = new Set(["stacks", "python_kind", "ts_kind", "rust_kind", "go_kind", "docker_image"]);
   for (const profile of profiles) {
     for (const key of Object.keys(profile.answers)) assert.ok(allowed.has(key), key);
     const command = copierCommand(profile);
@@ -17,7 +17,7 @@ test("every recommendation uses only released Copier answers", () => {
 
 test("a Python web service always includes its container", () => {
   const profile = recommend({ task: "tool", tool: "service", language: "rust" });
-  assert.deepEqual(profile.answers, { stacks: ["python", "docker"], kind: "web-service", docker_image: true });
+  assert.deepEqual(profile.answers, { stacks: ["python", "docker"], python_kind: "web-service", docker_image: true });
 });
 
 test("task changes ignore answers from hidden questions", () => {
