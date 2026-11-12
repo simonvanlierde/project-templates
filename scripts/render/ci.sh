@@ -152,6 +152,15 @@ grep -q 'cron: "0 6 \* \* 1"' d/.github/workflows/python.yml
 (lacks -q 'cron:' a/.github/workflows/python.yml)
 test -f h/.github/workflows/advisories.yml
 (lacks -q -e '^  python:' -e '^  ts:' h/.github/workflows/advisories.yml)
+# An Astro site's own lockfile gets audited too, beside a stack (y) or alone (compose-astro).
+for r in y compose-astro; do
+  wf=$r/.github/workflows/advisories.yml
+  sed -n '/^  site:$/,/^  notify:$/p' "$wf" | grep -qx '        working-directory: site'
+  sed -n '/^  site:$/,/^  notify:$/p' "$wf" | grep -qx '      - run: pnpm audit --prod --audit-level=moderate'
+  grep -qx '    needs: \[.*'"'"'site'"'"'\]' "$wf"
+done
+test ! -e compose-site/.github/workflows/advisories.yml
+(lacks -q '^  site:' a/.github/workflows/advisories.yml)
 grep -qx '## \[Unreleased\]' a/CHANGELOG.md
 # Decision records default on for a web service (b), a data pipeline or web app (d) and a
 # Silver badge (h); off for research (a), a monorepo of libraries (c) and an unlicensed tool (i).

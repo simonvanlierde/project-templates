@@ -231,6 +231,9 @@ c=$out/compose
 grep -qx ' *Then commit\.' "$out/compose-site.log"
 (lacks -e 'lockfiles' -e 'package manifest' "$out/compose-site.log")
 test -f "$out/compose-site/.github/scripts/preview-retire.sh"
+# An Astro site has a lockfile to audit even when no stack does.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=compose-astro --data 'stacks=[docker]' \
+  --data site=astro . "$out/compose-astro" >/dev/null 2>&1
 # A fresh render passes its own git hooks.
 git -C "$c" init -q
 git -C "$c" add -A
