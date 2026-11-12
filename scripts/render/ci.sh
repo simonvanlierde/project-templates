@@ -351,6 +351,11 @@ mkdir -p "$mutdiff/src/pkg" && cp m/just/mutation_diff.py "$mutdiff/"
   sed -i -e '7s/1/2/' -e '14s/1/2/' -e '19s/1/2/' src/pkg/a.py
   test "$(python3 -I mutation_diff.py HEAD 2>stderr.txt)" = "$(printf 'pkg.a.xǁCǁm__mutmut_*\npkg.a.xǁCǁs__mutmut_*')"
   test "$(cat stderr.txt)" = 'skipped (decorated): pkg.a.g'
+  # A new file git does not track yet counts whole. mutmut strips only a leading src from
+  # module names, so lib/pkg/d.py is module lib.pkg.d.
+  printf '[tool.mutmut]\nsource_paths = ["lib"]\n' >pyproject.toml
+  mkdir -p lib/pkg && printf 'def h():\n    return 1\n' >lib/pkg/d.py
+  test "$(python3 -I mutation_diff.py HEAD)" = 'lib.pkg.d.x_h__mutmut_*'
 )
 # just --list shows only the comment line directly above a recipe: a block of two or more
 # lines there would show its last line alone, so the detail sits behind a blank line.
