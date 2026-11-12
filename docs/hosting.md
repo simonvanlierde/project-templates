@@ -82,6 +82,8 @@ Each pull request that is open, not a draft, not opened by a bot such as Renovat
 - A web app's `preview` job in `ts.yml` deploys `wrangler.jsonc` as `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`.
 - A site's `preview` job in `site.yml` deploys the build job's artifact, not a fresh build, as `<slug>-site-pr-<number>`. The `-site` in the name keeps it apart from a web app's preview in a repo that has both. For a site on Pages, the preview serves the build under `/<repo>/` as Pages does, with a redirect from `/`. For a site on a Worker, it serves the build from `/`, as production does.
 
+A bot's push does not start a preview, so after one the preview keeps the previous build until a person pushes.
+
 The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. With a custom domain, production sends it only on the duplicate workers.dev origin.
 
 When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker through the Cloudflare API. A daily run lists the account's preview Workers and deletes those whose pull request is not open and ready, in case an event was missed. When it cannot read a pull request, it keeps that Worker and fails. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep.
