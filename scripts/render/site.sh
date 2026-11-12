@@ -177,13 +177,33 @@ test "$(grep -c '^          - {slug: ' s/.github/workflows/preview-retire.yml)" 
 grep -qxF "          version: \"$pnpm_pin\"" x/.github/workflows/site.yml
 grep -qx '          package_json_file: web/package.json' d/.github/workflows/site.yml
 # The starter page builds as it is.
-(cd x && just site >/dev/null)
+(cd x && just site) >site-build.log 2>&1 || {
+  cat site-build.log >&2
+  exit 1
+}
 test -f x/_site/index.html
 test -f x/_site/main.mjs
-# deploy-worker.sh with the site's wrangler command and config.
+# deploy-worker.sh with the site's wrangler command and config, as the workflow sets it.
+site_wrangler=$(sed -n 's/^ *WRANGLER: //p' x/.github/workflows/site.yml | sort -u)
+test "$(wc -l <<<"$site_wrangler")" = 1
+# The preview job's assembly step runs on a fake Pages artifact: the build under /<repo>/,
+# a redirect to it and the noindex header.
+assemble=$out/fake-preview-assemble
+rm -rf "$assemble" && mkdir -p "$assemble/pages" "$assemble/art"
+echo '<h1>hi</h1>' >"$assemble/art/index.html"
+tar -cf "$assemble/pages/artifact.tar" -C "$assemble/art" .
+uv run --no-project --with pyyaml python -I -c '
+import sys, yaml
+steps = yaml.safe_load(open(sys.argv[1]))["jobs"]["preview"]["steps"]
+(run,) = [s["run"] for s in steps if "artifact.tar" in s.get("run", "")]
+print(run)' x/.github/workflows/site.yml >"$assemble/step.sh"
+(cd "$assemble" && RUNNER_TEMP=$assemble bash -e step.sh)
+grep -qx '<h1>hi</h1>' "$assemble/_site/cli-me/index.html"
+grep -qx '/ /cli-me/ 302' "$assemble/_site/_redirects"
+grep -qx '  X-Robots-Tag: noindex' "$assemble/_site/_headers"
 (cd "$dstub/work" && env STUB="$dstub" PATH="$dstub:$PATH" GITHUB_OUTPUT="$dstub/gho" GITHUB_STEP_SUMMARY="$dstub/sum" \
-  WRANGLER="pnpm dlx wrangler@$wrangler_pin" "$deploy_sh" Preview cli-me-site-pr-4 --config wrangler.site.jsonc >"$dstub/out" 2>&1)
-test "$(tail -n 1 "$dstub/calls")" = "pnpm dlx wrangler@$wrangler_pin deploy --name cli-me-site-pr-4 --config wrangler.site.jsonc"
+  WRANGLER="$site_wrangler" "$deploy_sh" Preview cli-me-site-pr-4 --config wrangler.site.jsonc >"$dstub/out" 2>&1)
+test "$(tail -n 1 "$dstub/calls")" = "$site_wrangler deploy --name cli-me-site-pr-4 --config wrangler.site.jsonc"
 # A nested package's knip never sees the page's files.
 jq -e '.knip | has("ignoreFiles") | not' d/web/package.json >/dev/null
 # The preview serves the build under /<repo>/, as Pages does.
@@ -252,7 +272,10 @@ done
 (lacks -q 'project edit' y/site/package.json)
 # It builds: every page, Markdown included, inside the layout.
 astro_start=$SECONDS
-(cd y && just site-sync >/dev/null 2>&1 && just site >/dev/null 2>&1)
+(cd y && just site-sync && just site) >astro-build.log 2>&1 || {
+  cat astro-build.log >&2
+  exit 1
+}
 echo "check-render: the Astro build took $((SECONDS - astro_start)) s" >&2
 test -f y/site/dist/index.html
 test -f y/site/dist/about/index.html

@@ -320,3 +320,11 @@ grep -q 'no takedown below is verified' "$stub/out"
 grep -qF 'answers HTTP 000 after the delete' "$stub/out"
 (! retire PRS=1 PROBE_CODE=502)
 grep -qF 'answers HTTP 502 after the delete' "$stub/out"
+
+# A nested web app with a docs site: its legal pages stay in web/docs/, the docs site's
+# own sources in docs/ hold no copy, and docs.yml is there beside ts.yml.
+test -f nw/.github/workflows/docs.yml
+test -f nw/.github/workflows/ts.yml
+test -f nw/web/docs/privacy.md
+test ! -e nw/docs/privacy.md
+test -f nw/docs/index.md

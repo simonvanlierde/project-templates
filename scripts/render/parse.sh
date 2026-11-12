@@ -95,6 +95,8 @@ for path, publisher in [("c/.github/workflows/python-release.yml", "publish"),
              if "verify-tag.sh" in step.get("run", "")]
     assert len(gates) == 1, (path, gates)
     (gate_job, at), = gates
+    assert "continue-on-error" not in jobs[gate_job], (path, gate_job)
+    assert "continue-on-error" not in jobs[gate_job]["steps"][at], (path, gate_job)
     before = [step.get("uses", "").split("@")[0] for step in jobs[gate_job]["steps"][:at]]
     assert before == ["actions/checkout"], (path, before)
     assert waits_for(jobs, publisher, gate_job), (path, publisher, gate_job)

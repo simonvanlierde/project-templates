@@ -36,11 +36,12 @@ fi
 # would fail nothing: every key must be a top-level question in copier.yml.
 for f in presets/*.yml; do
   while read -r k; do
-    grep -qx "$k:" copier.yml || {
+    # copier.yml's own _settings are top-level keys too, but a preset sets answers only.
+    if [[ $k == _* ]] || ! grep -qx "$k:" copier.yml; then
       echo "check-render: $f sets $k, which is not a question" >&2
       exit 1
-    }
-  done < <(sed -n 's/^\([a-z_][a-z_0-9]*\):.*/\1/p' "$f")
+    fi
+  done < <(sed -n 's/^\([A-Za-z_][A-Za-z_0-9]*\):.*/\1/p' "$f")
 done
 
 out=${1:?usage: scripts/check-render.sh OUT_DIR}

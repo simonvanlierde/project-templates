@@ -159,6 +159,8 @@ grep -qx '      - run: uv run pytest' windows-job.yml
 jq -e '.rules[0].parameters.required_status_checks | any(.context == "python: tests (windows)")' x/.github/rulesets/main-checks.json >/dev/null
 # Nested: the git config step runs before checkout creates the folder.
 sed -n '/^  windows:/,/^  [a-z]/p' d/.github/workflows/python.yml | grep -A2 'core.autocrlf false' | grep -qx '        working-directory: \.'
+# A nested stack's jobs are path-filtered, so none is required: a skipped required check blocks the merge.
+(lacks -q 'python: ' d/.github/rulesets/main-checks.json)
 (lacks -q 'windows' e/.github/workflows/python.yml a/.github/workflows/python.yml)
 (lacks -q 'windows' e/.github/rulesets/main-checks.json)
 # Not in py-check: a deliberate break would keep local checks red until the next tag.
