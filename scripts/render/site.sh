@@ -505,6 +505,7 @@ for r in m k h ds; do
   cmp "$repo/template/{% if docs_site %}docs-overrides{% endif %}/main.html" "$r/docs-overrides/main.html"
   grep -qx 'og_image = "assets/og.png"' "$r/zensical.toml"
   grep -qF '<h1>' "$r/docs/og-card.html"
+  grep -qx '<html lang="en">' "$r/docs/og-card.html"
   # shellcheck disable=SC2016 # a literal "$PWD" in the recipe body
   grep -qF '"$PWD/docs/assets/og.png"' "$r/justfile"
   grep -qF 'zensical.toml' "$r/justfile"
