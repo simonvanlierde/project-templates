@@ -294,9 +294,9 @@ grep -qxF -- 'repo edit --add-topic python --add-topic typescript --add-topic ru
 grep -qxF -- "repo edit --description A \"quoted\" {{ one }}, naïve \$USD --add-topic python --add-topic typescript --add-topic docker" "$fake/about-b"
 grep -qxF -- 'repo edit --homepage https://pipe-me.example-org.workers.dev --add-topic python --add-topic typescript --add-topic docker' "$fake/about-d"
 grep -qxF -- 'repo edit --homepage https://demo.example.org --add-topic python' "$fake/about-cfp"
-grep -qxF -- 'repo edit --add-topic python' "$fake/about-x"
 # A docs site on GitHub Pages is the homepage when there is no app or Worker site.
-grep -qE -- '^repo edit .*--homepage https://[a-z0-9-]+\.github\.io/[a-z0-9.-]+/ ' "$fake/about-m"
+grep -qxF -- 'repo edit --homepage https://example-org.github.io/cli-me/ --add-topic python' "$fake/about-x"
+grep -qxF -- 'repo edit --homepage https://example-org.github.io/mutate-me/ --add-topic python --add-topic typescript --add-topic rust --add-topic go' "$fake/about-m"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
   r=${answers%%/*}
