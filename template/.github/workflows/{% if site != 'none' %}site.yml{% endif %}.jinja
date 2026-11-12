@@ -49,6 +49,10 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "{{ node_version }}"
+
+      # The lockfile alone: advisories.yml repeats this weekly.
+      - run: pnpm audit --prod --audit-level=moderate
+        working-directory: site
 {%- elif site_on_workers and worker %}
 
       # For the Worker's tests, which `just site` runs.
@@ -192,8 +196,8 @@ jobs:
   # without the secret.
   preview:
     name: "site: preview"
-    # Bot pull requests (Renovate, Dependabot, the update App) and bot pushes to a person's
-    # pull request get no preview, so their code never sees the token.
+    # Bot pull requests (Renovate, Dependabot, the update App) get no preview, and a bot's
+    # push does not start one. A person's later ready or reopen deploys the head as it is.
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]') && !endsWith(github.actor, '[bot]')
     # Shares the site job of preview-retire.yml, so a retire waits for a deploy in flight.
     concurrency:

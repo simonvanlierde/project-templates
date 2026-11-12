@@ -262,15 +262,15 @@ grep -q 'package = "codspeed-divan-compat"' a/Cargo.toml
 grep -qx 'name = "codspeed"' c/crates/cli/Cargo.toml
 grep -q 'working-directory: crates/cli' c/.github/workflows/benchmarks.yml
 grep -q 'working-directory: api' c/.github/workflows/benchmarks.yml
-# Every workflow that installs the locked dependencies checks them for malware first, as
-# python.yml does. The sweep must see benchmarks, property and mutation runs to count.
-mapfile -t synced < <(grep -rl --include='*.yml' -e '- run: uv sync' ./*/.github/workflows)
-for f in benchmarks property mutation; do
+# Every workflow that installs Python packages with uv (uv sync, uvx, or `just docs`) checks
+# them for malware first, as python.yml does. The sweep must see these runs to count.
+mapfile -t synced < <(grep -rl --include='*.yml' -e '- run: uv sync' -e 'uvx ' -e '- run: just docs' ./*/.github/workflows)
+for f in benchmarks property mutation docs fair copier-update pr-title; do
   printf '%s\n' "${synced[@]}" | grep -q "/$f.yml$"
 done
 unchecked=$(grep -L 'UV_MALWARE_CHECK: "1"' "${synced[@]}" || true)
 test -z "$unchecked" || {
-  echo "uv sync without UV_MALWARE_CHECK: $unchecked" >&2
+  echo "uv without UV_MALWARE_CHECK: $unchecked" >&2
   exit 1
 }
 for r in b d; do

@@ -248,6 +248,8 @@ for r in y t; do
   # The build job sets up node and pnpm from the site's own package.json.
   sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -qx '          package_json_file: site/package.json'
   sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -q 'uses: actions/setup-node@'
+  # Every push and pull request audits the site's dependencies, as each stack's CI job does.
+  sed -n '/^  build:$/,/^  deploy:$/p' "$wf" | grep -A1 -x '      - run: pnpm audit --prod --audit-level=moderate' | grep -qx '        working-directory: site'
   # Pages serves the site under /<repo>/, and so does its preview.
   grep -qx "  base: \"/$([ "$r" = y ] && echo site-me || echo lib-me)\"," "$r/site/astro.config.mjs"
   # The lockfile it writes is skipped by the YAML hooks at any depth.
@@ -255,6 +257,7 @@ for r in y t; do
   test "$(grep -cxF '        exclude: (^|/)pnpm-lock\.yaml$' "$r/.pre-commit-config.yaml")" -ge 2
 done
 grep -qx '          version: "'"$pnpm_pin"'"' y/.github/workflows/site.yml
+(lacks -q 'pnpm audit' x/.github/workflows/site.yml)
 # shellcheck disable=SC2016
 grep -qF 'tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C site/dist/site-me' y/.github/workflows/site.yml
 grep -qF "printf '/ /site-me/ 302\n' > site/dist/_redirects" y/.github/workflows/site.yml

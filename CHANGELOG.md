@@ -26,16 +26,16 @@ Upgrade steps:
 - Quick-start commands and preset examples select the intended Python project type with released templates.
 - Docs sites that enable code-copy buttons keep their actions from adding duplicate navigation landmarks.
 - Docs sites keep mobile navigation reachable by keyboard and selected links readable. Code names in tables no longer break mid-word, and a wide table shows a shadow on the side it scrolls to. New sites use system fonts and a plain repository link without remote statistics; existing sites can adopt the [theme settings](docs/usage.md#documentation-site) after updating.
-- Closing a Copier update PR unmerged skips that tag on later weekly runs; a newer tag can still open a PR.
-- Worker previews skip Copier update branches, including updates opened by a user account. They also skip runs that a bot started by pushing to a pull request a person opened, so bot-pushed code never sees the Cloudflare token. Web app deploys keep hidden build files such as `.well-known/security.txt`.
+- Closing a Copier update PR unmerged skips that tag on later weekly runs; a newer tag can still open a PR. A fork's pull request from a branch with the same name no longer counts as declining a tag, and the workflow never edits or closes it. Only the issue the workflow opened itself stops the weekly reminder for a tag.
+- Worker previews skip Copier update branches, including updates opened by a user account. A bot's push to a pull request a person opened does not start a preview either. Web app deploys keep hidden build files such as `.well-known/security.txt`.
 - Workers explicitly disable observability. With a custom domain, production adds `noindex` only to its duplicate workers.dev origin.
 - Generated hooks check shell scripts, and Dependabot projects explain how template updates refresh their prek pin.
-- The CodSpeed, property and mutation Python jobs check dependencies against OSV's malware advisories, as the test job does.
+- The CodSpeed, property and mutation Python jobs, the docs build, and the `cold-install`, `copier-update`, `fair` and `pr-title` workflows check what uv installs against OSV's malware advisories, as the test job does.
 - `tests/test_benchmarks.py` belongs to the project once written. An update or a render into an existing repo keeps the project's own benchmarks, also when it turns `codspeed` on. A deleted one comes back, since the benchmarks workflow runs it.
 
 ### Added
 
-- An Astro site's `site/pnpm-lock.yaml` gets its own `pnpm audit` job in the weekly `advisories.yml`, also in a repo whose stacks have no audit of their own.
+- An Astro site's `site/pnpm-lock.yaml` gets its own `pnpm audit` job in the weekly `advisories.yml`, also in a repo whose stacks have no audit of their own. The build job in `site.yml` runs the same audit on every push and pull request.
 - `just site-serve` serves the site locally: Astro's dev server at the address that includes the Pages base, or a plain site over HTTP, since a browser refuses its modules from a file.
 - Web-service tests exercise an unavailable OTLP HTTP collector, check that requests still succeed and bound shutdown after SIGTERM.
 - [Levels](docs/levels.md): the requirements a public repo meets at each level, by the traits that make a requirement apply, with the standard each comes from and the date it starts to count. `levels.toml` holds them, versioned with the template's releases.

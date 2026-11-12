@@ -28,6 +28,13 @@ jobs:
     # to a digest, so a moved tag can't swap the image. Renovate bumps it; Dependabot
     # doesn't read workflow images, so with Dependabot it moves on `copier update`.
     container: buildpack-deps:trixie@sha256:5214476af627916270063c9f99a969381f32cd961c861ea95e740ba71abc125f
+{%- if 'python' in stacks or 'ts' not in stacks %}
+    env:
+      # As in python.yml: uv checks every package against OSV's malware advisories before
+      # its code runs. The preview flag only silences the "experimental" warning.
+      UV_MALWARE_CHECK: "1"
+      UV_PREVIEW_FEATURES: malware-check
+{%- endif %}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
