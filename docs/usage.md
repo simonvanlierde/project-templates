@@ -352,7 +352,7 @@ The site uses system fonts and a plain repository link. It makes no font or repo
 
 `docs-overrides/main.html` adds link-preview tags to every page: `og:title`, `og:description`, `og:image` (with size and alt text), `og:url` and `twitter:card`. The home page's title is the site name alone, and another page's is `<page> - <site name>`. A page's `description:` front matter replaces the site description. The tags read `site_url`, `site_description` and `og_image` from `zensical.toml` and are skipped when there is no `og_image`. Run `just og-card` to render the card ([Social card](hosting.md#social-card)).
 
-An existing `zensical.toml` is yours, so updates leave it alone. To use these defaults after an update, add the assets under `[project]` and the theme settings under `[project.theme]`. Keep any other entries in those tables:
+An existing `zensical.toml` is yours, so updates leave it alone. To use these defaults after an update, add the assets under `[project]`, the theme settings under `[project.theme]`, the card under `[project.extra]` and the code-block setting under `[project.markdown_extensions.pymdownx.highlight]`. Keep any other entries in those tables:
 
 ```toml
 [project]
@@ -365,6 +365,9 @@ custom_dir = "docs-overrides"
 
 [project.extra]
 og_image = "assets/og.png"
+
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = false
 ```
 
 If you already list stylesheets or scripts, append the new paths instead of replacing those lists. If you use another `custom_dir`, copy the plain-link partial and `main.html` into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
