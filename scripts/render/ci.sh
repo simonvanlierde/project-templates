@@ -266,7 +266,8 @@ grep -q 'working-directory: api' c/.github/workflows/benchmarks.yml
 # them for malware first, as python.yml does. The sweep must see these runs to count.
 mapfile -t synced < <(grep -rl --include='*.yml' -e '- run: uv sync' -e 'uvx ' -e '- run: just docs' ./*/.github/workflows)
 for f in benchmarks property mutation docs fair copier-update pr-title; do
-  printf '%s\n' "${synced[@]}" | grep -q "/$f.yml$"
+  # Not grep -q: it exits at the first match, and under pipefail printf's SIGPIPE fails the line.
+  printf '%s\n' "${synced[@]}" | grep "/$f.yml$" >/dev/null
 done
 unchecked=$(grep -L 'UV_MALWARE_CHECK: "1"' "${synced[@]}" || true)
 test -z "$unchecked" || {

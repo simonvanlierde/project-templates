@@ -312,8 +312,11 @@ site_serve() { # render, URL, text the page holds
     return 1
   }
 }
-# setsid and `fuser -n` are Linux-only, so macOS runs skip this; CI runs it.
-if command -v setsid >/dev/null && command -v fuser >/dev/null; then
+# setsid, flock and `fuser -n` are Linux-only, so macOS runs skip this; CI runs it.
+if command -v setsid >/dev/null && command -v fuser >/dev/null && command -v flock >/dev/null; then
+  # The recipe's port is fixed, so runs in other worktrees take turns here.
+  exec {port_lock}>"${TMPDIR:-/tmp}/check-render-port-4321.lock"
+  flock "$port_lock"
   site_serve y http://localhost:4321/site-me/ 'href="/site-me/about/"'
   # astro dev prints the address without the Pages base, so the recipe prints it whole.
   grep -qxF 'Open http://localhost:4321/site-me/' "$out/y-site-serve.log"
@@ -360,6 +363,7 @@ time.sleep(120)' >"$out/port-holder.log" 2>&1 &
   done
   kill "$holder"
   wait "$holder" 2>/dev/null || true
+  exec {port_lock}>&-
 fi
 # The deploy job's gate: it deploys only when Pages deploys from Actions, skips with a
 # notice while Pages is off (404), and fails on any other error. Run against a stub gh.

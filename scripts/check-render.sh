@@ -23,14 +23,18 @@ no_image() {
 # Independent renders run in parallel, one per core: `bg cmd...` starts one, `bg_wait`
 # waits for all and fails if any failed. A failing job prints its own message.
 bg_limit=$(getconf _NPROCESSORS_ONLN)
-bg_failed=0
+bg_pids=()
 bg() {
-  while [ "$(jobs -rp | wc -l)" -ge "$bg_limit" ]; do wait -n || bg_failed=1; done
+  # Not wait -n: it also returns for jobs the area files start, such as the site servers.
+  while [ "$(jobs -rp | wc -l)" -ge "$bg_limit" ]; do sleep 0.1; done
   "$@" &
+  bg_pids+=("$!")
 }
 bg_wait() {
-  while [ -n "$(jobs -rp)" ]; do wait -n || bg_failed=1; done
-  [ "$bg_failed" -eq 0 ] || {
+  local pid failed=0
+  for pid in "${bg_pids[@]}"; do wait "$pid" || failed=1; done
+  bg_pids=()
+  [ "$failed" -eq 0 ] || {
     echo "check-render: a parallel check failed; its message is above" >&2
     exit 1
   }
