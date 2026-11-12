@@ -351,7 +351,7 @@ jobs:
 
       # check-render built the plain (x) and Astro (y) site starters. axe checks them with
       # the tags the web app's own a11y spec uses, in light and dark.
-      - name: axe over the site starters
+      - name: browser checks over sites and docs
         working-directory: ${{ runner.temp }}
         run: |
           set -euo pipefail
@@ -393,6 +393,13 @@ jobs:
           curl -fsS --retry 10 --retry-connrefused --retry-delay 1 -o /dev/null http://127.0.0.1:8101/
           curl -fsS --retry 10 --retry-connrefused --retry-delay 1 -o /dev/null http://127.0.0.1:8102/site-me/
           node axe.mjs http://127.0.0.1:8101/ http://127.0.0.1:8102/site-me/ http://127.0.0.1:8102/site-me/about/
+
+          # Check the template's docs and one generated docs site with the same browser dependencies.
+          just --working-directory "$GITHUB_WORKSPACE" docs
+          cp -R "$GITHUB_WORKSPACE/_docs" srv/project-templates
+          cp -R "$RUNNER_TEMP/m/_docs" srv/mutate-me
+          cp "$GITHUB_WORKSPACE/scripts/check-docs.mjs" .
+          node check-docs.mjs http://127.0.0.1:8102/project-templates/ http://127.0.0.1:8102/mutate-me/
 
       # No linter can parse the .jinja workflows, so audit the rendered output: every render
       # check-render made, each found by its .copier-answers.yml. Scaffolds get the same

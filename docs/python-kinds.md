@@ -10,7 +10,11 @@ A Python project asks for a `kind`:
 | `data-pipeline` | You rebuild a dataset from public sources, traceable to each download  | A source manifest, fetch/build/validate stages, citation files   |
 | `web-service`   | You run an HTTP service in a container (requires the `docker` stack)   | A FastAPI app with a `/health` endpoint                          |
 
-When the project has a license, `CITATION.cff` and `codemeta.json` render from your identity answers. Edit `CITATION.cff` only; run `just citation` to sync `codemeta.json`. A git hook fails if either file or `pyproject.toml` disagrees. A library also sets `python_min`: `requires-python` starts there, and CI tests every minor version up to `python_version`.
+Licensed Python `library`, `research` and `data-pipeline` projects get `CITATION.cff`, `codemeta.json` and `just citation`. An `app` or `web-service` gets them only when another selected stack has a library kind and the project has a license.
+
+The citation files render from your identity answers. Edit `CITATION.cff` only; run `just citation` to sync `codemeta.json`. A git hook fails if either file or `pyproject.toml` disagrees.
+
+A Python library also sets `python_min`: `requires-python` starts there, and CI tests every minor version up to `python_version`.
 
 ## data-pipeline
 

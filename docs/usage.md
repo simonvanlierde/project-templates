@@ -10,7 +10,7 @@ reference for what comes after, in the order you are likely to need it:
 - **After the first push:** [protect `main`](#protecting-main) and
   [fill in the About box](#the-github-about-box).
 - **Later:** [pull in template updates](#keeping-your-project-up-to-date).
-- **Optional features**, which you can turn on at any time with `copier update --data`:
+- **Optional features**, which you can turn on at any time with `copier update`:
   [publishing](#publishing), [tests on Windows](#tests-on-windows), [Codecov](#coverage-on-codecov),
   [CodSpeed](#benchmarks-on-codspeed), [profiling](#profiling),
   [test extras](#test-extras), a [static site](#static-site),
@@ -74,7 +74,8 @@ mutation tests require a library kind. Publishing and hosting keep their own que
 
 New public, licensed projects at `standard` or `community` start with `cold_install`.
 An explicit list replaces the whole selection, including that default. To change the
-selection interactively, run `copier update --ask extras`. In scripts, list every feature
+selection interactively, run `copier update --ask extras`. Keep the current selections
+and select the features to add. In scripts, list every feature
 to keep, for example:
 
 ```sh
@@ -374,7 +375,7 @@ To publish a release:
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
 
-If a publishing job fails before artifacts upload to the registry, re-run the failed CI job on the existing tag. PyPI uploads stay strict: an existing filename fails the job, so inspect a partial upload before publishing a new patch version. If `docker.yml`'s `attest` step fails after the image push, re-run only that step: a full re-run rebuilds the image and repoints the semver tags. If the release artifact is already published to the registry, do not move the git tag; bump the patch version and publish a new release.
+If a publishing job fails before any artifacts upload to the registry, re-run the failed CI job on the existing tag. PyPI uploads stay strict: an existing filename fails the job, so inspect the registry for a partial upload first. If any release artifact is already published, keep the git tag and publish a new patch release. This includes a failure in `docker.yml`'s attestation step after the image push. GitHub Actions can re-run a job, but not an individual step; re-running this job rebuilds the image and repoints the semver tags.
 
 Publishing controls:
 
@@ -432,8 +433,10 @@ A Rust library always gets an `api` job in `rust.yml`, and `just rs-api` runs th
 
 `python_windows` adds a `windows` job to `python.yml`. It runs `uv run pytest` on `windows-latest` with `python_version`, so a text file opened without `encoding="utf-8"`, a path built with `/`, or a POSIX-only module such as `fcntl` fails CI instead of a Windows user. Ruff and ty read the same code on every OS, so the job skips them, and it checks out the committed bytes (no CRLF conversion) so a test that hashes a committed file passes. It costs one more job on every push and pull request; Windows runners are also slower to start. With the Python package at the repo root, its check `python: tests (windows)` is required like the Linux ones.
 
+Keep the current selections and select `python_windows` in the prompt:
+
 ```sh
-copier update --data 'extras=[cold_install,python_windows]'
+copier update --ask extras
 ```
 
 Run `just repo-settings` after the update, so a public repo requires the new check.
@@ -446,10 +449,10 @@ Setup:
 
 1. Register the repository on Codecov and retrieve the upload token.
 2. Save it as repository secret `CODECOV_TOKEN` (`gh secret set CODECOV_TOKEN`).
-3. Enable Codecov:
+3. Keep the current selections and select `codecov` in the prompt:
 
    ```sh
-   copier update --data 'extras=[cold_install,codecov]'
+   copier update --ask extras
    ```
 
 ## Benchmarks on CodSpeed
@@ -460,10 +463,10 @@ Setup:
 
 1. Import the repository on [codspeed.io](https://codspeed.io).
 2. Set Pull Request comments to "On Change" in CodSpeed repository settings.
-3. Enable CodSpeed:
+3. Keep the current selections and select `codspeed` in the prompt:
 
    ```sh
-   copier update --data 'extras=[cold_install,codspeed]'
+   copier update --ask extras
    ```
 
 ## Profiling
@@ -473,10 +476,10 @@ Setup:
 - **Python:** `just py-profile <script or -m module> <args>` runs pyinstrument on demand via `uv run --with` without modifying dependencies.
 - **Rust:** `Cargo.toml` adds a `[profile.profiling]` profile. `just rs-profile <command>` records performance profiles using [samply](https://github.com/mstange/samply); `just rs-counters <command>` executes `perf stat` five times to measure CPU cycles and branch misses. Requires local kernel perf event support.
 
-Enable with:
+Keep the current selections and select `profiling` in the prompt:
 
 ```sh
-copier update --data 'extras=[cold_install,profiling]'
+copier update --ask extras
 ```
 
 ## Test extras
@@ -505,10 +508,11 @@ A full run takes minutes to hours, so check each change with the diff recipe ins
 
 Each takes another git ref, e.g. `just py-mutation-diff main`.
 
-To add extras to an existing project:
+To add tests to an existing project, keep the current selections and select `property`
+or `mutation` in the prompt:
 
 ```sh
-copier update --data 'extras=[cold_install,property]'
+copier update --ask extras
 ```
 
 ## Static site
@@ -599,6 +603,22 @@ A render with `docs_site` gets:
 The build is strict: a warning fails it. A link to a page that does not exist is a warning, and so is a link out of `docs/`, such as `../README.md`. Link to files outside `docs/` with their full GitHub URL instead.
 
 TypeScript, Rust and Go projects get the site too, without an API reference. A Rust crate has one on docs.rs and a Go module on pkg.go.dev. The template has none for TypeScript yet.
+
+The site uses system fonts and a plain repository link. It makes no font or repository-statistics requests to third parties. Search runs locally in the browser. `docs/assets/docs.css`, `docs/assets/docs.js` and `docs-overrides/partials/source.html` keep the theme's selected links readable and its mobile controls keyboard-accessible.
+
+An existing `zensical.toml` is yours, so updates leave it alone. To use these defaults after an update, add the assets under `[project]` and the theme settings under `[project.theme]`. Keep any other entries in those tables:
+
+```toml
+[project]
+extra_css = ["assets/docs.css"]
+extra_javascript = ["assets/docs.js"]
+
+[project.theme]
+font = false
+custom_dir = "docs-overrides"
+```
+
+If you already list stylesheets or scripts, append the new paths instead of replacing those lists. If you use another `custom_dir`, copy the plain-link partial into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
 
 One repo has one Pages site, so the template refuses `docs_site` together with a `site` on Pages. A `site` [on a Worker](#hosting-on-a-worker) leaves Pages to the docs. Otherwise, a playground page can go in `docs/` as Markdown or HTML.
 

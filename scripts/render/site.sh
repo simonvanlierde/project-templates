@@ -90,6 +90,11 @@ for r in m k h ds; do
   for f in zensical.toml docs/index.md .github/workflows/docs.yml; do test -f "$r/$f"; done
   grep -qx '/_docs/' "$r/.gitignore"
   grep -qx 'site_dir = "_docs"' "$r/zensical.toml"
+  grep -qx 'font = false' "$r/zensical.toml"
+  grep -qx 'custom_dir = "docs-overrides"' "$r/zensical.toml"
+  for asset in .lycheeignore docs/assets/docs.css docs/assets/docs.js docs-overrides/partials/source.html; do
+    cmp "$repo/$asset" "$r/$asset"
+  done
   grep -qF "zensical@$zensical_pin build --strict" "$r/justfile"
   grep -qF "zensical@$zensical_pin serve" "$r/justfile"
   wf=$r/.github/workflows/docs.yml
