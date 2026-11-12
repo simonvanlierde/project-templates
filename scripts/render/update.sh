@@ -357,12 +357,10 @@ test -z "$unpinned" || {
   cp -R "$repo/template/." "$extras_tpl/template/"
   "${git_extras[@]}" add copier.yml includes template
   "${git_extras[@]}" commit -qm extras
-  for selection in all some none; do
-    (
-      cd "$out/extras-$selection"
-      uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --vcs-ref=HEAD --defaults --quiet
-    )
-  done
+  # shellcheck disable=SC2329 # bg runs it.
+  update_in() { cd "$1" && uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --vcs-ref=HEAD --defaults --quiet; }
+  for selection in all some none; do bg update_in "$out/extras-$selection"; done
+  bg_wait
   uv run --no-project --with pyyaml python - "$out" <<'PYTEST'
 from pathlib import Path
 import sys, yaml

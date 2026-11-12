@@ -20,6 +20,22 @@ no_image() {
   test ! -e "$1/.github/workflows/docker.yml"
 }
 
+# Independent renders run in parallel, one per core: `bg cmd...` starts one, `bg_wait`
+# waits for all and fails if any failed. A failing job prints its own message.
+bg_limit=$(getconf _NPROCESSORS_ONLN)
+bg_failed=0
+bg() {
+  while [ "$(jobs -rp | wc -l)" -ge "$bg_limit" ]; do wait -n || bg_failed=1; done
+  "$@" &
+}
+bg_wait() {
+  while [ -n "$(jobs -rp)" ]; do wait -n || bg_failed=1; done
+  [ "$bg_failed" -eq 0 ] || {
+    echo "check-render: a parallel check failed; its message is above" >&2
+    exit 1
+  }
+}
+
 bash scripts/check-release-fixtures.sh
 
 # Windows git cannot write a path over 260 characters. On the runner, the checkout root
@@ -67,12 +83,14 @@ copier=(uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" copy --defaults --overwr
 # files re-render d, render n and edit renders in place, so keep the order.
 render=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/render
 
-# A throwaway local tag on HEAD stands in for a release, for render e. The trap uses
-# -C because the checks cd out of the repo. The -f on `git tag` covers a killed run
-# that left the tag behind.
+# A throwaway local tag on HEAD stands in for a release, for render e. Worktrees share
+# tags, so each worktree gets its own name and runs in two worktrees don't collide. The
+# trap uses -C because the checks cd out of the repo. The -f on `git tag` covers a killed
+# run that left the tag behind.
 repo=$PWD
-trap 'git -C "$repo" tag -d check-render-tag >/dev/null 2>&1 || true' EXIT
-git tag -f check-render-tag >/dev/null
+render_tag=check-render-$(printf %s "$repo" | cksum | cut -d' ' -f1)
+trap 'git -C "$repo" tag -d "$render_tag" >/dev/null 2>&1 || true' EXIT
+git tag -f "$render_tag" >/dev/null
 
 for area in cases parse; do
   # shellcheck source=/dev/null # the area files lint on their own

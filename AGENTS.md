@@ -10,8 +10,8 @@ Notes for coding agents working on this Copier template. `just` lists the comman
   `scripts/render/cases.sh` and its checks to that area's file in `scripts/render/`.
   The files run in the order check-render.sh sources them, and later checks read
   state that earlier ones leave, so add to a file rather than reorder.
-- The render script tags a commit that all worktrees of this repo share, so don't run
-  it in two worktrees at once.
+- The render script tags HEAD under a name of its worktree's own, so runs in separate
+  worktrees can overlap; two runs in one worktree still collide.
 - A render from an untagged commit records your local path as `_src_path`. Render a
   real project from a pushed tag.
 - Every change that projects should receive goes in `CHANGELOG.md` under `[Unreleased]`,

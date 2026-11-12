@@ -14,8 +14,8 @@ check: hooks render docs chooser
 hooks:
     prek run -a
 
-# The render includes uncommitted edits. Its commit tag is shared by every worktree of
-# this repo, so don't run it in two worktrees at once.
+# The render includes uncommitted edits. Its tag is named after the worktree, so runs in
+# separate worktrees can overlap, but not two in one worktree.
 
 # Render the answer sets in scripts/render/cases.sh and check the output.
 render:
