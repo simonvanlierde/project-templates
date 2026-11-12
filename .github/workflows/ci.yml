@@ -368,6 +368,8 @@ jobs:
             "$PLAYWRIGHT_VERSION" "$AXE_PLAYWRIGHT_VERSION" >package.json
           # Like a scaffold's dlx, the install waits a week for every package it resolves.
           pnpm install -s --config.minimum-release-age=10080 >/dev/null
+          # The browser checks' own dependencies must be ones this MIT project can take.
+          pnpm licenses list --json | node "$GITHUB_WORKSPACE/scripts/check-licenses.mjs"
           pnpm exec playwright install chromium >/dev/null
           cat >axe.mjs <<'JS'
           import AxeBuilder from "@axe-core/playwright";
