@@ -14,6 +14,14 @@ const focusOnScreen = () => {
 };
 const browser = await chromium.launch();
 try {
+  if (requireCsp) {
+    const page = await browser.newPage();
+    await page.goto(new URL("usage/", urls[0]).href);
+    // These published fragments must survive splits of the usage guide.
+    const oldAnchors = "moving-an-app-off-cloudflare-pages pull-request-previews public-repos making-a-repo-public protecting-main the-github-about-box keeping-your-project-up-to-date hearing-about-new-releases the-update-app publishing signed-release-tags first-release static-site the-plain-tool-page hosting-on-a-worker social-card openssf-best-practices-badge before-you-register register osps-baseline-level-1 dependency-updates spelling-and-link-checks scientific-python-repo-review documentation-rules adopting-the-template-in-an-existing-repo adopting-the-template-in-an-existing-python-package adopting-the-template-in-an-existing-web-app adopting-the-template-in-an-existing-compose-only-repo production workers-hosting levels how-much-documentation moving-up-a-tier".split(" ");
+    for (const id of oldAnchors) await expect(page.locator(`[id="${id}"]`), `old usage link #${id}`).toHaveCount(1);
+    await page.close();
+  }
   for (const url of urls) {
     for (const colorScheme of ["light", "dark"]) {
       const context = await browser.newContext({ colorScheme });

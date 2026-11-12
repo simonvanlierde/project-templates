@@ -379,7 +379,7 @@ jobs:
           pnpm exec playwright install chromium >/dev/null
           cat >axe.mjs <<'JS'
           import AxeBuilder from "@axe-core/playwright";
-          import { chromium } from "@playwright/test";
+          import { chromium, expect } from "@playwright/test";
 
           const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
           const browser = await chromium.launch();
@@ -390,6 +390,16 @@ jobs:
               const page = await context.newPage();
               const response = await page.goto(url);
               if (!response?.ok()) throw new Error(`${url}: HTTP ${response?.status()}`);
+              if (new URL(url).port === "8101") {
+                const input = page.locator("#input");
+                await input.fill("{");
+                await expect(input).toHaveAttribute("aria-invalid", "true");
+                await expect(page.locator("#copy")).toBeDisabled();
+                await input.fill("{}");
+                await expect(input).toHaveAttribute("aria-invalid", "false");
+                await expect(page.locator("#input-error")).toBeHidden();
+                await expect(page.locator("#copy")).toBeEnabled();
+              }
               const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
               for (const v of violations) {
                 console.log(`${url} (${colorScheme}): ${v.id}: ${v.help} at ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);

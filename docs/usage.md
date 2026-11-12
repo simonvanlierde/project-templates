@@ -91,8 +91,8 @@ Pass one with `--data-file`, which reads a local path. Use the same release tag 
 the preset and the template:
 
 ```sh
-curl -fsSLo /tmp/preset.yml https://raw.githubusercontent.com/simonvanlierde/project-templates/v0.14.0/presets/rust-cli.yml
-copier copy --vcs-ref=v0.14.0 --data-file /tmp/preset.yml gh:simonvanlierde/project-templates my-tool
+curl -fsSLo /tmp/preset.yml https://raw.githubusercontent.com/simonvanlierde/project-templates/v0.15.0/presets/rust-cli.yml
+copier copy --vcs-ref=v0.15.0 --data-file /tmp/preset.yml gh:simonvanlierde/project-templates my-tool
 ```
 
 `--data` flags after it override single answers. A preset is a starting point, not a
@@ -381,12 +381,37 @@ The template also refuses `docs_site` for a web app at the repo root (`ts_dir` i
 These sections now live on their own pages. The anchors keep links from rendered projects working.
 
 <!-- rumdl-disable MD033 -->
-- <a id="static-site"></a>Static site: see [hosting](hosting.md#static-site).
-- <a id="pull-request-previews"></a>Pull request previews: see [hosting](hosting.md#pull-request-previews).
-- <a id="social-card"></a>Social card: see [hosting](hosting.md#social-card).
-- <a id="publishing"></a>Publishing: see [setting up the repo](setup.md#publishing).
-- <a id="the-update-app"></a>The update App: see [updates](updates.md#the-update-app).
-- <a id="protecting-main"></a>Protecting `main`: see [setting up the repo](setup.md#protecting-main).
-- <a id="keeping-your-project-up-to-date"></a>Keeping your project up to date: see [updates](updates.md#keeping-your-project-up-to-date).
-- <a id="levels"></a>Levels: see [levels](levels.md).
+- <a id="moving-an-app-off-cloudflare-pages"></a>Moving an app off cloudflare pages: see [the current section](hosting.md#moving-an-app-off-cloudflare-pages).
+- <a id="pull-request-previews"></a>Pull request previews: see [the current section](hosting.md#pull-request-previews).
+- <a id="public-repos"></a>Public repos: see [the current section](setup.md#public-repos).
+- <a id="making-a-repo-public"></a>Making a repo public: see [the current section](setup.md#making-a-repo-public).
+- <a id="protecting-main"></a>Protecting main: see [the current section](setup.md#protecting-main).
+- <a id="the-github-about-box"></a>The github about box: see [the current section](setup.md#the-github-about-box).
+- <a id="keeping-your-project-up-to-date"></a>Keeping your project up to date: see [the current section](updates.md#keeping-your-project-up-to-date).
+- <a id="hearing-about-new-releases"></a>Hearing about new releases: see [the current section](updates.md#hearing-about-new-releases).
+- <a id="the-update-app"></a>The update app: see [the current section](updates.md#the-update-app).
+- <a id="publishing"></a>Publishing: see [the current section](setup.md#publishing).
+- <a id="signed-release-tags"></a>Signed release tags: see [the current section](setup.md#signed-release-tags).
+- <a id="first-release"></a>First release: see [the current section](setup.md#first-release).
+- <a id="static-site"></a>Static site: see [the current section](hosting.md#static-site).
+- <a id="the-plain-tool-page"></a>The plain tool page: see [the current section](hosting.md#the-plain-tool-page).
+- <a id="hosting-on-a-worker"></a>Hosting on a worker: see [the current section](hosting.md#hosting-on-a-worker).
+- <a id="social-card"></a>Social card: see [the current section](hosting.md#social-card).
+- <a id="openssf-best-practices-badge"></a>Openssf best practices badge: see [the current section](levels.md#openssf-best-practices-badge).
+- <a id="before-you-register"></a>Before you register: see [the current section](levels.md#before-you-register).
+- <a id="register"></a>Register: see [the current section](levels.md#register).
+- <a id="osps-baseline-level-1"></a>Osps baseline level 1: see [the current section](levels.md#osps-baseline-level-1).
+- <a id="dependency-updates"></a>Dependency updates: see [the current section](updates.md#dependency-updates).
+- <a id="spelling-and-link-checks"></a>Spelling and link checks: see [the current section](tooling.md#spelling-and-link-checks).
+- <a id="scientific-python-repo-review"></a>Scientific python repo review: see [the current section](levels.md#scientific-python-repo-review).
+- <a id="documentation-rules"></a>Documentation rules: see [the current section](tooling.md#documentation-rules).
+- <a id="adopting-the-template-in-an-existing-repo"></a>Adopting the template in an existing repo: see [the current section](updates.md#adopting-the-template-in-an-existing-repo).
+- <a id="adopting-the-template-in-an-existing-python-package"></a>Adopting the template in an existing python package: see [the current section](updates.md#adopting-the-template-in-an-existing-python-package).
+- <a id="adopting-the-template-in-an-existing-web-app"></a>Adopting the template in an existing web app: see [the current section](updates.md#adopting-the-template-in-an-existing-web-app).
+- <a id="adopting-the-template-in-an-existing-compose-only-repo"></a>Adopting the template in an existing compose only repo: see [the current section](updates.md#adopting-the-template-in-an-existing-compose-only-repo).
+- <a id="production"></a>Production: see [the current section](hosting.md#hosting-on-a-worker).
+- <a id="workers-hosting"></a>Workers hosting: see [the current section](hosting.md#hosting-on-a-worker).
+- <a id="levels"></a>Levels: see [the current section](levels.md).
+- <a id="how-much-documentation"></a>How much documentation: see [the current section](levels.md).
+- <a id="moving-up-a-tier"></a>Moving up a tier: see [the current section](levels.md).
 <!-- rumdl-enable MD033 -->

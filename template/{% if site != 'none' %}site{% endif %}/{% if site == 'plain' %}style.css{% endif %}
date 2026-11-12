@@ -177,7 +177,7 @@ textarea {
   resize: vertical;
 }
 
-textarea[aria-invalid] {
+textarea[aria-invalid="true"] {
   border-color: var(--error);
 }
 

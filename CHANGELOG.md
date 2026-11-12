@@ -10,6 +10,8 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-12
+
 Upgrade steps:
 
 - **Breaking:** one `extras` multiselect replaces the optional CI, profiling, docs-site and library-test questions. Updates from v0.14.0 preserve the old selections, including disabled features. Scripts must pass the full `extras` list instead of `codecov`, `codspeed`, `profiling`, `cold_install`, `python_windows`, `docs_site` or `test_extras`. See [optional features](docs/usage.md#optional-features).
@@ -20,6 +22,8 @@ Upgrade steps:
 
 ### Fixed
 
+- A new plain site marks invalid JSON input for screen readers and clears that state when the input is valid. Existing sites keep their own script and stylesheet.
+- Links to the old usage guide keep their section anchors after the guide splits into setup, hosting, updates and levels pages.
 - Docs sites use Zensical 0.0.74, which escapes quotes and markup in site and page descriptions before writing the HTML meta tag.
 - On a narrow screen, Tab no longer reaches the links of an open section in the closed navigation drawer of a docs site.
 - A docs site with breadcrumbs labels them "Breadcrumb", so screen readers no longer hear two landmarks called "Navigation".
@@ -971,7 +975,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/simonvanlierde/project-templates/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/simonvanlierde/project-templates/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/simonvanlierde/project-templates/compare/v0.11.0...v0.12.0

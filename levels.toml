@@ -16,7 +16,7 @@
 # be checked mechanically from the repo or its settings; review: a person has to judge it),
 # since (a date).
 
-version = "0.14.0"
+version = "0.15.0"
 
 # --- minimal: any public repo ---------------------------------------------------------
 
