@@ -2,10 +2,13 @@
 # Settings: https://zensical.org/docs/setup/basics/
 [project]
 site_name = "project-templates"
+site_description = "A Copier template that starts Python, TypeScript, Rust, Go and Docker repos, secure by default and kept current by a weekly update PR."
 site_url = "https://simonvanlierde.com/project-templates/"
 repo_url = "https://github.com/simonvanlierde/project-templates"
+repo_name = "simonvanlierde/project-templates"
+edit_uri = "edit/main/docs/"
 site_dir = "_docs"
-extra_css = ["assets/docs.css", "assets/chooser.css"]
+extra_css = ["assets/docs.css", "assets/brand.css", "assets/chooser.css"]
 extra_javascript = ["assets/docs.js", "assets/chooser.mjs"]
 nav = [
   { "Get started" = "index.md" },
@@ -36,7 +39,101 @@ nav = [
   ] },
 ]
 
+# docs-overrides/main.html reads these: the announcement names `release`, and `og_image`
+# carries the card's hash (`just og-card`), since link previews cache by URL.
+[project.extra]
+release = "0.14.0"
+og_image = "assets/og.png?v=6f68f2a2"
+generator = false
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/simonvanlierde/project-templates"
+name = "Source on GitHub"
+
+[[project.extra.social]]
+icon = "lucide/quote"
+link = "https://doi.org/10.5281/zenodo.23701980"
+name = "Cite it: Zenodo DOI"
+
+[[project.extra.social]]
+icon = "lucide/globe"
+link = "https://simonvanlierde.com/"
+name = "Simon van Lierde"
+
 [project.theme]
 font = false
 custom_dir = "docs-overrides"
-features = ["navigation.path", "navigation.footer", "content.code.copy", "toc.follow", "search.highlight"]
+logo = "assets/logo.svg"
+favicon = "assets/logo.svg"
+features = [
+  "announce.dismiss",
+  "content.action.edit",
+  "content.code.copy",
+  "header.autohide",
+  "navigation.footer",
+  "navigation.path",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "toc.follow",
+]
+
+[project.theme.icon]
+repo = "fontawesome/brands/github"
+
+# Follows the reader's system setting until they pick one with the header toggle.
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+# Old links into usage.md: the guide was split by job in 0.15.0.
+[project.plugins.redirects.redirect_maps]
+"usage.md#moving-an-app-off-cloudflare-pages" = "hosting.md#moving-an-app-off-cloudflare-pages"
+"usage.md#pull-request-previews" = "hosting.md#pull-request-previews"
+"usage.md#public-repos" = "setup.md#public-repos"
+"usage.md#making-a-repo-public" = "setup.md#making-a-repo-public"
+"usage.md#protecting-main" = "setup.md#protecting-main"
+"usage.md#the-github-about-box" = "setup.md#the-github-about-box"
+"usage.md#keeping-your-project-up-to-date" = "updates.md#keeping-your-project-up-to-date"
+"usage.md#hearing-about-new-releases" = "updates.md#hearing-about-new-releases"
+"usage.md#the-update-app" = "updates.md#the-update-app"
+"usage.md#publishing" = "setup.md#publishing"
+"usage.md#signed-release-tags" = "setup.md#signed-release-tags"
+"usage.md#first-release" = "setup.md#first-release"
+"usage.md#static-site" = "hosting.md#static-site"
+"usage.md#the-plain-tool-page" = "hosting.md#the-plain-tool-page"
+"usage.md#hosting-on-a-worker" = "hosting.md#hosting-on-a-worker"
+"usage.md#social-card" = "hosting.md#social-card"
+"usage.md#openssf-best-practices-badge" = "levels.md#openssf-best-practices-badge"
+"usage.md#before-you-register" = "levels.md#before-you-register"
+"usage.md#register" = "levels.md#register"
+"usage.md#osps-baseline-level-1" = "levels.md#osps-baseline-level-1"
+"usage.md#dependency-updates" = "updates.md#dependency-updates"
+"usage.md#spelling-and-link-checks" = "tooling.md#spelling-and-link-checks"
+"usage.md#scientific-python-repo-review" = "levels.md#scientific-python-repo-review"
+"usage.md#documentation-rules" = "tooling.md#documentation-rules"
+"usage.md#adopting-the-template-in-an-existing-repo" = "updates.md#adopting-the-template-in-an-existing-repo"
+"usage.md#adopting-the-template-in-an-existing-python-package" = "updates.md#adopting-the-template-in-an-existing-python-package"
+"usage.md#adopting-the-template-in-an-existing-web-app" = "updates.md#adopting-the-template-in-an-existing-web-app"
+"usage.md#adopting-the-template-in-an-existing-compose-only-repo" = "updates.md#adopting-the-template-in-an-existing-compose-only-repo"
+"usage.md#production" = "hosting.md#hosting-on-a-worker"
+"usage.md#workers-hosting" = "hosting.md#hosting-on-a-worker"
+"usage.md#levels" = "levels.md"

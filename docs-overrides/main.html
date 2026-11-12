@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{#- Link previews read these; the theme writes the plain description tag. A page's own
+    `description:` front matter wins over the site's. #}
+{% block extrahead %}
+  {%- if page is defined and page.canonical_url is defined and page.canonical_url %}
+  {%- set title = config.site_name if page.canonical_url == config.site_url else page.title ~ " - " ~ config.site_name %}
+  {%- set description = page.meta.description if page.meta is defined and page.meta.description is defined else config.site_description %}
+  {%- set image = config.site_url ~ config.extra.og_image %}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ config.site_name }}">
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ page.canonical_url }}">
+  <meta property="og:image" content="{{ image }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="{{ config.site_name }}: {{ config.site_description }}">
+  <meta name="twitter:card" content="summary_large_image">
+  {%- endif %}
+{% endblock %}
+
+{#- `release` in zensical.toml; a render check keeps it on the newest CHANGELOG release. #}
+{% block announce %}
+  project-templates <strong>{{ config.extra.release }}</strong> is out:
+  <a href="https://github.com/simonvanlierde/project-templates/releases/tag/v{{ config.extra.release }}">what changed</a>
+{% endblock %}

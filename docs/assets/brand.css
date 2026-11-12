@@ -1,0 +1,33 @@
+/* This site's plum and gold. Generated docs sites keep the theme's colours, so this file
+   is not in the template; DESIGN.md has the roles. */
+:root > * {
+  --md-primary-fg-color: #5b2d6e;
+  --md-primary-fg-color--light: #7b3f94;
+  --md-primary-fg-color--dark: #431f52;
+  --md-typeset-a-color: #7b3f94;
+  --md-accent-fg-color: #7b3f94;
+  --md-accent-fg-color--transparent: #7b3f941a;
+}
+
+/* Tint the dark surfaces toward plum, and lighten links for the same contrast. */
+:root > [data-md-color-scheme="slate"] {
+  --md-hue: 285;
+  --md-typeset-a-color: #d3a6e8;
+  --md-accent-fg-color: #e4c4f2;
+  --md-accent-fg-color--transparent: #d3a6e81a;
+}
+
+/* The release bar is the one plum band; gold marks the version. */
+.md-banner {
+  background-color: var(--md-primary-fg-color);
+  color: #fff;
+}
+
+.md-banner a,
+.md-banner .md-banner__button {
+  color: inherit;
+}
+
+.md-banner strong {
+  color: #f5b942;
+}

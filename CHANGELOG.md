@@ -39,6 +39,7 @@ Upgrade steps:
 
 ### Changed
 
+- `just repo-about` also sets the homepage of a project whose site or documentation site is on GitHub Pages, to its github.io address.
 - When `just repo-settings` stops because the plan has no rulesets, a Dependabot project also hears that the update App's key would be readable from any branch, with the link to set it up safely.
 - The usage guide is split by job into [setup](docs/setup.md), [hosting](docs/hosting.md), [updates](docs/updates.md) and [levels](docs/levels.md) pages. Links in a new render's README, justfile, CONTRIBUTING and workflows point at them; the old `docs/usage.md` anchors still lead there.
 

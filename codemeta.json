@@ -12,6 +12,7 @@
     }
   ],
   "codeRepository": "https://github.com/simonvanlierde/project-templates",
+  "url": "https://simonvanlierde.com/project-templates/",
   "issueTracker": "https://github.com/simonvanlierde/project-templates/issues",
   "license": "https://spdx.org/licenses/MIT",
   "identifier": "https://doi.org/10.5281/zenodo.23701980",
