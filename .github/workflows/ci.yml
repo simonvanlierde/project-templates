@@ -670,17 +670,17 @@ jobs:
 
       - *just
 
+      # The site's own install writes site/pnpm-lock.yaml, which `check` installs from frozen.
+      # Its node_modules then sit beside the root package, which biome and knip must leave alone.
+      - if: matrix.answers.site == 'astro'
+        working-directory: ${{ runner.temp }}/proj
+        run: just site-sync
+
       # The scaffold's own recipes; `check` runs the same commands as the generated
       # ts.yml. ts-sync has no --frozen-lockfile: the install writes pnpm-lock.yaml.
       - name: inner loop
         working-directory: ${{ runner.temp }}/proj
         run: just ts-sync check
-
-      # The site's own install, then the root checks again and the site build: root biome and
-      # knip see site/node_modules and the generated site/.astro.
-      - if: matrix.answers.site == 'astro'
-        working-directory: ${{ runner.temp }}/proj
-        run: just site-sync check site
 
       # Then the checks again: biome reads .gitignore, so a report left unignored fails them.
       - if: contains(matrix.answers.extras, 'mutation')
