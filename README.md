@@ -23,20 +23,6 @@ has the guides and a chooser that suggests a project type. Every project gets:
 
 When the template improves, `copier update` pulls the changes in.
 
-```mermaid
-flowchart TB
-  subgraph stacks["Pick one or more stacks, then a kind for each"]
-    direction TB
-    py["<b>Python</b><br/>library, app, research,<br/>data-pipeline, web-service"]
-    ts["<b>TypeScript</b><br/>library, app, web-app"]
-    rs["<b>Rust</b><br/>library, binary"]
-    go["<b>Go</b><br/>library, binary"]
-    dk["<b>Docker</b><br/>an image for the Python package,<br/>or a Compose-only repo"]
-  end
-  shared["<b>Every project</b><br/>just check, git hooks, GitHub Actions CI,<br/>weekly dependency and template updates"]
-  stacks --> shared
-```
-
 ## Data pipelines
 
 The `data-pipeline` kind builds a dataset from public sources, and every row says which

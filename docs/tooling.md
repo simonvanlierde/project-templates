@@ -4,11 +4,6 @@ The tools each stack uses, their default settings, and how releases are built.
 [usage.md](usage.md#choosing-your-stacks) lists the files each stack creates, and
 [ci-baseline.md](ci-baseline.md) lists every workflow check.
 
-## The stack
-
-![The stack: each stack's package manager, linters, type checker and tests, and the layer every project shares: just and git hooks, CI and dependency updates, releases, the docs site and hosting.](assets/stack-light.svg#only-light)
-![The stack: each stack's package manager, linters, type checker and tests, and the layer every project shares: just and git hooks, CI and dependency updates, releases, the docs site and hosting.](assets/stack-dark.svg#only-dark)
-
 ## Tools per stack
 
 | Stack      | Lint and format                          | Types                       | Tests                                    | Packaging                            |

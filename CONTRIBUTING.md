@@ -42,8 +42,7 @@ just check
 
 `just hooks`, `just render`, `just docs` and `just chooser` run each part alone.
 The chooser checks every recommendation against the released template and current code.
-`just docs-serve` previews the documentation at <http://localhost:8000>. After an edit to
-`docs/assets/stack.mmd`, `just diagrams` redraws the stack diagram; commit both SVGs.
+`just docs-serve` previews the documentation at <http://localhost:8000>.
 The docs workflow deploys `docs/` to GitHub Pages on pushes to `main`.
 Enable Settings > Pages > Build and deployment > Source: GitHub Actions for the first deploy.
 

@@ -405,7 +405,7 @@ jobs:
           cp -R "$RUNNER_TEMP/m/_docs" srv/mutate-me
           cp "$GITHUB_WORKSPACE/scripts/check-docs.mjs" .
           # A decision page opens a nested section in the drawer, which the theme makes visible.
-          # The tooling page holds the stack diagram, which must stay a local SVG.
+          # The tooling page has code blocks and a table wider than a phone.
           node check-docs.mjs http://127.0.0.1:8102/project-templates/ \
             http://127.0.0.1:8102/project-templates/decisions/0006-zensical-builds-the-docs-site/ \
             http://127.0.0.1:8102/project-templates/tooling/ http://127.0.0.1:8102/mutate-me/
