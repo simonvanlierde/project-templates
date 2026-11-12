@@ -43,11 +43,10 @@ rest wait behind `customise`, and take the defaults below when you answer no:
 | `docker_image` | `docker` and `python` stacks selected | Builds the Python package into an image with a Dockerfile and Compose service; no for a [Compose-only repo](#compose-only-repos) |
 
 Identity answers have no defaults. To skip the prompts, pass answers with `--data` or an
-answers file. The command uses `kind`, which works before and after its rename to
-`python_kind`:
+answers file:
 
 ```sh
-copier copy --data 'stacks=[python]' --data kind=research gh:simonvanlierde/project-templates .
+copier copy --data 'stacks=[python]' --data python_kind=research gh:simonvanlierde/project-templates .
 copier copy --data-file answers.yml gh:simonvanlierde/project-templates .
 ```
 

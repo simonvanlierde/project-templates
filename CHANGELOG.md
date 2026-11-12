@@ -12,7 +12,7 @@ changes are marked **Breaking**.
 
 ### Fixed
 
-- The project chooser uses the released `python_kind` answer in Python commands.
+- The project chooser and quick-start examples use the released `python_kind` answer in Python commands.
 
 ## [0.15.0] - 2026-11-12
 
