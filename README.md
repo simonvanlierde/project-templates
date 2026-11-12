@@ -23,34 +23,36 @@ has the guides and a chooser that suggests a project type. Every project gets:
 
 When the template improves, `copier update` pulls the changes in.
 
+```mermaid
+flowchart TB
+  subgraph stacks["Pick one or more stacks, then a kind for each"]
+    direction TB
+    py["<b>Python</b><br/>library, app, research,<br/>data-pipeline, web-service"]
+    ts["<b>TypeScript</b><br/>library, app, web-app"]
+    rs["<b>Rust</b><br/>library, binary"]
+    go["<b>Go</b><br/>library, binary"]
+    dk["<b>Docker</b><br/>an image for the Python package,<br/>or a Compose-only repo"]
+  end
+  shared["<b>Every project</b><br/>just check, git hooks, GitHub Actions CI,<br/>weekly dependency and template updates"]
+  stacks --> shared
+```
+
 ## Data pipelines
 
 The `data-pipeline` kind builds a dataset from public sources, and every row says which
-download it came from. The Python project centres on one manifest, `sources.toml`, which
-lists each input with its URL and the publisher's reuse terms. Three steps from the
-[sourceledger](https://github.com/simonvanlierde/sourceledger) library run over it:
-
-- `just fetch` downloads each source and writes a record beside it: the URL, when it
-  was fetched, the SHA-256 and size of the bytes, the vintage you expect, and the
-  server's ETag. The next fetch asks the server whether the file changed and keeps the
-  record when it has not. Each new version of a source is added to `data/fetches.jsonl`,
-  a log you commit.
-- `just build` re-hashes each download against its record before it parses it, and
-  stamps every output row with that record.
-- `just validate` fails when an output came from an older download, a source has no
-  reuse terms, or a raw file changed after it was fetched.
-
-`just build` writes `data/processed/example-co2.parquet`. A row of it:
+download it came from. The Python project centres on one manifest, `sources.toml`.
+`just fetch`, `just build` and `just validate` run [sourceledger](https://github.com/simonvanlierde/sourceledger)
+over it: they record each download's URL, hash and date, stamp every output row with
+that record, and fail when an output is stale or a source has no reuse terms. A row of
+`data/processed/example-co2.parquet`:
 
 | source_id | source_url | retrieved_at | vintage | raw_sha256 | Year | Mean | Uncertainty |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | example-co2 | `https://raw.githubusercontent.com/datasets/co2-ppm/8c40972…/co2-annmean-mlo.csv` | 2026-10-17T22:30:03Z | datasets/co2-ppm commit 8c40972 | `b1548ededea6f9b7eecac370753de8d8da6e0afafe1041f749a11db78c2e33c4` | 1959 | 315.98 | 0.12 |
 
-CI runs the whole pipeline against the live URLs. A weekly run comments on an issue when
-a publisher serves new bytes for a source, and fails when a value the tests pinned
-changed. The raw and processed data stay out of git, so the repository never
-redistributes a source. `CITATION.cff` and `codemeta.json` come from the same answers,
-ready for a Zenodo DOI.
+The raw and processed data stay out of git, so the repository never redistributes a
+source. [Python project kinds](https://simonvanlierde.com/project-templates/python-kinds/#data-pipeline)
+lists the files, the CI checks and how to swap in your own sources.
 
 ## Quick start
 
@@ -113,20 +115,9 @@ defaults:
 
 ## Docs
 
-- [docs/usage.md](docs/usage.md): the questions, stacks, Compose-only repos, monorepos and
-  the optional features.
-- [docs/setup.md](docs/setup.md): public repos, protecting `main`, the About box and
-  publishing.
-- [docs/hosting.md](docs/hosting.md): static sites, Cloudflare Workers, previews and the
-  social card.
-- [docs/updates.md](docs/updates.md): template and dependency updates, and adopting the
-  template in an existing repo.
-- [docs/levels.md](docs/levels.md): levels and the OpenSSF badge.
-- [docs/python-kinds.md](docs/python-kinds.md): the Python project kinds.
-- [docs/tooling.md](docs/tooling.md): the tools and lint rules per stack, git hooks,
-  dependency updates and release workflows.
-- [docs/ci-baseline.md](docs/ci-baseline.md): every CI check, and what was left out.
-- [docs/web-legal.md](docs/web-legal.md): tips for filling in a web app's legal pages.
+The [documentation site](https://simonvanlierde.com/project-templates/) has the guides: [help me choose](https://simonvanlierde.com/project-templates/choose/),
+[the questions and settings](https://simonvanlierde.com/project-templates/usage/), [setting up the repo](https://simonvanlierde.com/project-templates/setup/),
+[updates](https://simonvanlierde.com/project-templates/updates/), [levels](https://simonvanlierde.com/project-templates/levels/) and the [tools per stack](https://simonvanlierde.com/project-templates/tooling/).
 
 ## About this project
 
@@ -136,5 +127,5 @@ defaults:
 - [docs/decisions/](docs/decisions/README.md): the decisions behind the template's shape.
 - [SECURITY.md](SECURITY.md): how to report a vulnerability and verify a release.
 - [GOVERNANCE.md](GOVERNANCE.md): who decides, who can release, and who takes over.
-- [ROADMAP.md](ROADMAP.md): what is planned for the next year.
+- [Roadmap](https://simonvanlierde.com/project-templates/roadmap/): what is planned for the next year.
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): how people treat each other here.

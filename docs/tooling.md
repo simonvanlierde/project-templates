@@ -4,6 +4,28 @@ The tools each stack uses, their default settings, and how releases are built.
 [usage.md](usage.md#choosing-your-stacks) lists the files each stack creates, and
 [ci-baseline.md](ci-baseline.md) lists every workflow check.
 
+## The stack
+
+```mermaid
+flowchart TB
+  subgraph stacks["Per stack"]
+    direction TB
+    py["<b>Python</b><br/>uv, locked<br/>ruff, ty, pytest"]
+    ts["<b>TypeScript</b><br/>pnpm, Vite for a web-app<br/>biome, tsc, vitest<br/>Playwright and axe for a web-app"]
+    rs["<b>Rust</b><br/>cargo, cargo-deny<br/>rustfmt, clippy<br/>cargo nextest"]
+    go["<b>Go</b><br/>Go modules, govulncheck<br/>golangci-lint<br/>go test -race"]
+    dk["<b>Docker</b><br/>multi-stage Dockerfile<br/>Compose, hadolint"]
+  end
+  subgraph shared["Every project"]
+    direction TB
+    run["just tasks<br/>prek git hooks"]
+    ci["GitHub Actions CI<br/>Dependabot or Renovate"]
+    rel["Releases<br/>PyPI, npm, GHCR"]
+    web["Docs site: Zensical<br/>Hosting: GitHub Pages,<br/>Cloudflare Workers"]
+  end
+  stacks --> shared
+```
+
 ## Tools per stack
 
 |            | Lint and format                          | Types                       | Tests                                    | Packaging                            |

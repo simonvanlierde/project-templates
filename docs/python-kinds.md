@@ -24,10 +24,10 @@ A `data-pipeline` project includes:
 - `data/raw/` and `data/processed/`: gitignored directories so raw source data is never committed.
 - `data/fetches.jsonl`: committed log of every fetch of every source version. `REUSE.toml` licenses it under `data_license` (CC0-1.0 by default, see [Licenses](usage.md#licenses)).
 - `pipeline.py`: defines `parse` to extract records from raw files and a command entry point. `parse` delegates CSV, JSON, and Excel reading to [sourceledger](https://github.com/simonvanlierde/sourceledger). For other formats, branch on the source ID.
-  - `fetch`: downloads sources with retries, writes provenance records, and checks upstream `ETag` and `Last-Modified` headers.
+  - `fetch`: downloads sources with retries, writes a provenance record beside each (URL, fetch time, SHA-256 and size, expected vintage, `ETag`), and asks the server on the next fetch whether the file changed, keeping the record when it has not.
   - `build`: verifies downloads against fetch records, prepends five provenance columns, writes `data/processed/<id>.parquet`, and emits `datapackage.json` with checksums, sources, and licenses.
     Set `output_format = "csv"` at the top of `sources.toml` to write CSV instead.
-  - `validate`: checks output files against the manifest, fetch records, and reuse terms.
+  - `validate`: checks output files against the manifest, fetch records, and reuse terms. It fails when an output came from an older download, a source has no reuse terms, or a raw file changed after it was fetched.
 - Lifecycle recipes: `just fetch`, `just build`, `just validate`, and `just pipeline` to run all three. `just status` lists source fetch timestamps, and `just attribution` generates the table for `ATTRIBUTION.md`.
 - `ATTRIBUTION.md`: documents upstream data sources and reuse terms.
 - Tests: verify pipeline execution against local fixtures without network access.

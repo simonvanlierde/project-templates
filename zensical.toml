@@ -25,6 +25,13 @@ nav = [
     { "Architecture and security" = "design.md" },
     { "Web legal pages" = "web-legal.md" },
   ] },
+  { "Roadmap" = "roadmap.md" },
+  { "Project" = [
+    { "Changelog and upgrade steps" = "https://github.com/simonvanlierde/project-templates/blob/main/CHANGELOG.md" },
+    { "Contributing" = "https://github.com/simonvanlierde/project-templates/blob/main/CONTRIBUTING.md" },
+    { "Security" = "https://github.com/simonvanlierde/project-templates/blob/main/SECURITY.md" },
+    { "Governance" = "https://github.com/simonvanlierde/project-templates/blob/main/GOVERNANCE.md" },
+  ] },
   { "Decisions" = [
     { "Decision index" = "decisions/README.md" },
     "decisions/0001-pr-previews-use-the-production-cloudflare-account.md",
@@ -103,6 +110,12 @@ primary = "custom"
 accent = "custom"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to system preference"
+
+# Mermaid diagrams: the fence's content stays as source, and the theme draws it.
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
 
 # Old links into usage.md: the guide was split by job in 0.15.0.
 [project.plugins.redirects.redirect_maps]
