@@ -66,14 +66,12 @@ The script and its test are the project's after the first render. A binding beyo
 
 ### Moving an app off Cloudflare Pages
 
-An app made before this template deployed from CI was deployed by Cloudflare Pages. To move it:
+An app made before this template deployed from CI was deployed by Cloudflare Pages. Check first that the account has no Worker named `<slug>`: the first deploy overwrites it. Expect a short gap while the domain moves from Pages to the Worker. To move the app:
 
 1. Delete any Pages `public/_redirects` rule with status `200!`: Workers refuses it with error `100324`. Merge the `copier update`, then run `just repo-settings` and add both secrets to the new `production` environment.
 2. The next push to `main` deploys the Worker. Check the app at its workers.dev address.
 3. Remove the custom domain from the Pages project. With `site_url` set to it, the next production deploy attaches it to the Worker.
 4. Delete the Pages project, now that the Worker serves production.
-
-Before step 2, check that the account has no Worker named `<slug>`: the first deploy overwrites it. Expect a short gap while the domain moves from Pages to the Worker.
 
 Without a custom domain, the app's address changes: set the new one with `copier update --data site_url=https://<slug>.<subdomain>.workers.dev`.
 
