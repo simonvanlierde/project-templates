@@ -22,6 +22,7 @@ Upgrade steps:
 
 - On a narrow screen, Tab no longer reaches the links of an open section in the closed navigation drawer of a docs site.
 - A docs site with breadcrumbs labels them "Breadcrumb", so screen readers no longer hear two landmarks called "Navigation".
+- Docs-site code blocks drop the empty line-number links screen readers announced without a name (`anchor_linenums = false` in `zensical.toml`; add it by hand after updating), and a table wider than the page becomes a focusable region, so it scrolls from the keyboard.
 - Quick-start commands and preset examples select the intended Python project type with released templates.
 - Docs sites that enable code-copy buttons keep their actions from adding duplicate navigation landmarks.
 - Docs sites keep mobile navigation reachable by keyboard and selected links readable. Code names in tables no longer break mid-word, and a wide table shows a shadow on the side it scrolls to. New sites use system fonts and a plain repository link without remote statistics; existing sites can adopt the [theme settings](docs/usage.md#documentation-site) after updating.

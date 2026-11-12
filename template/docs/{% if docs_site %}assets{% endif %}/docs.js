@@ -5,7 +5,24 @@
     document.querySelectorAll("nav.md-code__nav").forEach((nav) => nav.setAttribute("role", "presentation"));
     // The theme labels the breadcrumbs "Navigation", the same as the main navigation.
     document.querySelector("nav.md-path")?.setAttribute("aria-label", "Breadcrumb");
+    markScrollingTables();
   });
+
+  // A table wider than the page scrolls; keyboard users can only scroll a focusable region.
+  function markScrollingTables() {
+    document.querySelectorAll(".md-typeset__scrollwrap").forEach((wrap) => {
+      if (wrap.scrollWidth > wrap.clientWidth) {
+        wrap.tabIndex = 0;
+        wrap.setAttribute("role", "region");
+        wrap.setAttribute("aria-label", "Table, scrolls sideways");
+      } else {
+        wrap.removeAttribute("tabindex");
+        wrap.removeAttribute("role");
+        wrap.removeAttribute("aria-label");
+      }
+    });
+  }
+  window.addEventListener("resize", markScrollingTables);
 
   function toggleButton(id) {
     const label = document.querySelector(`.md-header label[for="${id}"]`);

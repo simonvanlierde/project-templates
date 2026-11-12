@@ -111,12 +111,6 @@ accent = "custom"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to system preference"
 
-# Mermaid diagrams: the fence's content stays as source, and the theme draws it.
-[project.markdown_extensions.pymdownx.superfences]
-custom_fences = [
-  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
-]
-
 # Old links into usage.md: the guide was split by job in 0.15.0.
 [project.plugins.redirects.redirect_maps]
 "usage.md#moving-an-app-off-cloudflare-pages" = "hosting.md#moving-an-app-off-cloudflare-pages"
@@ -150,3 +144,7 @@ custom_fences = [
 "usage.md#production" = "hosting.md#hosting-on-a-worker"
 "usage.md#workers-hosting" = "hosting.md#hosting-on-a-worker"
 "usage.md#levels" = "levels.md"
+
+# Line anchors are empty links, which screen readers announce without a name.
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = false

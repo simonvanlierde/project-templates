@@ -44,6 +44,14 @@ og-card:
     pnpm dlx playwright@{{ playwright_version }} screenshot --viewport-size=1200,630 "file://$PWD/scripts/og-card.html" "$PWD/docs/assets/og.png"
     sed -E -i.bak "s/og\.png(\?v=[0-9a-f]+)?\"/og.png?v=$(shasum -a 256 docs/assets/og.png | cut -c1-8)\"/" zensical.toml && rm zensical.toml.bak
 
+# Drawn here, not in the browser, so the site loads no diagram script from a CDN. The
+# puppeteer pin is the one mermaid-cli depends on: bump them together.
+
+# Render docs/assets/stack.mmd to light and dark SVGs in the site's plum (scripts/diagram-*.json).
+diagrams:
+    pnpm dlx puppeteer@25.16.0 browsers install chrome-headless-shell
+    for t in light dark; do pnpm dlx @mermaid-js/mermaid-cli@12.0.0 --quiet -i docs/assets/stack.mmd -o "docs/assets/stack-$t.svg" -c "scripts/diagram-$t.json" -b transparent && echo >>"docs/assets/stack-$t.svg"; done
+
 # Serve docs/ at http://localhost:8000, rebuilt on each save.
 docs-serve:
     uvx --exclude-newer "1 week" zensical@{{zensical_version}} serve

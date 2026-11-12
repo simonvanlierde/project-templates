@@ -134,6 +134,9 @@ done
 # A real strict build: the API reference from the docstrings, and the badge pages.
 (cd m && just docs >/dev/null 2>&1)
 grep -qF 'Add two numbers' m/_docs/reference/index.html
+# Code blocks carry no empty line-anchor links, which axe flags as links without a name.
+grep -qF '<code>' m/_docs/reference/index.html
+(lacks -q '__codelineno' m/_docs/reference/index.html)
 (cd h && just docs >/dev/null 2>&1)
 test -f h/_docs/assurance-case/index.html
 # k's flat package: mkdocstrings finds the module at the root, through paths = ["."].

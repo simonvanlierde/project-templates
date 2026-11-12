@@ -20,6 +20,10 @@ custom_dir = "docs-overrides"
 # image and puts its hash in this URL, since link previews cache by URL.
 [project.extra]
 og_image = "assets/og.png"
+
+# Line anchors are empty links, which screen readers announce without a name.
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = false
 {%- if docs_api %}
 
 # docs/reference.md renders the docstrings under this path, read without importing the package.

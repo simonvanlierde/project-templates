@@ -6,29 +6,12 @@ The tools each stack uses, their default settings, and how releases are built.
 
 ## The stack
 
-```mermaid
-flowchart TB
-  subgraph stacks["Per stack"]
-    direction TB
-    py["<b>Python</b><br/>uv, locked<br/>ruff, ty, pytest"]
-    ts["<b>TypeScript</b><br/>pnpm, Vite for a web-app<br/>biome, tsc, vitest<br/>Playwright and axe for a web-app"]
-    rs["<b>Rust</b><br/>cargo, cargo-deny<br/>rustfmt, clippy<br/>cargo nextest"]
-    go["<b>Go</b><br/>Go modules, govulncheck<br/>golangci-lint<br/>go test -race"]
-    dk["<b>Docker</b><br/>multi-stage Dockerfile<br/>Compose, hadolint"]
-  end
-  subgraph shared["Every project"]
-    direction TB
-    run["just tasks<br/>prek git hooks"]
-    ci["GitHub Actions CI<br/>Dependabot or Renovate"]
-    rel["Releases<br/>PyPI, npm, GHCR"]
-    web["Docs site: Zensical<br/>Hosting: GitHub Pages,<br/>Cloudflare Workers"]
-  end
-  stacks --> shared
-```
+![The stack: each stack's package manager, linters, type checker and tests, and the layer every project shares: just and git hooks, CI and dependency updates, releases, the docs site and hosting.](assets/stack-light.svg#only-light)
+![The stack: each stack's package manager, linters, type checker and tests, and the layer every project shares: just and git hooks, CI and dependency updates, releases, the docs site and hosting.](assets/stack-dark.svg#only-dark)
 
 ## Tools per stack
 
-|            | Lint and format                          | Types                       | Tests                                    | Packaging                            |
+| Stack      | Lint and format                          | Types                       | Tests                                    | Packaging                            |
 | ---------- | ---------------------------------------- | --------------------------- | ---------------------------------------- | ------------------------------------ |
 | Python     | `ruff`                                   | `ty`                        | `pytest`                                 | `uv`, locked, `uv_build` backend     |
 | TypeScript | `biome`                                  | `tsc`                       | `vitest`, plus Playwright and axe for a `web-app` | `pnpm`, plus Vite for a `web-app` |
