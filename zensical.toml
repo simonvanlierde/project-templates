@@ -1,5 +1,6 @@
 # The documentation site: `just docs` builds the Markdown in docs/ into _docs/, and
-# docs.yml deploys it to GitHub Pages. Without a `nav`, the menu follows the files in docs/.
+# docs.yml deploys it to GitHub Pages. The `nav` sets the menu order and labels; a page
+# left out of it builds but is reached only by links, as the decision records are.
 # Settings: https://zensical.org/docs/setup/basics/
 [project]
 site_name = "project-templates"
@@ -8,7 +9,19 @@ repo_url = "https://github.com/simonvanlierde/project-templates"
 site_dir = "_docs"
 extra_css = ["assets/docs.css"]
 extra_javascript = ["assets/docs.js"]
+nav = [
+  { "Overview" = "index.md" },
+  { "Using the template" = "usage.md" },
+  { "Python project kinds" = "python-kinds.md" },
+  { "Tooling" = "tooling.md" },
+  { "CI baseline" = "ci-baseline.md" },
+  { "Legal pages" = "web-legal.md" },
+  { "Architecture" = "design.md" },
+  { "Decisions" = "decisions/README.md" },
+]
 
 [project.theme]
 font = false
 custom_dir = "docs-overrides"
+# Next/previous page links, back to top, and an outline that follows the reader.
+features = ["navigation.footer", "navigation.top", "navigation.tracking", "toc.follow"]
