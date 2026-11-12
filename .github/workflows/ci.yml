@@ -39,6 +39,9 @@ env:
   PLAYWRIGHT_VERSION: 1.64.1
   # renovate: datasource=npm depName=@axe-core/playwright
   AXE_PLAYWRIGHT_VERSION: 4.14.0
+  # As in docs.yml: uv checks every package against OSV's malware advisories before its code runs.
+  UV_MALWARE_CHECK: "1"
+  UV_PREVIEW_FEATURES: malware-check
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
