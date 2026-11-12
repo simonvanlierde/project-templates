@@ -122,6 +122,13 @@ jobs:
           mkdir -p {{ site_out }}
           tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C {{ site_out }}
 
+{%- if site_domain %}
+      # Keep the duplicate workers.dev origin out of search results.
+      - if: steps.gate.outputs.run == 'true'
+        run: |
+          printf '\nhttps://:worker.:subdomain.workers.dev/*\n  X-Robots-Tag: noindex\n' >> {{ site_out }}/_headers
+
+{%- endif %}
       - if: steps.gate.outputs.run == 'true'
         id: deploy
         env:
@@ -186,7 +193,7 @@ jobs:
   preview:
     name: "site: preview"
     # Bot pull requests (Renovate, Dependabot) get no preview, so their code never sees the token.
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !endsWith(github.event.pull_request.user.login, '[bot]')
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]')
     # Shares the site job of preview-retire.yml, so a retire waits for a deploy in flight.
     concurrency:
       group: preview-site-{% raw %}${{ github.event.pull_request.number }}{% endraw %}

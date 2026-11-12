@@ -49,7 +49,7 @@ Configure the GitHub environment protections listed above in repository settings
 
 ## Assurance case
 
-Security claims and controls for this template and generated projects. Vulnerability disclosures follow [SECURITY.md](../SECURITY.md).
+Security claims and controls for this template and generated projects. Vulnerability disclosures follow [SECURITY.md](https://github.com/simonvanlierde/project-templates/blob/main/SECURITY.md).
 
 ### Threat model
 
@@ -67,9 +67,9 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 
 | Boundary | Cross-boundary inputs | Controls |
 | --- | --- | --- |
-| User machine | Remote template and user answers | No Copier tasks or migrations in [`copier.yml`](../copier.yml); validator rules check answers ([Render](#render)) |
-| Template repo CI | PR code and metadata | `pull_request` trigger only; `contents: read` in [`ci.yml`](../.github/workflows/ci.yml), [`dco.yml`](../.github/workflows/dco.yml), and [`pr-title.yml`](../.github/workflows/pr-title.yml); `ci ok` required check |
-| Template releases | Pushed `vX.Y.Z` tag | [`release.yml`](../.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, requires a tag signed with a key in `.github/allowed_signers` on `main` (a check that holds only with the `v*` tag ruleset: a tag runs its own commit's workflow and script), runs only release script and `gh release create` |
+| User machine | Remote template and user answers | No Copier tasks or migrations in [`copier.yml`](https://github.com/simonvanlierde/project-templates/blob/main/copier.yml); validator rules check answers ([Render](#render)) |
+| Template repo CI | PR code and metadata | `pull_request` trigger only; `contents: read` in [`ci.yml`](https://github.com/simonvanlierde/project-templates/blob/main/.github/workflows/ci.yml), [`dco.yml`](https://github.com/simonvanlierde/project-templates/blob/main/.github/workflows/dco.yml), and [`pr-title.yml`](https://github.com/simonvanlierde/project-templates/blob/main/.github/workflows/pr-title.yml); `ci ok` required check |
+| Template releases | Pushed `vX.Y.Z` tag | [`release.yml`](https://github.com/simonvanlierde/project-templates/blob/main/.github/workflows/release.yml) has only `contents: write`, holds no OIDC token, requires a tag signed with a key in `.github/allowed_signers` on `main` (a check that holds only with the `v*` tag ruleset: a tag runs its own commit's workflow and script), runs only release script and `gh release create` |
 | Generated project CI | PR code and metadata | Workflows use `contents: read` or `{}`; no `pull_request_target` or `workflow_run`; `persist-credentials: false` on checkouts |
 | Release jobs with OIDC | Built artifacts | OIDC tokens isolated to upload jobs without project code execution ([Workflows that can publish](#workflows-that-can-publish)); ruleset limits `v*` tags to admins |
 | Weekly update workflow | New template releases | `copier-update.yml` runs Copier read-only and applies patches in a separate job holding push credentials ([Update](#update)) |
@@ -89,7 +89,7 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 - **Workflow injection:** No `run:` step expands event expressions inline; expressions pass via `env:` variables. CI validates workflows with zizmor and jactionlint.
 - **Token theft:** Registry tokens are restricted to dedicated jobs that run no repository code. The Cloudflare `preview` jobs are the exception: they deploy the pull request's code, and the web app's also builds it. Checkouts disable credential persistence.
 - **Dependency compromise:** Actions pin full commit SHAs. Generated projects commit lockfiles, and CI installs with strict lockfile flags. A 7-day cooldown delays non-urgent updates.
-- **Answer injection:** validators in [`copier.yml`](../copier.yml) constrain identifiers, URLs, versions, and descriptions. Descriptions are restricted to single lines without quotes or backslashes. Values pass into structured data via `to_json`.
+- **Answer injection:** validators in [`copier.yml`](https://github.com/simonvanlierde/project-templates/blob/main/copier.yml) constrain identifiers, URLs, versions, and descriptions. Descriptions are restricted to single lines without quotes or backslashes. Values pass into structured data via `to_json`.
 - **Untested templates:** `check-render.sh` ensures every file in `template/` is rendered and validated across test combinations.
 
 ### Security assessment

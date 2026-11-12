@@ -101,6 +101,12 @@ repos:
     hooks:
       - id: yamllint
 
+  # Workflow scripts need their own check; jactionlint checks only inline run blocks.
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: a6564f5d57444e123433a5c9af733e3975c77229 # frozen: v0.11.0.1-1
+    hooks:
+      - id: shellcheck
+
   # gitleaks' successor from the same authors. gitleaks takes security fixes only.
   - repo: https://github.com/betterleaks/betterleaks
     rev: 81aff7a638638aae3a659845d089043e1d8fe9ac # frozen: v1.9.0

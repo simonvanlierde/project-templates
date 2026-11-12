@@ -9,7 +9,7 @@ date: 2026-11-06
 
 The `docs-site` requirement in `docs/usage.md#levels` is a search-indexed site built from the Markdown
 in `docs/`, never a second copy. Until now the template had no way to render one, and
-`ROADMAP.md` ruled out a docs-site starter. The `docs_site` question adds one. The
+`ROADMAP.md` ruled out a docs-site starter. The `docs_site` selection in `extras` adds one. The
 generator is costly to swap: projects write their config and page syntax for it.
 
 It has to build `docs/*.md` unchanged, give a Python library an API reference from its
@@ -26,7 +26,7 @@ docstrings, have search, need little config, be maintained, and run with uv.
 
 Chosen: Zensical, the successor to Material for MkDocs from the same team, with
 mkdocstrings-python for the API reference. It reads plain Markdown, ships search, and
-a working `zensical.toml` is under ten lines. mkdocstrings reads the source with griffe,
+the site needs one small `zensical.toml`. mkdocstrings reads the source with griffe,
 so the package needs no install. `just docs` runs both with `uvx` at the versions
 `copier.yml` pins, so it works the same in every stack. The build runs with `--strict`.
 
@@ -44,6 +44,7 @@ pkg.go.dev publish one, and the template has no TypeScript handler.
 
 * Good: one config file and two recipes, and no docs dependencies in the project.
 * Good: the docs follow the template's one-week release-age rule (`uvx --exclude-newer`).
+* Bad: the small theme overrides follow its markup and breakpoints. Browser checks must cover keyboard controls, contrast and external requests after an upgrade.
 * Bad: Zensical is a beta (0.0.x), so its config can change between releases. Renovate
   bumps the pin in `copier.yml`, and `check-render.sh` builds a render for real.
 * Bad: a strict build refuses a link out of `docs/`, such as `../README.md`. Such links
@@ -52,7 +53,7 @@ pkg.go.dev publish one, and the template has no TypeScript handler.
 ### Confirmation
 
 `scripts/check-render.sh` renders the docs site with and without the API reference,
-refuses it beside a `site` on Pages, and runs a strict `just docs` on two renders.
+refuses it beside a `site` on Pages, and runs a strict `just docs` on two renders. CI also checks this repository's site and a generated site with Playwright and axe, including narrow-screen keyboard navigation and external requests.
 
 ## Pros and Cons of the Options
 

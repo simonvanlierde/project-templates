@@ -116,6 +116,9 @@ test ! -e d/web/wrangler.preview.jsonc
 (lacks -rq --exclude-dir=.git 'pages\.dev' d j s)
 grep -q '^  preview:' d/.github/workflows/ts.yml
 grep -q 'name: dist$' d/.github/workflows/ts.yml
+test "$(grep -cF '          include-hidden-files: true' d/.github/workflows/ts.yml)" = 1
+grep -qF '"observability": { "enabled": false }' d/web/wrangler.jsonc
+grep -qF "github.head_ref != 'chore/copier-update'" d/.github/workflows/preview-retire.yml
 (lacks -q 'preview-dist' d/.github/workflows/ts.yml)
 test "$(grep -c 'path: web/dist$' d/.github/workflows/ts.yml)" = 3
 # Production: push to main only, after the checks, in the production environment, one
@@ -235,7 +238,7 @@ grep -qF 'X-Robots-Tag: noindex' d/.github/workflows/ts.yml
 # A preview lives only while its pull request is open and ready: drafts get none, the deploy
 # re-reads the state, the retire runs on close and on a draft switch, and both share one
 # concurrency group so a retire waits for a deploy in flight.
-grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !endsWith(github.event.pull_request.user.login, '[bot]')" d/.github/workflows/ts.yml
+grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]')" d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
 grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostring)'\''' d/.github/workflows/ts.yml
 # shellcheck disable=SC2016

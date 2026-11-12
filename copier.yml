@@ -444,27 +444,6 @@ dependency_bot:
     Renovate (needs the Renovate GitHub App on the repo): renovate
   default: dependabot
 
-codecov:
-  type: bool
-  when: "{{ 'python' in stacks or 'ts' in stacks }}"
-  ask: "{{ customise }}"
-  help: Upload test coverage to Codecov (needs a CODECOV_TOKEN repository secret)
-  default: false
-
-codspeed:
-  type: bool
-  when: "{{ 'python' in stacks or 'rust' in stacks }}"
-  ask: "{{ customise }}"
-  help: Benchmark pull requests on CodSpeed (needs the repository imported on codspeed.io)
-  default: false
-
-profiling:
-  type: bool
-  when: "{{ 'python' in stacks or 'rust' in stacks }}"
-  ask: "{{ customise }}"
-  help: Profiling recipes (a sampling profiler on Python; a frame-pointer build, samply and perf stat on Rust)
-  default: false
-
 # A static page beside the code (a playground, demo or report) in site/. GitHub Pages
 # serves it from main, and each open, ready pull request gets a preview Worker
 # (docs/usage.md#static-site).
@@ -509,22 +488,6 @@ site_on_workers:
   when: false
   default: "{{ site != 'none' and site_host == 'cloudflare' }}"
 
-# A Zensical site built from the Markdown in docs/, deployed to GitHub Pages from main
-# (docs/usage.md#documentation-site). A Python library with python_api also gets an API
-# reference from its docstrings. One repo has one Pages site, so it rules out a `site` on Pages.
-# A web app at the root is ruled out too: its legal pages live in docs/.
-docs_site:
-  type: bool
-  ask: "{{ customise }}"
-  help: A search-indexed documentation site built from docs/ with Zensical, deployed to GitHub Pages from main (an API reference too for a Python library)
-  default: false
-  validator: >-
-    {% if docs_site and site != 'none' and not site_on_workers %}
-    The docs site and the `site` page would both deploy to this repo's one GitHub Pages site: answer site_host=cloudflare or site=none, or no here.
-    {% elif docs_site and web_app and ts_dir == '.' %}
-    A web app at the repo root keeps its privacy and accessibility pages in docs/, and the docs site would publish a second copy: answer a ts_dir such as web, or no here.
-    {% endif %}
-
 # The practice ladder in levels.toml (docs/usage.md#levels). The OpenSSF Best Practices
 # badge is for public, open-source projects, so a private or unlicensed repo is off it.
 level:
@@ -544,12 +507,76 @@ silver:
   when: false
   default: "{{ public and license != 'none' and level == 'community' }}"
 
-# After `level`, which sets its default: the cold-install requirement starts at standard.
+# One answer stores the optional features. Read old answers before the computed
+# questions below discard them, so an update keeps both true and false choices.
+extras:
+  type: str
+  multiselect: true
+  ask: "{{ customise }}"
+  help: Optional CI, profiling and documentation features; keep every feature you want enabled
+  choices:
+    Upload coverage to Codecov (Python or TypeScript; needs CODECOV_TOKEN): codecov
+    Benchmark pull requests on CodSpeed (Python or Rust; import the repo on codspeed.io): codspeed
+    Profiling recipes (Python or Rust): profiling
+    Verify README setup in a fresh Debian container: cold_install
+    Run Python tests on Windows (one extra CI job): python_windows
+    Searchable documentation on GitHub Pages (Zensical; Python libraries can include an API reference): docs_site
+    Property tests for library code (generated inputs, plus extended weekly runs): property
+    Mutation tests for library code (a local recipe and weekly CI run): mutation
+  default: >-
+    {% set old = _copier_answers %}
+    {% set selected = namespace(values=[]) %}
+    {% for name in ['codecov', 'codspeed', 'profiling', 'cold_install', 'python_windows', 'docs_site'] %}
+    {% if old.get(name, name == 'cold_install' and public and license != 'none' and level != 'minimal') %}
+    {% set selected.values = selected.values + [name] %}
+    {% endif %}
+    {% endfor %}
+    {{ selected.values + old.get('test_extras', []) }}
+  validator: >-
+    {% if 'codecov' in extras and not ('python' in stacks or 'ts' in stacks) %}
+    Codecov needs the python or ts stack.
+    {% elif ('codspeed' in extras or 'profiling' in extras) and not ('python' in stacks or 'rust' in stacks) %}
+    CodSpeed and profiling need the python or rust stack.
+    {% elif 'python_windows' in extras and 'python' not in stacks %}
+    Windows tests need the python stack.
+    {% elif ('property' in extras or 'mutation' in extras) and not library %}
+    Property and mutation tests need a library kind.
+    {% elif 'docs_site' in extras and site != 'none' and not site_on_workers %}
+    The docs site and the `site` page would both deploy to this repo's one GitHub Pages site: answer site_host=cloudflare or site=none, or remove docs_site from extras.
+    {% elif 'docs_site' in extras and web_app and ts_dir == '.' %}
+    A web app at the repo root keeps its privacy and accessibility pages in docs/, and the docs site would publish a second copy: answer a ts_dir such as web, or remove docs_site from extras.
+    {% endif %}
+
+# Computed, never asked or stored: templates use the selected features as booleans.
+codecov:
+  type: bool
+  when: false
+  default: "{{ 'codecov' in extras }}"
+
+codspeed:
+  type: bool
+  when: false
+  default: "{{ 'codspeed' in extras }}"
+
+profiling:
+  type: bool
+  when: false
+  default: "{{ 'profiling' in extras }}"
+
 cold_install:
   type: bool
-  ask: "{{ customise }}"
-  help: Verify README setup instructions in a fresh Debian container on setup changes
-  default: "{{ public and license != 'none' and level != 'minimal' }}"
+  when: false
+  default: "{{ 'cold_install' in extras }}"
+
+python_windows:
+  type: bool
+  when: false
+  default: "{{ 'python_windows' in extras }}"
+
+docs_site:
+  type: bool
+  when: false
+  default: "{{ 'docs_site' in extras }}"
 
 # --- python -------------------------------------------------------------------
 
@@ -632,16 +659,6 @@ python_api:
     Is the package used through its Python API, not only its command line?
     Turns on the griffe API-break check in python.yml (with publish_to_pypi)
   default: true
-
-python_windows:
-  type: bool
-  when: "{{ 'python' in stacks }}"
-  ask: "{{ customise }}"
-  help: >-
-    Run the tests on Windows too, on python_version only, to catch a missing encoding="utf-8",
-    a hardcoded / in a path and other Windows-only failures. Costs one extra CI job per push
-    and pull request
-  default: false
 
 # Computed, never asked: whether the docs site gets docs/reference.md, an API reference
 # that mkdocstrings reads from the docstrings. A command-line-only library gets none.
@@ -867,19 +884,13 @@ go_licenses_version:
 
 # --- test extras --------------------------------------------------------------
 
-# Library kinds only: their public API has to hold for any caller's input. Property
-# tests run with the rest of the tests. Mutation testing takes minutes to hours and
-# its score is noisy, so it runs weekly in CI (never on a pull request) and as a recipe by hand.
+# Computed, never asked or stored: the library test features selected in extras.
 test_extras:
   type: str
   multiselect: true
-  when: "{{ library }}"
-  ask: "{{ customise }}"
-  help: Extra tests for the library code (none, one or both)
-  choices:
-    Property tests (generated inputs checked against a rule, run with the tests and at length in a weekly CI run): property
-    Mutation testing (a `just <stack>-mutation` recipe and a weekly CI run that check the tests catch planted bugs): mutation
-  default: []
+  choices: [property, mutation]
+  when: false
+  default: "{{ extras | select('in', ['property', 'mutation']) | list }}"
 
 # Computed, never asked: the versions a new project starts on. Dependabot bumps
 # them in the project after that.

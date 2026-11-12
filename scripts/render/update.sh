@@ -1,4 +1,5 @@
 # shellcheck shell=bash
+# shellcheck disable=SC2030 # independent test subshells set their own environment
 # shellcheck disable=SC2154,SC2164 # check-render.sh sets out, repo, copier and set -e
 # Template updates: the copier-update workflow, ADRs and sample code across an update.
 # Renders adr-check and sample-up, which the install-action sweep at the end covers.
@@ -47,7 +48,12 @@ cat >"$cuh/gh" <<'FAKE'
 echo "$*" >>"$FAKE_LOG"
 case "$1 $2" in
   "issue list") echo "${FAKE_ISSUE:-}" ;;
-  "pr list") echo "${FAKE_PR:-}" ;;
+  "pr list")
+    case " $* " in
+      *" --state closed "*) printf '%s\n' "${FAKE_CLOSED_PRS:-[]}" ;;
+      *) echo "${FAKE_PR:-}" ;;
+    esac
+    ;;
 esac
 FAKE
 cat >"$cuh/uvx" <<'FAKE'
@@ -99,6 +105,15 @@ chmod +x "$cuh/gh" "$cuh/uvx"
       FAKE_TEXT=''
       if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
       export FAKE_TEXT
+      FAKE_CLOSED_PRS='[]'
+      # shellcheck disable=SC2089 # JSON data, never evaluated as shell code.
+      case $name in
+      declined*) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.10.0","mergedAt":null}]' ;;
+      older-declined) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.9.0","mergedAt":null}]' ;;
+      merged) FAKE_CLOSED_PRS='[{"title":"chore: update from template v0.10.0","mergedAt":"2026-11-11T12:00:00Z"}]' ;;
+      esac
+      # shellcheck disable=SC2090 # The fake gh prints this JSON verbatim.
+      export FAKE_CLOSED_PRS
       : >"$p.gho"
       # The copier step gets neither token variable.
       env -u GH_TOKEN -u HAS_TOKEN GITHUB_OUTPUT="$p.gho" bash --noprofile --norc -eo pipefail "$cuh/copier.sh" >"$p.out" 2>&1 || {
@@ -128,6 +143,11 @@ edit true 7 -
 plain false - - README.md
 layer true - - README.md
 both true - - README.md
+declined true - -
+declined-no-token false - -
+declined-plain false - - README.md
+older-declined true - -
+merged true - -
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
@@ -161,6 +181,15 @@ CASES
   grep -q '^pr create --head chore/copier-update --base main ' plain.log
   grep -q '^pr edit chore/copier-update ' edit.log
   (lacks -q '^pr create' edit.log)
+  # Declining a tag suppresses both pushes and manual-update issues for that tag.
+  for r in declined declined-no-token declined-plain; do
+    (lacks -q '^auth setup-git\|^pr create\|^pr edit\|^issue ' "$r.log")
+    (! git -C "$r.git" rev-parse --verify refs/heads/chore/copier-update 2>/dev/null)
+  done
+  # An older declined tag or a merged PR does not suppress a newer update.
+  for r in older-declined merged; do
+    grep -q '^pr create --head chore/copier-update --base main ' "$r.log"
+  done
   # Patch data must never replace Git configuration, and artifact symlinks are refused.
   git clone -q "$cuh/tpl" "$cuh/reject-checkout"
   mkdir -p "$cuh/reject/copier-update"
@@ -291,3 +320,76 @@ test -z "$unpinned" || {
   echo "install-action without fallback: none: $unpinned" >&2
   exit 1
 }
+
+# v0.14.0 optional answers survive the move to extras, including explicit false
+# values at standard. An untagged scratch history keeps updates local.
+# shellcheck disable=SC2030,SC2031 # each test subshell sets its own environment
+(
+  while IFS= read -r git_var; do unset "$git_var"; done < <(git rev-parse --local-env-vars)
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+  extras_tpl=$out/extras-tpl
+  mkdir -p "$extras_tpl"
+  git -C "$repo" archive v0.14.0 copier.yml includes template | tar -x -C "$extras_tpl"
+  git_extras=(git -C "$extras_tpl" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org)
+  "${git_extras[@]}" init -q
+  "${git_extras[@]}" add copier.yml includes template
+  "${git_extras[@]}" commit -qm old
+  for selection in all some none; do
+    flags=()
+    for feature in codecov codspeed profiling cold_install python_windows docs_site; do
+      enabled=false
+      if [ "$selection" = all ] || { [ "$selection" = some ] && [ "$feature" = python_windows ]; }; then
+        enabled=true
+      fi
+      flags+=(--data "$feature=$enabled")
+    done
+    if [ "$selection" = all ]; then flags+=(--data 'test_extras=[property,mutation]'); fi
+    "${copier[@]}" --vcs-ref=HEAD --quiet --data project_name=extras-check \
+      --data 'stacks=[python,ts,rust,go]' "${flags[@]}" "$extras_tpl" "$out/extras-$selection"
+    git -C "$out/extras-$selection" -c core.hooksPath=/dev/null init -q
+    git -C "$out/extras-$selection" add .
+    git -C "$out/extras-$selection" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org commit -qm old
+  done
+  cp "$repo/copier.yml" "$extras_tpl/copier.yml"
+  cp -R "$repo/includes/." "$extras_tpl/includes/"
+  cp -R "$repo/template/." "$extras_tpl/template/"
+  "${git_extras[@]}" add copier.yml includes template
+  "${git_extras[@]}" commit -qm extras
+  for selection in all some none; do
+    (
+      cd "$out/extras-$selection"
+      uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --vcs-ref=HEAD --defaults --quiet
+    )
+  done
+  uv run --no-project --with pyyaml python - "$out" <<'PYTEST'
+from pathlib import Path
+import sys, yaml
+root = Path(sys.argv[1])
+features = {'codecov', 'codspeed', 'profiling', 'cold_install', 'python_windows', 'docs_site'}
+for selection, expected in [('all', features | {'property', 'mutation'}),
+                            ('some', {'python_windows'}), ('none', set())]:
+    project = root / f'extras-{selection}'
+    answers = yaml.safe_load((project / '.copier-answers.yml').read_text())
+    assert set(answers['extras']) == expected, (selection, answers)
+    assert not (features | {'test_extras'}) & answers.keys(), answers
+    for path, feature in [('codecov.yml', 'codecov'), ('zensical.toml', 'docs_site'),
+                          ('.github/workflows/cold-install.yml', 'cold_install'),
+                          ('.github/workflows/benchmarks.yml', 'codspeed'),
+                          ('.github/workflows/property.yml', 'property'),
+                          ('.github/workflows/mutation.yml', 'mutation')]:
+        assert (project / path).exists() == (feature in expected), (selection, path)
+    workflow = (project / '.github/workflows/python.yml').read_text()
+    assert ('windows-latest' in workflow) == ('python_windows' in expected), selection
+    assert not list(project.rglob('*.rej')), selection
+PYTEST
+  # A later edit replaces the full selection rather than reviving legacy answers.
+  git -C "$out/extras-all" add .
+  git -C "$out/extras-all" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org commit -qm migrated
+  (
+    cd "$out/extras-all"
+    uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --vcs-ref=HEAD --defaults --quiet --data 'extras=[]'
+  )
+  grep -qx 'extras: \[\]' "$out/extras-all/.copier-answers.yml"
+  test ! -e "$out/extras-all/.github/workflows/cold-install.yml"
+  test ! -e "$out/extras-all/zensical.toml"
+)

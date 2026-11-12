@@ -1,14 +1,24 @@
 """Tests the app in process, and its telemetry in a child process."""
 
+from __future__ import annotations
+
 import os
+import socket
 import subprocess
 import sys
+import time
+from contextlib import closing
+from http.client import HTTPConnection
+from typing import TYPE_CHECKING
 
 import pytest
 from fastapi.testclient import TestClient
 
 from {{ module_name }}.__main__ import start_telemetry
 from {{ module_name }}.app import app
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_health() -> None:
@@ -65,3 +75,60 @@ def test_telemetry_records_a_span_and_the_request_duration() -> None:
     # The stable semantic-convention name, or the older one, depending on
     # OTEL_SEMCONV_STABILITY_OPT_IN.
     assert "http.server.request.duration" in child.stdout or "http.server.duration" in child.stdout
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows terminate() does not send SIGTERM")
+def test_unavailable_collector_keeps_serving_and_stops_on_sigterm(tmp_path: Path) -> None:
+    """A real OTLP HTTP export failure neither stops requests nor blocks SIGTERM."""
+    # Binding without listening reserves an endpoint that refuses every connection.
+    with socket.socket() as collector, socket.socket() as address:
+        collector.bind(("127.0.0.1", 0))
+        address.bind(("127.0.0.1", 0))
+        port = address.getsockname()[1]
+        address.close()
+        env = {key: value for key, value in os.environ.items() if not key.startswith("OTEL_")}
+        env.update(
+            {
+                "HOST": "127.0.0.1",
+                "PORT": str(port),
+                "NO_PROXY": "127.0.0.1",
+                "no_proxy": "127.0.0.1",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": f"http://127.0.0.1:{collector.getsockname()[1]}",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+                "OTEL_EXPORTER_OTLP_TIMEOUT": "1",
+                "OTEL_BSP_SCHEDULE_DELAY": "10",
+                "OTEL_TRACES_EXPORTER": "otlp",
+                "OTEL_METRICS_EXPORTER": "none",
+                "OTEL_LOGS_EXPORTER": "none",
+            }
+        )
+        log_path = tmp_path / "server.log"
+        with log_path.open("w", encoding="utf-8") as log:
+            child = subprocess.Popen([sys.executable, "-m", "{{ module_name }}"], env=env, stdout=log, stderr=log)
+            try:
+                deadline = time.monotonic() + 20
+                while True:
+                    assert child.poll() is None, log_path.read_text(encoding="utf-8")
+                    try:
+                        with closing(HTTPConnection("127.0.0.1", port, timeout=1)) as client:
+                            client.request("GET", "/health")
+                            response = client.getresponse()
+                            assert response.status == 200
+                            assert response.read() == b'{"status":"ok"}'
+                    except OSError:
+                        pass
+                    output = log_path.read_text(encoding="utf-8")
+                    if "/v1/traces" in output and "Connection refused" in output:
+                        break
+                    assert time.monotonic() < deadline, output
+                    time.sleep(0.05)
+                # The request after the real export failure must still succeed.
+                with closing(HTTPConnection("127.0.0.1", port, timeout=1)) as client:
+                    client.request("GET", "/health")
+                    assert client.getresponse().status == 200
+                child.terminate()
+                child.wait(timeout=5)
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                child.wait(timeout=5)

@@ -1,6 +1,6 @@
 # Using the template
 
-The [README](../README.md#quick-start) shows how to start a project. This page is the
+The [README](https://github.com/simonvanlierde/project-templates/blob/main/README.md#quick-start) shows how to start a project. This page is the
 reference for what comes after, in the order you are likely to need it:
 
 - **Render:** [the questions](#the-questions) and [presets](#presets), [stacks](#choosing-your-stacks) and
@@ -10,7 +10,7 @@ reference for what comes after, in the order you are likely to need it:
 - **After the first push:** [protect `main`](#protecting-main) and
   [fill in the About box](#the-github-about-box).
 - **Later:** [pull in template updates](#keeping-your-project-up-to-date).
-- **Optional features**, which you can turn on at any time with `copier update --data`:
+- **Optional features**, which you can turn on at any time with `copier update`:
   [publishing](#publishing), [tests on Windows](#tests-on-windows), [Codecov](#coverage-on-codecov),
   [CodSpeed](#benchmarks-on-codspeed), [profiling](#profiling),
   [test extras](#test-extras), a [static site](#static-site),
@@ -49,27 +49,43 @@ When `customise` is `no`, advanced questions take these defaults:
 | `python_dir`, `ts_dir`, `rust_dir`, `go_dir` | `.` (package located at repository root) |
 | `python_layout` | `src` (`src/<module>`); choose `flat` when [adopting in existing packages](#adopting-the-template-in-an-existing-python-package) |
 | `dependency_bot` | Dependabot |
-| `codecov` | Disabled |
-| `codspeed` | Disabled ([Benchmarks on CodSpeed](#benchmarks-on-codspeed)) |
-| `profiling` | Disabled ([Profiling](#profiling)) |
-| `cold_install` | Enabled at the `standard` and `community` levels ([CI baseline](ci-baseline.md)) |
 | `site` | None ([Static site](#static-site)) |
 | `site_host` | GitHub Pages; `cloudflare` deploys the site to a Worker ([Static site](#static-site)) |
 | `worker` | Disabled; a Worker script for `/api/*` in a web app or a site on Cloudflare ([Workers hosting](#workers-hosting)) |
-| `docs_site` | Disabled ([Documentation site](#documentation-site)) |
+| `extras` | `cold_install` at `standard` and `community`; otherwise none ([Optional features](#optional-features)) |
 | `level` | `standard` for a public repo with a license ([Levels](#levels)) |
 | `decision_records` | On for `web-service`, `data-pipeline`, `web-app`, Compose-only and `community`-level projects ([Decision records](#decision-records)) |
 | `module_name`, `go_module` | Derived from project name and GitHub user |
 | `python_version`, `python_min`, `node_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
 | `rust_version` | The crate's minimum supported Rust version (`rust-version` in `Cargo.toml`), the current stable minor by default |
 | `python_api` | Enabled ([API-break check](#api-break-check)) |
-| `python_windows` | Disabled ([Tests on Windows](#tests-on-windows)) |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](#publishing)) |
-| `test_extras` | None ([Test extras](#test-extras)) |
 | `app_port` | 8000 |
 | `site_url` | `https://<project>.<github_user>.workers.dev`, or `<project>-site` for a site on Cloudflare (the Worker's workers.dev address, if the account's subdomain is the GitHub user). Another host is a custom domain ([Workers hosting](#workers-hosting)) |
 
 During `copier update`, previously configured answers are preserved even when `customise` is `no`. Change an individual setting with `copier update --data <key>=<value>` or prompt for a single setting with `copier update --ask <key>`.
+
+### Optional features
+
+`extras` is one multiselect under `customise`. Select every feature the project needs:
+`codecov`, `codspeed`, `profiling`, `cold_install`, `python_windows`, `docs_site`,
+`property` and `mutation`. Stack-specific features require their stack; property and
+mutation tests require a library kind. Publishing and hosting keep their own questions.
+
+New public, licensed projects at `standard` or `community` start with `cold_install`.
+An explicit list replaces the whole selection, including that default. To change the
+selection interactively, run `copier update --ask extras`. Keep the current selections
+and select the features to add. In scripts, list every feature
+to keep, for example:
+
+```sh
+copier update --data 'extras=[cold_install,codecov,property]'
+```
+
+An update from v0.14.0 seeds this list from the old yes/no answers and `test_extras`.
+It preserves disabled features too, including `cold_install: false` at `standard`.
+The next answers file stores only `extras`. Replace old `--data codecov=true` and
+`--data 'test_extras=[...]'` arguments with the full `extras` selection.
 
 To bypass prompts during initial generation, supply values via `--data-file answers.yml` or pass flags with `--data`.
 
@@ -149,7 +165,7 @@ Every push to `main` runs the `production` job after the checks pass. It deploys
 
 An app made before this template deployed from CI was deployed by Cloudflare Pages. To move it:
 
-1. Merge the `copier update`, then run `just repo-settings` and add both secrets to the new `production` environment.
+1. Delete any Pages `public/_redirects` rule with status `200!`: Workers refuses it with error `100324`. Merge the `copier update`, then run `just repo-settings` and add both secrets to the new `production` environment.
 2. The next push to `main` deploys the Worker. Check the app at its workers.dev address.
 3. Remove the custom domain from the Pages project. With `site_url` set to it, the next production deploy attaches it to the Worker.
 4. Delete the Pages project, now that the Worker serves production.
@@ -160,7 +176,7 @@ Without a custom domain, the app's address changes: set the new one with `copier
 
 ### Pull request previews
 
-Each pull request that is open, not a draft and not opened by a bot such as Renovate gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`. The `preview` job deploys `wrangler.jsonc` under that name. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. Production never sends that header.
+Each pull request that is open, not a draft, not opened by a bot such as Renovate and not from `chore/copier-update` gets its own Cloudflare Worker, `<slug>-pr-<number>`, at `https://<slug>-pr-<number>.<subdomain>.workers.dev`. The `preview` job deploys `wrangler.jsonc` under that name. The job summary and the pull request's deployment show the link. Previews are public, and they send `X-Robots-Tag: noindex`. With a custom domain, production sends it only on the duplicate workers.dev origin.
 
 When a pull request closes or turns draft, `preview-retire.yml` deletes its Worker through the Cloudflare API. A daily run lists the account's `<slug>-pr-<number>` Workers and deletes those whose pull request is not open and ready, in case an event was missed. When it cannot read a pull request, it keeps that Worker and fails. To retire previews by hand, run that workflow with a list of pull request numbers, or with the list empty to run the sweep.
 
@@ -327,7 +343,7 @@ After updating, refresh and commit project lockfiles (`uv lock`, `pnpm install`,
 ### Hearing about new releases
 
 - **Renovate:** Automatically opens update PRs using `copier update --skip-answered --defaults`. Inspect PR diffs for conflict markers before merging.
-- **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`. It updates each `.copier-answers*.yml` in turn, so a [layered template](#layering-another-template) lands in the same PR.
+- **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`. It updates each `.copier-answers*.yml` in turn, so a [layered template](#layering-another-template) lands in the same PR. Closing that PR unmerged skips its tag; a later tag can open a new PR.
 
 Without [the update App](#the-update-app), `copier-update.yml` pushes with `GITHUB_TOKEN`, which can't change files in `.github/workflows/`: an update that does opens an issue asking for a local update instead. A PR it opens starts no checks either, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so. To open the PR at all, turn on Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests". With the App, the workflow does not need it.
 
@@ -359,7 +375,7 @@ To publish a release:
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
 
-If a publishing job fails before artifacts upload to the registry, re-run the failed CI job on the existing tag. If `docker.yml`'s `attest` step fails after the image push, re-run only that step: a full re-run rebuilds the image and repoints the semver tags. If the release artifact is already published to the registry, do not move the git tag; bump the patch version and publish a new release.
+If a publishing job fails before any artifacts upload to the registry, re-run the failed CI job on the existing tag. PyPI uploads stay strict: an existing filename fails the job, so inspect the registry for a partial upload first. If any release artifact is already published, keep the git tag and publish a new patch release. This includes a failure in `docker.yml`'s attestation step after the image push. GitHub Actions can re-run a job, but not an individual step; re-running this job rebuilds the image and repoints the semver tags.
 
 Publishing controls:
 
@@ -417,8 +433,10 @@ A Rust library always gets an `api` job in `rust.yml`, and `just rs-api` runs th
 
 `python_windows` adds a `windows` job to `python.yml`. It runs `uv run pytest` on `windows-latest` with `python_version`, so a text file opened without `encoding="utf-8"`, a path built with `/`, or a POSIX-only module such as `fcntl` fails CI instead of a Windows user. Ruff and ty read the same code on every OS, so the job skips them, and it checks out the committed bytes (no CRLF conversion) so a test that hashes a committed file passes. It costs one more job on every push and pull request; Windows runners are also slower to start. With the Python package at the repo root, its check `python: tests (windows)` is required like the Linux ones.
 
+Keep the current selections and select `python_windows` in the prompt:
+
 ```sh
-copier update --data python_windows=true
+copier update --ask extras
 ```
 
 Run `just repo-settings` after the update, so a public repo requires the new check.
@@ -431,10 +449,10 @@ Setup:
 
 1. Register the repository on Codecov and retrieve the upload token.
 2. Save it as repository secret `CODECOV_TOKEN` (`gh secret set CODECOV_TOKEN`).
-3. Enable Codecov:
+3. Keep the current selections and select `codecov` in the prompt:
 
    ```sh
-   copier update --data codecov=true
+   copier update --ask extras
    ```
 
 ## Benchmarks on CodSpeed
@@ -445,10 +463,10 @@ Setup:
 
 1. Import the repository on [codspeed.io](https://codspeed.io).
 2. Set Pull Request comments to "On Change" in CodSpeed repository settings.
-3. Enable CodSpeed:
+3. Keep the current selections and select `codspeed` in the prompt:
 
    ```sh
-   copier update --data codspeed=true
+   copier update --ask extras
    ```
 
 ## Profiling
@@ -458,15 +476,15 @@ Setup:
 - **Python:** `just py-profile <script or -m module> <args>` runs pyinstrument on demand via `uv run --with` without modifying dependencies.
 - **Rust:** `Cargo.toml` adds a `[profile.profiling]` profile. `just rs-profile <command>` records performance profiles using [samply](https://github.com/mstange/samply); `just rs-counters <command>` executes `perf stat` five times to measure CPU cycles and branch misses. Requires local kernel perf event support.
 
-Enable with:
+Keep the current selections and select `profiling` in the prompt:
 
 ```sh
-copier update --data profiling=true
+copier update --ask extras
 ```
 
 ## Test extras
 
-Library kinds configure `test_extras` under `customise`:
+Library kinds select `property` and `mutation` in `extras` under `customise`:
 
 | Option | Python | TypeScript | Rust | Go |
 | --- | --- | --- | --- | --- |
@@ -490,10 +508,11 @@ A full run takes minutes to hours, so check each change with the diff recipe ins
 
 Each takes another git ref, e.g. `just py-mutation-diff main`.
 
-To add extras to an existing project:
+To add tests to an existing project, keep the current selections and select `property`
+or `mutation` in the prompt:
 
 ```sh
-copier update --data 'test_extras=[property]'
+copier update --ask extras
 ```
 
 ## Static site
@@ -508,7 +527,7 @@ The two choices differ only in what is in `site/` and how `just site` builds it:
 The starter files are yours: an update leaves them alone. An Astro site's `package.json` stays the template's, and Dependabot or Renovate bumps it. Both choices also render:
 
 - `.github/workflows/site.yml`. The `build` job runs `just site` on every pull request and push to `main` and uploads the result, which is gitignored. The `deploy` job publishes that build to GitHub Pages on a push to `main`. It is the only job with `pages: write`. [On a Worker](#hosting-on-a-worker), it deploys to the Worker instead.
-- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft and not opened by a bot gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/` (from `/` itself on a Worker), and sends `X-Robots-Tag: noindex`.
+- The `preview` job in `site.yml`, with `wrangler.site.jsonc`, `.github/scripts/deploy-worker.sh`, `preview-retire.yml` and `preview-retire.sh`. These are the web app's own preview pieces, with the same lifecycle ([Pull request previews](#pull-request-previews)): a pull request that is open, not a draft, not opened by a bot and not from `chore/copier-update` gets the Worker `<slug>-site-pr-<number>`, and it comes down when the pull request closes or turns draft. The `-site` in the name keeps it apart from a web app's `<slug>-pr-<number>` in a repo that has both. The job deploys the build job's artifact, not a fresh build, under `/<repo>/` as Pages does, with a redirect from `/` (from `/` itself on a Worker), and sends `X-Robots-Tag: noindex`.
 
 On GitHub Pages, the one-time setup is below; on a Worker, see [Hosting on a Worker](#hosting-on-a-worker).
 
@@ -572,7 +591,7 @@ The script and its test are the project's after the first render. A binding beyo
 
 ## Documentation site
 
-Answer `docs_site` (under `customise`) when outside users need search or versioned docs (the `docs-site` requirement in [Levels](#levels)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
+Select `docs_site` in `extras` (under `customise`) when outside users need search or versioned docs (the `docs-site` requirement in [Levels](#levels)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
 
 A render with `docs_site` gets:
 
@@ -584,6 +603,22 @@ A render with `docs_site` gets:
 The build is strict: a warning fails it. A link to a page that does not exist is a warning, and so is a link out of `docs/`, such as `../README.md`. Link to files outside `docs/` with their full GitHub URL instead.
 
 TypeScript, Rust and Go projects get the site too, without an API reference. A Rust crate has one on docs.rs and a Go module on pkg.go.dev. The template has none for TypeScript yet.
+
+The site uses system fonts and a plain repository link. It makes no font or repository-statistics requests to third parties. Search runs locally in the browser. `docs/assets/docs.css`, `docs/assets/docs.js` and `docs-overrides/partials/source.html` keep the theme's selected links readable and its mobile controls keyboard-accessible.
+
+An existing `zensical.toml` is yours, so updates leave it alone. To use these defaults after an update, add the assets under `[project]` and the theme settings under `[project.theme]`. Keep any other entries in those tables:
+
+```toml
+[project]
+extra_css = ["assets/docs.css"]
+extra_javascript = ["assets/docs.js"]
+
+[project.theme]
+font = false
+custom_dir = "docs-overrides"
+```
+
+If you already list stylesheets or scripts, append the new paths instead of replacing those lists. If you use another `custom_dir`, copy the plain-link partial into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
 
 One repo has one Pages site, so the template refuses `docs_site` together with a `site` on Pages. A `site` [on a Worker](#hosting-on-a-worker) leaves Pages to the docs. Otherwise, a playground page can go in `docs/` as Markdown or HTML.
 
@@ -619,7 +654,7 @@ The render cannot answer these for you:
 - `maintained`, `report_responses` and `enhancement_responses`: you reply to issues. `.github/CONTRIBUTING.md` promises a reply within about two weeks.
 - `vulnerability_report_response`: you reply to a vulnerability report within 14 days, as `.github/SECURITY.md` promises.
 - `tests_are_added`, `warnings_fixed`, `static_analysis_fixed`, `vulnerabilities_fixed_60_days` and `dynamic_analysis_fixed`: the project's history shows it.
-- `dynamic_analysis` (suggested): `test_extras=[property]` adds property tests.
+- `dynamic_analysis` (suggested): `property` in `extras` adds property tests.
 
 Add the badge to `README.md` once bestpractices.dev awards it.
 
@@ -698,9 +733,9 @@ A requirement applies to every repo, or only to repos with one of its traits. Th
 | `pipeline` | Python `kind=data-pipeline` |
 | `numerics` | Python `kind=research` |
 
-The requirements live in [`levels.toml`](../levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
+The requirements live in [`levels.toml`](https://github.com/simonvanlierde/project-templates/blob/main/levels.toml), and `just levels-doc` writes the table below from it. A repo meets a level when it meets every requirement at that level and below that applies to it. "Counts from" is the date a requirement starts to count. Before then a tool that reads `levels.toml` may list it without counting it, which gives repos time to catch up. The file's version is the newest template release, so a repo can say which version of the ladder it meets.
 
-The table says what a repo must have to count as meeting a level, not only what the render adds: every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site=true` once its trigger holds.
+The table says what a repo must have to count as meeting a level, not only what the render adds: every level also gets the files the template always renders, such as `.github/CONTRIBUTING.md`, the issue forms and the citation files. A fresh render meets each `automated` requirement at its level. The `review` ones need you, and `docs-site` needs `docs_site` in `extras` once its trigger holds.
 
 <!-- levels:start -->
 <!-- Generated from levels.toml by `just levels-doc`; edit that file, not this table. -->

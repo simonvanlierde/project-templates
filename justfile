@@ -7,8 +7,8 @@ default:
 # CI is the source of truth and also runs zizmor, actionlint and the generated
 # projects' own checks, which are too slow for here.
 
-# Run the git hooks, then the render checks (before you push).
-check: hooks render
+# Run the git hooks, render checks and strict docs build before you push.
+check: hooks render docs
 
 # Run every git hook over the whole repo, as the `git hooks` job does.
 hooks:
@@ -28,3 +28,14 @@ render:
 # Write the Levels table in docs/usage.md from levels.toml; `--check` fails when it is stale.
 levels-doc *args:
     uv run scripts/levels_doc.py {{ args }}
+
+# Keep the docs builder on the version that new projects receive.
+zensical_version := `sed -n '/^zensical_version:/,/^$/s/^  default: //p' copier.yml`
+
+# Build docs/ into _docs/; warnings fail the build.
+docs:
+    uvx --exclude-newer "1 week" zensical@{{zensical_version}} build --strict
+
+# Serve docs/ at http://localhost:8000, rebuilt on each save.
+docs-serve:
+    uvx --exclude-newer "1 week" zensical@{{zensical_version}} serve

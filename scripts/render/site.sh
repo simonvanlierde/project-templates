@@ -37,7 +37,7 @@ for r in x r d; do
   preview_job=$(sed -n '/^  preview:$/,$p' "$wf")
   (! grep -q 'just site' <<<"$preview_job")
   grep -qx '          name: github-pages' <<<"$preview_job"
-  grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !endsWith(github.event.pull_request.user.login, '[bot]')" <<<"$preview_job"
+  grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]')" <<<"$preview_job"
   # shellcheck disable=SC2016
   grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostring)'\''' <<<"$preview_job"
   # shellcheck disable=SC2016
@@ -82,7 +82,7 @@ jq -e '.rules[0].parameters.required_status_checks | any(.context == "site: buil
 sed -n '/^check:/,/^$/p' y/justfile | grep -qx '    @just site'
 (sed -n '/^check:/,/^$/p' x/justfile | lacks -q 'just site')
 
-# Docs site: m (nested src), k (flat) and h (Go) answer docs_site=true; ds is a library
+# Docs site: m (nested src), k (flat) and h (Go) select docs_site in extras; ds is a library
 # without python_api. Built from docs/ with the pinned Zensical, deployed like the site.
 zensical_pin=$(sed -n '/^zensical_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
 mkdocstrings_pin=$(sed -n '/^mkdocstrings_python_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
@@ -90,6 +90,11 @@ for r in m k h ds; do
   for f in zensical.toml docs/index.md .github/workflows/docs.yml; do test -f "$r/$f"; done
   grep -qx '/_docs/' "$r/.gitignore"
   grep -qx 'site_dir = "_docs"' "$r/zensical.toml"
+  grep -qx 'font = false' "$r/zensical.toml"
+  grep -qx 'custom_dir = "docs-overrides"' "$r/zensical.toml"
+  for asset in .lycheeignore docs/assets/docs.css docs/assets/docs.js docs-overrides/partials/source.html; do
+    cmp "$repo/$asset" "$r/$asset"
+  done
   grep -qF "zensical@$zensical_pin build --strict" "$r/justfile"
   grep -qF "zensical@$zensical_pin serve" "$r/justfile"
   wf=$r/.github/workflows/docs.yml
@@ -405,3 +410,35 @@ grep -q 'stages: \[pre-push\]' d/.pre-commit-config.yaml
 grep -qx 'default_install_hook_types: \[pre-commit, commit-msg, pre-push\]' d/.pre-commit-config.yaml
 (lacks -q 'pre-push' a/.pre-commit-config.yaml)
 # Commit messages and PR titles: one committed.toml, read by the commit-msg hook and
+
+# Only a custom-domain production deploy suppresses the duplicate workers.dev origin.
+uv run --no-project --with pyyaml python - "$out" <<'PYTEST'
+from pathlib import Path
+import subprocess, sys, tempfile, yaml
+root = Path(sys.argv[1])
+checked = set()
+for path in root.glob('*/.github/workflows/*.yml'):
+    if path.name not in {'ts.yml', 'site.yml'}:
+        continue
+    jobs = yaml.safe_load(path.read_text())['jobs']
+    for job in jobs.values():
+        if any(step.get('uses', '').startswith('actions/deploy-pages@') for step in job.get('steps', [])):
+            assert not any('workers.dev/*' in step.get('run', '') for step in job.get('steps', [])), path
+    for name in ('production', 'deploy'):
+        steps = jobs.get(name, {}).get('steps', [])
+        runs = '\n'.join(step.get('run', '') for step in steps)
+        if 'deploy-worker.sh' not in runs:
+            continue
+        header_runs = [step['run'] for step in steps if 'https://:worker.:subdomain.workers.dev/*' in step.get('run', '')]
+        assert bool(header_runs) == ('--domain ' in runs), path
+        for run in header_runs:
+            with tempfile.TemporaryDirectory() as tmp:
+                headers = Path(tmp, run.split(' >> ', 1)[1].strip())
+                headers.parent.mkdir(parents=True)
+                existing = "/*\n  Content-Security-Policy: default-src 'self'\n"
+                headers.write_text(existing)
+                subprocess.run(['bash', '-euc', run], cwd=tmp, check=True)
+                assert headers.read_text() == existing + '\nhttps://:worker.:subdomain.workers.dev/*\n  X-Robots-Tag: noindex\n', path
+            checked.add(path.name)
+assert checked == {'ts.yml', 'site.yml'}, checked
+PYTEST

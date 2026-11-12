@@ -148,7 +148,7 @@ jobs:
               stacks: [python]
               kind: library
               publish_to_pypi: true
-              test_extras: [property, mutation]
+              extras: [cold_install, property, mutation]
           # Nested layout: the build context is a subdirectory.
           - name: monorepo
             answers:
@@ -217,7 +217,7 @@ jobs:
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: just py-sync check
 
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         # Two calls: py-mutation takes mutant patterns, so `just py-mutation py-property`
         # would hand py-property to mutmut instead of running the recipe.
@@ -228,7 +228,7 @@ jobs:
       # The run above passes, but so would a gate that ignored mutmut. Each case here must
       # turn it red, and py-mutation-diff must mutate only the function a commit changes.
       # Not in check-render: it needs the synced env this job already has.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         name: mutation gate fails when it should
         working-directory: ${{ runner.temp }}/proj
         run: |
@@ -255,7 +255,7 @@ jobs:
 
       # A new Hypothesis profile copies the loaded one, here the derandomized "ci"
       # profile, which would make the weekly run repeat its inputs.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'property')
         name: long profile draws new inputs
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.python_dir }}
         run: >-
@@ -314,7 +314,10 @@ jobs:
     # The Astro render installs its packages cold.
     timeout-minutes: 15
     steps:
-      - *checkout
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the extras migration regression reads v0.14.0
 
       # uv runs copier and the linters here; key on this file, which pins them.
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -348,7 +351,7 @@ jobs:
 
       # check-render built the plain (x) and Astro (y) site starters. axe checks them with
       # the tags the web app's own a11y spec uses, in light and dark.
-      - name: axe over the site starters
+      - name: browser checks over sites and docs
         working-directory: ${{ runner.temp }}
         run: |
           set -euo pipefail
@@ -390,6 +393,13 @@ jobs:
           curl -fsS --retry 10 --retry-connrefused --retry-delay 1 -o /dev/null http://127.0.0.1:8101/
           curl -fsS --retry 10 --retry-connrefused --retry-delay 1 -o /dev/null http://127.0.0.1:8102/site-me/
           node axe.mjs http://127.0.0.1:8101/ http://127.0.0.1:8102/site-me/ http://127.0.0.1:8102/site-me/about/
+
+          # Check the template's docs and one generated docs site with the same browser dependencies.
+          just --working-directory "$GITHUB_WORKSPACE" docs
+          cp -R "$GITHUB_WORKSPACE/_docs" srv/project-templates
+          cp -R "$RUNNER_TEMP/m/_docs" srv/mutate-me
+          cp "$GITHUB_WORKSPACE/scripts/check-docs.mjs" .
+          node check-docs.mjs http://127.0.0.1:8102/project-templates/ http://127.0.0.1:8102/mutate-me/
 
       # No linter can parse the .jinja workflows, so audit the rendered output: every render
       # check-render made, each found by its .copier-answers.yml. Scaffolds get the same
@@ -563,7 +573,7 @@ jobs:
               ts_dir: apps/lib
               ts_kind: library
               publish_to_npm: true
-              test_extras: [property, mutation]
+              extras: [cold_install, property, mutation]
           - name: app
             answers:
               project_name: ci-ts-app
@@ -644,7 +654,7 @@ jobs:
         run: just ts-sync check
 
       # Then the checks again: biome reads .gitignore, so a report left unignored fails them.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         working-directory: ${{ runner.temp }}/proj
         run: just ts-mutation ts-property ts-check
 
@@ -747,7 +757,7 @@ jobs:
               project_name: ci-rs-extras
               stacks: [rust]
               rust_kind: library
-              test_extras: [property, mutation]
+              extras: [cold_install, property, mutation]
           - name: binary
             answers:
               project_name: ci-rs-bin
@@ -769,7 +779,7 @@ jobs:
 
       - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
-          tool: cargo-nextest,cargo-deny${{ matrix.answers.test_extras && ',cargo-mutants' || '' }}${{ matrix.answers.rust_kind == 'library' && ',cargo-semver-checks' || '' }}
+          tool: cargo-nextest,cargo-deny${{ contains(matrix.answers.extras, 'mutation') && ',cargo-mutants' || '' }}${{ matrix.answers.rust_kind == 'library' && ',cargo-semver-checks' || '' }}
           fallback: none
 
       - *just
@@ -797,12 +807,12 @@ jobs:
           grep -q 'function_missing' "$log" || { cat "$log"; exit 1; }
           git checkout -- src/lib.rs
 
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         working-directory: ${{ runner.temp }}/proj
         run: just rs-mutation rs-property
 
       # rs-mutation-diff must mutate the function a commit adds, and only that one.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         name: mutation-diff reports an untested function
         working-directory: ${{ runner.temp }}/proj
         run: |
@@ -842,7 +852,7 @@ jobs:
               project_name: ci-go-extras
               stacks: [go]
               go_kind: library
-              test_extras: [property, mutation]
+              extras: [cold_install, property, mutation]
           - name: binary
             answers:
               project_name: ci-go-bin
@@ -888,13 +898,13 @@ jobs:
         working-directory: ${{ runner.temp }}/proj
         run: just go-sync go-check
 
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         working-directory: ${{ runner.temp }}/proj
         run: just go-mutation && just go-property -fuzztime=10s
 
       # go-mutation-diff must reach the function a commit adds, and skip the rest. gremlins
       # exits 0 on an uncovered mutant, so the report is the check.
-      - if: matrix.answers.test_extras
+      - if: contains(matrix.answers.extras, 'mutation')
         name: mutation-diff reports an untested function
         working-directory: ${{ runner.temp }}/proj
         run: |
@@ -930,14 +940,13 @@ jobs:
               kind: library
               publish_to_pypi: true
               python_api: false
-              test_extras: [property, mutation]
-              python_windows: true
+              extras: [cold_install, python_windows, property, mutation]
           - name: data-pipeline
             answers:
               project_name: ci-win-pipe
               stacks: [python]
               kind: data-pipeline
-              python_windows: true
+              extras: [cold_install, python_windows]
     steps:
       - *checkout
 

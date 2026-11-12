@@ -1,0 +1,14 @@
+# The documentation site: `just docs` builds the Markdown in docs/ into _docs/, and
+# docs.yml deploys it to GitHub Pages. Without a `nav`, the menu follows the files in docs/.
+# Settings: https://zensical.org/docs/setup/basics/
+[project]
+site_name = "project-templates"
+site_url = "https://simonvanlierde.github.io/project-templates/"
+repo_url = "https://github.com/simonvanlierde/project-templates"
+site_dir = "_docs"
+extra_css = ["assets/docs.css"]
+extra_javascript = ["assets/docs.js"]
+
+[project.theme]
+font = false
+custom_dir = "docs-overrides"

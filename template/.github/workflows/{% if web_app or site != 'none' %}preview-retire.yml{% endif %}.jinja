@@ -26,11 +26,11 @@ concurrency:
 jobs:
   retire:
     name: Retire
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.event.pull_request.user.login, '[bot]'))
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]'))
     runs-on: ubuntu-latest
     environment: preview
     # One job per Worker name prefix, each in its preview job's group, so a retire waits for
-    # that deploy in flight and the two kinds never cancel each other's pending runs.
+    # that deploy in flight. A newer pending job replaces the previous pending job.
     strategy:
       fail-fast: false
       matrix:

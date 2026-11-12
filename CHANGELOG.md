@@ -12,12 +12,22 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
+- **Breaking:** one `extras` multiselect replaces the optional CI, profiling, docs-site and library-test questions. Updates from v0.14.0 preserve the old selections, including disabled features. Scripts must pass the full `extras` list instead of `codecov`, `codspeed`, `profiling`, `cold_install`, `python_windows`, `docs_site` or `test_extras`. See [optional features](docs/usage.md#optional-features).
 - **Breaking:** a `level` question (`minimal`, `standard` or `community`) replaces `openssf_badge`. The old answer is not carried over: a public project with a license gets `standard`, which adds the test policy to `.github/CONTRIBUTING.md` and a `## Usage` section to the README. To keep what you had, update with `copier update --data level=minimal` if you answered `openssf_badge: none`, or `--data level=community` if you answered `silver`. Scripts that pass `--data openssf_badge=...` need `--data level=...` instead. A plain `copier update` of a project that answered `silver` deletes `GOVERNANCE.md`, `docs/roadmap.md` and `docs/assurance-case.md`, so pass `--data level=community`.
 - At `standard`, the render also adds `.github/first-release.md` with the OpenSSF badge step. The Levels section in `docs/usage.md` replaces "How much documentation".
-- `cold_install` is on by default for new projects at the `standard` and `community` levels, since the `cold-install` requirement starts at `standard`. An existing project keeps its stored answer; add the workflow with `copier update --data cold_install=true`.
+- `cold_install` is on by default for new projects at the `standard` and `community` levels, since the `cold-install` requirement starts at `standard`. An existing project keeps its stored answer; add the workflow with `copier update --ask extras`.
+
+### Fixed
+
+- Docs sites keep mobile navigation reachable by keyboard and selected links readable. New sites use system fonts and a plain repository link without remote statistics; existing sites can adopt the [theme settings](docs/usage.md#documentation-site) after updating.
+- Closing a Copier update PR unmerged skips that tag on later weekly runs; a newer tag can still open a PR.
+- Worker previews skip Copier update branches, including updates opened by a user account. Web app deploys keep hidden build files such as `.well-known/security.txt`.
+- Workers explicitly disable observability. With a custom domain, production adds `noindex` only to its duplicate workers.dev origin.
+- Generated hooks check shell scripts, and Dependabot projects explain how template updates refresh their prek pin.
 
 ### Added
 
+- Web-service tests exercise an unavailable OTLP HTTP collector, check that requests still succeed and bound shutdown after SIGTERM.
 - [Levels](docs/usage.md#levels): the requirements a public repo meets at each level, by the traits that make a requirement apply, with the standard each comes from and the date it starts to count. `levels.toml` holds them, versioned with the template's releases.
 - A license check in each stack's CI job and check recipe, for a project with a license: licensecheck for Python, `pnpm run licenses` (`scripts/checkLicenses.mjs`) for TypeScript, `cargo deny list` beside `cargo deny check` for Rust and go-licenses for Go. Each lists the licenses of the dependencies that ship, not dev tooling, and fails on one the project's license cannot take. TypeScript, Rust and Go share one allow-list that follows the `license` answer: permissive licenses (BlueOak-1.0.0, BSL-1.0, CDLA-Permissive-2.0, PSF-2.0, Python-2.0 and Unlicense among them) and MPL-2.0 for every project, the GPL family for a GPL or AGPL one. Python uses licensecheck's own compatibility table instead, which lets LGPL into a permissive project, refuses Zlib and Unicode-3.0 as unknown, and reads an `AGPL-3.0-*` dependency as the GPL, so a GPL project's check lets it in. `deny.toml` now takes the shared list too, plus `Apache-2.0 WITH LLVM-exception`. If you edited that list, `copier update` may leave a conflict there to resolve.
 - Four requirements in [Levels](docs/usage.md#levels): `ci-tests` and `dependency-licenses` at `standard`, `release-build` and `architecture-review` at `community`.
@@ -142,6 +152,7 @@ Upgrade steps:
 
 Upgrade steps:
 
+- When moving a web app from Pages to Workers, delete any `public/_redirects` rule with status `200!`. Workers refuses it with error `100324`.
 - **Breaking:** in a web app, add `export const LEGAL_LINKED_FROM: readonly string[] = [...ROUTES];` to `tests/e2e/routes.ts` to keep the old legal-page check, or list only the routes that link the legal pages.
 - **Breaking:** in a web app, merge the `copier update`, run `pnpm install` and commit `pnpm-lock.yaml` (the update adds wrangler as a devDependency, and CI installs with `--frozen-lockfile`). Run `just repo-settings` and add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` to the `production` environment. Once the Worker is live, move the custom domain to it and delete the Pages project ([steps](docs/usage.md#moving-an-app-off-cloudflare-pages)). Without a custom domain, change the `site_url` answer to the workers.dev address: `copier update --data site_url=https://<slug>.<subdomain>.workers.dev`. Then fix the lines that still name Pages in files the update leaves alone: `docs/privacy.md`, the README's deploy section and the comment in `src/App.tsx`.
 - **Breaking:** in a web app, move any hand tests in `docs/accessibility.md` under "How we check" and delete the "Tested with" heading, or the statement test fails.

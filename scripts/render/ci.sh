@@ -262,10 +262,10 @@ done
 grep -qx '      - run: uv run pytest --cov --cov-report=xml' d/.github/workflows/python.yml
 (lacks -q codecov a/.github/workflows/python.yml a/.github/workflows/ts.yml)
 grep -qx '      - run: pnpm run test' a/.github/workflows/ts.yml
-# test_extras: asked only with a library kind (d has none), off by default (a's rust
-# and go libraries get no property-test or mutation dependency).
-(lacks -q '^test_extras' d/.copier-answers.yml)
-grep -qx 'test_extras: \[\]' a/.copier-answers.yml
+# Test features are computed from extras, never stored as a second answer.
+# a's Rust and Go libraries get no property-test or mutation dependency.
+(lacks -q '^test_extras:' d/.copier-answers.yml)
+(lacks -q '^test_extras:' a/.copier-answers.yml)
 (lacks -q -e proptest -e gremlins a/Cargo.toml a/go.mod)
 # mutation.yml: only with the extra, one job per library stack, weekly and by hand only.
 test -f m/.github/workflows/mutation.yml
