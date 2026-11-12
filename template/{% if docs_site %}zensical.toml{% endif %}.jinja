@@ -15,6 +15,11 @@ extra_javascript = ["assets/docs.js"]
 [project.theme]
 font = false
 custom_dir = "docs-overrides"
+
+# docs-overrides/main.html reads og_image for the link-preview tags. `just og-card` renders the
+# image and puts its hash in this URL, since link previews cache by URL.
+[project.extra]
+og_image = "assets/og.png"
 {%- if docs_api %}
 
 # docs/reference.md renders the docstrings under this path, read without importing the package.

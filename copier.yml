@@ -104,7 +104,7 @@ _message_after_copy: |
   {%- if site == 'astro' %}
     just site-sync
   {%- endif %}
-  {%- if web_app or site != 'none' %}
+  {%- if web_app or site != 'none' or docs_site %}
     just og-card
   {%- endif %}
     just check
@@ -721,11 +721,12 @@ site_address:
   when: false
   default: "{% if site == 'none' %}{% elif site_on_workers %}{{ (site_url if not web_app else 'https://' ~ worker_slug ~ '-site.' ~ github_user | lower ~ '.workers.dev') | regex_replace('/$', '') }}/{% else %}https://{{ github_user | lower }}.github.io/{{ slug }}/{% endif %}"
 
-# Computed, never asked: the address the social card prints. The web app's, else the site's.
+# Computed, never asked: the address the social card prints. The web app's, else the site's,
+# else the docs site's. The docs site gets a copy of the same card.
 card_address:
   type: str
   when: false
-  default: "{{ (site_url | regex_replace('/$', '') ~ '/') if web_app else site_address }}"
+  default: "{{ (site_url | regex_replace('/$', '') ~ '/') if web_app else site_address if site != 'none' else ('https://' ~ github_user | lower ~ '.github.io/' ~ slug ~ '/' if docs_site else '') }}"
 
 # Computed, never asked: the Playwright a static site runs with `pnpm dlx` to render its
 # social card. A web app uses the one in its own devDependencies.

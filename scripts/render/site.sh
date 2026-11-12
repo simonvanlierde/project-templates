@@ -496,3 +496,23 @@ for path in root.glob('*/.github/workflows/*.yml'):
             checked.add(path.name)
 assert checked == {'ts.yml', 'site.yml'}, checked
 PYTEST
+# Docs-site link previews: the override, the card recipe, and a real build. m is a docs site
+# alone; the card goes to docs/assets/og.png and its hash into og_image.
+for r in m k h ds; do
+  cmp "$repo/template/{% if docs_site %}docs-overrides{% endif %}/main.html" "$r/docs-overrides/main.html"
+  grep -qx 'og_image = "assets/og.png"' "$r/zensical.toml"
+  grep -qF '<h1>' "$r/docs/og-card.html"
+  # shellcheck disable=SC2016 # a literal "$PWD" in the recipe body
+  grep -qF '"$PWD/docs/assets/og.png"' "$r/justfile"
+  grep -qF 'zensical.toml' "$r/justfile"
+done
+grep -qF 'mutate-me' m/docs/og-card.html
+grep -qF 'example-org.github.io/mutate-me</p>' m/docs/og-card.html
+(lacks -rq 'og_image' a/)
+for t in 'og:title" content="mutate-me"' 'og:image" content="https://example-org.github.io/mutate-me/assets/og.png' 'og:image:alt"' 'twitter:card" content="summary_large_image"'; do
+  grep -qF "$t" m/_docs/index.html
+done
+# With a description set (k), the head carries it and the alt text; without one (m) neither prints None.
+(lacks -q 'content="None"' m/_docs/index.html)
+grep -qF 'og:description" content="Mutates the tests."' k/_docs/index.html
+grep -qF 'og:image:alt" content="adopt-me: Mutates the tests."' k/_docs/index.html

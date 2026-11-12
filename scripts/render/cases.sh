@@ -165,7 +165,7 @@ echo '# project citation' >"$out/k/CITATION.cff"
 echo 'VALUE = 1' >"$out/k/adopt_me/__init__.py"
 "${copier[@]}" --vcs-ref=HEAD \
   --data 'extras=[codspeed,cold_install,docs_site,mutation]' --data project_name=adopt-me --data customise=true --data python_layout=flat \
-  --data license=GPL-3.0-or-later \
+  --data 'project_description=Mutates the tests.' --data license=GPL-3.0-or-later \
   --data publish_to_pypi=true . "$out/k"
 grep -qx '# project readme' "$out/k/README.md"
 grep -qx '# project citation' "$out/k/CITATION.cff"
