@@ -60,15 +60,6 @@ recipe_has a/just/ts.just ts-check '    pnpm audit --prod --audit-level=moderate
 recipe_has c/just/ts.just ts-check '    pnpm -C apps/web run coverage'
 for cmd in 'cargo fmt --check' 'cargo clippy --all-targets --all-features -- -D warnings' \
   'cargo nextest run --all-features' 'cargo deny check'; do
-  # A GPL project takes the GPL but not the AGPL, whose network clause its license lacks.
-  licenses_pass gpl GPL-3.0-only || {
-    echo "checkLicenses.mjs refuses GPL-3.0-only in a GPL project" >&2
-    exit 1
-  }
-  if licenses_pass gpl AGPL-3.0-only; then
-    echo "checkLicenses.mjs lets AGPL-3.0-only into a GPL project" >&2
-    exit 1
-  fi
   recipe_has a/just/rust.just rs-check "    $cmd"
 done
 # nextest skips doctests, so a library runs them apart, in the recipe and in CI.
@@ -138,6 +129,15 @@ for l in AGPL-3.0-only 'GPL-3.0-only AND (MIT OR Apache-2.0)'; do
 done
 if licenses_pass agl GPL-2.0-only; then
   echo "checkLicenses.mjs lets GPL-2.0-only into an AGPL project" >&2
+  exit 1
+fi
+# A GPL project takes the GPL but not the AGPL, whose network clause its license lacks.
+licenses_pass gpl GPL-3.0-only || {
+  echo "checkLicenses.mjs refuses GPL-3.0-only in a GPL project" >&2
+  exit 1
+}
+if licenses_pass gpl AGPL-3.0-only; then
+  echo "checkLicenses.mjs lets AGPL-3.0-only into a GPL project" >&2
   exit 1
 fi
 recipe_has a/just/rust.just rs-check '    cargo deny list'

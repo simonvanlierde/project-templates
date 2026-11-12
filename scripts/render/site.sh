@@ -319,7 +319,14 @@ if command -v setsid >/dev/null && command -v fuser >/dev/null; then
   grep -qxF 'Open http://localhost:4321/site-me/' "$out/y-site-serve.log"
   site_serve x http://localhost:4321/ '<script type="module" src="main.mjs"></script>'
   # A busy port is an error, not a silent move to 4322.
-  python3 -m http.server --bind 127.0.0.1 4321 >/dev/null 2>&1 &
+  # Astro listens on ::1 and the plain recipe on 127.0.0.1, so hold both.
+  python3 -c 'import socket, time
+for family, host in ((socket.AF_INET, "127.0.0.1"), (socket.AF_INET6, "::1")):
+    s = socket.socket(family)
+    s.bind((host, 4321))
+    s.listen()
+    globals()[host] = s
+time.sleep(120)' &
   holder=$!
   sleep 1
   for r in x y; do
