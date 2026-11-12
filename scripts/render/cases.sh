@@ -175,6 +175,13 @@ test ! -e "$out/k/src"
 grep -qx '      - "adopt_me/\*\*"' "$out/k/.github/workflows/benchmarks.yml"
 test ! -e "$out/k/tests/test_add.py"
 (lacks -q 'import add' "$out/k/tests/test_benchmarks.py")
+# The benchmarks are the project's once written: rendering k again keeps its own.
+echo '# project edit' >>"$out/k/tests/test_benchmarks.py"
+"${copier[@]}" --vcs-ref=HEAD \
+  --data 'extras=[codspeed,cold_install,docs_site,mutation]' --data project_name=adopt-me --data customise=true --data python_layout=flat \
+  --data license=GPL-3.0-or-later \
+  --data publish_to_pypi=true . "$out/k" >/dev/null 2>&1
+grep -qx '# project edit' "$out/k/tests/test_benchmarks.py"
 grep -qx 'module-root = ""' "$out/k/pyproject.toml"
 grep -qx 'source = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'GNU GENERAL PUBLIC LICENSE' "$out/k/LICENSE"

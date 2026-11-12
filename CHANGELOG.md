@@ -27,6 +27,8 @@ Upgrade steps:
 - Worker previews skip Copier update branches, including updates opened by a user account. They also skip runs that a bot started by pushing to a pull request a person opened, so bot-pushed code never sees the Cloudflare token. Web app deploys keep hidden build files such as `.well-known/security.txt`.
 - Workers explicitly disable observability. With a custom domain, production adds `noindex` only to its duplicate workers.dev origin.
 - Generated hooks check shell scripts, and Dependabot projects explain how template updates refresh their prek pin.
+- The CodSpeed, property and mutation Python jobs check dependencies against OSV's malware advisories, as the test job does.
+- `tests/test_benchmarks.py` belongs to the project once written. An update or a render into an existing repo keeps the project's own benchmarks, also when it turns `codspeed` on. A deleted one comes back, since the benchmarks workflow runs it.
 
 ### Added
 

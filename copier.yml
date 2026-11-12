@@ -43,6 +43,8 @@ _skip_if_exists:
   - /zensical.toml
   - /docs/index.md
   - /docs/reference.md
+  # Not a sample: benchmarks.yml runs this file, so one the project deleted comes back.
+  - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}tests/test_benchmarks.py"
   # Samples: code and pages the project replaces. Each is also in the update-only
   # `_exclude` below, so one the project deleted stays deleted (check-render checks both).
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
