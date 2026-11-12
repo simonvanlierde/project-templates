@@ -159,3 +159,14 @@ repos:
         language: python
         files: ^(levels\.toml|docs/levels\.md|CHANGELOG\.md|scripts/levels_doc\.py)$
         pass_filenames: false
+
+  # check_level.py's tests, on small repos it writes to a temp dir.
+  - repo: local
+    hooks:
+      - id: check-level
+        name: check_level.py tests
+        entry: pytest -q scripts/test_check_level.py
+        language: python
+        additional_dependencies: [jsonschema==4.26.0, pytest==9.2.0, pyyaml==6.0.3]
+        files: ^(levels\.toml|scripts/(check_level|test_check_level)\.py|scripts/check_level\.schema\.json)$
+        pass_filenames: false

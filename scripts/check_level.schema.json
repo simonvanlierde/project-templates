@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/simonvanlierde/project-templates/blob/main/scripts/check_level.schema.json",
+  "title": "check_level.py report",
+  "description": "One repo's results against the requirements in levels.toml. A new field is not a breaking change; a breaking change bumps schema_version.",
+  "type": "object",
+  "required": ["schema_version", "repo", "level", "traits", "levels_version", "checked_at", "requirements"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "repo": { "type": "string", "description": "The checkout's directory name." },
+    "level": {
+      "enum": ["minimal", "standard", "community", null],
+      "description": "The level from .copier-answers.yml or --level; null when the repo declares none, and then every requirement is not_applicable."
+    },
+    "traits": {
+      "type": "array",
+      "items": { "enum": ["web", "cli", "package", "pipeline", "numerics"] },
+      "uniqueItems": true
+    },
+    "levels_version": { "type": "string", "description": "`version` in the levels.toml read." },
+    "checked_at": { "type": "string", "format": "date-time", "description": "UTC, to the second." },
+    "requirements": {
+      "type": "array",
+      "description": "One item per requirement in levels.toml, in its order.",
+      "items": {
+        "type": "object",
+        "required": ["id", "area", "level", "since", "status", "evidence"],
+        "properties": {
+          "id": { "type": "string" },
+          "area": { "type": "string" },
+          "level": { "enum": ["minimal", "standard", "community"] },
+          "since": {
+            "type": "string",
+            "format": "date",
+            "description": "The date the requirement starts to count; before it, a reader may show the result without counting it."
+          },
+          "status": {
+            "enum": ["met", "missing", "not_applicable", "unchecked"],
+            "description": "not_applicable: above the repo's level, for traits it lacks, or its condition does not hold. unchecked: a person judges it, or the facts are not in the files."
+          },
+          "evidence": {
+            "type": "string",
+            "description": "For met, the paths that meet it; otherwise the reason, in one line."
+          }
+        }
+      }
+    }
+  }
+}
