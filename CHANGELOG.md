@@ -19,6 +19,7 @@ Upgrade steps:
 
 ### Fixed
 
+- Docs sites that enable code-copy buttons keep their actions from adding duplicate navigation landmarks.
 - Docs sites keep mobile navigation reachable by keyboard and selected links readable. New sites use system fonts and a plain repository link without remote statistics; existing sites can adopt the [theme settings](docs/usage.md#documentation-site) after updating.
 - Closing a Copier update PR unmerged skips that tag on later weekly runs; a newer tag can still open a PR.
 - Worker previews skip Copier update branches, including updates opened by a user account. Web app deploys keep hidden build files such as `.well-known/security.txt`.

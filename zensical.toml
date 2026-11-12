@@ -1,14 +1,38 @@
-# The documentation site: `just docs` builds the Markdown in docs/ into _docs/, and
-# docs.yml deploys it to GitHub Pages. Without a `nav`, the menu follows the files in docs/.
+# The documentation site: `just docs` builds docs/ into _docs/; docs.yml deploys it.
 # Settings: https://zensical.org/docs/setup/basics/
 [project]
 site_name = "project-templates"
-site_url = "https://simonvanlierde.github.io/project-templates/"
+site_url = "https://simonvanlierde.com/project-templates/"
 repo_url = "https://github.com/simonvanlierde/project-templates"
 site_dir = "_docs"
-extra_css = ["assets/docs.css"]
-extra_javascript = ["assets/docs.js"]
+extra_css = ["assets/docs.css", "assets/chooser.css"]
+extra_javascript = ["assets/docs.js", "assets/chooser.mjs"]
+nav = [
+  { "Get started" = "index.md" },
+  { "Help me choose" = "choose.md" },
+  { "Use and update the template" = "usage.md" },
+  { "Python project kinds" = "python-kinds.md" },
+  { "Reference" = [
+    { "Tools" = "tooling.md" },
+    { "CI checks" = "ci-baseline.md" },
+    { "Architecture and security" = "design.md" },
+    { "Web legal pages" = "web-legal.md" },
+  ] },
+  { "Decisions" = [
+    { "Decision index" = "decisions/README.md" },
+    "decisions/0001-pr-previews-use-the-production-cloudflare-account.md",
+    "decisions/0002-wrangler-is-an-exact-dev-dependency.md",
+    "decisions/0003-drop-the-ts-docker-image.md",
+    "decisions/0004-decision-records-in-rendered-projects.md",
+    "decisions/0005-workers-hosting-with-an-optional-script.md",
+    "decisions/0006-zensical-builds-the-docs-site.md",
+    "decisions/0007-the-plain-site-is-a-tool-page.md",
+    "decisions/0008-three-audiences-in-order.md",
+    "decisions/0009-optional-features-share-one-extras-answer.md",
+  ] },
+]
 
 [project.theme]
 font = false
 custom_dir = "docs-overrides"
+features = ["navigation.path", "navigation.footer", "content.code.copy", "toc.follow", "search.highlight"]

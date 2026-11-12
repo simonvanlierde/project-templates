@@ -8,7 +8,7 @@ default:
 # projects' own checks, which are too slow for here.
 
 # Run the git hooks, render checks and strict docs build before you push.
-check: hooks render docs
+check: hooks render docs chooser
 
 # Run every git hook over the whole repo, as the `git hooks` job does.
 hooks:
@@ -39,3 +39,8 @@ docs:
 # Serve docs/ at http://localhost:8000, rebuilt on each save.
 docs-serve:
     uvx --exclude-newer "1 week" zensical@{{zensical_version}} serve
+
+# Check chooser recommendations against the released template and the current code.
+chooser:
+    node --test scripts/test-chooser.mjs
+    node scripts/check-chooser-renders.mjs
