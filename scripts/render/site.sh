@@ -303,7 +303,7 @@ site_serve() { # render, URL, text the page holds
   kill -- "-$pid" 2>/dev/null || true
   fuser -s -k -n tcp 4321 || true
   wait "$pid" || true
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
+  for _ in $(seq 60); do
     fuser -s -n tcp 4321 || break
     sleep 0.5
   done
@@ -323,18 +323,40 @@ if command -v setsid >/dev/null && command -v fuser >/dev/null; then
   python3 -c 'import socket, time
 for family, host in ((socket.AF_INET, "127.0.0.1"), (socket.AF_INET6, "::1")):
     s = socket.socket(family)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # TIME_WAIT from the curls above
     s.bind((host, 4321))
     s.listen()
     globals()[host] = s
-time.sleep(120)' &
+print("holding", flush=True)
+time.sleep(120)' >"$out/port-holder.log" 2>&1 &
   holder=$!
-  sleep 1
+  # The holder must own the port, or a server left from above passes the check for it.
+  for _ in $(seq 50); do
+    grep -q holding "$out/port-holder.log" && break
+    kill -0 "$holder" 2>/dev/null || break
+    sleep 0.2
+  done
+  grep -q holding "$out/port-holder.log" || {
+    cat "$out/port-holder.log" >&2
+    fuser -v -n tcp 4321 >&2 || true
+    exit 1
+  }
   for r in x y; do
-    if (cd "$r" && timeout 60 just site-serve >"$out/$r-site-busy.log" 2>&1); then
+    # setsid and kill the group: timeout alone stops just and orphans the dev server.
+    (cd "$r" && exec setsid timeout 60 just site-serve) >"$out/$r-site-busy.log" 2>&1 &
+    busy=$!
+    rc=0
+    wait "$busy" || rc=$?
+    # 124 is timeout ending a server that started anyway, on another port.
+    if [ "$rc" -eq 0 ] || [ "$rc" -eq 124 ]; then
       kill "$holder"
+      # astro dev runs on as a background server; stop the one that moved ports.
+      fuser -s -k -n tcp 4322 || true
+      cat "$out/$r-site-busy.log" >&2
       echo "just site-serve in $r did not fail with port 4321 taken" >&2
       exit 1
     fi
+    kill -- "-$busy" 2>/dev/null || true
   done
   kill "$holder"
   wait "$holder" 2>/dev/null || true
