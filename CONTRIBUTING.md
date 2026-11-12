@@ -62,10 +62,10 @@ projects' own linters, such as ruff and biome, run in CI on each render.
 
 ## Add a test with each change
 
-A change that adds a question, an answer or a generated file adds the check that proves
-it in the same pull request: a case in `scripts/render/`, which `scripts/check-render.sh`
-runs, or a step in the CI job for that stack. A bug fix adds a check that fails without
-the fix. Fix each warning a hook or linter gives, or silence it where it occurs and say why.
+A change comes with tests. One that adds a question, an answer or a generated file adds
+the test that proves it in the same pull request: a case in `scripts/render/`, which
+`scripts/check-render.sh` runs, or a step in the CI job for that stack. A bug fix adds a
+test that fails without the fix. Fix each warning a hook or linter gives, or silence it where it occurs and say why.
 
 ## Tag every change
 
