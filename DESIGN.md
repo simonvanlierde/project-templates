@@ -21,8 +21,16 @@ the reference pages.
 ## Colors
 
 Use the theme's indigo accent for links and active controls, with its muted accent
-for highlights. Keep the light reading surface and the theme's text colors.
-`zensical.toml` selects the theme; theme styles own the remaining colors.
+for highlights, in both the light and the dark scheme. The site follows the reader's
+system setting until they pick one with the header toggle. `zensical.toml` selects the
+theme; theme styles own the remaining colors.
+
+## Mark and social card
+
+The mark is `docs/assets/logo.svg`: an indigo tile with two offset squares, a copy made
+from a template. It is the header logo and the favicon. `scripts/og-card.html` is the
+1200x630 link-preview card, centred so the mark and the name survive a square crop;
+`just og-card` renders it to `docs/assets/og.png`.
 
 ## Typography
 
@@ -39,7 +47,9 @@ Let the theme adapt navigation to smaller screens.
 ## Components
 
 Use the built-in navigation, search, links, tables and code blocks. Preserve their
-keyboard behavior and visible focus indicators. The chooser uses native radio
+keyboard behavior and visible focus indicators. The announcement bar names the newest
+release and can be dismissed; each page has an edit link, and the footer links the
+source, the DOI and the maintainer's site. The chooser uses native radio
 buttons, selects and a copy button, revealing only the questions relevant to the
 reader’s task. Check normal text against its
 background for at least 4.5:1 contrast when changing colors.

@@ -36,6 +36,14 @@ zensical_version := `sed -n '/^zensical_version:/,/^$/s/^  default: //p' copier.
 docs:
     uvx --exclude-newer "1 week" zensical@{{zensical_version}} build --strict
 
+playwright_version := `sed -n '/^playwright_version:/,/^$/s/^  default: //p' copier.yml`
+
+# Render scripts/og-card.html to docs/assets/og.png and put its hash in the og:image URL,
+# since link previews cache by URL. Needs Chromium: `pnpm dlx playwright@<version> install chromium`.
+og-card:
+    pnpm dlx playwright@{{ playwright_version }} screenshot --viewport-size=1200,630 "file://$PWD/scripts/og-card.html" "$PWD/docs/assets/og.png"
+    sed -E -i.bak "s/og\.png(\?v=[0-9a-f]+)?\"/og.png?v=$(shasum -a 256 docs/assets/og.png | cut -c1-8)\"/" zensical.toml && rm zensical.toml.bak
+
 # Serve docs/ at http://localhost:8000, rebuilt on each save.
 docs-serve:
     uvx --exclude-newer "1 week" zensical@{{zensical_version}} serve

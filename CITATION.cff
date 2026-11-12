@@ -16,6 +16,7 @@ authors:
     family-names: "van Lierde"
     orcid: "https://orcid.org/0009-0006-6953-909X"
 repository-code: "https://github.com/simonvanlierde/project-templates"
+url: "https://simonvanlierde.com/project-templates/"
 license: MIT
 keywords:
   - copier

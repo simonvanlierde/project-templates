@@ -13,7 +13,8 @@ current by a weekly update PR. Research code comes citable: `CITATION.cff`, a Ze
 and a Software Heritage archive from the first release.
 
 This is a [Copier](https://copier.readthedocs.io) template. Combine the stacks as your
-project needs ([quick start](#quick-start)). Every project gets:
+project needs ([quick start](#quick-start)). The [documentation site](https://simonvanlierde.com/project-templates/)
+has the guides and a chooser that suggests a project type. Every project gets:
 
 - a passing test on day one;
 - `just check`, which runs the same checks as CI;
