@@ -282,10 +282,9 @@ git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
 samples=(src/sample_me/__init__.py tests/test_add.py
   web/src/App.tsx web/src/App.test.tsx web/src/main.tsx web/src/app.css
   web/worker/index.ts web/worker/index.test.ts
-  site/src/pages/index.astro site/src/pages/about.md site/worker/index.mjs site/worker/index.test.mjs
-  docs/og-card.html)
-owned=docs/decisions/0001-start-from-project-templates.md
-(cd "$sample_up" && rm "${samples[@]}" "$owned")
+  site/src/pages/index.astro site/src/pages/about.md site/worker/index.mjs site/worker/index.test.mjs)
+owned=(docs/decisions/0001-start-from-project-templates.md docs/og-card.html)
+(cd "$sample_up" && rm "${samples[@]}" "${owned[@]}")
 git -C "$sample_up" init -q
 git -C "$sample_up" add -A
 git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "replace the samples"
@@ -303,7 +302,7 @@ test -z "$back" || {
   echo "check-render: copier update brought back deleted samples: $back" >&2
   exit 1
 }
-test -f "$sample_up/$owned"
+for f in "${owned[@]}"; do test -f "$sample_up/$f"; done
 
 # install-action falls back to cargo-binstall for a tool past its manifest, which
 # installs an unchecked binary: every step says fallback: none, but cargo-codspeed,

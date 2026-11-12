@@ -45,6 +45,8 @@ _skip_if_exists:
   - /docs/reference.md
   # Not a sample: benchmarks.yml runs this file, so one the project deleted comes back.
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}tests/test_benchmarks.py"
+  # Also not a sample: `just og-card` renders it, so an update adds it to a project without one.
+  - /docs/og-card.html
   # Samples: code and pages the project replaces. Each is also in the update-only
   # `_exclude` below, so one the project deleted stays deleted (check-render checks both).
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
@@ -55,7 +57,6 @@ _skip_if_exists:
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts"
-  - /docs/og-card.html
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
@@ -89,7 +90,6 @@ _exclude:
   - "{% if _copier_operation == 'update' %}/site/src/pages/about.md{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/worker/index.mjs{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/worker/index.test.mjs{% endif %}"
-  - "{% if _copier_operation == 'update' %}/docs/og-card.html{% endif %}"
 
 # Shown on `copier copy` only; `--quiet` hides both.
 _message_before_copy: |

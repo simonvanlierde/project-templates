@@ -11,7 +11,7 @@ User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, citation fi
 
 Known limit: once a project has deleted any file the template renders, copier 9.19.1 reads the skip list before it loads the answers. A Compose-only repo's `compose.yaml` and `.env.example`, and the owned files under `ts_dir` or `go_dir`, then merge with the template's and can conflict. Keep your side of each.
 
-Updates skip the sample code and pages (the package's `__init__.py`, `tests/test_add.py`, the web app's components, the site's pages and Worker scripts), so a sample you deleted stays deleted. So does a feature you turn on later with `copier update --data`: it comes without its samples, which a fresh `copier copy` into a scratch directory shows. Delete a file the project owns, such as `README.md` or `tests/test_benchmarks.py`, and the update writes it again.
+Updates skip the sample code and pages (the package's `__init__.py`, `tests/test_add.py`, the web app's components, the site's pages and Worker scripts), so a sample you deleted stays deleted. So does a feature you turn on later with `copier update --data`: it comes without its samples, which a fresh `copier copy` into a scratch directory shows. Delete a file the project owns, such as `README.md`, `tests/test_benchmarks.py` or `docs/og-card.html`, and the update writes it again.
 
 To move a package directory, run `copier update` with the new path, then delete the old directory yourself.
 

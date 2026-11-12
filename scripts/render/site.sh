@@ -514,5 +514,5 @@ for t in 'og:title" content="mutate-me"' 'og:image" content="https://example-org
 done
 # With a description set (k), the head carries it and the alt text; without one (m) neither prints None.
 (lacks -q 'content="None"' m/_docs/index.html)
-grep -qF 'og:description" content="Mutates the tests."' k/_docs/index.html
-grep -qF 'og:image:alt" content="adopt-me: Mutates the tests."' k/_docs/index.html
+grep -qF 'og:description" content="Mutates &quot;the&quot; tests &amp; more."' k/_docs/index.html
+grep -qF 'og:image:alt" content="adopt-me: Mutates &quot;the&quot; tests &amp; more."' k/_docs/index.html
