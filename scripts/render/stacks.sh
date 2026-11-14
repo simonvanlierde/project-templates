@@ -124,7 +124,9 @@ for wf in */.github/workflows/{release,python-release,ts-release}.yml c/.github/
   test -f "${wf%%/*}/.github/allowed_signers"
   n=$((n + 1))
 done
-test -f c/.github/workflows/python-release.yml && test -f c/.github/workflows/ts-release.yml && test "$n" -ge 11
+test -f c/.github/workflows/python-release.yml
+test -f c/.github/workflows/ts-release.yml
+test "$n" -ge 11
 grep -qxF "        if: startsWith(github.ref, 'refs/tags/')" c/.github/workflows/docker.yml
 # Both package workflows exist; Python creates the GitHub release after PyPI.
 test ! -e c/.github/workflows/release.yml
@@ -148,7 +150,7 @@ grep -qF 'actions/attest@' c/.github/workflows/python-release.yml
 (lacks -q 'attest-build-provenance' c/.github/workflows/python-release.yml)
 # shellcheck disable=SC2016 # literal workflow expression
 grep -qF 'sbom-path: ${{ steps.sbom.outputs.path }}' c/.github/workflows/python-release.yml
-! grep -qF 'sbom-path: sbom/*' c/.github/workflows/python-release.yml
+(lacks -qF 'sbom-path: sbom/*' c/.github/workflows/python-release.yml)
 grep -qF 'gh attestation verify' c/.github/workflows/python-release.yml
 # The API-break checks render with the publish answers, and only with them: griffe in CI from
 # the repository root, so its search path carries the nested dir; the npm report beside
