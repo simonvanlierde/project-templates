@@ -196,7 +196,8 @@ grep -q 'Changelog = "https://github.com/[^/]*/adopt-me/blob/main/CHANGELOG.md"'
 # A warn-level ty rule must not fail the check, and the hooks must not rewrite data/.
 grep -qx 'error-on-warning = false' "$out/k/pyproject.toml"
 # Per hook, never top-level: the secret scan and the large-file check still cover them.
-test "$(grep -cx ' *exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")" = 4
+test "$(grep -cxF '        exclude: ^LICENSES/|^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")" = 3
+test "$(grep -cx ' *exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")" = 1
 (lacks -qx 'exclude: \^(data|tests/fixtures)/' "$out/k/.pre-commit-config.yaml")
 grep -qx 'source_paths = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'check --search \. --format github adopt_me' "$out/k/.github/workflows/python.yml"

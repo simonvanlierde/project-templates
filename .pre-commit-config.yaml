@@ -19,10 +19,12 @@ repos:
       - id: check-toml
       - id: check-yaml
       - id: end-of-file-fixer
+        exclude: (^|/)LICENSES/|^template/[^/]*LICENSES[^/]*/|LICENSE.*\.jinja$
       - id: mixed-line-ending
+        exclude: (^|/)LICENSES/|^template/[^/]*LICENSES[^/]*/|LICENSE.*\.jinja$
       - id: trailing-whitespace
-        # The Apache license text is byte-exact from the GitHub licenses API.
-        exclude: 'LICENSE.*\.jinja$'
+        # Canonical licence text must keep its original bytes.
+        exclude: (^|/)LICENSES/|^template/[^/]*LICENSES[^/]*/|LICENSE.*\.jinja$
 
   # Commit messages follow committed.toml, as in a generated project.
   - repo: https://github.com/crate-ci/committed
@@ -131,7 +133,7 @@ repos:
         # typos reads ruff's copyright rule code in the Python template's pyproject as a
         # misspelling of "copy". The rendered pyproject.toml passes, so the template file
         # alone is skipped.
-        exclude: pyproject\.toml\.jinja$
+        exclude: (^|/)LICENSES/|^template/[^/]*LICENSES[^/]*/|LICENSE.*\.jinja$|pyproject\.toml\.jinja$
 
   # Dead relative links in Markdown and HTML. Offline, so a commit never waits on the
   # network: the weekly links.yml checks the web links. lychee's own hook installs its
