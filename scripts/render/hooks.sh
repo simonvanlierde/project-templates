@@ -131,7 +131,6 @@ printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg
 (cd h-hooks && "${dco_hook[@]}" >/dev/null)
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace\n' >h-hooks/msg
 (cd h-hooks && ! "${dco_hook[@]}" >/dev/null 2>&1)
-rm -rf h-hooks
 # citesync passes on each fresh citable render: root (a), nested (c, d, m), one stack (h, r, t).
 # Adding a release to CITATION.cff leaves codemeta.json stale, which fails the hook until
 # the manual-stage writer fixes it. The writer re-indents codemeta.json, so a second
@@ -215,13 +214,41 @@ LOCK
 git -C a-hooks add ui/pnpm-lock.yaml
 (cd a-hooks && "${prek[@]}" yamlfmt >/dev/null)
 git -C a-hooks diff --quiet ui/pnpm-lock.yaml
+# Canonical licence bytes and image-format identifiers survive commit and push hooks.
+# Include a final blank line: upstream licence texts need not end at one newline.
+for r in a b h; do
+  mkdir -p "$r-hooks/LICENSES"
+  cp a/LICENSES/CC-BY-SA-4.0.txt "$r-hooks/LICENSES/CC-BY-SA-4.0.txt"
+  printf '\n' >>"$r-hooks/LICENSES/CC-BY-SA-4.0.txt"
+  cp "$r-hooks/LICENSES/CC-BY-SA-4.0.txt" license.orig
+  printf 'definately \r\n\r\n' >"$r-hooks/LICENSES/verbatim.txt"
+  cp "$r-hooks/LICENSES/verbatim.txt" verbatim.orig
+  printf '# Save PNGs\n' >"$r-hooks/Snakefile"
+  cp "$r-hooks/Snakefile" Snakefile.orig
+  git -C "$r-hooks" add LICENSES/CC-BY-SA-4.0.txt LICENSES/verbatim.txt Snakefile
+  for stage in pre-commit pre-push; do
+    (cd "$r-hooks" && "${prek[@]}" end-of-file-fixer mixed-line-ending trailing-whitespace typos --hook-stage "$stage" >/dev/null)
+    cmp "$r-hooks/LICENSES/CC-BY-SA-4.0.txt" license.orig
+    cmp "$r-hooks/LICENSES/verbatim.txt" verbatim.orig
+    cmp "$r-hooks/Snakefile" Snakefile.orig
+    printf '# definately \r\n# ordinary\n\n' >"$r-hooks/ordinary.py"
+    git -C "$r-hooks" add ordinary.py
+    for hook in end-of-file-fixer mixed-line-ending trailing-whitespace typos; do
+      (cd "$r-hooks" && ! "${prek[@]}" "$hook" --hook-stage "$stage" >"$hook.log" 2>&1)
+      grep -q 'files were modified by this hook' "$r-hooks/$hook.log"
+    done
+    printf '# definitely\n# ordinary\n' >ordinary.orig
+    cmp "$r-hooks/ordinary.py" ordinary.orig
+  done
+done
+rm -f license.orig verbatim.orig Snakefile.orig ordinary.orig
 # end-of-file-fixer leaves tests/fixtures/ untouched
 mkdir -p a-hooks/tests/fixtures
 printf 'fixture content' >a-hooks/tests/fixtures/fixture.txt
 git -C a-hooks add tests/fixtures/fixture.txt
 (cd a-hooks && "${prek[@]}" end-of-file-fixer >/dev/null)
 test "$(cat a-hooks/tests/fixtures/fixture.txt)" = 'fixture content'
-rm -rf a-hooks b-hooks d-hooks
+rm -rf a-hooks b-hooks d-hooks h-hooks
 for r in a b; do
   grep -qx '      - id: typos' "$r/.pre-commit-config.yaml"
   grep -qx '        entry: lychee --no-progress --offline' "$r/.pre-commit-config.yaml"

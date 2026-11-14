@@ -42,6 +42,8 @@ Install golangci-lint once per machine. The template pins the golangci-lint vers
 | Go | `golangci-lint-fmt`, `golangci-lint` |
 | Python image | `hadolint-docker`, which needs a running Docker daemon |
 
+Whitespace and spelling hooks leave canonical texts in `LICENSES/` unchanged. Secret scanning and other validation still cover that directory.
+
 ## Spelling and link checks
 
 Two git hooks validate prose:
@@ -52,6 +54,8 @@ Two git hooks validate prose:
   [default.extend-words]
   ue = "ue"
   ```
+
+  Use `[default.extend-identifiers]` for a whole identifier such as `PNGs`, which typos splits into separate words.
 
   typos knows English only. The hook skips gettext `.po` files and anything in a `locales/` directory; list other files with text in other languages under `[files] extend-exclude` in `_typos.toml`.
 

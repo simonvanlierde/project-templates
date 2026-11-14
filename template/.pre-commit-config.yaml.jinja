@@ -25,6 +25,8 @@ default_install_hook_types: [pre-commit, commit-msg{% if web_app %}, pre-push{% 
 # and the large-file check still cover them.
 {%- set data_exclude = '^' ~ ('' if python_dir == '.' else python_dir ~ '/') ~ '(data|tests/fixtures)/' %}
 {%- endif %}
+{%- set rewrite_exclude = '^LICENSES/' ~ ('|' ~ data_exclude if 'python' in stacks else '') %}
+# Licence texts are verbatim; keep other checks, including the secret scan, enabled.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
@@ -37,17 +39,11 @@ repos:
         exclude: (^|/)pnpm-lock\.yaml$
 {%- endif %}
       - id: end-of-file-fixer
-{%- if 'python' in stacks %}
-        exclude: {{ data_exclude }}
-{%- endif %}
+        exclude: {{ rewrite_exclude }}
       - id: mixed-line-ending
-{%- if 'python' in stacks %}
-        exclude: {{ data_exclude }}
-{%- endif %}
+        exclude: {{ rewrite_exclude }}
       - id: trailing-whitespace
-{%- if 'python' in stacks %}
-        exclude: {{ data_exclude }}
-{%- endif %}
+        exclude: {{ rewrite_exclude }}
       # Not gated to python: .rumdl.toml ships to every stack.
       - id: check-toml
 
@@ -193,7 +189,7 @@ repos:
         # translation catalogs: gettext .po files and anything in a locales/ directory.
         # List other files with text in other languages under [files] extend-exclude in
         # _typos.toml.
-        exclude: ^\.copier-answers\.yml$|\.po$|(^|/)locales/
+        exclude: ^LICENSES/|^\.copier-answers\.yml$|\.po$|(^|/)locales/
 
   # Dead relative links in Markdown and HTML. Offline, so a commit never waits on the
   # network: the weekly links.yml checks the web links. lychee's own hook installs its
