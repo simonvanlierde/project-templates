@@ -95,8 +95,13 @@ grep -qx '/services/tool/mono-me' c/.gitignore
 # rust-analyzer finds a crate two levels down only when told.
 grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/settings.json
 (lacks -q linkedProjects a/.vscode/settings.json)
+# Only research projects override Jupyter's vulnerable Tornado dependency.
+grep -qxF 'override-dependencies = ["tornado @ https://github.com/tornadoweb/tornado/archive/c1adc39faea87d87d99421529aa06cdd3d39f660.tar.gz"]' a/pyproject.toml
+(lacks -q 'override-dependencies' b/svc/pyproject.toml c/api/pyproject.toml)
 # Another stack's secrets stay out of an image's build context.
 grep -qx '\*\*/.env' c/api/.dockerignore
+grep -qx '\*\*/.env\.\*' c/api/.dockerignore
+grep -qx '!\*\*/.env\.example' c/api/.dockerignore
 # A local .env stays out of git, and compose publishes each port on loopback only.
 grep -qxF '.env' c/.gitignore
 test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 1

@@ -280,6 +280,8 @@ grep -q 'label: Release or commit' "$c/.github/ISSUE_TEMPLATE/bug.yml"
 grep -q 'The README says how to install prek' "$c/.pre-commit-config.yaml"
 grep -q 'image: .*@sha256:' "$out/compose/compose.yaml"
 grep -q '127.0.0.1:' "$out/compose/compose.yaml"
+# Every port binds to loopback: a bare "8080:80" reaches the LAN past the host firewall.
+(lacks -qE '^ +- "[0-9]+:' "$out/compose/compose.yaml")
 grep -q 'healthcheck:' "$out/compose/compose.yaml"
 grep -q '@just docker-check' "$out/compose/justfile"
 (lacks -q 'hadolint' "$out/compose/.pre-commit-config.yaml")
