@@ -10,13 +10,17 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+Upgrade steps:
+
+- Existing projects must [add the `PNGs` spelling exception](docs/updates.md#spelling-exceptions-in-existing-projects) to their project-owned `_typos.toml`.
+
 ### Changed
 
 - The `readme` requirement in `levels.toml` keeps maintainer-only material, such as deploy and release steps, out of the README: it goes in `docs/` or `CONTRIBUTING.md`.
 
 ### Fixed
 
-- Generated hooks preserve canonical `LICENSES/` bytes and the image-format plural `PNGs`, while still checking ordinary prose and source files.
+- Generated hooks preserve canonical `LICENSES/` bytes while still checking ordinary prose and source files. New projects also preserve the image-format plural `PNGs`.
 - Python Docker builds exclude PEM files, key files and `.npmrc` at every directory depth, so `COPY` keeps them out of image layers.
 - Research projects use Tornado 6.6.1's pinned source archive while its security fix is inside the one-week dependency window, so Jupyter's dependency passes the audit without disabling the release-age policy.
 - The project chooser and quick-start examples use the released `python_kind` answer in Python commands.

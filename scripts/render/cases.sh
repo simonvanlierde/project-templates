@@ -35,7 +35,10 @@ grep -qxF '      org.opencontainers.image.description="A \"quoted\" {{ one }}, n
 # shellcheck disable=SC2016 # literal ${...} in docker compose default value
 grep -qF 'OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-project=odd-name--co,env=dev}' "$out/b/compose.yaml"
 
-# c: the only render with nested paths, at two depths to catch hardcoded
+# Nested Python keeps its data exclusions alongside the root licence exclusion.
+test "$(grep -cxF '        exclude: ^LICENSES/|^svc/(data|tests/fixtures)/' "$out/b/.pre-commit-config.yaml")" = 3
+
+# c: nested package paths at two depths to catch hardcoded
 # up-paths. The rust crate and go module are the binary kind. Render a has the
 # libraries. All publish flags on, so the release workflows could collide and
 # docker.yml renders its push job. Codecov is on here and in d. The only
