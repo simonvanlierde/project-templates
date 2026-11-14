@@ -107,6 +107,10 @@ build-backend = "uv_build"
 # Set here, not user-wide, so every machine writes the same uv.lock.
 [tool.uv]
 exclude-newer = "1 week"
+{%- if python_kind == 'research' %}
+# TODO: remove after 2026-11-16: Tornado 6.6.1 then clears the one-week release window.
+override-dependencies = ["tornado @ https://github.com/tornadoweb/tornado/archive/c1adc39faea87d87d99421529aa06cdd3d39f660.tar.gz"]
+{%- endif %}
 {%- if python_kind == 'data-pipeline' %}
 # sourceledger is released with this template, and a template release can need its newest
 # version on the day it ships.

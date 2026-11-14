@@ -16,6 +16,7 @@ changes are marked **Breaking**.
 
 ### Fixed
 
+- Research projects use Tornado 6.6.1's pinned source archive while its security fix is inside the one-week dependency window, so Jupyter's dependency passes the audit without disabling the release-age policy.
 - The project chooser and quick-start examples use the released `python_kind` answer in Python commands.
 
 ## [0.15.0] - 2026-11-12
