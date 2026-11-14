@@ -16,6 +16,7 @@ changes are marked **Breaking**.
 
 ### Fixed
 
+- Python Docker builds exclude PEM files, key files and `.npmrc` at every directory depth, so `COPY` keeps them out of image layers.
 - Research projects use Tornado 6.6.1's pinned source archive while its security fix is inside the one-week dependency window, so Jupyter's dependency passes the audit without disabling the release-age policy.
 - The project chooser and quick-start examples use the released `python_kind` answer in Python commands.
 
