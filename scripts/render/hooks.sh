@@ -110,12 +110,21 @@ git -C s-git check-ignore -q shots/index-390-light.png
 # A rumdl cache an older rumdl wrote has no ignore file of its own, and Biome formats its JSON.
 git -C s-git check-ignore -q .rumdl_cache/0.3.1/entry.json
 git -C d-hooks ls-files --error-unmatch web/tests/shots/shots.spec.ts >/dev/null
+# Only the rendered .gitignore counts: a global excludes file would hide a missing rule.
+git -C d-hooks config core.excludesFile /dev/null
 git -C d-hooks check-ignore -q web/shots/index-390-light.png
 git -C d-hooks check-ignore -q web/.dev.vars
 git -C d-hooks check-ignore -q deploy.pem
 git -C d-hooks check-ignore -q tls.key
 git -C d-hooks check-ignore -q web/.npmrc
 git -C d-hooks check-ignore -q web/.dev.vars.production
+# Local env files stay out of git; the committed example does not.
+git -C d-hooks check-ignore -q .env
+git -C d-hooks check-ignore -q web/.env.production.local
+# check-ignore exits 1 when no rule ignores the path and 128 on an error, so test for 1.
+rc=0
+git -C d-hooks check-ignore --no-index -q .env.example || rc=$?
+test "$rc" = 1
 # h's commit-msg hook takes a sign-off with an email, and refuses one without.
 dco_hook=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run --hook-stage commit-msg --commit-msg-filename msg dco-signoff)
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg

@@ -97,6 +97,8 @@ grep -qF '"rust-analyzer.linkedProjects": ["crates/cli/Cargo.toml"]' c/.vscode/s
 (lacks -q linkedProjects a/.vscode/settings.json)
 # Another stack's secrets stay out of an image's build context.
 grep -qx '\*\*/.env' c/api/.dockerignore
+grep -qx '\*\*/.env\.\*' c/api/.dockerignore
+grep -qx '!\*\*/.env\.example' c/api/.dockerignore
 # A local .env stays out of git, and compose publishes each port on loopback only.
 grep -qxF '.env' c/.gitignore
 test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 1
