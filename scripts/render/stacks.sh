@@ -102,6 +102,9 @@ grep -qxF 'override-dependencies = ["tornado @ https://github.com/tornadoweb/tor
 grep -qx '\*\*/.env' c/api/.dockerignore
 grep -qx '\*\*/.env\.\*' c/api/.dockerignore
 grep -qx '!\*\*/.env\.example' c/api/.dockerignore
+grep -qxF '**/*.pem' c/api/.dockerignore
+grep -qxF '**/*.key' c/api/.dockerignore
+grep -qxF '**/.npmrc' c/api/.dockerignore
 # A local .env stays out of git, and compose publishes each port on loopback only.
 grep -qxF '.env' c/.gitignore
 test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 1
