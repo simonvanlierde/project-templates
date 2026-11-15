@@ -16,6 +16,7 @@ Upgrade steps:
 
 ### Changed
 
+- The docs have a [CML golden path](docs/cml-golden-path.md) page: the route a CML repo takes from `copier copy` to a signed release, a container, a deploy and OTLP telemetry.
 - The `readme` requirement in `levels.toml` keeps maintainer-only material, such as deploy and release steps, out of the README: it goes in `docs/` or `CONTRIBUTING.md`.
 
 ### Fixed

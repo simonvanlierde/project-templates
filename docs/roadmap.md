@@ -7,7 +7,7 @@ Ideas and bugs are tracked as GitHub issues.
 [GOVERNANCE.md](https://github.com/simonvanlierde/project-templates/blob/main/GOVERNANCE.md)
 says who decides what goes here.
 
-Last reviewed: 2026-11-12
+Last reviewed: 2026-11-15
 
 ## Planned
 

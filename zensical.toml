@@ -19,6 +19,7 @@ nav = [
   { "Updates" = "updates.md" },
   { "Levels" = "levels.md" },
   { "Python project kinds" = "python-kinds.md" },
+  { "CML golden path" = "cml-golden-path.md" },
   { "Reference" = [
     { "Tools" = "tooling.md" },
     { "CI checks" = "ci-baseline.md" },

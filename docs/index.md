@@ -27,6 +27,7 @@ Already have a repository? Follow
 - [Hosting](hosting.md): static sites, Cloudflare Workers, previews and the social card.
 - [Updates](updates.md): template and dependency updates, and adopting the template.
 - [Levels](levels.md): what a public repo commits to, and the OpenSSF badge.
+- [CML golden path](cml-golden-path.md): the one route for CML repos, from render to monitoring.
 - [Python project kinds](python-kinds.md): libraries, tools, services and data pipelines.
 - [Tooling](tooling.md): the tools and checks in generated projects.
 - [CI baseline](ci-baseline.md): what each workflow checks.
