@@ -71,7 +71,7 @@ The advanced questions and their defaults:
 | `python_api` | Enabled ([API-break check](#api-break-check)) |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_crates`, `publish_to_ghcr` | Disabled ([Publishing](setup.md#publishing)) |
 | `app_port` | 8000 |
-| `site_url` | `https://<project>.<github_user>.workers.dev` (`<project>-site` for a site on Cloudflare), which is right when the account's subdomain is the GitHub user. Another host is a custom domain ([Custom domains](hosting.md#custom-domains)) |
+| `site_url` | `https://<project>.<github_user>.workers.dev` (`<project>-site` for a site on Cloudflare), which is right when the account's subdomain is the GitHub user. Another host is a custom domain ([Custom domains](hosting.md#custom-domains)). A web app's may end in a path, served through a route on the host's zone ([An app under a path](hosting.md#an-app-under-a-path)) |
 
 During `copier update`, earlier answers stay even when `customise` is `no`. Change one setting with `copier update --data <key>=<value>`, or be asked for one with `copier update --ask <key>`.
 

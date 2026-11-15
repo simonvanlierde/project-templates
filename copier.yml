@@ -697,9 +697,11 @@ docs_api:
 
 # The address of whatever production deploys to a Worker: the web app, or else the
 # site with site_host=cloudflare. The legal pages name it. A host other than
-# *.workers.dev becomes the Worker's custom domain on each production deploy. The
-# default is the workers.dev address of the Worker its wrangler config names, assuming
-# the account's workers.dev subdomain is the GitHub user.
+# *.workers.dev becomes the Worker's custom domain on each production deploy. A web app
+# may also sit under a path on a host that serves other things: production then routes
+# that path to the Worker on the host's zone. The default is the workers.dev address of
+# the Worker its wrangler config names, assuming the account's workers.dev subdomain is
+# the GitHub user.
 site_url:
   type: str
   when: "{{ web_app or site_on_workers }}"
@@ -707,20 +709,41 @@ site_url:
   help: >-
     The public address of the {{ 'web app' if web_app else 'site' }}: a custom domain
     (production attaches it to the Worker), or your own workers.dev subdomain if it is not the GitHub user.
+    {%- if web_app %} A path, as in https://example.org/app, serves the app there through
+    a route on the host's zone: the host is taken as the zone's name, so give the zone
+    itself, such as example.org, not a subdomain of it.{% endif %}
   default: "https://{{ worker_slug }}{{ '' if web_app else '-site' }}.{{ github_user | lower }}.workers.dev"
   validator: >-
     {% if not site_url|regex_search('^https://') %}
     Give the full address, starting with https://.
-    {% elif not site_url|regex_search('^https://[a-z0-9.-]+/?$') %}
-    Give the host alone, such as https://example.org: a Worker serves a whole host, so no path, port or capitals.
+    {% elif not site_url|regex_search('^https://[a-z0-9.-]+(/[a-z0-9][a-z0-9._-]*)*/?$') %}
+    Give the host{% if web_app %}, and a path if any,{% endif %} in lower case, such as https://example.org{% if web_app %} or https://example.org/app{% endif %}: no port, query or capitals.
+    {% elif site_url|regex_search('^https://[^/]+/[^/]') and not web_app %}
+    Give the host alone, such as https://example.org: the site's Worker serves a whole host, so no path.
+    {% elif site_url|regex_search('^https://[^/]+\\.workers\\.dev/[^/]') %}
+    Give a workers.dev address without a path: workers.dev serves the Worker on the whole host. A path needs a custom domain.
     {% endif %}
 
-# Computed, never asked: site_url's host when it is a custom domain, else empty. The
-# production deploy passes it to wrangler as --domain; previews never get it.
+# Computed, never asked: site_url's path without the trailing slash, such as /app, or
+# empty for a whole host. The web app builds under it (vite.config.ts `base`).
+site_path:
+  type: str
+  when: false
+  default: "{{ site_url | regex_replace('^https://[^/]+', '') | regex_replace('/$', '') }}"
+
+# Computed, never asked: with a path, site_url's host, taken as the name of the
+# Cloudflare zone that production adds the routes to; else empty.
+site_zone:
+  type: str
+  when: false
+  default: "{{ site_url | regex_replace('^https://', '') | regex_replace('/.*$', '') if site_path else '' }}"
+
+# Computed, never asked: site_url's host when it is a custom domain for the whole host,
+# else empty. The production deploy passes it to wrangler as --domain; previews never get it.
 custom_domain:
   type: str
   when: false
-  default: "{% set h = site_url | regex_replace('^https://', '') | regex_replace('/$', '') %}{{ '' if h.endswith('.workers.dev') else h }}"
+  default: "{% set h = site_url | regex_replace('^https://', '') | regex_replace('/$', '') %}{{ '' if h.endswith('.workers.dev') or site_path else h }}"
 
 # Computed, never asked: the custom domain of the site's Worker. In a repo with a web
 # app, site_url is the app's, and the site keeps its workers.dev address.
@@ -759,6 +782,12 @@ worker:
   ask: "{{ customise }}"
   help: Add a Worker script in front of the static assets that handles /api/* (one example route, /api/health)
   default: false
+  # The script and its run_worker_first answer /api/* at the host's root, which a route
+  # for site_url's path never sends to the Worker.
+  validator: >-
+    {% if worker and site_path %}
+    The Worker script answers /api/* at the root of the host, and production routes only {{ site_path }}/ to the Worker: answer worker=false, or give site_url without a path.
+    {% endif %}
 
 # Computed, never asked: the date the legal pages start from. They are the
 # project's files from then on (_skip_if_exists), so an update never rewrites it.

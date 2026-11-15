@@ -628,7 +628,8 @@ jobs:
               ts_kind: library
               publish_to_npm: true
           # The three web frameworks, React and Svelte at the root and Preact nested, with
-          # the least and the most user_data. Each also runs its Playwright specs.
+          # the least and the most user_data. Each also runs its Playwright specs, Svelte's
+          # under a site_url path.
           # The nested one has the Worker script, whose types and tests `check` runs.
           - name: web-app (react)
             answers:
@@ -653,6 +654,8 @@ jobs:
               ts_kind: web-app
               web_framework: svelte
               user_data: browser
+              # Under a path, so the e2e specs and the screenshots run below a base.
+              site_url: https://example.org/svelte-app
     env:
       TS_DIR: ${{ matrix.answers.ts_dir }}
     steps:

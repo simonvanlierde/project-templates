@@ -36,7 +36,7 @@
     "api": "api-extractor run",
 {%- endif %}
 {%- if web_app %}
-    "budget": "node scripts/checkBundleBudget.mjs",
+    "budget": "node scripts/checkBundleBudget.mjs{% if site_path %} dist{{ site_path }}/assets{% endif %}",
     "build": "vite build",
 {%- else %}
     "build": "tsc -p tsconfig.build.json",

@@ -332,7 +332,7 @@ jobs:
           name: dist
           path: {% if ts_dir != '.' %}{{ ts_dir }}/{% endif %}dist
 
-{%- if custom_domain %}
+{%- if custom_domain or site_path %}
       # Keep the duplicate workers.dev origin out of search results.
       - if: steps.gate.outputs.run == 'true'
         run: |
@@ -347,6 +347,9 @@ jobs:
 {%- if custom_domain %}
         # --domain attaches the custom domain here only: previews deploy the same config.
         run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production "" --domain {{ custom_domain }}'
+{%- elif site_path %}
+        # --route here only, for the path and everything under it: previews deploy the same config.
+        run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production "" --route {{ site_zone }}{{ site_path }} --route "{{ site_zone }}{{ site_path }}/*"'
 {%- else %}
         run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production'
 {%- endif %}

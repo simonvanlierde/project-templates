@@ -25,7 +25,7 @@ grep -qx '/web/shots/' d/.gitignore
 # each a route the axe, CSP, privacy and legal-page specs visit.
 for page in accessibility privacy terms; do
   test -f "d/web/docs/$page.md"
-  grep -q "\"/$page\"" d/web/tests/e2e/routes.ts
+  grep -qF "\`\${BASE}$page\`" d/web/tests/e2e/routes.ts
 done
 test -f d/web/tests/e2e/privacy.spec.ts
 test -f d/web/tests/e2e/accessibility-statement.spec.ts
@@ -366,3 +366,32 @@ grep -qF 'html, svelte]' sv/.pre-commit-config.yaml
 (lacks -q '      - id: tsc' sv/.pre-commit-config.yaml)
 grep -qxF '      - id: tsc' s/.pre-commit-config.yaml
 (lacks -q 'svelte' s/.pre-commit-config.yaml)
+
+# wp: site_url with a path. The build goes to dist/<path>/, the request's full path, under
+# that base; index.html and _headers get copies at the top of dist/, where Cloudflare reads
+# them. Production routes the path on the host's zone in place of --domain.
+grep -qxF '  base: "/tools/path-me/",' wp/web/vite.config.ts
+grep -qxF '  build: { outDir: "dist/tools/path-me" },' wp/web/vite.config.ts
+# shellcheck disable=SC2016 # literal template text
+grep -qF 'copyFileSync(`dist/tools/path-me/${name}`, `dist/${name}`);' wp/web/vite.config.ts
+grep -qxF '  plugins: [markdown(), topLevelCopies()],' wp/web/vite.config.ts
+(lacks -q -e 'base:' -e topLevelCopies -e node:fs d/web/vite.config.ts s/vite.config.ts sv/vite.config.ts)
+jq -e '.scripts.budget == "node scripts/checkBundleBudget.mjs dist/tools/path-me/assets"' wp/web/package.json >/dev/null
+jq -e '.scripts.budget == "node scripts/checkBundleBudget.mjs"' d/web/package.json >/dev/null
+# The specs and the app read the base, so their routes and links follow it.
+grep -qxF 'export const BASE = "/tools/path-me/";' wp/web/tests/e2e/base.ts
+grep -qxF 'export const BASE = "/";' s/tests/e2e/base.ts
+grep -qF 'const BASE = import.meta.env.BASE_URL;' wp/web/src/App.tsx sv/src/App.svelte
+grep -qF 'href={BASE + path.slice(1)}' wp/web/src/App.tsx sv/src/App.svelte
+# shellcheck disable=SC2016 # literal template text
+grep -qF 'page.request.get(`${BASE}_headers`)' wp/web/tests/e2e/csp.spec.ts
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --route example.org/tools/path-me --route \"example.org/tools/path-me/*\"'" wp/.github/workflows/ts.yml
+(lacks -q -- '--domain' wp/.github/workflows/ts.yml)
+(lacks -q -- '--route' wk/.github/workflows/ts.yml d/.github/workflows/ts.yml)
+grep -qF 'https://:worker.:subdomain.workers.dev/*' wp/.github/workflows/ts.yml
+grep -qF '"workers_dev": true' wp/web/wrangler.jsonc
+grep -qF 'with --route on the zone example.org.' wp/web/wrangler.jsonc
+# shellcheck disable=SC2016 # literal template text
+grep -qF 'Zone > Workers Routes: Edit for the zone of `example.org`' wp/README.md
+# shellcheck disable=SC2016 # literal template text
+grep -qF 'The production job routes `example.org/tools/path-me`' wp/README.md

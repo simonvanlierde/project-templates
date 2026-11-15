@@ -10,6 +10,9 @@ export const title = {{ project_name | to_json }};
 const description = {{ project_description | to_json }};
 {%- endif %}
 
+// Where the app is served: "/", or site_url's path, such as "/app/" (vite.config.ts `base`).
+const BASE = import.meta.env.BASE_URL;
+
 // The pages rendered from docs/, by path. The Cloudflare Worker and vite preview
 // answer an unknown path with index.html, so each loads the app.
 const PAGES: Record<string, { title: string; html: string }> = {
@@ -22,7 +25,7 @@ const PAGES: Record<string, { title: string; html: string }> = {
 </script>
 
 <script lang="ts">
-const page = PAGES[location.pathname.replace(/\/$/, "")];
+const page = PAGES[location.pathname.slice(BASE.length - 1).replace(/\/$/, "")];
 
 $effect(() => {
   document.title = page ? `${page.title} · ${title}` : title;
@@ -44,9 +47,9 @@ $effect(() => {
 </main>
 <footer>
   <nav aria-label="About this site">
-    {#if page}<a href="/">{title}</a>{/if}
+    {#if page}<a href={BASE}>{title}</a>{/if}
     {#each Object.entries(PAGES) as [path, { title: name }] (path)}
-      <a href={path} aria-current={PAGES[path] === page ? "page" : undefined}>{name}</a>
+      <a href={BASE + path.slice(1)} aria-current={PAGES[path] === page ? "page" : undefined}>{name}</a>
     {/each}
   </nav>
 </footer>{% endraw %}

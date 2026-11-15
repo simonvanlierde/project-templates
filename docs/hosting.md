@@ -53,7 +53,16 @@ The starter `astro.config.mjs` is the project's, so switching an existing Astro 
 
 ### Custom domains
 
-`site_url` is the public address of what deploys to a Worker. Give a host alone, without a path: a Worker serves a whole host. When the host is not `*.workers.dev`, it is a custom domain: the production job runs `wrangler deploy --domain <host>`, which attaches it to the Worker and creates its DNS record. The domain needs a zone in the same Cloudflare account, without a CNAME record for that host, and the production token needs Zone > Workers Routes: Edit for that zone. The domain is not in the wrangler config, because previews deploy that config under their own names and must not take it. `just repo-about` sets it as the repo's homepage.
+`site_url` is the public address of what deploys to a Worker. A site's Worker serves a whole host, so give it the host alone; a web app can also take a path ([An app under a path](#an-app-under-a-path)). When the host is not `*.workers.dev`, it is a custom domain: the production job runs `wrangler deploy --domain <host>`, which attaches it to the Worker and creates its DNS record. The domain needs a zone in the same Cloudflare account, without a CNAME record for that host, and the production token needs Zone > Workers Routes: Edit for that zone. The domain is not in the wrangler config, because previews deploy that config under their own names and must not take it. `just repo-about` sets it as the repo's homepage.
+
+### An app under a path
+
+A web app's `site_url` may end in a path, such as `https://example.org/app`, when the host's other paths are served by something else. Then:
+
+- The production job runs `wrangler deploy --route example.org/app --route "example.org/app/*"` in place of `--domain`, and the zone's other paths stay where they are. wrangler finds the zone from the host, and the template takes the host as the zone's name: the production token needs Zone > Workers Routes: Edit for that zone, and the zone must be in the same Cloudflare account. As with a custom domain, the routes are not in the wrangler config, so previews do not take them.
+- Vite builds with `base: "/app/"` into `dist/app/`. The Worker looks a request's full path up in `dist/`, so the files must sit under the path; `assets.base_path` in the wrangler config would do the same, but Cloudflare refuses it on accounts without its flag (error `100343`). A build step copies `index.html` and `_headers` to the top of `dist/`: Cloudflare reads `_headers` only there, and answers a page path it has no file for with the top `index.html`. That copy loads its assets from `/app/`, so the previews' workers.dev addresses serve the app at `/` and at `/app/`.
+- The starter app and the e2e specs read the base, from `import.meta.env.BASE_URL` and `tests/e2e/base.ts`, so their links and routes start with `/app/`. Code you add builds its links the same way.
+- A workers.dev address cannot take a path, since workers.dev serves the Worker on the whole host, and neither can a site on a Worker. The `worker` script answers `/api/*` at the root of the host, which the routes never send to the Worker, so the template refuses `worker` with a path.
 
 ### Worker script
 

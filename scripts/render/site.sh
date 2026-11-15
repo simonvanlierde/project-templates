@@ -536,7 +536,7 @@ grep -qx 'default_install_hook_types: \[pre-commit, commit-msg, pre-push\]' d/.p
 (lacks -q 'pre-push' a/.pre-commit-config.yaml)
 # Commit messages and PR titles: one committed.toml, read by the commit-msg hook and
 
-# Only a custom-domain production deploy suppresses the duplicate workers.dev origin.
+# Only a production deploy to a custom domain or a route suppresses the duplicate workers.dev origin.
 uv run --no-project --with pyyaml python - "$out" <<'PYTEST'
 from pathlib import Path
 import subprocess, sys, tempfile, yaml
@@ -555,7 +555,7 @@ for path in root.glob('*/.github/workflows/*.yml'):
         if 'deploy-worker.sh' not in runs:
             continue
         header_runs = [step['run'] for step in steps if 'https://:worker.:subdomain.workers.dev/*' in step.get('run', '')]
-        assert bool(header_runs) == ('--domain ' in runs), path
+        assert bool(header_runs) == ('--domain ' in runs or '--route ' in runs), path
         for run in header_runs:
             with tempfile.TemporaryDirectory() as tmp:
                 headers = Path(tmp, run.split(' >> ', 1)[1].strip())

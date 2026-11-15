@@ -1,5 +1,6 @@
 // Fails when the largest JavaScript file in the build, gzipped, is over the
-// budget. Run after `pnpm build`.
+// budget. Run after `pnpm build`, with the build's assets folder as the argument
+// (package.json's "budget" script passes it; the default is dist/assets).
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
@@ -9,12 +10,12 @@ import { gzipSync } from "node:zlib";
 // the next feature: keep it at least 25% above the build. When a change goes over, find
 // what grew first, then raise it in its own commit, back to 25% headroom.
 const MAX_GZIP_BYTES = 100 * 1024;
-const DIST_ASSETS_DIR = join(process.cwd(), "dist", "assets");
+const DIST_ASSETS_DIR = join(process.cwd(), process.argv[2] ?? join("dist", "assets"));
 
 const jsAssets = readdirSync(DIST_ASSETS_DIR).filter((filename) => filename.endsWith(".js"));
 
 if (jsAssets.length === 0) {
-  throw new Error("No built JavaScript assets found in dist/assets");
+  throw new Error(`No built JavaScript assets found in ${DIST_ASSETS_DIR}`);
 }
 
 const largestAsset = jsAssets
