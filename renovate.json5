@@ -22,6 +22,9 @@
   // time to be yanked, and matches Dependabot's cooldown in scaffolds. The author's own
   // simonvanlierde packages skip it (the last package rule).
   minimumReleaseAge: "7 days",
+  // A group PR can carry a release younger than the week above, and would then sit open
+  // with renovate/stability-days pending. Open it only once that and CI have passed.
+  prCreation: "not-pending",
   // dco.yml skips a bot's commits only when GitHub links their author to a bot account;
   // signing off does not depend on that.
   commitBody: "Signed-off-by: {{{gitAuthor}}}",

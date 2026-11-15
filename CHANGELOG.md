@@ -21,6 +21,7 @@ Upgrade steps:
 
 ### Changed
 
+- Renovate opens a dependency pull request only once its checks pass, `renovate/stability-days` included (`prCreation: 'not-pending'`). A grouped pull request could carry a release younger than the one-week wait and sat open until it aged. Minor and patch groups still merge themselves.
 - The author's own `simonvanlierde` hooks (citesync, jsonvet) skip the one-week release cooldown in Dependabot and Renovate, and so does sourceledger in a data-pipeline project (Dependabot `cooldown.exclude`, a Renovate package rule). Whoever can publish them can push to the repos directly, so the week only delays their fixes. Other packages keep the week.
 - A project with `publish_to_npm` and no PyPI or crates.io release makes its GitHub release in `ts-release.yml`, after the npm publish. `release.yml` is no longer rendered for it, so a tag npm refuses leaves no immutable release behind. After `copier update`, delete the old `.github/workflows/release.yml` if copier leaves it.
 - `copier-update.yml` leaves a template tag under a week old for a later run, so a tag pushed with stolen credentials gets a week to be noticed before the update token pushes it. Templates under `simonvanlierde/` are exempt, as those packages are from the release cooldown, and the tag's own date is used, so this does not stop a forged one.

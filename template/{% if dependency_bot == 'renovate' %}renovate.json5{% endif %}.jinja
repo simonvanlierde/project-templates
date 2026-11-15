@@ -33,6 +33,9 @@
   ignorePresets: [':pinDevDependencies', 'security:minimumReleaseAgeNpm'],
   schedule: ['before 9am on monday'],
   minimumReleaseAge: '7 days',
+  // A group PR can carry a release younger than the week above, and would then sit open
+  // with renovate/stability-days pending. Open it only once that and CI have passed.
+  prCreation: 'not-pending',
   // Renovate merges the PR itself. GitHub's own auto-merge may not use the bypass, and
   // would then wait for an approval.
   platformAutomerge: false,
