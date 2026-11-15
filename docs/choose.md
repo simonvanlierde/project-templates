@@ -66,7 +66,7 @@ Copier command. You can change the template's other settings when Copier asks.
 <pre><code>mkdir my-project
 cd my-project
 git init</code></pre>
-<p>Run this command inside that directory:</p>
+<p>Run this command inside that directory, in bash or zsh. In PowerShell, join it into one line first:</p>
 <pre class="chooser-command"><code data-chooser-command></code></pre>
 <button type="button" data-chooser-copy>Copy Copier command</button>
 <p data-chooser-status role="status"></p>

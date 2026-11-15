@@ -542,8 +542,8 @@ jobs:
           PROJ="$RUNNER_TEMP/pipe"
           git init -q "$PROJ"
           uvx "copier@$COPIER_VERSION" copy --vcs-ref="$TAG" --defaults --overwrite \
-            --data project_name=pipe-me --data 'stacks=[python]' --data kind=data-pipeline . "$PROJ"
-          grep -qxE '(python_)?kind: data-pipeline' "$PROJ/.copier-answers.yml"
+            --data project_name=pipe-me --data 'stacks=[python]' --data python_kind=data-pipeline . "$PROJ"
+          grep -qx 'python_kind: data-pipeline' "$PROJ/.copier-answers.yml"
           test -f "$PROJ/sources.toml"
           sed -i "s|^_src_path: .*|_src_path: $GITHUB_WORKSPACE|" "$PROJ/.copier-answers.yml"
           (cd "$PROJ" && uv lock -q)

@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import io
+import itertools
 import json
 import os
 import posixpath
@@ -73,6 +74,20 @@ class Repo:
         """The first workflow whose text matches."""
         test = pattern.search if isinstance(pattern, re.Pattern) else pattern
         return next((p for p, t in self.workflows.items() if test(t)), None)
+
+
+def runs_on_release(text: str) -> bool:
+    """Whether a workflow's parsed `on:` has `release`, or `push` with `tags` (a pushed version tag)."""
+    try:
+        doc = yaml.safe_load(text)
+    except yaml.YAMLError:
+        return False
+    on = doc.get("on", doc.get(True)) if isinstance(doc, dict) else None  # a bare `on:` key reads as True
+    if isinstance(on, str):
+        return on == "release"
+    if isinstance(on, list):
+        return "release" in on
+    return isinstance(on, dict) and ("release" in on or bool(isinstance(on.get("push"), dict) and on["push"].get("tags")))
 
 
 def without_git_env() -> dict[str, str]:
@@ -134,8 +149,6 @@ def where(name: str) -> tuple[str, ...]:
 
 
 PR_TRIGGER = re.compile(r"^\s*pull_request\s*:|^on:.*\bpull_request\b", re.MULTILINE)
-# A release runs on `on: release` or on a pushed version tag (`push: tags:`).
-RELEASE_TRIGGER = re.compile(r"^\s*release\s*:|^on:.*\brelease\b|^\s*tags\s*:", re.MULTILINE)
 TEST_CMD = re.compile(
     r"\bpytest\b|cargo (nextest run|test)\b|\bpnpm (run )?test\b|\bvitest\b|\bgo test\b|\bjust (test|check)\b"
 )
@@ -191,6 +204,8 @@ def workflow_problems(name: str, text: str) -> list[str]:
         return [f"{name} is not a workflow"]
     on = doc.get("on", doc.get(True))  # YAML 1.1 reads a bare `on:` key as True.
     triggers = {on} if isinstance(on, str) else set(map(str, on)) if isinstance(on, list | dict) else set()
+    if not isinstance(doc.get("jobs") or {}, dict):
+        return [f"{name}: jobs is not a mapping"]
     jobs = {j: s for j, s in (doc.get("jobs") or {}).items() if isinstance(s, dict)}
     out = [f"{name} runs on pull_request_target"] if "pull_request_target" in triggers else []
     if "permissions" not in doc and (bare := [j for j, s in jobs.items() if "permissions" not in s]):
@@ -331,11 +346,15 @@ def roadmap_issue_links(r: Repo) -> Result:
     text = r.text("docs/roadmap.md")
     problems = [m] if (m := stale_review(text, "docs/roadmap.md", r.today)) else []
     section = ""
-    for line in text.splitlines():
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
         if h := re.match(r"#+\s+(.*)", line):
             section = h[1].lower()
-        elif re.match(r"[-*]\s", line) and "not planned" not in section and not ISSUE_URL.search(line):
-            problems.append(f"theme links no issue: {line[2:].strip()[:60]}")
+        elif re.match(r"[-*]\s", line) and "not planned" not in section:
+            # The link may sit on a wrapped continuation line, which is indented.
+            bullet = [line, *itertools.takewhile(lambda x: x.startswith((" ", "\t")), lines[i + 1 :])]
+            if not ISSUE_URL.search("\n".join(bullet)):
+                problems.append(f"theme links no issue: {line[2:].strip()[:60]}")
     if problems:
         return "missing", "; ".join(problems)
     return "unchecked", "each theme links an issue; whether those issues are open needs the GitHub API"
@@ -386,7 +405,7 @@ CHECKS: dict[str, Callable[[Repo], Result]] = {
     "roadmap": lambda r: met_if(r.first("docs/roadmap.md"), "no docs/roadmap.md"),
     "roadmap-issue-links": roadmap_issue_links,
     "release-build": lambda r: met_if(
-        r.workflow(lambda t: bool(RELEASE_TRIGGER.search(t) and RELEASE_UPLOAD.search(t))),
+        r.workflow(lambda t: bool(runs_on_release(t) and RELEASE_UPLOAD.search(t))),
         "no release workflow builds and uploads the release packages",
     ),
 }

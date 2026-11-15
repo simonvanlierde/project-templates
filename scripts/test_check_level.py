@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 import tomllib
+from types import SimpleNamespace
 from pathlib import Path
 
 import jsonschema
@@ -242,3 +243,51 @@ def test_a_published_binary_crate_is_not_a_package():
 def test_pnpm_api_script_counts_as_an_api_check():
     assert check_level.API_CHECK.search("      - run: pnpm run api")
     assert not check_level.API_CHECK.search("      - run: pnpm apilint")
+
+
+def test_a_workflow_whose_jobs_is_a_list_is_a_problem_not_a_crash():
+    assert check_level.workflow_problems("x.yml", "on: push\njobs:\n  - build\n") == ["x.yml: jobs is not a mapping"]
+
+
+@pytest.mark.parametrize(
+    ("workflow", "expected"),
+    [
+        ("on:\n  push:\n    tags: ['v*']\n", True),
+        ("on:\n  release:\n    types: [published]\n", True),
+        ("on: release\n", True),
+        ("on:\n  push:\n    branches: [main]\njobs:\n  b:\n    steps:\n      - with:\n          tags: foo:latest\n", False),
+        ("on: [push, pull_request]\n", False),
+    ],
+)
+def test_release_trigger_is_read_from_on(workflow: str, expected: bool):
+    assert check_level.runs_on_release(workflow) is expected
+
+
+def test_a_roadmap_link_on_a_wrapped_bullet_line_counts(tmp_path: Path):
+    files = GOOD | {"docs/roadmap.md": "Last reviewed: 2027-02-20\n\n## Planned\n\n- A theme that wraps\n  over a line, tracked in https://github.com/o/r/issues/1.\n"}
+    res = run(write(tmp_path, files), level="community")
+    assert "theme links no issue" not in res["roadmap-issue-links"][1]
+
+
+def test_stale_review_limit_is_exactly_a_year():
+    today = dt.date(2027, 3, 1)
+    assert check_level.stale_review("Last reviewed: 2026-03-01\n", "r.md", today) is None
+    assert "over a year ago" in check_level.stale_review("Last reviewed: 2026-02-28\n", "r.md", today)
+
+
+@pytest.mark.parametrize(
+    ("workflows", "status"),
+    [
+        ({}, "missing"),
+        ({"dco.yml": "run: grep Signed-off-by"}, "met"),
+        ({"dco.yml": "if: github.event.pull_request.head.repo.full_name != github.repository\nrun: grep Signed-off-by"}, "missing"),
+    ],
+)
+def test_dco_wants_a_check_on_every_pull_request(workflows: dict[str, str], status: str):
+    assert check_level.dco(SimpleNamespace(workflows=workflows))[0] == status
+
+
+@pytest.mark.parametrize(("paths", "status"), [({"docs/accessibility.md"}, "met"), (set(), "missing")])
+def test_a_cli_needs_an_accessibility_page(paths: set[str], status: str):
+    repo = SimpleNamespace(traits={"cli"}, paths=paths, text=lambda _: "")
+    assert check_level.accessibility_statement(repo)[0] == status

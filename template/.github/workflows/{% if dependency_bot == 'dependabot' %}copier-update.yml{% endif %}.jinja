@@ -63,30 +63,43 @@ jobs:
             [ -f "$answers" ] || continue
             src=$(sed -n "s/^_src_path: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" "$answers")
             url=${src/#gh:/https://github.com/}
-            latest=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' | sed 's|.*refs/tags/||' | sed -n '/-/!{p;q;}')
+            tags=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' | sed 's|.*refs/tags/||' | sed -n '/-/!p')
             current=$(sed -n "s/^_commit: *['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" "$answers")
-            if [ -z "$latest" ]; then
+            if [ -z "$tags" ]; then
               echo "::error::no stable v* tag found at $url (_src_path: $src in $answers)"
               exit 1
             fi
-            if [ "$current" = "$latest" ]; then
-              echo "$answers: already on $latest."
-              continue
-            fi
-            # A tag under a week old waits, as `--exclude-newer` makes Copier's own dependencies wait:
-            # a template tag pushed with stolen credentials gets a week to be noticed before this
-            # workflow's token pushes it. The tagger date is the tagger's own claim. Templates under
-            # simonvanlierde/ are exempt, as his packages are from the release cooldown.
-            if [[ $src != gh:simonvanlierde/* ]]; then
+            # The newest stable tag that is a week old. A younger tag waits, as `--exclude-newer` makes
+            # Copier's own dependencies wait: a template tag pushed with stolen credentials gets a week
+            # to be noticed before this workflow's token pushes it. The tagger date is the tagger's own
+            # claim, so this stops a careless tag, not a forged one. Templates under simonvanlierde/ are
+            # exempt, as his packages are from the release cooldown.
+            latest='' waiting=''
+            for tag in $tags; do
+              [ "$tag" = "$current" ] && break
+              if [[ $src == gh:simonvanlierde/* || $src == https://github.com/simonvanlierde/* ]]; then
+                latest=$tag
+                break
+              fi
               tag_repo="$RUNNER_TEMP/tag-age"
               rm -rf "$tag_repo"
               git init -q "$tag_repo"
-              git -C "$tag_repo" fetch -q --depth=1 "$url" "refs/tags/$latest:refs/tags/$latest"
-              tagged=$(git -C "$tag_repo" for-each-ref --format='%(creatordate:unix)' "refs/tags/$latest")
-              if [ $(( $(date +%s) - tagged )) -lt 604800 ]; then
-                echo "$answers: $latest is under a week old; leaving it for a later run."
-                continue
+              git -C "$tag_repo" fetch -q --depth=1 "$url" "refs/tags/$tag:refs/tags/$tag"
+              tagged=$(git -C "$tag_repo" for-each-ref --format='%(creatordate:unix)' "refs/tags/$tag")
+              if [ $(( $(date +%s) - tagged )) -ge 604800 ]; then
+                latest=$tag
+                break
               fi
+              waiting=${waiting:-$tag}
+            done
+            if [ -z "$latest" ]; then
+              if [ -n "$waiting" ]; then
+                echo "::notice::$answers: $waiting is under a week old; leaving it for a later run."
+                echo "- \`$answers\`: \`$waiting\` is under a week old, so it waits." >>"$GITHUB_STEP_SUMMARY"
+              else
+                echo "$answers: already on $current."
+              fi
+              continue
             fi
             uvx --exclude-newer "1 week" "copier@$COPIER_VERSION" update --answers-file "$answers" --defaults --vcs-ref "$latest"
             git add -A

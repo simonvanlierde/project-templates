@@ -12,19 +12,20 @@ changes are marked **Breaking**.
 
 Upgrade steps:
 
-- Existing projects must [add the `PNGs` spelling exception](docs/updates.md#spelling-exceptions-in-existing-projects) to their project-owned `_typos.toml`.
+- Existing projects whose files spell `PNGs` must [add the `PNGs` spelling exception](docs/updates.md#spelling-exceptions-in-existing-projects) to their project-owned `_typos.toml`.
+- **Breaking:** a project with `publish_to_npm` and no PyPI or crates.io release loses `.github/workflows/release.yml` on `copier update`. Its GitHub release now comes from a `release` job in `ts-release.yml`; carry any local edit of `release.yml` over to that job.
 
 ### Added
 
 - The `data-pipeline` kind, with a license, gets `just data-release [DIR]` and `just data-release-check [DIR]`, which call sourceledger's release stage (the folder defaults to `release/`, gitignored). The CI workflow writes a release folder after `validate` and checks it, and does not publish. `pyproject.toml` already requires sourceledger 0.5.0 or later. Fixes #291.
 - With `codspeed` on, a public project's `CONTRIBUTING.md` asks that a pull request adding or changing a parser, importer, exporter or other code that takes user-sized input adds or updates a benchmark case at the input's documented bound, and the release step lists the size-capped or hot entry points and checks each has a case.
-- A `publish_to_crates` answer for the Rust stack (default off, so existing projects update unchanged and keep `publish = false`). It adds `rust-release.yml`, which replaces `release.yml`: tag signature check, version check against `Cargo.toml`, then publish to crates.io by trusted publishing from a protected `crates` environment, and the GitHub release. A Rust binary also gets archives for four targets named as `cargo binstall` looks them up (`[package.metadata.binstall]`), with build provenance attestations that the release job verifies before upload. `just repo-settings` creates the environment and prints the crates.io trusted-publisher address, and `first-release.md` lists the manual first publish. It cannot be combined with `publish_to_pypi`. See [Publishing](docs/setup.md#publishing).
+- A `publish_to_crates` answer for the Rust stack (default off, so existing projects update unchanged and keep `publish = false`). It adds `rust-release.yml`, which replaces `release.yml`: tag signature check, version check against `Cargo.toml`, then publish to crates.io by trusted publishing from a protected `crates` environment, and the GitHub release. A Rust binary also gets archives for four targets named as `cargo binstall` looks them up (`[package.metadata.binstall]`), with build provenance attestations that the release job verifies before upload. `just repo-settings` creates the environment and prints the crates.io trusted-publisher address, and `first-release.md` lists the manual first publish. The README gets a crates.io badge and install line. It cannot be combined with `publish_to_pypi`. See [Publishing](docs/setup.md#publishing).
 
 ### Changed
 
 - The author's own `simonvanlierde` hooks (citesync, jsonvet) skip the one-week release cooldown in Dependabot and Renovate, and so does sourceledger in a data-pipeline project (Dependabot `cooldown.exclude`, a Renovate package rule). Whoever can publish them can push to the repos directly, so the week only delays their fixes. Other packages keep the week.
-- A project with `publish_to_npm` and no PyPI or crates.io release makes its GitHub release in `ts-release.yml`, after the npm publish. `release.yml` is no longer rendered for it, so a tag npm refuses leaves no immutable release behind. After `copier update`, delete the old `.github/workflows/release.yml` if copier leaves it.
-- `copier-update.yml` leaves a template tag under a week old for a later run, so a tag pushed with stolen credentials gets a week to be noticed before the update token pushes it. Templates under `simonvanlierde/` are exempt, as those packages are from the release cooldown, and the tag's own date is used, so this does not stop a forged one.
+- **Breaking:** a project with `publish_to_npm` and no PyPI or crates.io release makes its GitHub release in `ts-release.yml`, after the npm publish, from the notes the build job saved. `release.yml` is no longer rendered for it, so a tag npm refused leaves no immutable release behind. With crates.io too, `rust-release.yml` still makes the release whether or not npm took the package.
+- `copier-update.yml` updates to the newest template tag that is a week old, so a tag pushed with stolen credentials has a week to be noticed before the update token pushes it. Templates under `simonvanlierde/` skip the wait, as those packages skip the release cooldown. The tag's own date is used, so a forged one still passes. See [Dependabot updates](docs/updates.md).
 - The docs have a [CML golden path](docs/cml-golden-path.md) page: the route a CML repo takes from `copier copy` to a signed release, a container, a deploy and OTLP telemetry.
 - The `readme` requirement in `levels.toml` keeps maintainer-only material, such as deploy and release steps, out of the README: it goes in `docs/` or `CONTRIBUTING.md`.
 
@@ -36,7 +37,7 @@ Upgrade steps:
 - A pull request preview checks the PR's state in its own step, and the deploy step that holds the Cloudflare token no longer gets `GH_TOKEN`.
 - Research projects use Tornado 6.6.1's pinned source archive while its security fix is inside the one-week dependency window, so Jupyter's dependency passes the audit without disabling the release-age policy.
 - The project chooser and quick-start examples use the released `python_kind` answer in Python commands.
-- A Rust project named `std`, `core`, `alloc`, `proc_macro` or `test` is refused: its doctests would not compile. `publish_to_crates` is refused without a project description or with `license=none`, since crates.io rejects both.
+- A Rust project named `std`, `core`, `alloc`, `proc_macro` or `test` is refused, on `copier update` too: its doctests would not compile, so rename it first. `publish_to_crates` is refused without a project description or with `license=none`, since crates.io rejects both.
 - `just repo-settings` lists the release environments for a crates-only project too.
 
 ## [0.15.0] - 2026-11-12

@@ -229,7 +229,9 @@ grep -qx '      attestations: write' c/.github/workflows/python-release.yml
 grep -q '^      artifact-metadata: write' c/.github/workflows/python-release.yml
 grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 # The publish step: npm, from a tarball built earlier.
-grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
+grep -qx '            npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
+# shellcheck disable=SC2016 # a literal $pkg for the runner's shell
+grep -qF 'npm view "$pkg" version' c/.github/workflows/ts-release.yml
 (lacks -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 # The GitHub release waits for the npm publish (t, npm only) and the plain release.yml is not
 # rendered beside it; with PyPI too, python-release.yml makes the release (c).
@@ -240,4 +242,5 @@ only, both = (yaml.safe_load(open(p))["jobs"] for p in sys.argv[1:])
 assert only["release"]["needs"] == "publish", only["release"]
 assert only["release"]["permissions"] == {"contents": "write"}, only["release"]
 assert "release" not in both, both.keys()
+assert not any("checkout" in s.get("uses", "") for s in only["release"]["steps"]), "the write token runs no project code"
 PYTEST

@@ -283,12 +283,16 @@ grep -q '^pipeline: fetch build validate' d/just/python.just
 grep -qx "data-release out='release':" d/just/python.just
 grep -qx "data-release-check out='release':" d/just/python.just
 grep -qF -- 'release --codemeta ../codemeta.json {{ out }}' d/just/python.just
-grep -qx 'pipe/release/' d/.gitignore
+grep -qx '/pipe/release/' d/.gitignore
 # shellcheck disable=SC2016 # literal workflow text, not shell expansions
 grep -qF -- 'release --codemeta ../codemeta.json "$RUNNER_TEMP/release"' d/.github/workflows/python.yml
 # shellcheck disable=SC2016 # literal workflow text, not shell expansions
 grep -qF -- 'release --check "$RUNNER_TEMP/release"' d/.github/workflows/python.yml
 grep -qF -- ' release {{ out }}' dp/just/python.just
 (lacks -qF -- '--codemeta' dp/just/python.just dp/.github/workflows/python.yml)
-grep -qx 'release/' dp/.gitignore
+grep -qx '/release/' dp/.gitignore
+# shellcheck disable=SC2016 # literal workflow text, not shell expansions
+grep -qF -- 'release --codemeta ../../codemeta.json "$RUNNER_TEMP/release"' dpd/.github/workflows/python.yml
+grep -qF -- 'release --codemeta ../../codemeta.json {{ out }}' dpd/just/python.just
+grep -qx '/apps/pipe/release/' dpd/.gitignore
 (lacks -q 'data-release' dpn/just/python.just dpn/.github/workflows/python.yml dpn/.gitignore dpn/README.md)

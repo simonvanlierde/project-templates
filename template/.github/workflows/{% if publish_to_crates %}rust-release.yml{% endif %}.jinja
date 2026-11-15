@@ -68,7 +68,7 @@ jobs:
         run: bash "$GITHUB_WORKSPACE/.github/scripts/verify-tag.sh" --fetch "$TAG" "origin/$DEFAULT_BRANCH"
 
       # The crate takes its version from Cargo.toml, not the tag: refuse a mismatch.
-      - run: test "$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')" = "${GITHUB_REF_NAME#v}"
+      - run: test "$(cargo metadata --no-deps --format-version 1 | jq -r --arg n {{ crate_name }} '.packages[] | select(.name == $n) | .version')" = "${GITHUB_REF_NAME#v}"
 {%- if web_app %}
 
       # The app shows package.json's version, so the tag must name the same one.
@@ -171,6 +171,8 @@ jobs:
           pattern: dist-*
           merge-multiple: true
           path: dist/
+      # Only the four archives of this build: another dist-* artifact in the run would be signed too.
+      - run: test "$(LC_ALL=C ls dist | tr '\n' ' ')" = "{{ crate_name }}-aarch64-apple-darwin.tar.gz {{ crate_name }}-aarch64-unknown-linux-gnu.tar.gz {{ crate_name }}-x86_64-pc-windows-msvc.zip {{ crate_name }}-x86_64-unknown-linux-gnu.tar.gz "
       # A signed build-provenance attestation per archive, so anyone can check where a
       # binary was built: `gh attestation verify <file> --repo <owner>/<repo>`.
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
@@ -180,6 +182,7 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: provenance
+          overwrite: true # a re-run of this job uploads it again
           path: {% raw %}${{ steps.attest.outputs.bundle-path }}{% endraw %}
 {%- endif %}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -190,13 +193,21 @@ jobs:
           toolchain: stable
       - uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
         id: auth
-      # --no-verify: the build job already built the packaged crate.
-      - run: cargo publish --locked --no-verify{{ ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' if rust_dir != '.' }}
+      # --no-verify: the build job already built the packaged crate. A re-run after crates.io took
+      # the upload but this job still failed finds the version and goes on to the release job.
+      - name: publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: {% raw %}${{ steps.auth.outputs.token }}{% endraw %}
+        run: |-
+          version=${GITHUB_REF_NAME#v}
+          if curl -fsS -A "{{ slug }} release workflow" -o /dev/null "https://crates.io/api/v1/crates/{{ crate_name }}/$version"; then
+            echo "{{ crate_name }} $version is already on crates.io; leaving it"
+          else
+            cargo publish --locked --no-verify{{ ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' if rust_dir != '.' }}
+          fi
 
   # crates.io already has this version if this job fails: re-run only this job.
-  # Delete a leftover draft first; a published immutable release needs a new version.
+  # A leftover draft is deleted first; a published immutable release needs a new version.
   release:
     needs: publish
     runs-on: ubuntu-latest
@@ -210,6 +221,7 @@ jobs:
           pattern: dist-*
           merge-multiple: true
           path: assets/
+      - run: test "$(LC_ALL=C ls assets | tr '\n' ' ')" = "{{ crate_name }}-aarch64-apple-darwin.tar.gz {{ crate_name }}-aarch64-unknown-linux-gnu.tar.gz {{ crate_name }}-x86_64-pc-windows-msvc.zip {{ crate_name }}-x86_64-unknown-linux-gnu.tar.gz "
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: provenance
@@ -235,10 +247,16 @@ jobs:
           # Immutable once published: check every attestation before anything is uploaded.
           for f in *; do
             case $f in *.intoto.jsonl) continue ;; esac
-            gh attestation verify "$f" --repo "$GH_REPO" --bundle "$f.intoto.jsonl"
+            # The attestation can lag the attest step by a moment.
+            for attempt in 1 2 3; do
+              gh attestation verify "$f" --repo "$GH_REPO" --bundle "$f.intoto.jsonl" && break
+              [ "$attempt" -lt 3 ] && sleep 10 || exit 1
+            done
           done
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = true ]; then gh release delete "$TAG" --yes; fi
           gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file ../notes/notes.md ./*
 {%- else %}
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = true ]; then gh release delete "$TAG" --yes; fi
           gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file notes/notes.md
 {%- endif %}
           gh release edit "$TAG" --draft=false
