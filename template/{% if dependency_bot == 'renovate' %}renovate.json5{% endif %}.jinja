@@ -16,7 +16,8 @@
 //
 // `minimumReleaseAge` holds a version update back until the release has been public for
 // a week, long enough for a compromised release to be caught and yanked, majors
-// included. Security
+// included. The author's own simonvanlierde hooks and packages skip it: whoever can
+// publish those can push to the repos directly. Security
 // updates ignore it and the schedule. They need Dependabot alerts on in the repo settings,
 // and cover only the dependencies a manifest names.
 //
@@ -72,6 +73,7 @@
     // Template releases, from .copier-answers.yml. Their tags carry no release date,
     // so the week's wait above would hold them back for good.
     { matchManagers: ['copier'], minimumReleaseAge: null },
+    { matchPackageNames: ['simonvanlierde/**'{{ ", 'sourceledger'" if pipeline else '' }}], minimumReleaseAge: null },
 {%- if 'rust' in stacks %}
     // Its own group gives the Cargo relock its own branch, so the uv and pnpm relocks still
     // merge themselves: Renovate merges a branch only when every update on it may.

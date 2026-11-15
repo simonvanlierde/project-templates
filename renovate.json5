@@ -19,7 +19,8 @@
   // Everything automerges and then runs with CI tokens, on developer machines, or
   // in every new scaffold. Scaffolds resolve only releases a week old (uv
   // exclude-newer, pnpm minimumReleaseAge). The wait gives a hijacked release
-  // time to be yanked, and matches Dependabot's cooldown in scaffolds.
+  // time to be yanked, and matches Dependabot's cooldown in scaffolds. The author's own
+  // simonvanlierde packages skip it (the last package rule).
   minimumReleaseAge: "7 days",
   // dco.yml skips a bot's commits only when GitHub links their author to a bot account;
   // signing off does not depend on that.
@@ -129,6 +130,8 @@
       matchDepNames: ["python", "node", "go", "rust-lang/rust"],
       automerge: false,
     },
+    // Whoever can publish these can push to the repos directly, so the week adds nothing.
+    { matchPackageNames: ["simonvanlierde/**", "sourceledger"], minimumReleaseAge: null },
     // Compiled packages publish wheels for a new Python over the following months. A
     // scaffold that defaulted to it at once would build them from source on `uv sync`.
     {
