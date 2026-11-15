@@ -22,7 +22,7 @@ no_image() {
 
 # Independent renders run in parallel, one per core: `bg cmd...` starts one, `bg_wait`
 # waits for all and fails if any failed. A failing job prints its own message.
-bg_limit=$(getconf _NPROCESSORS_ONLN)
+bg_limit=${CHECK_RENDER_JOBS:-$(getconf _NPROCESSORS_ONLN)}
 bg_pids=()
 bg() {
   # Not wait -n: it also returns for jobs the area files start, such as the site servers.
@@ -99,6 +99,7 @@ git tag -f "$render_tag" >/dev/null
 for area in cases parse; do
   # shellcheck source=/dev/null # the area files lint on their own
   source "$render/$area.sh"
+  echo "check-render: $area done at ${SECONDS}s"
 done
 
 # NOTE: a bare `! cmd` never trips set -e; the negated subshells below do.
@@ -106,6 +107,7 @@ cd "$out"
 for area in release ci stacks web site hooks recipes repo update; do
   # shellcheck source=/dev/null
   source "$render/$area.sh"
+  echo "check-render: $area done at ${SECONDS}s"
 done
 
 echo "all render checks passed"
