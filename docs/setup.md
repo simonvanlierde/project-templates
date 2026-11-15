@@ -64,11 +64,11 @@ Execute `just repo-settings` once after creating the repository and again whenev
 
 To publish a release:
 
-1. Set the version `X.Y.Z` in the manifest you publish (`pyproject.toml` or `package.json`). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts without a `version`, which citesync skips. Once you add one, after the first release, keep it in step, or citesync fails with `version-mismatch`.
+1. Set the version `X.Y.Z` in the manifest you publish (`pyproject.toml`, `package.json` or `Cargo.toml`). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts without a `version`, which citesync skips. Once you add one, after the first release, keep it in step, or citesync fails with `version-mismatch`.
 2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits. In a web app it also sets the version in `package.json` itself and commits both files.
 3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it against `.github/allowed_signers` on `origin/main` and pushes it. A web app's run first refuses a `package.json` on `origin/main` at another version, and its `release.yml` refuses such a tag again before it publishes. See [Signed release tags](#signed-release-tags) for the key it needs.
 
-With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. Other configurations publish using `release.yml`.
+With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. With `publish_to_crates`, `rust-release.yml` publishes to crates.io and creates the GitHub release itself, so it cannot run beside `python-release.yml`: Copier refuses both answers together. A Rust binary also gets archives for four targets, named as `cargo binstall` looks them up, with build provenance attestations that the release job verifies before it uploads. Other configurations publish using `release.yml`.
 
 If a publishing job fails before any artifacts upload to the registry, re-run the failed CI job on the existing tag. PyPI uploads stay strict: an existing filename fails the job, so inspect the registry for a partial upload first. If any release artifact is already published, keep the git tag and publish a new patch release. This includes a failure in `docker.yml`'s attestation step after the image push. GitHub Actions can re-run a job, but not an individual step; re-running this job rebuilds the image and repoints the semver tags.
 
@@ -78,11 +78,12 @@ Publishing controls:
 | --- | --- | --- |
 | `publish_to_pypi` | Package marked `Private :: Do Not Upload` | `python-release.yml` publishes to PyPI |
 | `publish_to_npm` | Package set to `"private": true` | `ts-release.yml` publishes to npm |
+| `publish_to_crates` | `publish = false` in `Cargo.toml` | `rust-release.yml` publishes to crates.io |
 | `publish_to_ghcr` | Images built and tested; no push | Images pushed to GitHub Container Registry |
 
 Setting up trusted publishing (OIDC):
 
-1. Configure trusted publishers on [pypi.org](https://pypi.org/manage/account/publishing/) or [npmjs.com](https://docs.npmjs.com/trusted-publishers/). For npm, manually publish version 0.1.0 before enabling trusted publishing.
+1. Configure trusted publishers on [pypi.org](https://pypi.org/manage/account/publishing/), [npmjs.com](https://docs.npmjs.com/trusted-publishers/) or crates.io (`just repo-settings` prints the crates.io address). For npm and crates.io, manually publish version 0.1.0 before enabling trusted publishing.
 2. Enable publishing via Copier:
 
    ```sh

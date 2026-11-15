@@ -113,7 +113,7 @@ def answer_traits(a: dict) -> set[str]:
         out.add("cli")
     if ("python" in stacks and a.get("publish_to_pypi")) or ("ts" in stacks and a.get("publish_to_npm")):
         out.add("package")
-    if rust_kind == "library":
+    if rust_kind == "library" or a.get("publish_to_crates"):
         out.add("package")
     out |= {"data-pipeline": {"pipeline"}, "research": {"numerics"}}.get(kind, set())
     return out

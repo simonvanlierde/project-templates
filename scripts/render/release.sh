@@ -226,3 +226,34 @@ cp -R s "$rel/s"
 # shellcheck disable=SC2016 # literal $app and ${TAG#v}
 grep -qF '[ "$app" = "${TAG#v}" ] || { echo "::error::web/package.json is at $app, not ${TAG#v}"; exit 1; }' d/.github/workflows/release.yml
 (lacks -q 'differs from package.json' a/.github/workflows/release.yml)
+
+# publish_to_crates: rust-release.yml replaces release.yml and creates the release itself, the
+# environment and first-release steps follow, and only a binary builds and attests archives.
+# cb is a binary at the root, cl a library in crates/lib.
+test ! -e a/.github/workflows/rust-release.yml
+test -f a/.github/workflows/release.yml
+grep -qx 'publish = false' a/Cargo.toml
+for p in cb cl; do
+  test -f $p/.github/workflows/rust-release.yml
+  test ! -e $p/.github/workflows/release.yml
+  grep -q 'environment: crates' $p/.github/workflows/rust-release.yml
+  grep -q 'rust-lang/crates-io-auth-action@' $p/.github/workflows/rust-release.yml
+  grep -q 'verify-tag.sh' $p/.github/workflows/rust-release.yml
+  grep -q 'cargo publish --locked --no-verify' $p/.github/workflows/rust-release.yml
+  grep -q 'crates.io' $p/.github/first-release.md
+  grep -q 'for env in .*crates' $p/justfile
+  (lacks -q '^publish = false' $p/**/Cargo.toml $p/Cargo.toml 2>/dev/null || true)
+done
+# Binary: archives named as cargo binstall looks them up, attested and checked before upload.
+grep -q 'binstall' cb/Cargo.toml
+(lacks -q '^publish = false' cb/Cargo.toml)
+grep -q 'name=crates-bin' cb/.github/workflows/rust-release.yml
+grep -q 'actions/attest@' cb/.github/workflows/rust-release.yml
+grep -q 'gh attestation verify' cb/.github/workflows/rust-release.yml
+grep -q 'x86_64-pc-windows-msvc' cb/.github/workflows/rust-release.yml
+# Library: no archives, no attestation, no binstall metadata; nested crate paths.
+(lacks -q 'binstall' cl/crates/lib/Cargo.toml)
+(lacks -q '^publish = false' cl/crates/lib/Cargo.toml)
+(lacks -q 'attest' cl/.github/workflows/rust-release.yml)
+grep -q 'working-directory: crates/lib' cl/.github/workflows/rust-release.yml
+grep -q 'cargo publish --locked --no-verify --manifest-path crates/lib/Cargo.toml' cl/.github/workflows/rust-release.yml

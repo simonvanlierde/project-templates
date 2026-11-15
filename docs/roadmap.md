@@ -14,9 +14,6 @@ Last reviewed: 2026-11-15
 - Let the `data-pipeline` kind release its data: a `just release` recipe that publishes
   the pipeline's outputs, with CI checks, once sourceledger has a release step.
   Tracked in [#291](https://github.com/simonvanlierde/project-templates/issues/291).
-- Add a release path for Rust: a `publish_to_crates` answer, crates.io trusted publishing,
-  binaries that `cargo binstall` can find, and attestations.
-  Tracked in [#292](https://github.com/simonvanlierde/project-templates/issues/292).
 
 ## Not planned
 

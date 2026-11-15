@@ -163,6 +163,9 @@ release version:
     # The build takes its version from the manifest and refuses a tag that differs.
     [ "$(uv version --short --no-sync --directory {{ python_dir }})" = "$version" ] || { echo "{{ python_dir ~ '/' if python_dir != '.' else '' }}pyproject.toml is not at $version" >&2; exit 1; }
 {%- endif %}
+{%- if 'rust' in stacks and publish_to_crates %}
+    [ "$(cargo metadata --no-deps --format-version 1{{ ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' if rust_dir != '.' }} | jq -r '.packages[0].version')" = "$version" ] || { echo "{{ rust_dir ~ '/' if rust_dir != '.' else '' }}Cargo.toml is not at $version" >&2; exit 1; }
+{%- endif %}
 {%- if 'ts' in stacks and publish_to_npm %}
     [ "$(node -p "require('./{{ ts_dir }}/package.json').version")" = "$version" ] || { echo "{{ ts_dir ~ '/' if ts_dir != '.' else '' }}package.json is not at $version" >&2; exit 1; }
 {%- endif %}
@@ -277,7 +280,7 @@ repo-settings:
     # Dependabot alerts let {{ 'Renovate' if dependency_bot == 'renovate' else 'Dependabot' }} open security PRs and turn on the dependency graph.
     gh api -X PUT repos/{owner}/{repo}/vulnerability-alerts >/dev/null 2>"$err" || fail
     echo "Turned on Dependabot alerts."
-{%- set release_envs = [('pypi', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('ghcr', publish_to_ghcr | default(false))] | selectattr('1') | map(attribute='0') | list %}
+{%- set release_envs = [('pypi', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('crates', publish_to_crates | default(false)), ('ghcr', publish_to_ghcr | default(false))] | selectattr('1') | map(attribute='0') | list %}
 {%- if release_envs %}
     # Environments limit publishing to version tags and require review before release.
     user_id=$(gh api user --jq .id 2>"$err") || fail
@@ -350,10 +353,14 @@ repo-settings:
     repo=${repo_full_name##*/}
     echo "PyPI pending publisher: https://pypi.org/manage/account/publishing/?provider=github&project_name={{ slug }}&owner=$owner&repository=$repo&workflow_filename=python-release.yml&environment=pypi"
 {%- endif %}
+{%- if publish_to_crates %}
+    repo_full_name=$(gh api repos/{owner}/{repo} --jq .full_name 2>"$err") || fail
+    echo "crates.io trusted publisher: https://crates.io/crates/{{ crate_name }}/settings (repository $repo_full_name, workflow rust-release.yml, environment crates)"
+{%- endif %}
 {%- if public and citable %}
     echo "Zenodo: https://zenodo.org/account/settings/github/"
 {%- endif %}
-{%- if (public and (citable or level != 'minimal')) or publish_to_pypi %}
+{%- if (public and (citable or level != 'minimal')) or publish_to_pypi or publish_to_crates %}
     if [ -f .github/first-release.md ]; then echo "First-release checklist: gh issue create --title 'First release' --body-file .github/first-release.md"; fi
 {%- endif %}
 

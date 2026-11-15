@@ -14,6 +14,10 @@ Upgrade steps:
 
 - Existing projects must [add the `PNGs` spelling exception](docs/updates.md#spelling-exceptions-in-existing-projects) to their project-owned `_typos.toml`.
 
+### Added
+
+- A `publish_to_crates` answer for the Rust stack (default off, so existing projects update unchanged and keep `publish = false`). It adds `rust-release.yml`, which replaces `release.yml`: tag signature check, version check against `Cargo.toml`, then publish to crates.io by trusted publishing from a protected `crates` environment, and the GitHub release. A Rust binary also gets archives for four targets named as `cargo binstall` looks them up (`[package.metadata.binstall]`), with build provenance attestations that the release job verifies before upload. `just repo-settings` creates the environment and prints the crates.io trusted-publisher address, and `first-release.md` lists the manual first publish. It cannot be combined with `publish_to_pypi`. See [Publishing](docs/setup.md#publishing).
+
 ### Changed
 
 - The docs have a [CML golden path](docs/cml-golden-path.md) page: the route a CML repo takes from `copier copy` to a signed release, a container, a deploy and OTLP telemetry.

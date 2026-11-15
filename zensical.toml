@@ -45,6 +45,7 @@ nav = [
     "decisions/0008-three-audiences-in-order.md",
     "decisions/0009-optional-features-share-one-extras-answer.md",
     "decisions/0010-a-level-ladder-replaces-the-badge-question.md",
+    "decisions/0011-rust-releases-through-one-workflow.md",
   ] },
 ]
 
