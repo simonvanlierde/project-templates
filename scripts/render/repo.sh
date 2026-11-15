@@ -360,6 +360,10 @@ test -d h/docs/decisions
 (lacks -q '## Tests and code style' c/.github/CONTRIBUTING.md)
 grep -q '## Tests and code style' a/.github/CONTRIBUTING.md
 grep -q '## Tests and code style' m/.github/CONTRIBUTING.md
+# The benchmark rule renders only with codspeed (a, c), not without it (d, m).
+grep -q '^## Benchmarks' a/.github/CONTRIBUTING.md
+grep -q 'benchmark case' c/.github/CONTRIBUTING.md
+(lacks -q -e 'Benchmarks' -e 'benchmark case' d/.github/CONTRIBUTING.md m/.github/CONTRIBUTING.md)
 test "$(grep -c '^- \(Python\|TypeScript\|Rust\|Go\): ' m/.github/CONTRIBUTING.md)" = 4
 grep -qx -- '- Go: gofmt and \[golangci-lint\](https://golangci-lint.run).' h/.github/CONTRIBUTING.md
 for f in "${badge_docs[@]}"; do test -f "h/$f"; done
