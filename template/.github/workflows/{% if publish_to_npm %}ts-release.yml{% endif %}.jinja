@@ -121,3 +121,32 @@ jobs:
       # npm, not pnpm: a prebuilt tarball needs no checkout, install or lockfile. npm
       # ships with Node 24+ and supports OIDC since npm 11.5.1.
       - run: npm publish --access public ./*.tgz
+{%- if not (publish_to_pypi or publish_to_crates) %}
+
+  # The release comes after the publish, so a tag npm refused leaves no immutable
+  # release behind. With publish_to_pypi or publish_to_crates their workflow makes it.
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: create the release
+        env:
+          TAG: {% raw %}${{ github.ref_name }}{% endraw %}
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+        run: |-
+          set -euo pipefail
+          .github/scripts/release-notes.sh "$TAG" >"$RUNNER_TEMP/notes.md"
+          # A release made by hand before this run is left as it is: immutable releases can't be edited.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists; leaving it"
+            exit 0
+          fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+{%- endif %}

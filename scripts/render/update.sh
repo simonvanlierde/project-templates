@@ -79,9 +79,15 @@ chmod +x "$cuh/gh" "$cuh/uvx"
   export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_ALLOW_PROTOCOL=file \
     GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.org GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.org
   git init -q -b main "$cuh/tpl"
-  git -C "$cuh/tpl" commit -q --allow-empty -m one
+  # The tags are a month old: a tag under a week old waits for a later run.
+  GIT_COMMITTER_DATE=2020-01-01T00:00:00Z git -C "$cuh/tpl" commit -q --allow-empty -m one
   git -C "$cuh/tpl" tag v0.9.0
   git -C "$cuh/tpl" tag v0.10.0
+  # A template whose newest tag was made just now.
+  git init -q -b main "$cuh/tpl-young"
+  git -C "$cuh/tpl-young" commit -q --allow-empty -m one
+  git -C "$cuh/tpl-young" tag v0.9.0
+  git -C "$cuh/tpl-young" tag v0.10.0
   # name, HAS_TOKEN, the open PR and the issue the fake gh finds ("-": none), and the
   # file the update changes.
   while read -r name token pr issue file; do
@@ -90,7 +96,10 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     # An open PR has its branch on the remote, on a history the update does not extend.
     if [ "$pr" != - ]; then git -C "$cuh/tpl" push -q "$p.git" HEAD:refs/heads/chore/copier-update; fi
     git init -q -b main "$p"
-    printf '_commit: v0.9.0\n_src_path: %s\n' "$cuh/tpl" >"$p/.copier-answers.yml"
+    src=$cuh/tpl
+    if [ "$name" = young ]; then src=$cuh/tpl-young; fi
+    if [ "$name" = own-young ]; then src=gh:simonvanlierde/project-templates; fi
+    printf '_commit: v0.9.0\n_src_path: %s\n' "$src" >"$p/.copier-answers.yml"
     # A layered template with its own answers file; this project's own is already current.
     if [ "$name" = layer ]; then
       cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"
@@ -111,6 +120,11 @@ chmod +x "$cuh/gh" "$cuh/uvx"
         RUNNER_TEMP="$p-runner"
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
         GIT_CONFIG_VALUE_0="https://github.com/$REPO.git"
+      # A simonvanlierde template, as gh: names it, is the young template here.
+      if [ "$name" = own-young ]; then
+        export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_1="url.$cuh/tpl-young.insteadOf" \
+          GIT_CONFIG_VALUE_1=https://github.com/simonvanlierde/project-templates
+      fi
       FAKE_TEXT=''
       if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
       export FAKE_TEXT
@@ -130,6 +144,7 @@ chmod +x "$cuh/gh" "$cuh/uvx"
       # shellcheck disable=SC2090 # The fake gh prints this JSON verbatim.
       export FAKE_OPEN_PRS FAKE_ISSUES FAKE_CLOSED_PRS
       : >"$p.gho"
+      : >"$p.log"
       # The copier step gets neither token variable.
       env -u GH_TOKEN -u HAS_TOKEN GITHUB_OUTPUT="$p.gho" bash --noprofile --norc -eo pipefail "$cuh/copier.sh" >"$p.out" 2>&1 || {
         cat "$p.out" >&2
@@ -166,6 +181,8 @@ merged true - -
 fork-declined true - -
 fork-open true - -
 fork-open-no-token false - -
+young true - -
+own-young true - -
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
@@ -205,6 +222,12 @@ CASES
     (lacks -q '^auth setup-git\|^pr create\|^pr edit\|^issue ' "$r.log")
     (! git -C "$r.git" rev-parse --verify refs/heads/chore/copier-update 2>/dev/null)
   done
+  # A tag under a week old is not applied: no copier run, no push, no pull request, no issue.
+  (lacks -q '^uvx\|^pr create\|^pr edit\|^issue \|^auth setup-git' young.log)
+  grep -q 'under a week old' young.out
+  # A simonvanlierde template is not held back.
+  grep -q '^pr create --head chore/copier-update --base main ' own-young.log
+  (lacks -q 'under a week old' own-young.out)
   # An older declined tag or a merged PR does not suppress a newer update.
   for r in older-declined merged fork-declined fork-open; do
     grep -q '^pr create --head chore/copier-update --base main ' "$r.log"

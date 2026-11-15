@@ -231,3 +231,13 @@ grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 # The publish step: npm, from a tarball built earlier.
 grep -qx '      - run: npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
 (lacks -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
+# The GitHub release waits for the npm publish (t, npm only) and the plain release.yml is not
+# rendered beside it; with PyPI too, python-release.yml makes the release (c).
+test ! -e t/.github/workflows/release.yml
+uv run --no-project --with pyyaml python - t/.github/workflows/ts-release.yml c/.github/workflows/ts-release.yml <<'PYTEST'
+import sys, yaml
+only, both = (yaml.safe_load(open(p))["jobs"] for p in sys.argv[1:])
+assert only["release"]["needs"] == "publish", only["release"]
+assert only["release"]["permissions"] == {"contents": "write"}, only["release"]
+assert "release" not in both, both.keys()
+PYTEST
