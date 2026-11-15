@@ -59,7 +59,18 @@ and remove it a week later ([how](https://github.com/simonvanlierde/project-temp
 ## Make a release
 
 The maintainer runs `just release X.Y.Z`. [Publishing](https://github.com/simonvanlierde/project-templates/blob/main/docs/setup.md#publishing) has the steps and the one-time setup.
+{% if codspeed %}
+Before a release, list the entry points that take size-capped or user-sized input, or run hot,
+and check each has a benchmark case. Add the missing ones.
+{% endif %}
+{% if codspeed -%}
+## Benchmarks
 
+A pull request that adds or changes a parser, importer, exporter or other code that takes
+user-sized input adds or updates a benchmark case at the input's documented bound (size cap,
+maximum items), so CodSpeed watches it.
+
+{% endif -%}
 {% if license != 'none' and level != 'minimal' -%}
 ## Tests and code style
 

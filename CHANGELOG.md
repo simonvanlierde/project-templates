@@ -16,6 +16,7 @@ Upgrade steps:
 
 ### Added
 
+- With `codspeed` on, a public project's `CONTRIBUTING.md` asks that a pull request adding or changing a parser, importer, exporter or other code that takes user-sized input adds or updates a benchmark case at the input's documented bound, and the release step lists the size-capped or hot entry points and checks each has a case.
 - A `publish_to_crates` answer for the Rust stack (default off, so existing projects update unchanged and keep `publish = false`). It adds `rust-release.yml`, which replaces `release.yml`: tag signature check, version check against `Cargo.toml`, then publish to crates.io by trusted publishing from a protected `crates` environment, and the GitHub release. A Rust binary also gets archives for four targets named as `cargo binstall` looks them up (`[package.metadata.binstall]`), with build provenance attestations that the release job verifies before upload. `just repo-settings` creates the environment and prints the crates.io trusted-publisher address, and `first-release.md` lists the manual first publish. It cannot be combined with `publish_to_pypi`. See [Publishing](docs/setup.md#publishing).
 
 ### Changed
