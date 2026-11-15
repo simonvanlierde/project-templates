@@ -98,6 +98,7 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     git init -q -b main "$p"
     src=$cuh/tpl
     if [ "$name" = young ]; then src=$cuh/tpl-young; fi
+    if [ "$name" = own-young ]; then src=gh:simonvanlierde/project-templates; fi
     printf '_commit: v0.9.0\n_src_path: %s\n' "$src" >"$p/.copier-answers.yml"
     # A layered template with its own answers file; this project's own is already current.
     if [ "$name" = layer ]; then
@@ -119,6 +120,11 @@ chmod +x "$cuh/gh" "$cuh/uvx"
         RUNNER_TEMP="$p-runner"
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
         GIT_CONFIG_VALUE_0="https://github.com/$REPO.git"
+      # A simonvanlierde template, as gh: names it, is the young template here.
+      if [ "$name" = own-young ]; then
+        export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_1="url.$cuh/tpl-young.insteadOf" \
+          GIT_CONFIG_VALUE_1=https://github.com/simonvanlierde/project-templates
+      fi
       FAKE_TEXT=''
       if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
       export FAKE_TEXT
@@ -176,6 +182,7 @@ fork-declined true - -
 fork-open true - -
 fork-open-no-token false - -
 young true - -
+own-young true - -
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
@@ -218,6 +225,9 @@ CASES
   # A tag under a week old is not applied: no copier run, no push, no pull request, no issue.
   (lacks -q '^uvx\|^pr create\|^pr edit\|^issue \|^auth setup-git' young.log)
   grep -q 'under a week old' young.out
+  # A simonvanlierde template is not held back.
+  grep -q '^pr create --head chore/copier-update --base main ' own-young.log
+  (lacks -q 'under a week old' own-young.out)
   # An older declined tag or a merged PR does not suppress a newer update.
   for r in older-declined merged fork-declined fork-open; do
     grep -q '^pr create --head chore/copier-update --base main ' "$r.log"
