@@ -32,6 +32,8 @@ Upgrade steps:
 - A pull request preview checks the PR's state in its own step, and the deploy step that holds the Cloudflare token no longer gets `GH_TOKEN`.
 - Research projects use Tornado 6.6.1's pinned source archive while its security fix is inside the one-week dependency window, so Jupyter's dependency passes the audit without disabling the release-age policy.
 - The project chooser and quick-start examples use the released `python_kind` answer in Python commands.
+- A Rust project named `std`, `core`, `alloc`, `proc_macro` or `test` is refused: its doctests would not compile. `publish_to_crates` is refused without a project description or with `license=none`, since crates.io rejects both.
+- `just repo-settings` lists the release environments for a crates-only project too.
 
 ## [0.15.0] - 2026-11-12
 

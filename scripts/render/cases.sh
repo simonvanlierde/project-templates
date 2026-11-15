@@ -137,9 +137,9 @@ r_args=(--data project_name=crate-me --data 'stacks=[rust]' --data site=plain)
 "${copier[@]}" --vcs-ref=HEAD "${r_args[@]}" . "$out/r"
 # publish_to_crates: a binary at the root (cb) and a library in a subdirectory (cl).
 "${copier[@]}" --vcs-ref=HEAD --data project_name=crates-bin --data 'stacks=[rust]' --data rust_kind=binary \
-  --data publish_to_crates=true . "$out/cb"
+  --data project_description='A binary crate' --data license=MIT --data publish_to_crates=true . "$out/cb"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=crates-lib --data 'stacks=[rust]' --data rust_kind=library \
-  --data rust_dir=crates/lib --data publish_to_crates=true . "$out/cl"
+  --data rust_dir=crates/lib --data project_description='A library crate' --data license=MIT --data publish_to_crates=true . "$out/cl"
 # Rendered again over edited starter pages, which stay the project's.
 echo '<!-- project edit -->' >>"$out/r/site/index.html"
 echo '/* project edit */' >>"$out/r/site/style.css"
@@ -290,7 +290,7 @@ grep -q 'The README says how to install prek' "$c/.pre-commit-config.yaml"
 grep -q 'image: .*@sha256:' "$out/compose/compose.yaml"
 grep -q '127.0.0.1:' "$out/compose/compose.yaml"
 # Every port binds to loopback: a bare "8080:80" reaches the LAN past the host firewall.
-(lacks -qE '^ +- "[0-9]+:' "$out/compose/compose.yaml")
+(lacks -qE '^ +- +["'\'']?([0-9]+:|0\.0\.0\.0)' "$out/compose/compose.yaml")
 grep -q 'healthcheck:' "$out/compose/compose.yaml"
 grep -q '@just docker-check' "$out/compose/justfile"
 (lacks -q 'hadolint' "$out/compose/.pre-commit-config.yaml")
@@ -465,6 +465,9 @@ refuses 'Keep the description to one line' --data $'project_description=Two\nlin
 refuses 'Keep the description to one line' --data 'project_description=Has a \x escape'
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
+refuses 'built-in crate' --data 'stacks=[rust]' --data project_name=std
+refuses 'no description' --data 'stacks=[rust]' --data publish_to_crates=true --data license=MIT
+refuses 'no license' --data 'stacks=[rust]' --data publish_to_crates=true --data license=none --data project_description=Something
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
 # A digit-leading name makes no module name, and the question is hidden behind customise.
 refuses 'to give one when the project name does not make one' --data 'stacks=[python]' --data project_name=1abc

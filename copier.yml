@@ -251,10 +251,13 @@ rust_kind:
   validator: >-
     {% set ident = slug|replace('.', '-')|replace('-', '_') %}
     {% set keywords = ['abstract', 'as', 'async', 'await', 'become', 'box', 'break', 'const', 'continue', 'crate', 'do', 'dyn', 'else', 'enum', 'extern', 'false', 'final', 'fn', 'for', 'gen', 'if', 'impl', 'in', 'let', 'loop', 'macro', 'match', 'mod', 'move', 'mut', 'override', 'priv', 'pub', 'ref', 'return', 'self', 'static', 'struct', 'super', 'trait', 'true', 'try', 'type', 'typeof', 'unsafe', 'unsized', 'use', 'virtual', 'where', 'while', 'yield'] %}
+    {% set std_crates = ['std', 'core', 'alloc', 'proc_macro', 'test'] %}
     {% if ident|regex_search('^[0-9]') %}
     Cargo rejects a crate name that starts with a digit (`{{ ident }}`): start the project name with a letter.
     {% elif ident in keywords %}
     `{{ ident }}` is a Rust keyword, so the crate (and its doctests) would not compile: pick another project name.
+    {% elif ident in std_crates %}
+    `{{ ident }}` is a Rust built-in crate, so the crate's doctests would not compile: pick another project name.
     {% endif %}
 
 # Computed, never asked. Cargo takes `-` and `_` but not the `.` a slug may carry.
@@ -800,6 +803,10 @@ publish_to_crates:
   validator: >-
     {% if publish_to_crates and publish_to_pypi | default(false) %}
     rust-release.yml and python-release.yml each create the GitHub release: turn one of publish_to_crates and publish_to_pypi off.
+    {% elif publish_to_crates and not project_description %}
+    crates.io refuses a crate with no description: give project_description an answer, or turn publish_to_crates off.
+    {% elif publish_to_crates and license == 'none' %}
+    crates.io refuses a crate with no license: choose a license, or turn publish_to_crates off.
     {% endif %}
 
 # --- go -----------------------------------------------------------------------

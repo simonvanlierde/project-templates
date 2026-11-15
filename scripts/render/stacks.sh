@@ -108,7 +108,7 @@ grep -qxF '**/.npmrc' c/api/.dockerignore
 # A local .env stays out of git, and compose publishes each port on loopback only.
 grep -qxF '.env' c/.gitignore
 test "$(grep -c '^      - "127.0.0.1:' c/compose.yaml)" = 1
-(lacks -qE '^ +- "[0-9]+:' c/compose.yaml)
+(lacks -qE '^ +- +["'\'']?([0-9]+:|0\.0\.0\.0)' c/compose.yaml)
 # Every workflow that publishes from a tag checks it against .github/allowed_signers on the
 # default branch, and every render that has one gets that file. e renders the last commit,
 # without uncommitted edits.
