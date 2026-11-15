@@ -6,7 +6,9 @@
 #
 # `cooldown` holds a version update back until the release has been public for a
 # week, long enough for a compromised release to be caught and yanked. One number for
-# every ecosystem and every update type. Security updates ignore it.
+# every ecosystem and every update type, except the author's own simonvanlierde hooks and
+# packages: whoever can publish those can push to the repos directly. Security updates
+# ignore it.
 #
 # No docker ecosystem: it reads FROM lines only, and those tags are copier answers,
 # so its PRs would fight the next `copier update`.{% if compose_only %} A Compose-only repo has no Dockerfile
@@ -35,7 +37,7 @@ updates:
     directory: /
     multi-ecosystem-group: actions-and-hooks
     patterns: ["*"]
-    cooldown: {default-days: 7}
+    cooldown: {default-days: 7, exclude: ["*simonvanlierde/*"]}
 {#- An Astro site in site/ is an npm package of its own. #}
 {%- for eco, on, dir in [
       ('uv', 'python' in stacks, python_dir),
@@ -53,7 +55,7 @@ updates:
   - package-ecosystem: {{eco}}
     directory: {{'/' if dir == '.' else '/' ~ dir}}
     schedule: {interval: weekly}
-    cooldown: {default-days: 7}
+    cooldown: {{ '{default-days: 7, exclude: [sourceledger]}' if eco == 'uv' and pipeline else '{default-days: 7}' }}
     commit-message: {prefix: chore, include: scope}
     groups:
       runtime:
