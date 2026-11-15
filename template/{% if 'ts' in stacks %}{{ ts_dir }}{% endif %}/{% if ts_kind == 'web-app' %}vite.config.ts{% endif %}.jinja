@@ -1,5 +1,8 @@
 {% if web_framework == 'react' -%}
 import react from "@vitejs/plugin-react";
+{% elif web_framework == 'svelte' -%}
+import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { svelteTesting } from "@testing-library/svelte/vite";
 {% endif -%}
 import { marked } from "marked";
 import { defineConfig, type Plugin } from "vite";
@@ -41,6 +44,9 @@ export default defineConfig({
       react: "preact/compat",
     },
   },
+{%- elif web_framework == 'svelte' %}
+  // svelteTesting acts under vitest only: it loads Svelte's browser build and unmounts after each test.
+  plugins: [svelte(), svelteTesting(), markdown()],
 {%- else %}
   plugins: [react(), markdown()],
 {%- endif %}

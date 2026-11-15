@@ -331,3 +331,38 @@ test -f nw/.github/workflows/ts.yml
 test -f nw/web/docs/privacy.md
 test ! -e nw/docs/privacy.md
 test -f nw/docs/index.md
+
+# sv: Svelte replaces the React starter with App.svelte, main.ts and App.test.ts, and
+# svelte-check replaces tsc, which cannot read a .svelte import.
+test -f sv/src/App.svelte
+test -f sv/src/App.test.ts
+test -f sv/src/main.ts
+for f in App.tsx App.test.tsx main.tsx; do test ! -e "sv/src/$f"; done
+grep -qF 'src="/src/main.ts"' sv/index.html
+grep -qF 'mount(App, { target: root });' sv/src/main.ts
+grep -qF 'from "@testing-library/svelte";' sv/src/App.test.ts
+# The markup survives Jinja: its {#if} would otherwise open a comment.
+grep -qxF '  {#if page}' sv/src/App.svelte
+grep -qxF '  {/if}' sv/src/App.svelte
+grep -qxF 'const description = "A small {demo}";' sv/src/App.svelte
+grep -qxF '    <p>{description}</p>' sv/src/App.svelte
+grep -qF '"/terms": { title: "Terms of use", html: terms },' sv/src/App.svelte
+# The runtime is a dependency, so the licence check covers what the bundle ships.
+jq -e '.dependencies | keys == ["svelte"]' sv/package.json >/dev/null
+jq -e '.devDependencies | has("@sveltejs/vite-plugin-svelte") and has("@testing-library/svelte") and has("svelte-check")' sv/package.json >/dev/null
+jq -e '.devDependencies | has("@vitejs/plugin-react") or has("@testing-library/react") or has("@types/react") | not' sv/package.json >/dev/null
+# svelte-check 4.7 refuses TypeScript 7 without a second install and --tsgo.
+jq -e '.devDependencies.typescript | startswith("^6.")' sv/package.json >/dev/null
+jq -e '.devDependencies.typescript | startswith("^7.")' s/package.json >/dev/null
+jq -e '.scripts.typecheck == "svelte-check --fail-on-warnings"' sv/package.json >/dev/null
+grep -qF 'plugins: [svelte(), svelteTesting(), markdown()],' sv/vite.config.ts
+(lacks -q '"jsx"' sv/tsconfig.json)
+grep -qF '"jsx": "react-jsx",' s/tsconfig.json
+# Biome reads only the <script> blocks, so the rules that miss the markup's names are off there.
+jq -e '.overrides[0].includes == ["**/*.svelte"] and .overrides[0].linter.rules.correctness.noUnusedVariables == "off"' sv/biome.json >/dev/null
+(lacks -q '"overrides"' s/biome.json)
+grep -qxF '      - id: svelte-check' sv/.pre-commit-config.yaml
+grep -qF 'html, svelte]' sv/.pre-commit-config.yaml
+(lacks -q '      - id: tsc' sv/.pre-commit-config.yaml)
+grep -qxF '      - id: tsc' s/.pre-commit-config.yaml
+(lacks -q 'svelte' s/.pre-commit-config.yaml)

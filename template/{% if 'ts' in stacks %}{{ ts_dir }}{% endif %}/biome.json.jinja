@@ -4,7 +4,10 @@
     .astro files: biome reads only their frontmatter, so it reports every name the
     template uses as unused.
     noDangerouslySetInnerHtml: a React-domain rule, on only with react in package.json.
-    Preact turns it on here, so the app's one suppression of it has an effect. -#}
+    Preact turns it on here, so the app's one suppression of it has an effect.
+    .svelte files: without html.experimentalFullSupportEnabled, biome reads only their
+    <script> blocks, so it misses names the markup uses. The override turns off the rules
+    biome's language-support page names for that case. -#}
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": { "includes": ["**", "!.vscode"{% if site == 'astro' and ts_dir == '.' %}, "!site/**/*.astro"{% endif %}] },
@@ -12,6 +15,19 @@
   "formatter": { "indentStyle": "space", "lineWidth": 120 },
 {%- if ts_kind == 'web-app' and web_framework == 'preact' %}
   "linter": { "rules": { "security": { "noDangerouslySetInnerHtml": "error" } } },
+{%- endif %}
+{%- if ts_kind == 'web-app' and web_framework == 'svelte' %}
+  "overrides": [
+    {
+      "includes": ["**/*.svelte"],
+      "linter": {
+        "rules": {
+          "style": { "useConst": "off", "useImportType": "off" },
+          "correctness": { "noUnusedVariables": "off", "noUnusedImports": "off" }
+        }
+      }
+    }
+  ],
 {%- endif %}
   "markdown": { "formatter": { "enabled": false } },
   "yaml": { "formatter": { "enabled": false } },

@@ -34,7 +34,7 @@ rest wait behind `customise`, and take the defaults below when you answer no:
 | `project_description` | Always | One-line summary for README, package metadata, and citation files |
 | `stacks` | Always | Selected packages, CI workflows, and `just` recipes |
 | `python_kind`, `ts_kind`, `rust_kind`, `go_kind` | Respective stack selected | Package architecture, directory layout, and CI configuration |
-| `web_framework` | `ts_kind=web-app` | React, or Preact for reduced bundle size |
+| `web_framework` | `ts_kind=web-app` | React, Preact for reduced bundle size, or Svelte 5 |
 | `user_data` | `ts_kind=web-app` | Sets the content of the privacy statement and the terms page ([legal pages](#legal-pages)) |
 | `public` | Always | Adds `.github/` community files and sets default license |
 | `github_user`, `author_name`, `author_email` | Always | Repository URLs, badges, licenses, and package metadata |
@@ -133,9 +133,9 @@ With `decision_records` on, a project keeps its architectural choices in `docs/d
 | `app` | Node application compiled to `dist/`, not published |
 | `web-app` | Single-page application built with Vite, served by a Cloudflare Worker |
 
-`web-app` prompts for `web_framework` (React or Preact) and `user_data` ([legal pages](#legal-pages)). Web apps include:
+`web-app` prompts for `web_framework` (React, Preact or Svelte 5) and `user_data` ([legal pages](#legal-pages)). Web apps include:
 
-- Single-page application entry points (`index.html`, `src/main.tsx`, `src/App.tsx`) and Vitest setup.
+- Single-page application entry points (`index.html`, `src/main.tsx`, `src/App.tsx`) and Vitest setup. With Svelte they are `src/main.ts` and `src/App.svelte`, the test is `src/App.test.ts`, and `svelte-check` replaces `tsc` as the type check. Biome lints only the `<script>` blocks of `.svelte` files, with the rules that misread the markup turned off for them.
 - Playwright end-to-end tests in `tests/e2e/`: axe accessibility scans in light/dark modes and Content-Security-Policy enforcement.
 - Mandatory legal pages, linked from the footer in the starter app.
 - Cloudflare Worker configuration: `public/_headers` (security headers) and `wrangler.jsonc` (static assets, and with `worker` a Worker script for `/api/*`: [Worker script](hosting.md#worker-script)).
@@ -144,7 +144,7 @@ With `decision_records` on, a project keeps its architectural choices in `docs/d
 - Pull request previews: a `preview` job in `.github/workflows/ts.yml`, `.github/workflows/preview-retire.yml` and `.github/scripts/preview-retire.sh`.
 - Bundle size budget in `scripts/checkBundleBudget.mjs`: 100 KiB of gzipped JavaScript in the largest file. It catches a heavy dependency or a broken chunk split, not ordinary features, so keep it at least 25% above the build rather than just above it.
 
-The starter app is yours after the first render. `copier update` never touches `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx`, `src/app.css` or the Worker script, even to bring back one you deleted. It leaves `index.html`, `tests/e2e/routes.ts` and the Markdown files in `docs/` alone too, but re-creates one you delete.
+The starter app is yours after the first render. `copier update` never touches `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx` (or the Svelte `src/App.svelte`, `src/App.test.ts` and `src/main.ts`), `src/app.css` or the Worker script, even to bring back one you deleted. It leaves `index.html`, `tests/e2e/routes.ts` and the Markdown files in `docs/` alone too, but re-creates one you delete.
 
 The web app's folder also gets `PRODUCT.md` and `DESIGN.md`, stubs to fill in. They name who uses the app and how it looks, and are yours to edit: an update leaves them alone.
 

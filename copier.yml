@@ -52,8 +52,11 @@ _skip_if_exists:
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}tests/test_add.py"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.tsx"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.svelte"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.test.tsx"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.test.ts"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/main.tsx"
+  - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/main.ts"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts"
@@ -78,8 +81,11 @@ _exclude:
   - "{% if _copier_operation == 'update' %}/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if python_dir == '.' else python_dir ~ '/' }}tests/test_add.py{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.tsx{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.svelte{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.test.tsx{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.test.ts{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/main.tsx{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/main.ts{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts{% endif %}"
@@ -212,8 +218,9 @@ web_app:
   when: false
   default: "{{ 'ts' in stacks and ts_kind == 'web-app' }}"
 
-# Only the web-app kind renders JSX. Preact runs the same code through its
-# React-compatible layer, aliased in vite.config.ts and tsconfig.json.
+# Only the web-app kind renders JSX, or Svelte components. Preact runs the same code
+# as React through its React-compatible layer, aliased in vite.config.ts and tsconfig.json.
+# Svelte replaces src/App.tsx, App.test.tsx and main.tsx with App.svelte, App.test.ts and main.ts.
 web_framework:
   type: str
   when: "{{ web_app }}"
@@ -221,6 +228,7 @@ web_framework:
   choices:
     React: react
     Preact (React API through preact/compat, a smaller bundle): preact
+    Svelte 5 (components compiled at build time, its own syntax): svelte
   default: react
 
 # Decides the legal pages: every web app gets docs/privacy.md, and `accounts`

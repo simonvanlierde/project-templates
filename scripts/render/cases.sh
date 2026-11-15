@@ -577,6 +577,11 @@ grep -qxF '.dev.vars*' "$out/cfp/.gitignore"
 grep -qxF '.wrangler/' "$out/cfp/.gitignore"
 lacks -q wrangler "$out/dp/.gitignore"
 
+# sv: a Svelte web app at the root, which replaces the React starter files.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=svelte-me --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data web_framework=svelte --data user_data=accounts \
+  --data 'project_description=A small {demo}' . "$out/sv"
+
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the
 # template, each file holding only its line number in files.txt, with each render's

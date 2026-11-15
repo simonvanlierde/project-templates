@@ -247,7 +247,17 @@ repos:
         pass_filenames: false
 {%- endif %}
         language: system
-        types_or: [javascript, jsx, ts, tsx, json, css, html]
+        types_or: [javascript, jsx, ts, tsx, json, css, html{% if web_app and web_framework == 'svelte' %}, svelte{% endif %}]
+{%- if web_app and web_framework == 'svelte' %}
+
+      # tsc cannot read .svelte imports; svelte-check checks the .ts files too.
+      - id: svelte-check
+        name: svelte-check
+        entry: {{ pnpm }} exec svelte-check --fail-on-warnings
+        language: system
+        pass_filenames: false
+        types_or: [ts, svelte]
+{%- else %}
 
       - id: tsc
         name: tsc --noEmit
@@ -255,6 +265,7 @@ repos:
         language: system
         pass_filenames: false
         types_or: [ts, tsx]
+{%- endif %}
 {%- if ts_kind == 'web-app' %}
 
       # Before a push, not each commit: the unit tests take longer than a lint.
@@ -263,7 +274,7 @@ repos:
         entry: {{ pnpm }} exec vitest run
         language: system
         pass_filenames: false
-        types_or: [javascript, jsx, ts, tsx, css]
+        types_or: [javascript, jsx, ts, tsx, css{% if web_framework == 'svelte' %}, svelte{% endif %}]
         stages: [pre-push]
 {%- endif %}
 {%- endif %}
