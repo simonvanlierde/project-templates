@@ -136,6 +136,11 @@ cp -R k "$rel/w"
   (! .github/scripts/verify-tag.sh v9.9.9 origin/main >release.log 2>&1)
   grep -qxF 'refs/tags/v9.9.9 points at a tag object made for another name' release.log
   git tag -d v9.9.9 >/dev/null
+  # A tag that does not exist, and a ref without the signers file, each get a plain message.
+  (! .github/scripts/verify-tag.sh v8.8.8 origin/main >release.log 2>&1)
+  grep -qxF 'v8.8.8 does not exist here: fetch it, or pass --fetch' release.log
+  (! .github/scripts/verify-tag.sh v0.1.0 4b825dc642cb6eb9a060e54bf8d69288fb56ca3 >release.log 2>&1)
+  grep -qxF '4b825dc642cb6eb9a060e54bf8d69288fb56ca3 has no .github/allowed_signers' release.log
   git tag --no-sign -a -m plain plain
   (! .github/scripts/verify-tag.sh plain origin/main >release.log 2>&1)
   grep -qF 'plain has no SSH signature' release.log

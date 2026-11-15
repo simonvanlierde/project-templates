@@ -47,6 +47,8 @@ A web app, and a site with `site_host=cloudflare`, deploy to a Worker on every p
 
 Both jobs run in the `production` GitHub environment, which `just repo-settings` limits to `main`. A preview job that holds the same Cloudflare token can still deploy over production (see [Cloudflare setup](#cloudflare-setup)). Without `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID`, the job skips with a notice. Static-asset requests are free and unlimited on the Workers Free plan.
 
+Expect a short gap when a live site moves from Pages to the Worker: the address changes to the Worker's, and a custom domain stays on Pages until you remove it there and the next production deploy attaches it to the Worker.
+
 The starter `astro.config.mjs` is the project's, so switching an existing Astro site from Pages leaves it alone: set `site` to the new address and delete `base`.
 
 ### Custom domains
