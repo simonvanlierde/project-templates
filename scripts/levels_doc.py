@@ -5,8 +5,8 @@
 """Write the Levels table in docs/levels.md from levels.toml.
 
 Usage: scripts/levels_doc.py [--check]
---check writes nothing and exits 1 when the table is stale or levels.toml's version is not
-the newest release in CHANGELOG.md.
+--check writes nothing and exits 1 when the table is stale. Both modes exit 1, writing
+nothing, when levels.toml's version is not the newest release in CHANGELOG.md.
 """
 
 import datetime
