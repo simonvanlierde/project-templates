@@ -722,9 +722,16 @@ jobs:
       - if: matrix.answers.ts_kind == 'web-app'
         name: e2e
         working-directory: ${{ runner.temp }}/proj/${{ matrix.answers.ts_dir }}
+        env:
+          SITE_URL: ${{ matrix.answers.site_url }}
         run: |
           pnpm exec playwright install chromium
           just ts-e2e
+          # Under a path, Cloudflare reads _headers and the fallback index.html only at the
+          # top of dist/, where vite.config.ts copies them.
+          if [ -n "$SITE_URL" ]; then
+            test -f dist/index.html && test -f dist/_headers
+          fi
           # The screenshot recipe runs too, and writes its shots.
           just ts-shots
           test -f shots/index-390-light.png

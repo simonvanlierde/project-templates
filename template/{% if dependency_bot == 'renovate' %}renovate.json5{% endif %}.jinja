@@ -77,6 +77,10 @@
     // so the week's wait above would hold them back for good.
     { matchManagers: ['copier'], minimumReleaseAge: null },
     { matchPackageNames: ['simonvanlierde/**'{{ ", 'sourceledger'" if pipeline else '' }}], minimumReleaseAge: null },
+{%- if web_app and web_framework == 'svelte' %}
+    // svelte-check refuses TypeScript 7 alone. Remove this once svelte-check runs on it.
+    { matchManagers: ['npm'], matchPackageNames: ['typescript'], allowedVersions: '<7' },
+{%- endif %}
 {%- if 'rust' in stacks %}
     // Its own group gives the Cargo relock its own branch, so the uv and pnpm relocks still
     // merge themselves: Renovate merges a branch only when every update on it may.

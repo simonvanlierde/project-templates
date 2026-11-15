@@ -228,7 +228,7 @@ web_framework:
   choices:
     React: react
     Preact (React API through preact/compat, a smaller bundle): preact
-    Svelte 5 (components compiled at build time, its own syntax): svelte
+    Svelte 5 (its own components, compiled at build time, in place of the React starter): svelte
   default: react
 
 # Decides the legal pages: every web app gets docs/privacy.md, and `accounts`
@@ -699,7 +699,7 @@ docs_api:
 # site with site_host=cloudflare. The legal pages name it. A host other than
 # *.workers.dev becomes the Worker's custom domain on each production deploy. A web app
 # may also sit under a path on a host that serves other things: production then routes
-# that path to the Worker on the host's zone. The default is the workers.dev address of
+# that path to the Worker on the zone that holds the host. The default is the workers.dev address of
 # the Worker its wrangler config names, assuming the account's workers.dev subdomain is
 # the GitHub user.
 site_url:
@@ -710,14 +710,15 @@ site_url:
     The public address of the {{ 'web app' if web_app else 'site' }}: a custom domain
     (production attaches it to the Worker), or your own workers.dev subdomain if it is not the GitHub user.
     {%- if web_app %} A path, as in https://example.org/app, serves the app there through
-    a route on the host's zone: the host is taken as the zone's name, so give the zone
-    itself, such as example.org, not a subdomain of it.{% endif %}
+    a route on the Cloudflare zone that holds the host, which needs a proxied DNS record.{% endif %}
   default: "https://{{ worker_slug }}{{ '' if web_app else '-site' }}.{{ github_user | lower }}.workers.dev"
   validator: >-
     {% if not site_url|regex_search('^https://') %}
     Give the full address, starting with https://.
     {% elif not site_url|regex_search('^https://[a-z0-9.-]+(/[a-z0-9][a-z0-9._-]*)*/?$') %}
     Give the host{% if web_app %}, and a path if any,{% endif %} in lower case, such as https://example.org{% if web_app %} or https://example.org/app{% endif %}: no port, query or capitals.
+    {% elif site_url|regex_search('\\.html/?$') %}
+    Give the folder the app is served from, such as https://example.org/app, not a page in it.
     {% elif site_url|regex_search('^https://[^/]+/[^/]') and not web_app %}
     Give the host alone, such as https://example.org: the site's Worker serves a whole host, so no path.
     {% elif site_url|regex_search('^https://[^/]+\\.workers\\.dev/[^/]') %}
@@ -731,9 +732,9 @@ site_path:
   when: false
   default: "{{ site_url | regex_replace('^https://[^/]+', '') | regex_replace('/$', '') }}"
 
-# Computed, never asked: with a path, site_url's host, taken as the name of the
-# Cloudflare zone that production adds the routes to; else empty.
-site_zone:
+# Computed, never asked: with a path, site_url's host, which production routes the path
+# on (wrangler finds the zone that holds it); else empty.
+route_host:
   type: str
   when: false
   default: "{{ site_url | regex_replace('^https://', '') | regex_replace('/.*$', '') if site_path else '' }}"

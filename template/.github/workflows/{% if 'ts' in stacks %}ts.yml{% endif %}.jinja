@@ -349,7 +349,7 @@ jobs:
         run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production "" --domain {{ custom_domain }}'
 {%- elif site_path %}
         # --route here only, for the path and everything under it: previews deploy the same config.
-        run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production "" --route {{ site_zone }}{{ site_path }} --route "{{ site_zone }}{{ site_path }}/*"'
+        run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production "" --route {{ route_host }}{{ site_path }} --route "{{ route_host }}{{ site_path }}/*"'
 {%- else %}
         run: '"$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Production'
 {%- endif %}

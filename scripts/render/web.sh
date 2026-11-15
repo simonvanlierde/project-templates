@@ -390,8 +390,32 @@ grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\"
 (lacks -q -- '--route' wk/.github/workflows/ts.yml d/.github/workflows/ts.yml)
 grep -qF 'https://:worker.:subdomain.workers.dev/*' wp/.github/workflows/ts.yml
 grep -qF '"workers_dev": true' wp/web/wrangler.jsonc
-grep -qF 'with --route on the zone example.org.' wp/web/wrangler.jsonc
 # shellcheck disable=SC2016 # literal template text
-grep -qF 'Zone > Workers Routes: Edit for the zone of `example.org`' wp/README.md
+grep -qF 'Zone > Workers Routes: Edit for the zone that holds `example.org`' wp/README.md
 # shellcheck disable=SC2016 # literal template text
 grep -qF 'The production job routes `example.org/tools/path-me`' wp/README.md
+
+# checks.yml has no Node install, so it skips the type-check hook the ts workflow runs:
+# svelte-check for Svelte, tsc otherwise.
+grep -q 'SKIP: biome,svelte-check,betterleaks,zizmor$' sv/.github/workflows/checks.yml
+grep -q 'SKIP: biome,tsc,betterleaks,zizmor$' s/.github/workflows/checks.yml
+# svelte-check refuses TypeScript 7 alone, so neither bot offers it to a Svelte app.
+grep -qxF "    { matchManagers: ['npm'], matchPackageNames: ['typescript'], allowedVersions: '<7' }," svr/renovate.json5
+(lacks -q "allowedVersions: '<7'" d/renovate.json5)
+uv run --no-project --with pyyaml python - sv/.github/dependabot.yml s/.github/dependabot.yml <<'PYTEST'
+import sys, yaml
+def ignores(path):
+    return [u.get('ignore') for u in yaml.safe_load(open(path))['updates'] if u['package-ecosystem'] == 'npm']
+assert ignores(sys.argv[1]) == [[{'dependency-name': 'typescript', 'versions': ['>=7']}]], ignores(sys.argv[1])
+assert ignores(sys.argv[2]) == [None], ignores(sys.argv[2])
+PYTEST
+# Both copies Cloudflare reads at the top of dist/; ci.yml checks that a build makes them.
+grep -qF 'for (const name of ["index.html", "_headers"]) {' wp/web/vite.config.ts
+# The README and the wrangler config name the zone that holds the host, and the DNS record.
+# shellcheck disable=SC2016 # literal Markdown backticks
+grep -qF 'proxied (orange-cloud) DNS record for `example.org`' wp/README.md
+grep -qF 'with --route on the zone that holds example.org.' wp/web/wrangler.jsonc
+# shellcheck disable=SC2016 # literal Markdown backticks
+grep -qF '`svelte-check` for types.' sv/.github/CONTRIBUTING.md
+# shellcheck disable=SC2016 # literal Markdown backticks
+grep -qF '`tsc` for types.' s/.github/CONTRIBUTING.md

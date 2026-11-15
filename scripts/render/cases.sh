@@ -523,6 +523,11 @@ refuses 'so no path' --data 'stacks=[python]' --data site=plain --data site_host
   --data site_url=https://example.org/site
 refuses 'answer worker=false' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=nothing --data worker=true --data site_url=https://example.org/app
+# A page is not a folder to serve the app from, and a query is not part of an address.
+refuses 'not a page in it' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data site_url=https://example.org/app/index.html
+refuses 'no port, query or capitals' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data 'site_url=https://example.org/app?x=1'
 # An app that keeps personal data on a server needs its own contact address.
 refuses 'needs its own contact address' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=accounts --data author_email=Code@duinlab.nl
@@ -588,6 +593,11 @@ lacks -q wrangler "$out/dp/.gitignore"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=svelte-me --data 'stacks=[ts]' \
   --data ts_kind=web-app --data web_framework=svelte --data user_data=accounts \
   --data 'project_description=A small {demo}' . "$out/sv"
+# svr: the Svelte app with Renovate, which holds TypeScript below 7 as Dependabot does in sv.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=svelte-renovate --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data web_framework=svelte --data user_data=nothing \
+  --data dependency_bot=renovate . "$out/svr"
+
 # wp: a nested web app under a two-segment path on a custom domain, which production
 # routes to the Worker in place of --domain.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=path-me --data 'stacks=[ts]' \

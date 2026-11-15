@@ -7,8 +7,8 @@
 {%- if custom_domain %}
 // The production job also attaches the custom domain {{ custom_domain }}, with --domain.
 {%- elif site_path %}
-// The production job also routes {{ site_zone }}{{ site_path }} and everything under it to
-// the Worker, with --route on the zone {{ site_zone }}. The build sits in dist{{ site_path }}/,
+// The production job also routes {{ route_host }}{{ site_path }} and everything under it to
+// the Worker, with --route on the zone that holds {{ route_host }}. The build sits in dist{{ site_path }}/,
 // the request's full path, and vite.config.ts copies index.html and _headers to dist/.
 {%- endif %}
 //
