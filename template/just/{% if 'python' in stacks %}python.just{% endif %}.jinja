@@ -122,6 +122,18 @@ status:
 
 # The whole chain, from the network to validated output.
 pipeline: fetch build validate
+{%- if citable %}
+
+# Write the data release folder (default `release`, next to sources.toml): the data without the
+# sources whose terms forbid redistribution, datapackage.json and SHA256SUMS. `just release` is the project's own tag.
+# Run `just pipeline` first.
+data-release out='release':
+    {{ uv }} run {{ slug }} release{{ ' --codemeta ../codemeta.json' if python_dir != '.' else '' }} {% raw %}{{ out }}{% endraw %}
+
+# Check a data release folder: SHA256SUMS, and the RO-Crate and Croissant files when sources.toml asks for them.
+data-release-check out='release':
+    {{ uv }} run {{ slug }} release --check {% raw %}{{ out }}{% endraw %}
+{%- endif %}
 {%- endif %}
 {%- if python_kind == 'web-service' %}
 

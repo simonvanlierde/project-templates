@@ -278,3 +278,17 @@ test ! -e d/pipe/notebooks
 grep -qx 'pipe/data/raw/\*' d/.gitignore
 grep -q 'path: pipe/data/raw/\*.fetch.json' d/.github/workflows/python.yml
 grep -q '^pipeline: fetch build validate' d/just/python.just
+# The data release: a folder argument with a default, the nested codemeta.json one level up, and CI only
+# checks. The root justfile's `release` stays the project's own tag.
+grep -qx "data-release out='release':" d/just/python.just
+grep -qx "data-release-check out='release':" d/just/python.just
+grep -qF -- 'release --codemeta ../codemeta.json {{ out }}' d/just/python.just
+grep -qx 'pipe/release/' d/.gitignore
+# shellcheck disable=SC2016 # literal workflow text, not shell expansions
+grep -qF -- 'release --codemeta ../codemeta.json "$RUNNER_TEMP/release"' d/.github/workflows/python.yml
+# shellcheck disable=SC2016 # literal workflow text, not shell expansions
+grep -qF -- 'release --check "$RUNNER_TEMP/release"' d/.github/workflows/python.yml
+grep -qF -- ' release {{ out }}' dp/just/python.just
+(lacks -qF -- '--codemeta' dp/just/python.just dp/.github/workflows/python.yml)
+grep -qx 'release/' dp/.gitignore
+(lacks -q 'data-release' dpn/just/python.just dpn/.github/workflows/python.yml dpn/.gitignore dpn/README.md)

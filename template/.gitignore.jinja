@@ -84,6 +84,10 @@ target/
 {{ d }}data/raw/*
 !{{ d }}data/raw/.gitkeep
 {{ d }}data/processed/*
+{%- if citable %}
+# `just data-release` writes the folder to publish here.
+{{ d }}release/
+{%- endif %}
 {%- endif %}
 {%- if test_extras %}
 

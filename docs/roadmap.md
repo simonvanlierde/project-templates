@@ -7,13 +7,12 @@ Ideas and bugs are tracked as GitHub issues.
 [GOVERNANCE.md](https://github.com/simonvanlierde/project-templates/blob/main/GOVERNANCE.md)
 says who decides what goes here.
 
-Last reviewed: 2026-11-15
+Last reviewed: 2026-11-16
 
 ## Planned
 
-- Let the `data-pipeline` kind release its data: a `just release` recipe that publishes
-  the pipeline's outputs, with CI checks, once sourceledger has a release step.
-  Tracked in [#291](https://github.com/simonvanlierde/project-templates/issues/291).
+- Let the web-app kind use Svelte 5 as well as React and Preact, and accept a `site_url`
+  with a path, for an app served under a subpath.
 
 ## Not planned
 

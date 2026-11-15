@@ -100,6 +100,12 @@ jobs:
         run: uv run {{ slug }} revisions "$RUNNER_TEMP/fetches-before.jsonl" >"$RUNNER_TEMP/revisions.md"
       - run: uv run {{ slug }} build
       - run: uv run {{ slug }} validate
+{%- if citable %}
+
+      # The release folder `just data-release` writes, checked as `just data-release-check` does.
+      - run: uv run {{ slug }} release{{ ' --codemeta ../codemeta.json' if python_dir != '.' else '' }} "$RUNNER_TEMP/release"
+      - run: uv run {{ slug }} release --check "$RUNNER_TEMP/release"
+{%- endif %}
 
       # tests/test_published.py fails, not skips, when the output is missing. The
       # literal-value tripwire runs only on the weekly schedule, so a publisher revision
