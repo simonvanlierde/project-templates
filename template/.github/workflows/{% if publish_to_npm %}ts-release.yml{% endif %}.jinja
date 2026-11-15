@@ -128,6 +128,7 @@ jobs:
       # upload but this job still failed finds the version and goes on to the release job.
       - name: publish to npm
         run: |-
+          set -o pipefail
           pkg=$(tar -xzOf ./*.tgz package/package.json | node -e 'const p=JSON.parse(require("fs").readFileSync(0,"utf8"));console.log(p.name+"@"+p.version)')
           if npm view "$pkg" version >/dev/null 2>&1; then
             echo "$pkg is already on npm; leaving it"
