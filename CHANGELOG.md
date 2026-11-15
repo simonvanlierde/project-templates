@@ -22,6 +22,8 @@ Upgrade steps:
 ### Changed
 
 - The author's own `simonvanlierde` hooks (citesync, jsonvet) skip the one-week release cooldown in Dependabot and Renovate, and so does sourceledger in a data-pipeline project (Dependabot `cooldown.exclude`, a Renovate package rule). Whoever can publish them can push to the repos directly, so the week only delays their fixes. Other packages keep the week.
+- A project with `publish_to_npm` and no PyPI or crates.io release makes its GitHub release in `ts-release.yml`, after the npm publish. `release.yml` is no longer rendered for it, so a tag npm refuses leaves no immutable release behind. After `copier update`, delete the old `.github/workflows/release.yml` if copier leaves it.
+- `copier-update.yml` leaves a template tag under a week old for a later run, so a tag pushed with stolen credentials gets a week to be noticed before the update token pushes it. The tag's own date is used, so this does not stop a forged one.
 - The docs have a [CML golden path](docs/cml-golden-path.md) page: the route a CML repo takes from `copier copy` to a signed release, a container, a deploy and OTLP telemetry.
 - The `readme` requirement in `levels.toml` keeps maintainer-only material, such as deploy and release steps, out of the README: it goes in `docs/` or `CONTRIBUTING.md`.
 

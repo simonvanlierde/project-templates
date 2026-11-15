@@ -73,6 +73,18 @@ jobs:
               echo "$answers: already on $latest."
               continue
             fi
+            # A tag under a week old waits, as `--exclude-newer` makes Copier's own dependencies wait:
+            # a template tag pushed by a stolen credential gets a week to be noticed before this
+            # workflow's token pushes it. The tagger date is the tagger's own claim.
+            tag_repo="$RUNNER_TEMP/tag-age"
+            rm -rf "$tag_repo"
+            git init -q "$tag_repo"
+            git -C "$tag_repo" fetch -q --depth=1 "$url" "refs/tags/$latest:refs/tags/$latest"
+            tagged=$(git -C "$tag_repo" for-each-ref --format='%(creatordate:unix)' "refs/tags/$latest")
+            if [ $(( $(date +%s) - tagged )) -lt 604800 ]; then
+              echo "$answers: $latest is under a week old; leaving it for a later run."
+              continue
+            fi
             uvx --exclude-newer "1 week" "copier@$COPIER_VERSION" update --answers-file "$answers" --defaults --vcs-ref "$latest"
             git add -A
             git -c core.hooksPath=/dev/null -c user.name=copier-update -c user.email=copier-update@localhost \
