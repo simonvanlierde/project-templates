@@ -277,6 +277,7 @@ grep -A3 'lockFileMaintenance: {' d/renovate.json5 | grep -q 'minimumReleaseAge:
 # Minor and patch updates and the relock merge themselves, by Renovate, so the merge uses
 # its app's bypass. Nothing else does: majors, copier and the actions group stay manual.
 grep -qx '  platformAutomerge: false,' d/renovate.json5
+grep -qx "  prCreation: 'not-pending'," d/renovate.json5
 grep -A4 'lockFileMaintenance: {' d/renovate.json5 | grep -qx '    automerge: true,'
 grep -B3 'automerge: true' d/renovate.json5 | grep -q "groupName: 'runtime'"
 test "$(grep -c 'automerge: true' d/renovate.json5)" = 2
