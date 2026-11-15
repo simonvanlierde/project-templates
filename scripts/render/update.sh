@@ -416,6 +416,10 @@ for selection, expected in [('all', features | {'property', 'mutation'}),
     workflow = (project / '.github/workflows/python.yml').read_text()
     assert ('windows-latest' in workflow) == ('python_windows' in expected), selection
     assert not list(project.rglob('*.rej')), selection
+    # publish_to_crates is new since v0.14.0: an update keeps the crate unpublishable.
+    assert answers['publish_to_crates'] is False, answers
+    assert 'publish = false' in (project / 'Cargo.toml').read_text(), selection
+    assert not (project / '.github/workflows/rust-release.yml').exists(), selection
 PYTEST
   grep -qx 'level: community' "$out/level-silver/.copier-answers.yml"
   grep -qx 'level: minimal' "$out/level-none/.copier-answers.yml"
