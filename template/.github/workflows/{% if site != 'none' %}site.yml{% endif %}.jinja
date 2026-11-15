@@ -265,23 +265,32 @@ jobs:
           printf '/*\n  X-Robots-Tag: noindex\n' > {{ site_out }}/_headers
 {%- endif %}
 
+      # This job may have queued behind a close or a draft switch: a retire that
+      # ran first must not be undone by a deploy. This step alone holds GH_TOKEN, so the
+      # deploy step, which holds the Cloudflare token, never gets it.
       - if: steps.gate.outputs.run == 'true'
+        id: pr
+        env:
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          REPO: {% raw %}${{ github.repository }}{% endraw %}
+          PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
+        run: |-
+          state=$(gh api "repos/$REPO/pulls/$PR" --jq '.state + " " + (.draft|tostring)')
+          if [ "$state" != "open false" ]; then
+            echo "::notice::Preview skipped: pull request $PR is no longer open and ready ($state)."
+            echo "open=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "open=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.gate.outputs.run == 'true' && steps.pr.outputs.open == 'true'
         id: upload
         env:
           CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
           CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
-          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
-          REPO: {% raw %}${{ github.repository }}{% endraw %}
           PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
           # The same week's wait as a package's own installs: dlx resolves wrangler's
           # dependencies without a lockfile, here with the token in reach.
           WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@{{ wrangler_version }}
         run: |-
-          # This job may have queued behind a close or a draft switch: a retire that
-          # ran first must not be undone by a deploy.
-          state=$(gh api "repos/$REPO/pulls/$PR" --jq '.state + " " + (.draft|tostring)')
-          if [ "$state" != "open false" ]; then
-            echo "::notice::Preview skipped: pull request $PR is no longer open and ready ($state)."
-            exit 0
-          fi
           "$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Preview "{{ worker_name }}-pr-$PR" --config wrangler.site.jsonc

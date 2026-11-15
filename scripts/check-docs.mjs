@@ -143,7 +143,7 @@ try {
         console.log(`${url} (${width}px, ${colorScheme}): docs checks passed`);
       }
       const destination = await page.locator('.md-sidebar--primary a.md-nav__link[href]').evaluateAll((links) =>
-        links.find((link) => new URL(link.href).pathname !== location.pathname && new URL(link.href).origin === location.origin)?.getAttribute("href"));
+        links.find((link) => getComputedStyle(link).visibility === "visible" && new URL(link.href).pathname !== location.pathname && new URL(link.href).origin === location.origin)?.getAttribute("href"));
       assert.ok(destination, `${url}: no local navigation link`);
       const link = page.locator(`.md-sidebar--primary a.md-nav__link[href="${destination}"]`).first();
       await Promise.all([page.waitForURL(new URL(destination, page.url()).href), link.click()]);

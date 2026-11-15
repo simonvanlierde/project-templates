@@ -68,5 +68,6 @@ background for at least 4.5:1 contrast when changing colors.
 - Give first-time readers a short route to choosing and creating a project.
 - Label links that take readers to the GitHub quick start.
 - Keep theme components and assets local; omit remote repository statistics.
-- Keep the homepage as a reading page, without a hero or a grid of cards.
+- Keep the homepage as a reading page, without a hero or a grid of cards. The one bold
+  "New here?" line above the steps is the only emphasis.
 - Avoid custom colors or components when the theme already serves the task.

@@ -253,22 +253,31 @@ jobs:
         run: |
           printf '\n/*\n  X-Robots-Tag: noindex\n' >> dist/_headers
 
+      # This job may have queued behind a close or a draft switch: a retire that
+      # ran first must not be undone by a deploy. This step alone holds GH_TOKEN, so the
+      # deploy step, which holds the Cloudflare token, never gets it.
       - if: steps.gate.outputs.run == 'true'
-        id: upload
+        id: pr
         env:
-          CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
-          CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
           GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
           REPO: {% raw %}${{ github.repository }}{% endraw %}
           PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
         run: |-
-          # This job may have queued behind a close or a draft switch: a retire that
-          # ran first must not be undone by a deploy.
           state=$(gh api "repos/$REPO/pulls/$PR" --jq '.state + " " + (.draft|tostring)')
           if [ "$state" != "open false" ]; then
             echo "::notice::Preview skipped: pull request $PR is no longer open and ready ($state)."
-            exit 0
+            echo "open=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "open=true" >>"$GITHUB_OUTPUT"
           fi
+
+      - if: steps.gate.outputs.run == 'true' && steps.pr.outputs.open == 'true'
+        id: upload
+        env:
+          CLOUDFLARE_API_TOKEN: {% raw %}${{ secrets.CLOUDFLARE_API_TOKEN }}{% endraw %}
+          CLOUDFLARE_ACCOUNT_ID: {% raw %}${{ secrets.CLOUDFLARE_ACCOUNT_ID }}{% endraw %}
+          PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
+        run: |-
           "$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Preview "{{ worker_slug }}-pr-$PR"
 
   # Production: every push to main deploys the build the checks ran on. Without the

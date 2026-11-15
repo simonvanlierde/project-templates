@@ -17,3 +17,4 @@ Confirmation section names the check that enforces it, or says none exists yet.
 | [0008](0008-three-audiences-in-order.md) Three audiences in order | accepted | 2026-11-10 |
 | [0009](0009-optional-features-share-one-extras-answer.md) Optional features share one extras answer | accepted | 2026-11-11 |
 | [0010](0010-a-level-ladder-replaces-the-badge-question.md) A level ladder replaces the badge question | accepted | 2026-11-12 |
+| [0011](0011-rust-releases-through-one-workflow.md) Rust releases through one workflow | accepted | 2026-11-15 |

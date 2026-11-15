@@ -14,14 +14,21 @@ Upgrade steps:
 
 - Existing projects must [add the `PNGs` spelling exception](docs/updates.md#spelling-exceptions-in-existing-projects) to their project-owned `_typos.toml`.
 
+### Added
+
+- A `publish_to_crates` answer for the Rust stack (default off, so existing projects update unchanged and keep `publish = false`). It adds `rust-release.yml`, which replaces `release.yml`: tag signature check, version check against `Cargo.toml`, then publish to crates.io by trusted publishing from a protected `crates` environment, and the GitHub release. A Rust binary also gets archives for four targets named as `cargo binstall` looks them up (`[package.metadata.binstall]`), with build provenance attestations that the release job verifies before upload. `just repo-settings` creates the environment and prints the crates.io trusted-publisher address, and `first-release.md` lists the manual first publish. It cannot be combined with `publish_to_pypi`. See [Publishing](docs/setup.md#publishing).
+
 ### Changed
 
+- The docs have a [CML golden path](docs/cml-golden-path.md) page: the route a CML repo takes from `copier copy` to a signed release, a container, a deploy and OTLP telemetry.
 - The `readme` requirement in `levels.toml` keeps maintainer-only material, such as deploy and release steps, out of the README: it goes in `docs/` or `CONTRIBUTING.md`.
 
 ### Fixed
 
 - Generated hooks preserve canonical `LICENSES/` bytes while still checking ordinary prose and source files. New projects also preserve the image-format plural `PNGs`.
 - Python Docker builds exclude PEM files, key files and `.npmrc` at every directory depth, so `COPY` keeps them out of image layers.
+- `verify-tag.sh` names a missing tag and a missing `.github/allowed_signers` instead of ending on a bare git error.
+- A pull request preview checks the PR's state in its own step, and the deploy step that holds the Cloudflare token no longer gets `GH_TOKEN`.
 - Research projects use Tornado 6.6.1's pinned source archive while its security fix is inside the one-week dependency window, so Jupyter's dependency passes the audit without disabling the release-age policy.
 - The project chooser and quick-start examples use the released `python_kind` answer in Python commands.
 

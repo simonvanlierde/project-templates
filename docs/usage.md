@@ -69,7 +69,7 @@ The advanced questions and their defaults:
 | `python_version`, `python_min`, `node_version`, `go_version` | Current stable releases; `python_min` defaults two minor versions below |
 | `rust_version` | The crate's minimum supported Rust version (`rust-version` in `Cargo.toml`), the current stable minor by default |
 | `python_api` | Enabled ([API-break check](#api-break-check)) |
-| `publish_to_pypi`, `publish_to_npm`, `publish_to_ghcr` | Disabled ([Publishing](setup.md#publishing)) |
+| `publish_to_pypi`, `publish_to_npm`, `publish_to_crates`, `publish_to_ghcr` | Disabled ([Publishing](setup.md#publishing)) |
 | `app_port` | 8000 |
 | `site_url` | `https://<project>.<github_user>.workers.dev` (`<project>-site` for a site on Cloudflare), which is right when the account's subdomain is the GitHub user. Another host is a custom domain ([Custom domains](hosting.md#custom-domains)) |
 

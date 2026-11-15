@@ -5,6 +5,8 @@ Start a Python, TypeScript, Rust, Go or Docker repository with this
 needs more than one. Generated projects include tests, local checks and CI
 workflows, with weekly pull requests to bring in template updates.
 
+New here? **[Help me choose a project type](choose.md)**
+
 ## Start your first project
 
 1. [Help me choose](choose.md) suggests a project type and a command to create it.
@@ -26,7 +28,8 @@ Already have a repository? Follow
 - [Setting up the repo](setup.md): public repos, protecting `main`, the About box and publishing.
 - [Hosting](hosting.md): static sites, Cloudflare Workers, previews and the social card.
 - [Updates](updates.md): template and dependency updates, and adopting the template.
-- [Levels](levels.md): what a public repo commits to, and the OpenSSF badge.
+- [Repo levels](levels.md): what a public repo commits to, and the OpenSSF badge.
+- [CML golden path](cml-golden-path.md): the one route for CML repos, from render to monitoring.
 - [Python project kinds](python-kinds.md): libraries, tools, services and data pipelines.
 - [Tooling](tooling.md): the tools and checks in generated projects.
 - [CI baseline](ci-baseline.md): what each workflow checks.

@@ -15,6 +15,12 @@ gh issue create --title "First release" --body-file .github/first-release.md
 - [ ] **PyPI trusted publishing**, before the first tag: add the pending publisher that
   `just repo-settings` prints. Without it, `python-release.yml` cannot upload.
 {%- endif %}
+{%- if publish_to_crates %}
+- [ ] **crates.io**, before the first tag: publish `0.1.0` by hand with a short-lived API
+  token (`cargo publish`), since trusted publishing cannot create a crate. Then add the
+  trusted publisher that `just repo-settings` prints. Without it, `rust-release.yml` cannot
+  publish.
+{%- endif %}
 {%- if public and citable %}
 - [ ] **Zenodo**, before the first release: turn this repo on at the Zenodo link that
   `just repo-settings` prints. Zenodo then archives each GitHub release and mints a DOI.

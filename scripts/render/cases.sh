@@ -135,6 +135,11 @@ test ! -e "$out/minimal-extras/.github/workflows/cold-install.yml"
 # static site: r the plain one, t the Astro one beside a package at the root.
 r_args=(--data project_name=crate-me --data 'stacks=[rust]' --data site=plain)
 "${copier[@]}" --vcs-ref=HEAD "${r_args[@]}" . "$out/r"
+# publish_to_crates: a binary at the root (cb) and a library in a subdirectory (cl).
+"${copier[@]}" --vcs-ref=HEAD --data project_name=crates-bin --data 'stacks=[rust]' --data rust_kind=binary \
+  --data publish_to_crates=true . "$out/cb"
+"${copier[@]}" --vcs-ref=HEAD --data project_name=crates-lib --data 'stacks=[rust]' --data rust_kind=library \
+  --data rust_dir=crates/lib --data publish_to_crates=true . "$out/cl"
 # Rendered again over edited starter pages, which stay the project's.
 echo '<!-- project edit -->' >>"$out/r/site/index.html"
 echo '/* project edit */' >>"$out/r/site/style.css"
@@ -447,6 +452,7 @@ refused() {
     exit 1
   }
 }
+refuses 'each create the GitHub release' --data 'stacks=[python,rust]' --data python_kind=library --data publish_to_pypi=true --data publish_to_crates=true
 refuses 'An empty value' --data 'stacks=[python]' --data python_dir=
 refuses 'An empty value' --data 'stacks=[ts]' --data ts_dir=
 refuses 'An empty value' --data 'stacks=[rust]' --data rust_dir=

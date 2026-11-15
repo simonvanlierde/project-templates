@@ -114,7 +114,7 @@ _message_after_copy: |
   Then commit.
   {%- endif %}
   After the first push, run `just repo-settings` to protect main.
-  {%- for reg, on in [('PyPI', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('ghcr', publish_to_ghcr | default(false))] if on %}
+  {%- for reg, on in [('PyPI', publish_to_pypi | default(false)), ('npm', publish_to_npm | default(false)), ('crates.io', publish_to_crates | default(false)), ('ghcr', publish_to_ghcr | default(false))] if on %}
   Before the first {{ reg }} release, set up the trusted publisher and the protected environment:
   https://github.com/simonvanlierde/project-templates/blob/main/docs/setup.md#publishing
   {%- endfor %}
@@ -123,7 +123,7 @@ _message_after_copy: |
   {%- if citable %} Set the version first in every manifest
   {{ 'citesync.toml lists' if (python_dir != '.' or ts_dir != '.' or rust_dir != '.') else 'at the root' }}, and in CITATION.cff once it has a `version`:
   citesync stops the release while they differ.
-  {%- elif publish_to_pypi | default(false) or publish_to_npm | default(false) %} Set the version in the package manifest first.
+  {%- elif publish_to_pypi | default(false) or publish_to_npm | default(false) or publish_to_crates | default(false) %} Set the version in the package manifest first.
   {%- endif %}
   Later, `copier update` pulls in new template releases.
 
@@ -786,6 +786,20 @@ rust_version:
   validator: >-
     {% if not rust_version|regex_search('^1\\.(8[5-9]|9[0-9]|[1-9][0-9]{2,})(\\.[0-9]+)?$') %}
     Give 1.85 or later, as `1.85` or `1.85.0`: Cargo.toml uses edition 2024.
+    {% endif %}
+
+# Releases through rust-release.yml, which also creates the GitHub release, so it
+# cannot run beside python-release.yml. A binary crate also gets release binaries that
+# `cargo binstall` finds. Projects from before this question keep `publish = false`.
+publish_to_crates:
+  type: bool
+  when: "{{ 'rust' in stacks }}"
+  ask: "{{ customise }}"
+  help: Add a release workflow publishing to crates.io via trusted publishing (needs setup on crates.io first)
+  default: false
+  validator: >-
+    {% if publish_to_crates and publish_to_pypi | default(false) %}
+    rust-release.yml and python-release.yml each create the GitHub release: turn one of publish_to_crates and publish_to_pypi off.
     {% endif %}
 
 # --- go -----------------------------------------------------------------------

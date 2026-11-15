@@ -42,6 +42,10 @@ for r in x r d; do
   grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostring)'\''' <<<"$preview_job"
   # shellcheck disable=SC2016
   grep -qF '[ "$state" != "open false" ]' <<<"$preview_job"
+  # The PR-state check is its own step, which the deploy step waits on and shares no token with.
+  grep -qx '        id: pr' <<<"$preview_job"
+  grep -qF "steps.pr.outputs.open == 'true'" <<<"$preview_job"
+  [ "$(sed -n '/^        id: upload$/,$p' <<<"$preview_job" | grep -c GH_TOKEN)" = 0 ]
   # shellcheck disable=SC2016
   grep -qF 'group: preview-site-${{ github.event.pull_request.number }}' <<<"$preview_job"
   grep -qF 'X-Robots-Tag: noindex' <<<"$preview_job"

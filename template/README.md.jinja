@@ -1,6 +1,6 @@
 {#- Trailing punctuation in a heading trips rumdl (MD026). -#}
 {#- PyPI and npm show this file as the package page, where a relative link is dead. -#}
-{%- set blob = 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/blob/main/' if publish_to_pypi or publish_to_npm else '' -%}
+{%- set blob = 'https://github.com/' ~ github_user ~ '/' ~ slug ~ '/blob/main/' if publish_to_pypi or publish_to_npm or publish_to_crates else '' -%}
 {%- set tree = blob | replace('/blob/', '/tree/') -%}
 # {{ project_name | regex_replace('[.,;:!?]+$', '') }}
 
@@ -10,6 +10,7 @@
 {% endif %}{% if publish_to_pypi %}[![PyPI](https://img.shields.io/pypi/v/{{ slug }})](https://pypi.org/project/{{ slug }}/)
 [![Python versions](https://img.shields.io/pypi/pyversions/{{ slug }})](https://pypi.org/project/{{ slug }}/)
 {% endif %}{% if publish_to_npm %}[![npm](https://img.shields.io/npm/v/{{ slug }})](https://www.npmjs.com/package/{{ slug }})
+{% endif %}{% if publish_to_crates %}[![crates.io](https://img.shields.io/crates/v/{{ crate_name }})](https://crates.io/crates/{{ crate_name }})
 {% endif %}{% if public %}[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/{{ github_user }}/{{ slug }}/badge)](https://scorecard.dev/viewer/?uri=github.com/{{ github_user }}/{{ slug }})
 {% endif %}{% if public and citable %}[![Software Heritage](https://archive.softwareheritage.org/badge/origin/https://github.com/{{ github_user }}/{{ slug }}/)](https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/{{ github_user }}/{{ slug }})
 {% endif %}{% if license != 'none' %}[![license](https://img.shields.io/badge/license-{{ license | replace('-', '--') }}-blue.svg)]({{ blob }}LICENSE)
@@ -24,7 +25,7 @@ Questions and bugs: see [CONTRIBUTING.md]({{ blob }}.github/CONTRIBUTING.md).
 
 <!-- TODO: {% if not project_description %}say what this software does and the problem it solves, then {% endif %}show its basic use. The OpenSSF Best Practices badge asks for {{ 'both' if not project_description else 'it' }}. -->
 
-Get it from the [releases](https://github.com/{{ github_user }}/{{ slug }}/releases){% if publish_to_pypi %}, from [PyPI](https://pypi.org/project/{{ slug }}/) (`uv add {{ slug }}`){% endif %}{% if publish_to_npm %}, from [npm](https://www.npmjs.com/package/{{ slug }}) (`pnpm add {{ slug }}`){% endif %}, or clone the repository.
+Get it from the [releases](https://github.com/{{ github_user }}/{{ slug }}/releases){% if publish_to_pypi %}, from [PyPI](https://pypi.org/project/{{ slug }}/) (`uv add {{ slug }}`){% endif %}{% if publish_to_npm %}, from [npm](https://www.npmjs.com/package/{{ slug }}) (`pnpm add {{ slug }}`){% endif %}{% if publish_to_crates %}, from [crates.io](https://crates.io/crates/{{ crate_name }}) (`cargo {{ 'binstall' if rust_kind == 'binary' else 'add' }} {{ crate_name }}`){% endif %}, or clone the repository.
 {% endif %}
 ## Development
 

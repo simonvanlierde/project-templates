@@ -9,8 +9,22 @@ repository = "https://github.com/{{ github_user }}/{{ slug }}"
 {%- if license != 'none' %}
 license = "{{ license }}"
 {%- endif %}
+{%- if not publish_to_crates %}
 # Makes an accidental `cargo publish` fail. Delete it when you do want to publish.
 publish = false
+{%- endif %}
+
+{%- if publish_to_crates and rust_kind == 'binary' %}
+
+# Where `cargo binstall` finds the archives rust-release.yml attaches to the release.
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.{ archive-format }"
+pkg-fmt = "tgz"
+bin-dir = "{ bin }{ binary-ext }"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
+{%- endif %}
 
 [dependencies]
 {%- if codspeed or (rust_kind == 'library' and 'property' in test_extras) %}

@@ -243,6 +243,9 @@ grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.
 grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostring)'\''' d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
 grep -qF '[ "$state" != "open false" ]' d/.github/workflows/ts.yml
+grep -qx '        id: pr' d/.github/workflows/ts.yml
+grep -qF "steps.pr.outputs.open == 'true'" d/.github/workflows/ts.yml
+[ "$(sed -n '/^        id: upload$/,/^  production:/p' d/.github/workflows/ts.yml | grep -c GH_TOKEN)" = 0 ]
 grep -q 'pull-requests: read' d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
 grep -qF 'group: preview-${{ github.event.pull_request.number }}' d/.github/workflows/ts.yml
