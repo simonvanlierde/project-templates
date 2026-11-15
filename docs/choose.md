@@ -15,37 +15,33 @@ Copier command. You can change the template's other settings when Copier asks.
 <label><input type="radio" name="task" value="research"> Research or a data project</label>
 <label><input type="radio" name="task" value="website"> A website</label>
 </fieldset>
-<fieldset data-question="tool" hidden disabled>
-<legend>What will it do?</legend>
-<label for="chooser-tool">Type of tool or service</label>
+<div data-question="tool" hidden>
+<label for="chooser-tool">What will it do?</label>
 <select id="chooser-tool" name="tool">
 <option value="">Choose an option</option>
 <option value="app">Run a program I write</option>
 <option value="service">Serve an HTTP API with Python</option>
 <option value="compose">Run existing container images together</option>
 </select>
-</fieldset>
-<fieldset data-question="research" hidden disabled>
-<legend>How will you work with data?</legend>
-<label for="chooser-research">Type of research or data project</label>
+</div>
+<div data-question="research" hidden>
+<label for="chooser-research">How will you work with data?</label>
 <select id="chooser-research" name="research">
 <option value="">Choose an option</option>
 <option value="notebooks">Analyse data and run experiments, with notebooks</option>
 <option value="pipeline">Fetch, build and validate data in repeatable steps</option>
 </select>
-</fieldset>
-<fieldset data-question="website" hidden disabled>
-<legend>What kind of website?</legend>
-<label for="chooser-website">Type of website</label>
+</div>
+<div data-question="website" hidden>
+<label for="chooser-website">What kind of website?</label>
 <select id="chooser-website" name="website">
 <option value="">Choose an option</option>
 <option value="app">An interactive browser app</option>
 <option value="static">A static page or content site</option>
 </select>
-</fieldset>
-<fieldset data-question="language" hidden disabled>
-<legend>Which language will you use?</legend>
-<label for="chooser-language">Language</label>
+</div>
+<div data-question="language" hidden>
+<label for="chooser-language">Which language will you use?</label>
 <select id="chooser-language" name="language">
 <option value="">Choose a language</option>
 <option value="python">Python</option>
@@ -53,8 +49,9 @@ Copier command. You can change the template's other settings when Copier asks.
 <option value="rust">Rust</option>
 <option value="go">Go</option>
 </select>
-</fieldset>
+</div>
 </form>
+<p data-chooser-announce role="status" class="chooser-announce"></p>
 <div data-chooser-static hidden>
 <h2>Start with the static site guide</h2>
 <p>The template offers a plain HTML page or an Astro site alongside a project. The <a href="hosting.md#static-site">static site guide</a> explains those choices and hosting.</p>

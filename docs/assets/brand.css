@@ -1,4 +1,5 @@
-/* This site's plum and gold. Generated docs sites keep the theme's colours, so this file
+/* Overrides the indigo accent in docs.css, which this file follows in extra_css.
+   This site's plum and gold. Generated docs sites keep the theme's colours, so this file
    is not in the template; DESIGN.md has the roles. */
 :root > * {
   --md-primary-fg-color: #5b2d6e;

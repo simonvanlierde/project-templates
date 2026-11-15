@@ -49,8 +49,10 @@ if (form) {
   const staticHelp = root.querySelector("[data-chooser-static]");
   const command = root.querySelector("[data-chooser-command]");
   const status = root.querySelector("[data-chooser-status]");
+  const announce = root.querySelector("[data-chooser-announce]");
   const copy = root.querySelector("[data-chooser-copy]");
   let currentCommand = "";
+  let copyTimer;
 
   function update() {
     const task = form.elements.task.value;
@@ -59,15 +61,19 @@ if (form) {
     for (const group of form.querySelectorAll("[data-question]")) {
       const shown = group.dataset.question === "language" ? showLanguage : group.dataset.question === task;
       group.hidden = !shown;
-      group.disabled = !shown;
+      for (const control of group.querySelectorAll("select")) control.disabled = !shown;
     }
     const answers = Object.fromEntries(new FormData(form));
     const selected = recommend(answers);
     result.hidden = !selected;
     staticHelp.hidden = !(answers.task === "website" && answers.website === "static");
     status.textContent = "";
-    currentCommand = selected ? copierCommand(selected) : "";
-    if (!selected) return;
+    // Display one flag per line; the shell reads the continued lines as one command.
+    currentCommand = selected ? copierCommand(selected).replace(/ (--data|gh:)/g, " \\\n  $1") : "";
+    if (!selected) {
+      announce.textContent = !task ? "" : task === "website" && answers.website === "static" ? "See the static site guide." : "Now answer the next question.";
+      return;
+    }
     root.querySelector("[data-chooser-title]").textContent = selected.title;
     root.querySelector("[data-chooser-reason]").textContent = selected.reason;
     for (const [attribute, values] of [["files", selected.files], ["checks", selected.checks]]) {
@@ -81,7 +87,7 @@ if (form) {
       }));
     }
     command.textContent = currentCommand;
-    status.textContent = `Recommendation: ${selected.title}`;
+    announce.textContent = `Recommendation: ${selected.title}`;
   }
 
   form.addEventListener("change", update);
@@ -90,7 +96,11 @@ if (form) {
     const text = currentCommand;
     try {
       await navigator.clipboard.writeText(text);
-      if (currentCommand === text) status.textContent = "Command copied.";
+      if (currentCommand !== text) return;
+      status.textContent = "Command copied.";
+      copy.textContent = "Copied";
+      clearTimeout(copyTimer);
+      copyTimer = setTimeout(() => { copy.textContent = "Copy Copier command"; }, 2000);
     } catch {
       if (currentCommand !== text) return;
       const range = document.createRange();

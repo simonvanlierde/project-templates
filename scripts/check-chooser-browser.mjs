@@ -34,9 +34,9 @@ try {
       const result = page.locator("[data-chooser-result]");
       const title = page.locator("[data-chooser-title]");
       const command = page.locator("[data-chooser-command]");
-      const language = page.getByLabel("Language", { exact: true });
-      const tool = page.getByLabel("Type of tool or service");
-      const website = page.getByLabel("Type of website", { exact: true });
+      const language = page.getByLabel("Which language will you use?");
+      const tool = page.getByLabel("What will it do?");
+      const website = page.getByLabel("What kind of website?");
       await expect(result).toBeHidden();
       await page.getByRole("radio", { name: "A reusable package" }).focus();
       await page.keyboard.press("Space");
@@ -46,10 +46,11 @@ try {
       for (const [value, expected] of [["python", "Python library"], ["ts", "TypeScript library"], ["rust", "Rust library"], ["go", "Go library"]]) {
         await language.selectOption(value);
         await expect(title).toHaveText(expected);
-        await expect(page.locator("[data-chooser-status]")).toHaveText(`Recommendation: ${expected}`);
+        await expect(page.locator("[data-chooser-announce]")).toHaveText(`Recommendation: ${expected}`);
       }
       await page.getByRole("radio", { name: "A tool or service" }).check();
       await expect(result).toBeHidden();
+      await expect(page.locator("[data-chooser-announce]")).toHaveText("Now answer the next question.");
       await expect(language).toBeHidden();
       await expect(language).toBeDisabled();
       await tool.selectOption("app");
@@ -58,13 +59,13 @@ try {
       await expect(title).toHaveText("Python application");
       await tool.selectOption("service");
       await expect(title).toHaveText("Python web service with Docker");
-      await expect(command).toContainText("--data 'stacks=[python,docker]' --data 'python_kind=web-service' --data 'docker_image=true'");
+      await expect(command).toContainText("--data 'stacks=[python,docker]' \\\n  --data 'python_kind=web-service' \\\n  --data 'docker_image=true'");
       await tool.selectOption("compose");
       await expect(title).toHaveText("Docker Compose project");
       await expect(command).not.toContainText("kind=");
       await page.getByRole("radio", { name: "Research or a data project" }).check();
       await expect(result).toBeHidden();
-      const research = page.getByLabel("Type of research or data project");
+      const research = page.getByLabel("How will you work with data?");
       await research.selectOption("notebooks");
       await expect(title).toHaveText("Python research project");
       await research.selectOption("pipeline");
@@ -78,10 +79,11 @@ try {
       await expect(title).toHaveText("TypeScript web app");
       await expect(page.locator("[data-chooser-static]")).toBeHidden();
       await expect(command).not.toContainText("user_data");
-      const copy = page.getByRole("button", { name: "Copy Copier command", exact: true });
+      const copy = page.locator("[data-chooser-copy]");
       const status = page.locator("[data-chooser-status]");
       await copy.click();
       await expect(status).toHaveText("Command copied.");
+      await expect(copy).toHaveText("Copied");
       assert.equal(await page.evaluate(() => window.copiedText), await command.textContent());
       await page.evaluate(() => { window.copyMode = "denied"; });
       await copy.click();
@@ -101,9 +103,9 @@ try {
       await expect(codeCopy).toHaveCount(2);
       await expect(codeCopy.last()).toBeVisible();
       await expect(codeCopy.last()).toHaveAttribute("data-clipboard-target", /#__code_1 > code/);
-      assert.deepEqual((await page.locator(".md-sidebar--primary > .md-sidebar__scrollwrap > .md-sidebar__inner > nav > ul > li > a").allTextContents()).slice(0, 3).map(text => text.trim()),
-        ["Get started", "Help me choose", "Use the template"]);
-      await expect(page.locator(".md-footer__link--prev")).toContainText("Get started");
+      assert.deepEqual((await page.locator(".md-sidebar--primary > .md-sidebar__scrollwrap > .md-sidebar__inner > nav > ul > li > :is(a, label)").allTextContents()).slice(0, 3).map(text => text.trim()),
+        ["Get started", "Guides", "Reference"]);
+      await expect(page.locator(".md-footer__link--prev")).toContainText("Overview");
       await expect(page.locator(".md-footer__link--next")).toContainText("Use the template");
       await page.goto(new URL("usage/?h=Copier", url).href);
       await expect(page.locator(".md-content mark").first()).toBeVisible();
