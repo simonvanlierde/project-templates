@@ -242,7 +242,6 @@ for p in cb cl; do
   grep -q 'cargo publish --locked --no-verify' $p/.github/workflows/rust-release.yml
   grep -q 'crates.io' $p/.github/first-release.md
   grep -q 'for env in .*crates' $p/justfile
-  (lacks -q '^publish = false' $p/**/Cargo.toml $p/Cargo.toml 2>/dev/null || true)
 done
 # Binary: archives named as cargo binstall looks them up, attested and checked before upload.
 grep -q 'binstall' cb/Cargo.toml

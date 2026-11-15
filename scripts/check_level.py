@@ -113,7 +113,7 @@ def answer_traits(a: dict) -> set[str]:
         out.add("cli")
     if ("python" in stacks and a.get("publish_to_pypi")) or ("ts" in stacks and a.get("publish_to_npm")):
         out.add("package")
-    if rust_kind == "library" or a.get("publish_to_crates"):
+    if rust_kind == "library":
         out.add("package")
     out |= {"data-pipeline": {"pipeline"}, "research": {"numerics"}}.get(kind, set())
     return out
@@ -145,7 +145,8 @@ LICENCE_CMD = re.compile(
 RELEASE_UPLOAD = re.compile(
     r"upload-artifact|gh release upload|pypa/gh-action-pypi-publish|cargo publish|npm publish|pnpm publish"
 )
-API_CHECK = re.compile(r"griffe|cargo[- ]semver-checks|api-extractor", re.IGNORECASE)
+# `pnpm run api` is the TS template's api-extractor script.
+API_CHECK = re.compile(r"griffe|cargo[- ]semver-checks|api-extractor|pnpm (?:run )?api\b", re.IGNORECASE)
 # test-policy: a sentence that ties a change to its tests, and a named style, standard or linter.
 TEST_POLICY = re.compile(r"\b(change|pull request|fix|feature)s?\b[^.]{0,120}?\btests?\b", re.IGNORECASE)
 CODING_STANDARDS = re.compile(

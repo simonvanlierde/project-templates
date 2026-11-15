@@ -231,3 +231,14 @@ def test_axe_scan_is_not_found_in_unrelated_names(tmp_path: Path):
 def test_dual_license_files_count_as_a_license(tmp_path: Path):
     files = {k: v for k, v in GOOD.items() if k != "LICENSE"} | {"LICENSE-MIT": "MIT\n", "LICENSE-APACHE": "Apache\n"}
     assert run(write(tmp_path, files))["license"] == ("met", "LICENSE-APACHE, LICENSE-MIT (MIT)")
+
+
+def test_a_published_binary_crate_is_not_a_package():
+    binary = {"stacks": ["rust"], "rust_kind": "binary", "publish_to_crates": True}
+    assert "package" not in check_level.answer_traits(binary)
+    assert "package" in check_level.answer_traits(binary | {"rust_kind": "library"})
+
+
+def test_pnpm_api_script_counts_as_an_api_check():
+    assert check_level.API_CHECK.search("      - run: pnpm run api")
+    assert not check_level.API_CHECK.search("      - run: pnpm apilint")
