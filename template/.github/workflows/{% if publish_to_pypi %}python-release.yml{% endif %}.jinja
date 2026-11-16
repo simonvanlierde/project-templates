@@ -1,3 +1,4 @@
+{% from 'includes/create-release.jinja' import create_release -%}
 name: python release
 
 # Trusted publishing: no API token. Configure the publisher once at
@@ -261,6 +262,4 @@ jobs:
           gh attestation verify "$sdist" --repo "$GH_REPO" --bundle "$sdist.sbom.intoto.jsonl" \
             --predicate-type https://cyclonedx.org/bom
           printf '\nThe SBOM lists the dependency versions this release was tested with, not what an install will resolve.\n' >>../notes/notes.md
-          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = true ]; then gh release delete "$TAG" --yes; fi
-          gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file ../notes/notes.md ./*
-          gh release edit "$TAG" --draft=false
+          {{ create_release('../notes/notes.md', ' ./*') | indent(10) }}
