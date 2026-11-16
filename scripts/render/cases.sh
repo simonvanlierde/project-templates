@@ -130,7 +130,8 @@ test ! -e "$out/minimal-extras/.github/workflows/cold-install.yml"
 # ds: a command-line-only Python library with the docs site: no API reference.
 "${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=docs-me --data 'stacks=[python]' \
   --data python_api=false . "$out/ds"
-# st: Starlight is the default docs engine for a Rust repo, built from its decision records too.
+# st: Starlight is the default docs engine for a Rust repo, built from its decision records too:
+# decision_records passed with --data must not read as an update.
 # sp: a Python library that picks it has no API reference. zt: a TypeScript repo picks Zensical,
 # and zs, its twin, keeps the default: Starlight beside a package at the root.
 "${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=star-me --data 'stacks=[rust]' \

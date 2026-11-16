@@ -615,8 +615,9 @@ docs_site:
 # Never asked: pass --data docs_engine=... to pick the other one.
 # An update keeps the stored answer. A project from before this question stays on Zensical:
 # while defaults render, copier leaves _copier_operation unset, and _copier_answers holds only
-# the answers so far on a copy but every stored answer on an update. decision_records (stored
-# since 0.14.0) and docs_site (stored before 0.15.0) come later, so either one marks an update.
+# the answers so far (and --data) on a copy but every stored answer on an update. decision_records
+# (stored since 0.14.0) and docs_site (stored before 0.15.0) come later, so either one, when
+# --data did not pass it, marks an update.
 # docs/decisions/0012-docs-engine-per-toolchain.md has the reasons.
 docs_engine:
   type: str
@@ -627,7 +628,7 @@ docs_engine:
     Zensical (Python, via uvx; a Python library can add an API reference): zensical
     Starlight (Astro, via pnpm; a hash-based CSP, no API reference): starlight
   default: >-
-    {{ 'starlight' if not ('decision_records' in _copier_answers or 'docs_site' in _copier_answers) and 'python' not in stacks and ('ts' in stacks or 'rust' in stacks) else 'zensical' }}
+    {{ 'starlight' if not (['decision_records', 'docs_site'] | reject('in', _copier_conf.data) | select('in', _copier_answers) | list) and 'python' not in stacks and ('ts' in stacks or 'rust' in stacks) else 'zensical' }}
   # docs-site/ and _docs/ belong to the Starlight build: a package there would share them with it.
   validator: >-
     {% if docs_engine == 'starlight' %}{% for q, d in [('python_dir', python_dir), ('ts_dir', ts_dir), ('rust_dir', rust_dir), ('go_dir', go_dir)] if d in ('docs-site', '_docs') or d.startswith(('docs-site/', '_docs/')) %}
