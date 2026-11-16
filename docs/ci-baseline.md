@@ -58,7 +58,7 @@ Each piece turns on with one value in `extras`.
 | Scheduled extended property tests | `property.yml` (`property` extra) | Runs 10,000 cases per property (or 10 minutes of Go fuzzing) weekly; excluded from PRs |
 | Scheduled mutation testing | `mutation.yml` (`mutation` extra) | Measures test resilience against injected bugs weekly; excluded from PRs |
 | Pull request benchmarks | `benchmarks.yml` (`codspeed` extra) | Runs CodSpeed instruction-count benchmarks on PRs that touch benchmarked code and on every push to `main`, using OIDC authentication. A public project's `CONTRIBUTING.md` asks for a benchmark case at the documented input bound for parsers and importers, and a release check of the capped entry points |
-| Documentation site build | `docs.yml` (`docs_site` extra) | Builds `docs/` with Zensical in `--strict` mode on every pull request and push to `main`, and deploys that build from `main` to GitHub Pages |
+| Documentation site build | `docs.yml` (`docs_site` extra) | Builds `docs/` on every pull request and push to `main` (Zensical in `--strict` mode, or Starlight followed by link, anchor, origin, script-hash and axe checks), and deploys that build from `main` to GitHub Pages |
 | Cold-install setup verification | `cold-install.yml` (`cold_install` extra) | Executes README development instructions in a minimal Debian container to catch missing prerequisites. Also runs when `pyproject.toml`, `uv.lock` or `.python-version` change |
 
 ## Web apps and sites
