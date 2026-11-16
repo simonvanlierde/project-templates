@@ -52,7 +52,8 @@ assert not any("checkout" in s.get("uses", "") for s in release["steps"]), relea
 publish_script = release["steps"][-1]["run"]
 verify = ["verify"] * 4
 # Every attestation is checked before the draft exists, so a failed check leaves nothing to delete.
-for fail, expected in [("", [*verify, "create", "edit"]), ("create", [*verify, "create"]),
+# `view` asks whether an earlier run left a draft; the fake gh answers nothing, so none is deleted.
+for fail, expected in [("", [*verify, "view", "create", "edit"]), ("create", [*verify, "view", "create"]),
                        ("verify", ["verify"])]:
     with tempfile.TemporaryDirectory() as tmp:
         work = pathlib.Path(tmp)

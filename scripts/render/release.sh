@@ -243,8 +243,31 @@ for p in cb cl; do
   grep -q 'crates.io' $p/.github/first-release.md
   grep -q 'for env in .*crates' $p/justfile
 done
+# The job graph: only publish holds the OIDC token, the release job waits for it and checks nothing out.
+uv run --no-project --with pyyaml python - cb/.github/workflows/rust-release.yml cl/.github/workflows/rust-release.yml <<'PYTEST'
+import sys, yaml
+for path in sys.argv[1:]:
+    jobs = yaml.safe_load(open(path))["jobs"]
+    assert jobs["release"]["needs"] == "publish", path
+    assert jobs["release"]["permissions"] == {"contents": "write"}, path
+    assert not any("checkout" in s.get("uses", "") for s in jobs["release"]["steps"]), path
+    assert jobs["publish"]["environment"] == "crates" and jobs["publish"]["permissions"]["id-token"] == "write", path
+    leaks = [n for n, j in jobs.items() if n != "publish" and "id-token" in j.get("permissions", {})]
+    assert not leaks, (path, leaks)
+PYTEST
+# With npm too, one workflow makes the GitHub release, and it is the crates one.
+test ! -e cn/.github/workflows/release.yml
+uv run --no-project --with pyyaml python - cn/.github/workflows/ts-release.yml cn/.github/workflows/rust-release.yml <<'PYTEST'
+import sys, yaml
+npm, crates = (yaml.safe_load(open(p))["jobs"] for p in sys.argv[1:])
+assert "release" not in npm and "release" in crates, (npm.keys(), crates.keys())
+PYTEST
 # Binary: archives named as cargo binstall looks them up, attested and checked before upload.
 grep -q 'binstall' cb/Cargo.toml
+grep -qF 'pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.{ archive-format }"' cb/Cargo.toml
+# shellcheck disable=SC2016 # literal workflow text, not shell expansions
+grep -qF 'tar -czf "dist/$name-$TARGET.tar.gz"' cb/.github/workflows/rust-release.yml
+grep -qF 'crates-bin-aarch64-apple-darwin.tar.gz' cb/.github/workflows/rust-release.yml
 (lacks -q '^publish = false' cb/Cargo.toml)
 grep -q 'name=crates-bin' cb/.github/workflows/rust-release.yml
 grep -q 'actions/attest@' cb/.github/workflows/rust-release.yml

@@ -49,7 +49,7 @@ Scheduled workflows report a failure through `report-failure.yml`. Its one job h
 
 None of these workflows use `pull_request_target` or `workflow_run`, preventing untrusted fork code from running with write permissions. Actions pin full commit SHAs, and checkouts set `persist-credentials: false`.
 
-`just repo-settings` creates the `pypi`, `npm`, `ghcr`, `preview`, `production` and `copier-update` environments a project uses. It limits the release environments to `v*` tags (`ghcr` also to `main`), adds you as their reviewer, and limits `production` and `copier-update` to `main`. `preview` takes no reviewer or branch limit, because previews run on pull request refs and start unattended.
+`just repo-settings` creates the `pypi`, `npm`, `crates`, `ghcr`, `preview`, `production` and `copier-update` environments a project uses. It limits the release environments to `v*` tags (`ghcr` also to `main`), adds you as their reviewer, and limits `production` and `copier-update` to `main`. `preview` takes no reviewer or branch limit, because previews run on pull request refs and start unattended.
 
 ## Assurance case
 

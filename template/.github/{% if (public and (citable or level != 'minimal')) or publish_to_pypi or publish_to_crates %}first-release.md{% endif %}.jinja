@@ -19,7 +19,7 @@ gh issue create --title "First release" --body-file .github/first-release.md
 - [ ] **crates.io**, before the first tag: publish `0.1.0` by hand with a short-lived API
   token (`cargo publish`), since trusted publishing cannot create a crate. Then add the
   trusted publisher that `just repo-settings` prints. Without it, `rust-release.yml` cannot
-  publish.
+  publish. Tagging `v0.1.0` after that is fine: the workflow sees the version is on crates.io, skips the upload and makes the GitHub release.
 {%- endif %}
 {%- if public and citable %}
 - [ ] **Zenodo**, before the first release: turn this repo on at the Zenodo link that

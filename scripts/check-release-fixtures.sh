@@ -32,15 +32,16 @@ for tag in v1.9.0 v2.0.0 v2.0.0-rc1; do
   git --git-dir="$scratch/tags.git" update-ref "refs/tags/$tag" "$blob"
 done
 workflow="$root/template/.github/workflows/{% if dependency_bot == 'dependabot' %}copier-update.yml{% endif %}.jinja"
-selection=$(sed -n 's/^ *latest=//p' "$workflow")
+# The workflow's own tag listing, newest stable first: the update takes the first one that is a week old.
+selection=$(sed -n 's/^ *tags=//p' "$workflow")
 # shellcheck disable=SC2034 # the workflow selection below reads url through eval
 url="$scratch/tags.git"
-latest=$(eval "printf '%s' $selection")
-test "$latest" = v2.0.0
+tags=$(eval "printf '%s\\n' $selection")
+test "$tags" = "$(printf 'v2.0.0\nv1.9.0')"
 git --git-dir="$scratch/tags.git" update-ref -d refs/tags/v2.0.0
 git --git-dir="$scratch/tags.git" update-ref -d refs/tags/v1.9.0
-latest=$(eval "printf '%s' $selection")
-test -z "$latest"
+tags=$(eval "printf '%s\\n' $selection")
+test -z "$tags"
 
 cat >"$scratch/CHANGELOG.md" <<'MD'
 ## [1.0.0]
