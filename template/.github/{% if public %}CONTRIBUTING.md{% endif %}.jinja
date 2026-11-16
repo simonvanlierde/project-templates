@@ -81,7 +81,7 @@ fix.
 {% if stacks | reject('eq', 'docker') | list %}The code follows the style the linters enforce, and `just fmt` applies most of it:
 
 {% if 'python' in stacks %}- Python: [Ruff](https://docs.astral.sh/ruff/) for lint and format, ty for types.
-{% endif %}{% if 'ts' in stacks %}- TypeScript: [Biome](https://biomejs.dev) for lint and format, `tsc` for types.
+{% endif %}{% if 'ts' in stacks %}- TypeScript: [Biome](https://biomejs.dev) for lint and format, {% if web_app and web_framework == 'svelte' %}`svelte-check`{% else %}`tsc`{% endif %} for types.
 {% endif %}{% if 'rust' in stacks %}- Rust: rustfmt and [Clippy](https://doc.rust-lang.org/clippy/).
 {% endif %}{% if 'go' in stacks %}- Go: gofmt and [golangci-lint](https://golangci-lint.run).
 {% endif %}

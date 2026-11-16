@@ -9,7 +9,7 @@ The tools each stack uses, their default settings, and how releases are built.
 | Stack      | Lint and format                          | Types                       | Tests                                    | Packaging                            |
 | ---------- | ---------------------------------------- | --------------------------- | ---------------------------------------- | ------------------------------------ |
 | Python     | `ruff`                                   | `ty`                        | `pytest`                                 | `uv`, locked, `uv_build` backend     |
-| TypeScript | `biome`                                  | `tsc`                       | `vitest`, plus Playwright and axe for a `web-app` | `pnpm`, plus Vite for a `web-app` |
+| TypeScript | `biome`                                  | `tsc` (`svelte-check` for Svelte) | `vitest`, plus Playwright and axe for a `web-app` | `pnpm`, plus Vite for a `web-app` |
 | Rust       | `rustfmt`, `clippy`                      | `rustc`                     | `cargo nextest`, plus `cargo test --doc` | `cargo`, checked by `cargo-deny`     |
 | Go         | `golangci-lint` (`gofumpt`, `goimports`) | `go vet`, via golangci-lint | `go test -race`, Examples included       | Go modules, checked by `govulncheck` |
 
@@ -37,7 +37,7 @@ Install golangci-lint once per machine. The template pins the golangci-lint vers
 | Public or licensed | `dco-signoff` (public), `reuse` (licensed) |
 | Citable | `check-citation-file-format`, `citesync` |
 | Python | `ruff-check`, `ruff-format`, `ty`, `nbstripout`, [`sp-repo-review`](levels.md#scientific-python-repo-review) |
-| TypeScript | `biome`, `tsc`, and `vitest` in a web app |
+| TypeScript | `biome`, `tsc` (`svelte-check` for Svelte), and `vitest` in a web app |
 | Rust | `cargo-fmt`, `cargo-clippy` |
 | Go | `golangci-lint-fmt`, `golangci-lint` |
 | Python image | `hadolint-docker`, which needs a running Docker daemon |

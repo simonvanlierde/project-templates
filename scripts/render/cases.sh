@@ -524,11 +524,23 @@ refuses 'Question "user_data" is required' --data 'stacks=[ts]' --data ts_kind=w
 refuses "Invalid choice for 'user_data'" --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=some
 refuses 'starting with https://' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=nothing --data site_url=http://example.org
-# A Worker's custom domain is a whole host: no path, and the site on a Worker asks too.
-refuses 'so no path' --data 'stacks=[ts]' --data ts_kind=web-app \
-  --data user_data=nothing --data site_url=https://example.org/app
-refuses 'so no path' --data 'stacks=[python]' --data site=plain --data site_host=cloudflare \
+# A web app may sit under a path on a custom domain. workers.dev serves a whole host, and
+# so does the site's Worker, which is asked too. The Worker script answers /api/* at the root.
+refuses 'Give a workers.dev address without a path' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data site_url=https://app.example-org.workers.dev/app
+refuses 'no port, query or capitals' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data site_url=https://example.org/App
+refuses 'no port, query or capitals' --data 'stacks=[python]' --data site=plain --data site_host=cloudflare \
   --data site_url=https://Example.org
+refuses 'so no path' --data 'stacks=[python]' --data site=plain --data site_host=cloudflare \
+  --data site_url=https://example.org/site
+refuses 'answer worker=false' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data worker=true --data site_url=https://example.org/app
+# A page is not a folder to serve the app from, and a query is not part of an address.
+refuses 'not a page in it' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data site_url=https://example.org/app/index.html
+refuses 'no port, query or capitals' --data 'stacks=[ts]' --data ts_kind=web-app \
+  --data user_data=nothing --data 'site_url=https://example.org/app?x=1'
 # An app that keeps personal data on a server needs its own contact address.
 refuses 'needs its own contact address' --data 'stacks=[ts]' --data ts_kind=web-app \
   --data user_data=accounts --data author_email=Code@duinlab.nl
@@ -595,6 +607,21 @@ grep -q 'What a first visit may keep in the browser, by name, each with a line' 
 grep -qxF '.dev.vars*' "$out/cfp/.gitignore"
 grep -qxF '.wrangler/' "$out/cfp/.gitignore"
 lacks -q wrangler "$out/dp/.gitignore"
+
+# sv: a Svelte web app at the root, which replaces the React starter files.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=svelte-me --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data web_framework=svelte --data user_data=accounts \
+  --data 'project_description=A small {demo}' . "$out/sv"
+# svr: the Svelte app with Renovate, which holds TypeScript below 7 as Dependabot does in sv.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=svelte-renovate --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data web_framework=svelte --data user_data=nothing \
+  --data dependency_bot=renovate . "$out/svr"
+
+# wp: a nested web app under a two-segment path on a custom domain, which production
+# routes to the Worker in place of --domain.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=path-me --data 'stacks=[ts]' \
+  --data ts_kind=web-app --data ts_dir=web --data web_framework=preact --data user_data=nothing \
+  --data site_url=https://example.org/tools/path-me/ . "$out/wp"
 
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the

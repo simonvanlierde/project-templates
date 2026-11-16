@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { BASE } from "./base";
 import { ROUTES } from "./routes";
 
 // vite preview sends no headers, so apply the Content-Security-Policy from the
 // locally built _headers file and fail on any violation.
 test("the built app runs under its own Content-Security-Policy", async ({ page }) => {
-  const headersFile = await (await page.request.get("/_headers")).text();
+  const headersFile = await (await page.request.get(`${BASE}_headers`)).text();
   const policy = headersFile.match(/Content-Security-Policy:\s*(.+)/)?.[1];
   expect(policy).toContain("script-src 'self';");
   for (const name of [

@@ -11,9 +11,7 @@ Last reviewed: 2026-11-16
 
 ## Planned
 
-- Let the web-app kind use Svelte 5 as well as React and Preact, and accept a `site_url`
-  with a path, for an app served under a subpath.
-  Tracked in [#313](https://github.com/simonvanlierde/project-templates/issues/313).
+Nothing is queued right now.
 
 ## Not planned
 

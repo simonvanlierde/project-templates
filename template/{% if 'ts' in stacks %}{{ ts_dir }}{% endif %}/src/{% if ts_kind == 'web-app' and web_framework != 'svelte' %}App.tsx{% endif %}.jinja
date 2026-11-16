@@ -7,6 +7,9 @@ import terms from "../docs/terms.md";
 
 export const title = {{ project_name | to_json }};
 
+// Where the app is served: "/", or site_url's path, such as "/app/" (vite.config.ts `base`).
+const BASE = import.meta.env.BASE_URL;
+
 // The pages rendered from docs/, by path. The Cloudflare Worker and vite preview
 // answer an unknown path with index.html, so each loads the app.
 const PAGES: Record<string, { title: string; html: string }> = {
@@ -18,7 +21,7 @@ const PAGES: Record<string, { title: string; html: string }> = {
 };
 
 export function App() {
-  const page = PAGES[location.pathname.replace(/\/$/, "")];
+  const page = PAGES[location.pathname.slice(BASE.length - 1).replace(/\/$/, "")];
 
   useEffect(() => {
     document.title = page ? `${page.title} · ${title}` : title;
@@ -43,9 +46,9 @@ export function App() {
       </main>
       <footer>
         <nav aria-label="About this site">
-          {page && <a href="/">{title}</a>}
+          {page && <a href={BASE}>{title}</a>}
           {Object.entries(PAGES).map(([path, { title: name }]) => (
-            <a key={path} href={path} aria-current={PAGES[path] === page ? "page" : undefined}>
+            <a key={path} href={BASE + path.slice(1)} aria-current={PAGES[path] === page ? "page" : undefined}>
               {name}
             </a>
           ))}
