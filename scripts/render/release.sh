@@ -279,3 +279,9 @@ grep -q 'x86_64-pc-windows-msvc' cb/.github/workflows/rust-release.yml
 (lacks -q 'attest' cl/.github/workflows/rust-release.yml)
 grep -q 'working-directory: crates/lib' cl/.github/workflows/rust-release.yml
 grep -q 'cargo publish --locked --no-verify --manifest-path crates/lib/Cargo.toml' cl/.github/workflows/rust-release.yml
+# One shared release step in every release workflow: a leftover draft is replaced, a published release stays.
+# shellcheck disable=SC2016 # literal workflow text
+for f in a/.github/workflows/release.yml t/.github/workflows/ts-release.yml c/.github/workflows/python-release.yml cb/.github/workflows/rust-release.yml cl/.github/workflows/rust-release.yml; do
+  grep -qF 'if [ "$state" = true ]; then gh release delete "$TAG" --yes; fi' "$f"
+  grep -qF 'gh release edit "$TAG" --draft=false' "$f"
+done

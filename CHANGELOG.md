@@ -23,6 +23,7 @@ Upgrade steps:
 
 ### Changed
 
+- The four release workflows create the GitHub release from one shared step: a draft left by a failed run is replaced, and a published release is left as it is on a re-run. `release.yml` and the npm release job used to leave a draft in place, where `gh release create` then failed.
 - Renovate opens a dependency pull request only once its checks pass, `renovate/stability-days` included (`prCreation: 'not-pending'`). A grouped pull request could carry a release younger than the one-week wait and sat open until it aged. Minor and patch groups still merge themselves.
 - The author's own `simonvanlierde` hooks (citesync, jsonvet) skip the one-week release cooldown in Dependabot and Renovate, and so does sourceledger in a data-pipeline project (Dependabot `cooldown.exclude`, a Renovate package rule). Whoever can publish them can push to the repos directly, so the week only delays their fixes. Other packages keep the week.
 - **Breaking:** a project with `publish_to_npm` and no PyPI or crates.io release makes its GitHub release in `ts-release.yml`, after the npm publish, from the notes the build job saved. `release.yml` is no longer rendered for it, so a tag npm refused leaves no immutable release behind. With crates.io too, `rust-release.yml` still makes the release whether or not npm took the package.

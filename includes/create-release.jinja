@@ -1,0 +1,14 @@
+{#- The GitHub release step shared by the release workflows (indent the call to the step's
+    `run:` body). A draft left by a failed run is replaced; a published release is immutable,
+    so a re-run leaves it. Draft first, then publish, so assets and tag are final.
+    Outside template/, like the other includes. -#}
+{% macro create_release(notes, assets='') -%}
+state=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || true)
+if [ "$state" = false ]; then
+  echo "release $TAG already exists; leaving it"
+  exit 0
+fi
+if [ "$state" = true ]; then gh release delete "$TAG" --yes; fi
+gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file {{ notes }}{{ assets }}
+gh release edit "$TAG" --draft=false
+{%- endmacro %}

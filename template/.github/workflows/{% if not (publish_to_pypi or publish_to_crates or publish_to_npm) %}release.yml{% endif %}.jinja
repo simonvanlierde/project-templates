@@ -1,3 +1,4 @@
+{% from 'includes/create-release.jinja' import create_release -%}
 name: release
 
 # A pushed version tag becomes a GitHub release whose notes are that version's
@@ -56,9 +57,4 @@ jobs:
         run: |-
           set -euo pipefail
           .github/scripts/release-notes.sh "$TAG" >"$RUNNER_TEMP/notes.md"
-          # A release made by hand before this run is left as it is: immutable releases can't be edited.
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "release $TAG already exists; leaving it"
-            exit 0
-          fi
-          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          {{ create_release('"$RUNNER_TEMP/notes.md"') | indent(10) }}
