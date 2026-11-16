@@ -271,7 +271,7 @@ grep -q 'working-directory: api' c/.github/workflows/benchmarks.yml
 # Every workflow that installs Python packages with uv (uv sync, uvx, or `just docs`) checks
 # them for malware first, as python.yml does. The sweep must see these runs to count. The
 # Starlight renders' docs.yml runs `just docs` with pnpm, so it has no uv to check.
-starlight=(st sp nw zs)
+starlight=(st sp nw zs cr)
 for r in "${starlight[@]}"; do (lacks -qE 'uv|zensical' "$r/.github/workflows/docs.yml"); done
 mapfile -t synced < <(grep -rl --include='*.yml' -e '- run: uv sync' -e 'uvx ' -e '- run: just docs' ./*/.github/workflows |
   grep -vxF "$(printf './%s/.github/workflows/docs.yml\n' "${starlight[@]}")")
