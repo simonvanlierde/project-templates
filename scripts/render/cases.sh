@@ -141,6 +141,10 @@ test ! -e "$out/minimal-extras/.github/workflows/cold-install.yml"
 "${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=zt-me --data 'stacks=[ts]' \
   --data docs_engine=zensical . "$out/zt"
 "${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=zs-me --data 'stacks=[ts]' . "$out/zs"
+# cr: a Compose-only repo with Starlight docs and Renovate, so advisories.yml is its one
+# workflow that reports failures (ci.sh checks the workflows it calls).
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site]' --data project_name=cr-me --data 'stacks=[docker]' \
+  --data docs_engine=starlight --data dependency_bot=renovate . "$out/cr"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
 # only its own manifest beside them, and t's hooks run through pnpm. Both have the
 # static site: r the plain one, t the Astro one beside a package at the root.

@@ -409,3 +409,15 @@ for stack in py ts rs go; do
 done
 test -f m/py/tests/conftest.py
 test ! -e k/tests/conftest.py
+# Every local reusable workflow a render calls exists in it. cr, a Compose-only repo with
+# Starlight docs and Renovate, calls report-failure.yml from advisories.yml alone.
+for answers in */.copier-answers.yml; do
+  r=${answers%/.copier-answers.yml}
+  [ -d "$r/.github/workflows" ] || continue
+  while read -r called; do
+    test -f "$r/$called" || {
+      echo "check-render: $r calls $called, which it lacks" >&2
+      exit 1
+    }
+  done < <(sed -n 's|^ *uses: \$/||p' "$r"/.github/workflows/*.yml)
+done

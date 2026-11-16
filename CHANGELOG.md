@@ -46,6 +46,7 @@ Upgrade steps:
 - The project chooser and quick-start examples use the released `python_kind` answer in Python commands.
 - A Rust project named `std`, `core`, `alloc`, `proc_macro` or `test` is refused, on `copier update` too: its doctests would not compile, so rename it first. `publish_to_crates` is refused without a project description or with `license=none`, since crates.io rejects both.
 - `just repo-settings` lists the release environments for a crates-only project too.
+- Every project gets `.github/workflows/report-failure.yml`. A Compose-only repo with Starlight docs and Renovate rendered an `advisories.yml` that called it without the file, which GitHub rejects as an invalid workflow.
 
 ## [0.15.0] - 2026-11-12
 
