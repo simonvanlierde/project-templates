@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { copierCommand, profiles, recommend } from "../docs/assets/chooser.mjs";
 
-test("every recommendation uses only released Copier answers", () => {
-  const allowed = new Set(["stacks", "python_kind", "ts_kind", "rust_kind", "go_kind", "docker_image"]);
+// Copier ignores --data for a key it has no question for, so a renamed question must fail here.
+// Computed answers (`when: false`) are not answers a user passes.
+const questions = new Set(readFileSync(new URL("../copier.yml", import.meta.url), "utf8")
+  .split(/^(?=[a-z])/m).filter((block) => !/^  when: false$/m.test(block)).map((block) => block.match(/^([a-z]\w*):/)?.[1]).filter(Boolean));
+
+test("every recommendation uses only Copier questions", () => {
+  assert.ok(questions.has("stacks") && !questions.has("compose_only"), [...questions].join(" "));
   for (const profile of profiles) {
-    for (const key of Object.keys(profile.answers)) assert.ok(allowed.has(key), key);
+    for (const key of Object.keys(profile.answers)) assert.ok(questions.has(key), `${profile.id}: ${key} is not a question in copier.yml`);
     const command = copierCommand(profile);
     assert.ok(command.startsWith("copier copy --data "));
     assert.ok(command.endsWith(" gh:simonvanlierde/project-templates ."));
