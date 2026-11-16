@@ -338,6 +338,7 @@ Select `docs_site` in `extras` (under `customise`) when outside users need searc
 A render with `docs_site` gets:
 
 - `zensical.toml` and `docs/index.md`, the home page. Both are yours: an update leaves them alone.
+- `docs/assets/docs-tokens.css`, the paper, ink, accent and font stacks that `docs/assets/docs.css` maps onto the theme. It is yours: edit its values to match your `DESIGN.md`, and an update leaves it alone.
 - `docs/og-card.html`, the social card, and `docs/assets/og.png` once you run `just og-card`. Commit the PNG.
 - `docs/reference.md`, for a Python library with `python_api`. It holds one `::: <module>` line, which mkdocstrings expands into the API reference from the docstrings. It reads the source without importing the package.
 - `just docs`, which builds into `_docs/` (gitignored), and `just docs-serve`, which serves the site on port 8000 and rebuilds it on each save. Both run the Zensical that `copier.yml` pins with `uvx`, so the project needs no docs dependencies. Like the project's own installs, uvx resolves only releases at least a week old. `copier update` brings a newer pin.
@@ -355,7 +356,7 @@ An existing `zensical.toml` is yours, so updates leave it alone. To use these de
 
 ```toml
 [project]
-extra_css = ["assets/docs.css"]
+extra_css = ["assets/docs-tokens.css", "assets/docs.css"]
 extra_javascript = ["assets/docs.js"]
 
 [project.theme]
@@ -369,7 +370,7 @@ og_image = "assets/og.png"
 anchor_linenums = false
 ```
 
-If you already list stylesheets or scripts, append the new paths instead of replacing those lists. If you use another `custom_dir`, copy the plain-link partial and `main.html` into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
+If you already list stylesheets or scripts, append the new paths instead of replacing those lists. Until `extra_css` lists `assets/docs-tokens.css`, `docs.css` uses the same values as the template's tokens file, so the site looks the same, but your edits to the tokens file do not show. If you use another `custom_dir`, copy the plain-link partial and `main.html` into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
 
 One repo has one Pages site, so the template refuses `docs_site` together with a `site` on Pages. A `site` [on a Worker](hosting.md#hosting-on-a-worker) leaves Pages to the docs. Otherwise, a playground page can go in `docs/` as Markdown or HTML.
 
