@@ -95,8 +95,9 @@ for r in m k h ds; do
   grep -qx '/_docs/' "$r/.gitignore"
   grep -qx 'site_dir = "_docs"' "$r/zensical.toml"
   grep -qx 'font = false' "$r/zensical.toml"
+  grep -qxF 'extra_css = ["assets/docs-tokens.css", "assets/docs.css"]' "$r/zensical.toml"
   grep -qx 'custom_dir = "docs-overrides"' "$r/zensical.toml"
-  for asset in .lycheeignore docs/assets/docs.css docs/assets/docs.js docs-overrides/partials/source.html; do
+  for asset in .lycheeignore docs/assets/docs-tokens.css docs/assets/docs.css docs/assets/docs.js docs-overrides/partials/source.html; do
     cmp "$repo/$asset" "$r/$asset"
   done
   grep -qF "zensical@$zensical_pin build --strict" "$r/justfile"

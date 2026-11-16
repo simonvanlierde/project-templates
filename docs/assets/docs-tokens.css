@@ -1,0 +1,12 @@
+/* This site's own values for the tokens that template/docs/assets/docs-tokens.css defines: the
+   plum and gold of brand.css, which follows docs.css and sets the rest of the palette. */
+:root {
+  --docs-paper: #ffffff;
+  --docs-ink: #1f2328;
+  --docs-accent: #7b3f94;
+  --docs-paper-dark: #3a2e3e;
+  --docs-ink-dark: #e4e5ea;
+  --docs-accent-dark: #e4c4f2;
+  --docs-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --docs-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+}
