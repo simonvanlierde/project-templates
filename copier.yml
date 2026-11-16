@@ -52,6 +52,8 @@ _skip_if_exists:
   - /docs/og-card.html
   # Samples: code and pages the project replaces. Each is also in the update-only
   # `_exclude` below, so one the project deleted stays deleted (check-render checks both).
+  # Copier 9.19 renders each entry here as one pattern and cannot read this list from
+  # `_exclude`, so the paths are written twice.
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}{{ 'src/' if python_layout == 'src' else '' }}{{ module_name }}/__init__.py"
   - "/{{ '' if python_dir == '.' else python_dir ~ '/' }}tests/test_add.py"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/App.tsx"
@@ -1143,14 +1145,6 @@ compose_only:
   type: bool
   when: false
   default: "{{ 'docker' in stacks and not docker_image }}"
-
-# Computed, not asked: some workflow calls report-failure.yml (mutation, property,
-# copier-update, preview-retire, advisories). It names that file, whose path must stay
-# short enough for a Windows checkout of this repo.
-reports_failures:
-  type: bool
-  when: false
-  default: "{{ 'mutation' in test_extras or 'property' in test_extras or dependency_bot == 'dependabot' or web_app or site != 'none' or 'python' in stacks or 'ts' in stacks or 'rust' in stacks or 'go' in stacks }}"
 
 # Computed, not asked: a ts stack, the Astro site or the Starlight docs install Node packages with pnpm.
 has_pnpm:

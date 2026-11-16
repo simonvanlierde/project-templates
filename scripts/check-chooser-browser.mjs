@@ -37,15 +37,20 @@ try {
       const language = page.getByLabel("Which language will you use?");
       const tool = page.getByLabel("What will it do?");
       const website = page.getByLabel("What kind of website?");
+      // The answers are spelled out here, not read from chooser.mjs, so a swapped value fails.
+      const recommends = async (expected, ...answers) => {
+        await expect(title).toHaveText(expected);
+        await expect(command).toContainText(answers.map((answer) => `--data '${answer}'`).join(" \\\n  "));
+      };
       await expect(result).toBeHidden();
       await page.getByRole("radio", { name: "A reusable package" }).focus();
       await page.keyboard.press("Space");
       await expect(language).toBeVisible();
       await page.keyboard.press("Tab");
       await expect(language).toBeFocused();
-      for (const [value, expected] of [["python", "Python library"], ["ts", "TypeScript library"], ["rust", "Rust library"], ["go", "Go library"]]) {
+      for (const [value, expected, kind] of [["python", "Python library", "python_kind=library"], ["ts", "TypeScript library", "ts_kind=library"], ["rust", "Rust library", "rust_kind=library"], ["go", "Go library", "go_kind=library"]]) {
         await language.selectOption(value);
-        await expect(title).toHaveText(expected);
+        await recommends(expected, `stacks=[${value}]`, kind);
         await expect(page.locator("[data-chooser-announce]")).toHaveText(`Recommendation: ${expected}`);
       }
       await page.getByRole("radio", { name: "A tool or service" }).check();
@@ -54,29 +59,32 @@ try {
       await expect(language).toBeHidden();
       await expect(language).toBeDisabled();
       await tool.selectOption("app");
-      await expect(title).toHaveText("Go binary");
+      await recommends("Go binary", "stacks=[go]", "go_kind=binary");
+      await language.selectOption("rust");
+      await recommends("Rust binary", "stacks=[rust]", "rust_kind=binary");
+      await language.selectOption("ts");
+      await recommends("TypeScript application", "stacks=[ts]", "ts_kind=app");
       await language.selectOption("python");
-      await expect(title).toHaveText("Python application");
+      await recommends("Python application", "stacks=[python]", "python_kind=app");
       await tool.selectOption("service");
-      await expect(title).toHaveText("Python web service with Docker");
-      await expect(command).toContainText("--data 'stacks=[python,docker]' \\\n  --data 'python_kind=web-service' \\\n  --data 'docker_image=true'");
+      await recommends("Python web service with Docker", "stacks=[python,docker]", "python_kind=web-service", "docker_image=true");
       await tool.selectOption("compose");
-      await expect(title).toHaveText("Docker Compose project");
+      await recommends("Docker Compose project", "stacks=[docker]");
       await expect(command).not.toContainText("kind=");
       await page.getByRole("radio", { name: "Research or a data project" }).check();
       await expect(result).toBeHidden();
       const research = page.getByLabel("How will you work with data?");
       await research.selectOption("notebooks");
-      await expect(title).toHaveText("Python research project");
+      await recommends("Python research project", "stacks=[python]", "python_kind=research");
       await research.selectOption("pipeline");
-      await expect(title).toHaveText("Python data pipeline");
+      await recommends("Python data pipeline", "stacks=[python]", "python_kind=data-pipeline");
       await page.getByRole("radio", { name: "A website", exact: true }).check();
       await expect(result).toBeHidden();
       await website.selectOption("static");
       await expect(page.locator("[data-chooser-static]")).toBeVisible();
       await expect(result).toBeHidden();
       await website.selectOption("app");
-      await expect(title).toHaveText("TypeScript web app");
+      await recommends("TypeScript web app", "stacks=[ts]", "ts_kind=web-app");
       await expect(page.locator("[data-chooser-static]")).toBeHidden();
       await expect(command).not.toContainText("user_data");
       const copy = page.locator("[data-chooser-copy]");
