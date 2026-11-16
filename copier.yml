@@ -817,7 +817,7 @@ card_address:
 playwright_version:
   type: str
   when: false
-  default: 1.64.1
+  default: 1.65.0
 
 # A Worker script in front of the static assets, for server code. Requests for files
 # stay free; each request the script handles counts against the Workers plan.
@@ -928,7 +928,7 @@ go_version:
 committed_version:
   type: str
   when: false
-  default: 1.1.11
+  default: 1.1.12
 
 # Computed, never asked: the uv the generated workflows install. Pinned because
 # CI runs `uv audit`, a preview command that can change in any uv release.
@@ -936,7 +936,7 @@ committed_version:
 uv_version:
   type: str
   when: false
-  default: 0.13.6
+  default: 0.13.7
 
 # Computed, never asked: the griffe that python.yml's api job runs with uvx when
 # publish_to_pypi and python_api are on. It compares the public API with the last git tag.
@@ -952,7 +952,7 @@ griffe_version:
 zensical_version:
   type: str
   when: false
-  default: 0.0.74
+  default: 0.1.0
 
 # Computed, never asked: the Starlight docs build's pins, exact in docs-site/package.json.
 # The Astro is astro_version above. Renovate bumps them here, a project gets the bump
@@ -961,7 +961,7 @@ zensical_version:
 starlight_version:
   type: str
   when: false
-  default: 0.42.8
+  default: 0.42.10
 
 # renovate: datasource=npm depName=@astrojs/markdown-satteri
 satteri_version:
@@ -995,7 +995,7 @@ golangci_lint_version:
 prek_version:
   type: str
   when: false
-  default: 0.5.7
+  default: 0.5.10
 
 # The govulncheck a new go.mod requires as a tool. Dependabot bumps it in the
 # project after that.
@@ -1092,7 +1092,7 @@ copier_version:
 wrangler_version:
   type: str
   when: false
-  default: 4.154.0
+  default: 4.158.0
 
 # Computed, never asked: the astro an Astro site pins exactly in site/package.json.
 # Renovate bumps it here; a project gets the bump through `copier update`, and its own
@@ -1101,7 +1101,7 @@ wrangler_version:
 astro_version:
   type: str
   when: false
-  default: 7.4.2
+  default: 7.4.7
 
 # Computed, never asked: the pnpm that site.yml runs wrangler with when the repo has no
 # package.json, and that an Astro site's package.json names. Keep it equal to
@@ -1110,7 +1110,7 @@ astro_version:
 pnpm_version:
   type: str
   when: false
-  default: 12.16.1
+  default: 12.18.0
 
 # A GitHub commit, not PyPI: PyPI stops at 0.14.2, which misses the www.bestpractices.dev
 # badge URL (fair-software/howfairis#383). A commit, not the tag, because a tag can be
