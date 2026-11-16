@@ -140,6 +140,9 @@ r_args=(--data project_name=crate-me --data 'stacks=[rust]' --data site=plain)
   --data project_description='A binary crate' --data license=MIT --data publish_to_crates=true . "$out/cb"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=crates-lib --data 'stacks=[rust]' --data rust_kind=library \
   --data rust_dir=crates/lib --data project_description='A library crate' --data license=MIT --data publish_to_crates=true . "$out/cl"
+# cn: crates.io beside npm. rust-release.yml makes the GitHub release; ts-release.yml makes none.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=crates-npm --data 'stacks=[ts,rust]' --data ts_kind=library --data rust_kind=library \
+  --data publish_to_npm=true --data project_description='A library on npm and crates.io' --data license=MIT --data publish_to_crates=true . "$out/cn"
 # Rendered again over edited starter pages, which stay the project's.
 echo '<!-- project edit -->' >>"$out/r/site/index.html"
 echo '/* project edit */' >>"$out/r/site/style.css"
@@ -578,6 +581,12 @@ grep -q 'What a first visit may keep in the browser, by name, each with a line' 
 # dp: a data-pipeline at the root, whose python.yml ends on the revisions job's `run:` block.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=dp-me --data 'stacks=[python]' \
   --data python_kind=data-pipeline . "$out/dp"
+# dpd: a data-pipeline two folders deep, so the data release reaches codemeta.json two levels up.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=dpd-me --data 'stacks=[python]' \
+  --data python_kind=data-pipeline --data python_dir=apps/pipe . "$out/dpd"
+# dpn: a data-pipeline with no license renders no codemeta.json, so it gets no data release.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=dpn-me --data 'stacks=[python]' \
+  --data python_kind=data-pipeline --data license=none . "$out/dpn"
 # nw: a nested web app beside the docs site, the allowed twin of the root-web-app refusal.
 "${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=nw-me --data 'stacks=[ts]' \
   --data ts_kind=web-app --data ts_dir=web --data web_framework=preact --data user_data=nothing . "$out/nw"

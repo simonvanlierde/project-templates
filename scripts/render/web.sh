@@ -17,6 +17,9 @@ test -f d/web/tests/shots/shots.spec.ts
 grep -q '^ts-shots:' d/just/ts.just
 grep -qF 'rm -rf web/shots' d/just/ts.just
 grep -qF 'SHOTS=1 pnpm -C web exec playwright test --project shots' d/just/ts.just
+# The recipe's project and switch exist where it points.
+grep -q "name: 'shots'\|name: \"shots\"" d/web/playwright.config.ts
+grep -qF 'process.env.SHOTS' d/web/playwright.config.ts
 grep -qF 'web/shots/' d/README.md
 grep -qF 'ts-(e2e|shots)' d/.github/workflows/cold-install.yml
 grep -qx '/web/shots/' d/.gitignore

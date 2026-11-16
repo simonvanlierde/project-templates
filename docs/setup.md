@@ -66,7 +66,7 @@ To publish a release:
 
 1. Set the version `X.Y.Z` in the manifest you publish (`pyproject.toml`, `package.json` or `Cargo.toml`). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts without a `version`, which citesync skips. Once you add one, after the first release, keep it in step, or citesync fails with `version-mismatch`.
 2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits. In a web app it also sets the version in `package.json` itself and commits both files.
-3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it against `.github/allowed_signers` on `origin/main` and pushes it. A web app's run first refuses a `package.json` on `origin/main` at another version, and its `release.yml` refuses such a tag again before it publishes. See [Signed release tags](#signed-release-tags) for the key it needs.
+3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it against `.github/allowed_signers` on `origin/main` and pushes it. A web app's run first refuses a `package.json` on `origin/main` at another version, and the release workflow refuses such a tag again before it publishes. See [Signed release tags](#signed-release-tags) for the key it needs.
 
 With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. With `publish_to_crates`, `rust-release.yml` publishes to crates.io and creates the GitHub release itself, so it cannot run beside `python-release.yml`: Copier refuses both answers together. A Rust binary also gets archives for four targets, named as `cargo binstall` looks them up, with build provenance attestations that the release job verifies before it uploads. With `publish_to_npm` alone, `ts-release.yml` creates the GitHub release after the npm publish. Other configurations publish using `release.yml`.
 
@@ -90,7 +90,7 @@ Setting up trusted publishing (OIDC):
    copier update --data publish_to_pypi=true
    ```
 
-3. Run `just repo-settings` to create the enabled publishing environments (`pypi`, `npm`, `ghcr`). It sets yourself as required reviewer and a `v*` tag policy (`ghcr` also on `main`).
+3. Run `just repo-settings` to create the enabled publishing environments (`pypi`, `npm`, `crates`, `ghcr`). It sets yourself as required reviewer and a `v*` tag policy (`ghcr` also on `main`).
 
 ### Signed release tags
 

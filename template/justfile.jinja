@@ -164,7 +164,7 @@ release version:
     [ "$(uv version --short --no-sync --directory {{ python_dir }})" = "$version" ] || { echo "{{ python_dir ~ '/' if python_dir != '.' else '' }}pyproject.toml is not at $version" >&2; exit 1; }
 {%- endif %}
 {%- if 'rust' in stacks and publish_to_crates %}
-    [ "$(cargo metadata --no-deps --format-version 1{{ ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' if rust_dir != '.' }} | jq -r '.packages[0].version')" = "$version" ] || { echo "{{ rust_dir ~ '/' if rust_dir != '.' else '' }}Cargo.toml is not at $version" >&2; exit 1; }
+    [ "$(cargo metadata --no-deps --format-version 1{{ ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' if rust_dir != '.' }} | jq -r --arg n {{ crate_name }} '.packages[] | select(.name == $n) | .version')" = "$version" ] || { echo "{{ rust_dir ~ '/' if rust_dir != '.' else '' }}Cargo.toml is not at $version" >&2; exit 1; }
 {%- endif %}
 {%- if 'ts' in stacks and publish_to_npm %}
     [ "$(node -p "require('./{{ ts_dir }}/package.json').version")" = "$version" ] || { echo "{{ ts_dir ~ '/' if ts_dir != '.' else '' }}package.json is not at $version" >&2; exit 1; }
