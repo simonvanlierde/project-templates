@@ -306,7 +306,8 @@ test ! -e "$adr_dir/docs/decisions"
 grep -q 'docs/adr' "$repo/docs/updates.md"
 
 # Each sample in _skip_if_exists (the entries after its `# Samples:` comment) has an
-# update-only _exclude entry with the same path, and no update-only entry lacks one.
+# update-only _exclude entry with the same path, and no other _exclude entry reads the
+# operation. copier.yml says why the list cannot live in one place.
 uv run --no-project --with pyyaml python - "$repo/copier.yml" <<'PY'
 import sys, yaml
 text = open(sys.argv[1]).read()
@@ -320,7 +321,7 @@ for line in text[text.index("\n  # Samples:") + 1:].splitlines():
     samples += yaml.safe_load(line.strip())
 assert samples and set(samples) <= set(conf["_skip_if_exists"]), samples
 want = {"{% if _copier_operation == 'update' %}" + s + "{% endif %}" for s in samples}
-have = {e for e in conf["_exclude"] if e.startswith("{% if _copier_operation == 'update' %}")}
+have = {e for e in conf["_exclude"] if "_copier_operation" in e}
 assert not want - have, f"samples not excluded on update: {sorted(want - have)}"
 assert not have - want, f"update-only excludes outside the samples group: {sorted(have - want)}"
 PY
