@@ -97,9 +97,11 @@ for r in m k h ds; do
   grep -qx 'font = false' "$r/zensical.toml"
   grep -qxF 'extra_css = ["assets/docs-tokens.css", "assets/docs.css"]' "$r/zensical.toml"
   grep -qx 'custom_dir = "docs-overrides"' "$r/zensical.toml"
-  for asset in .lycheeignore docs/assets/docs-tokens.css docs/assets/docs.css docs/assets/docs.js docs-overrides/partials/source.html; do
+  for asset in .lycheeignore docs/assets/docs.css docs/assets/docs.js docs-overrides/partials/source.html; do
     cmp "$repo/$asset" "$r/$asset"
   done
+  # This repo restyles its own tokens; a render gets the template's.
+  cmp "$repo/template/docs/{% if docs_site %}assets{% endif %}/docs-tokens.css" "$r/docs/assets/docs-tokens.css"
   grep -qF "zensical@$zensical_pin build --strict" "$r/justfile"
   grep -qF "zensical@$zensical_pin serve" "$r/justfile"
   wf=$r/.github/workflows/docs.yml
