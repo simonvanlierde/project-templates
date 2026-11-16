@@ -214,6 +214,17 @@ LOCK
 git -C a-hooks add ui/pnpm-lock.yaml
 (cd a-hooks && "${prek[@]}" yamlfmt >/dev/null)
 git -C a-hooks diff --quiet ui/pnpm-lock.yaml
+# A Rust repo with the Starlight docs installs Node packages too: it ignores node_modules/, its
+# README asks for pnpm, and the YAML hooks leave the real lockfile that site.sh's build wrote alone.
+grep -qx 'node_modules/' st/.gitignore
+grep -qF '[pnpm](https://pnpm.io)' st/README.md
+rm -rf st-hooks
+cp -R st st-hooks
+cp "$out/st-build/docs-site/pnpm-lock.yaml" st-hooks/docs-site/
+git -C st-hooks init -q
+git -C st-hooks add -A
+(cd st-hooks && "${prek[@]}" check-yaml yamlfmt yamllint >/dev/null)
+git -C st-hooks diff --quiet docs-site/pnpm-lock.yaml
 # Canonical licence bytes and image-format identifiers survive commit and push hooks.
 # Include a final blank line: upstream licence texts need not end at one newline.
 for r in a b h; do
