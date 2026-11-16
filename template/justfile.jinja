@@ -125,12 +125,15 @@ og-card:
     {{ shot }} "$PWD/site/{{ 'public/' if site == 'astro' else '' }}og.png"
     {{ stamp('site/' ~ ('public/' if site == 'astro' else '') ~ 'og.png', 'site/' ~ ('src/layouts/Base.astro' if site == 'astro' else 'index.html')) }}
 {%- endif %}
-{%- if docs_site %}
+{%- if docs_zensical %}
     {{ shot }} "$PWD/docs/assets/og.png"
     {{ stamp('docs/assets/og.png', 'zensical.toml') }}
+{%- elif docs_starlight %}
+    {{ shot }} "$PWD/docs-site/public/og.png"
+    {{ stamp('docs-site/public/og.png', 'docs-site/astro.config.mjs') }}
 {%- endif %}
 {%- endif %}
-{%- if docs_site %}
+{%- if docs_zensical %}
 {%- set zensical = 'uvx --exclude-newer "1 week"' ~ (' --with mkdocstrings-python==' ~ mkdocstrings_python_version if docs_api else '') ~ ' zensical@' ~ zensical_version %}
 
 # Build docs/ into _docs/, which docs.yml deploys. --strict fails on any warning, such as a broken link.
@@ -140,6 +143,29 @@ docs:
 # Serve docs/ at http://localhost:8000, rebuilt on each save.
 docs-serve:
     {{ zensical }} serve
+{%- elif docs_starlight %}
+
+# `just docs` and CI install with --frozen-lockfile.
+
+# Install docs-site/node_modules, and write docs-site/pnpm-lock.yaml if it is missing.
+docs-sync:
+    pnpm -C docs-site install
+
+# Build docs/ into _docs/, which docs.yml deploys, then check its links, anchors, origins and script hashes.
+docs:
+    pnpm -C docs-site install --frozen-lockfile
+    ASTRO_TELEMETRY_DISABLED=1 pnpm -C docs-site run build
+    pnpm -C docs-site run check
+
+# Load the built pages in Chromium, light and dark, and run axe on each. Run `just docs` first.
+docs-check:
+    pnpm -C docs-site exec playwright install chromium
+    pnpm -C docs-site run axe
+
+# Serve docs/ at http://localhost:4321/{{ slug }}/, rebuilt on each save.
+docs-serve: docs-sync
+    @echo "Open http://localhost:4321/{{ slug }}/"
+    ASTRO_TELEMETRY_DISABLED=1 pnpm -C docs-site run dev
 {%- endif %}
 {% if citable %}
 # The writer exits 1 whenever it changes a file, so the check that follows decides

@@ -1,0 +1,25 @@
+{
+  "name": "{{ slug }}-docs",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@{{ pnpm_version }}",
+  "engines": {
+    "node": ">={{ node_version }}"
+  },
+  "scripts": {
+    "build": "astro build",
+    "dev": "astro dev",
+    "check": "node check.mjs",
+    "axe": "node axe.mjs"
+  },
+  "dependencies": {
+{#- Exact: copier.yml pins them, and Renovate bumps them there and in each project. #}
+    "@astrojs/markdown-satteri": "{{ satteri_version }}",
+    "@astrojs/starlight": "{{ starlight_version }}",
+    "astro": "{{ astro_version }}"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "{{ axe_playwright_version }}",
+    "playwright": "{{ playwright_version }}"
+  }
+}

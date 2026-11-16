@@ -1,0 +1,108 @@
+/* docs/assets/docs-tokens.css holds the paper, ink, accent and fonts; this maps them onto Starlight's
+   variables. The faint, rule and tint shades are mixed from them, so a project restyles the site
+   by changing those few values. */
+:root {
+  --paper: var(--docs-paper);
+  --ink: var(--docs-ink);
+  --pen: var(--docs-accent);
+}
+:root[data-theme="dark"] {
+  --paper: var(--docs-paper-dark);
+  --ink: var(--docs-ink-dark);
+  --pen: var(--docs-accent-dark);
+}
+/* Starlight starts in dark and marks the page light or dark in a script. Without that script the
+   system's setting holds: the light tokens above, unless the system is dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --paper: var(--docs-paper-dark);
+    --ink: var(--docs-ink-dark);
+    --pen: var(--docs-accent-dark);
+  }
+}
+:root,
+:root[data-theme] {
+  --faint: color-mix(in srgb, var(--ink) 68%, var(--paper));
+  --dim: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  --rule: color-mix(in srgb, var(--ink) 16%, var(--paper));
+  --rule-strong: color-mix(in srgb, var(--ink) 38%, var(--paper));
+  --tint: color-mix(in srgb, var(--ink) 6%, var(--paper));
+  --sl-font: var(--docs-font);
+  --sl-font-mono: var(--docs-mono);
+  --sl-color-white: var(--ink);
+  --sl-color-gray-1: var(--ink);
+  --sl-color-gray-2: var(--ink);
+  --sl-color-gray-3: var(--faint);
+  --sl-color-gray-4: var(--dim);
+  --sl-color-gray-5: var(--rule-strong);
+  --sl-color-gray-6: var(--tint);
+  --sl-color-gray-7: var(--tint);
+  --sl-color-black: var(--paper);
+  --sl-color-bg: var(--paper);
+  --sl-color-bg-nav: var(--paper);
+  --sl-color-bg-sidebar: var(--paper);
+  --sl-color-bg-inline-code: var(--tint);
+  --sl-color-text: var(--ink);
+  --sl-color-text-accent: var(--pen);
+  --sl-color-text-invert: var(--paper);
+  --sl-color-hairline: var(--rule);
+  --sl-color-hairline-light: var(--rule);
+  --sl-color-hairline-shade: var(--rule);
+  --sl-color-accent-low: var(--tint);
+  --sl-color-accent: var(--pen);
+  --sl-color-accent-high: var(--pen);
+  --sl-color-bg-accent: var(--pen);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+  }
+}
+body {
+  background: var(--paper);
+}
+
+.sl-markdown-content :not(pre) > code {
+  overflow-wrap: anywhere;
+}
+.sl-markdown-content :is(h2, h3, h4) {
+  text-wrap: balance;
+}
+.sl-markdown-content :is(p, li) {
+  text-wrap: pretty;
+}
+
+/* Code without Expressive Code: the tint, scrolling on its own in a box markdown.mjs makes focusable. */
+.sl-markdown-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0.65rem 0.75rem;
+  font: 0.85rem / 1.55 var(--docs-mono);
+  background: var(--tint);
+  border: 0;
+  border-radius: 0;
+}
+.sl-markdown-content pre code {
+  padding: 0;
+  background: none;
+  font: inherit;
+}
+/* Starlight makes a wide table scroll itself with no way to focus it: the wrapper scrolls instead. */
+.scroll {
+  max-width: 100%;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+.scroll table {
+  display: table;
+  margin: 0;
+}
+@media (forced-colors: active) {
+  .sl-markdown-content pre {
+    border: 1px solid CanvasText;
+  }
+}

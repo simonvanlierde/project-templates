@@ -604,6 +604,14 @@ jobs:
               stacks: [ts]
               ts_kind: library
               site: astro
+          # The Starlight docs beside a root package: root biome checks docs-site/, which must
+          # pass as rendered, and knip leaves it alone.
+          - name: library (starlight docs)
+            answers:
+              project_name: ci-ts-docs
+              stacks: [ts]
+              ts_kind: library
+              extras: [docs_site]
           # Nested, so a report the mutation run writes beside the package must be
           # gitignored there too: ts-check runs again after it.
           - name: library (test extras)
@@ -702,6 +710,10 @@ jobs:
       - if: matrix.answers.site == 'astro'
         working-directory: ${{ runner.temp }}/proj
         run: just site-sync
+
+      - if: contains(matrix.answers.extras, 'docs_site')
+        working-directory: ${{ runner.temp }}/proj
+        run: just docs-sync
 
       # The scaffold's own recipes; `check` runs the same commands as the generated
       # ts.yml. ts-sync has no --frozen-lockfile: the install writes pnpm-lock.yaml.

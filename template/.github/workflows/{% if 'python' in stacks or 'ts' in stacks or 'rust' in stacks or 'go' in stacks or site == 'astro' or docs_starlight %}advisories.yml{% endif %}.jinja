@@ -1,6 +1,6 @@
 name: advisories
 
-# The stack workflows{% if site == 'astro' %} and site.yml{% endif %} audit dependencies on push and pull request, and zizmor
+# The stack workflows{% if site == 'astro' %} and site.yml{% endif %}{% if docs_starlight %} and docs.yml{% endif %} audit dependencies on push and pull request, and zizmor
 # audits workflows. A new advisory can land against a lockfile or action with no commit here, so
 # this audits again every Monday. A failed scheduled run opens one issue, or comments on the
 # open one.
@@ -120,32 +120,32 @@ jobs:
           cache-dependency-path: {{ '' if go_dir == '.' else go_dir ~ '/' }}go.sum
       - run: go tool govulncheck ./...
 {%- endif %}
-{%- if site == 'astro' %}
-  site:
-    name: "site: pnpm audit"
+{%- for job, dir in [('site', 'site'), ('docs', 'docs-site')] if (job == 'site' and site == 'astro') or (job == 'docs' and docs_starlight) %}
+  {{ job }}:
+    name: "{{ job }}: pnpm audit"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: site
+        working-directory: {{ dir }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
-          package_json_file: site/package.json
+          package_json_file: {{ dir }}/package.json
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "{{ node_version }}"
       - run: pnpm audit --audit-level=moderate
-{%- endif %}
+{%- endfor %}
 
   notify:
     # Scheduled runs only. Opens one issue, or comments on the open one, when an audit fails.
     # The only job that may write issues.
     name: "advisories: report failure"
-    needs: {{ ['actions'] + (['python', 'ts', 'rust', 'go'] | select('in', stacks) | list) + (['site'] if site == 'astro' else []) }}
+    needs: {{ ['actions'] + (['python', 'ts', 'rust', 'go'] | select('in', stacks) | list) + (['site'] if site == 'astro' else []) + (['docs'] if docs_starlight else []) }}
     # A job that runs past timeout-minutes ends cancelled, not failed.
     if: always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
     permissions:
