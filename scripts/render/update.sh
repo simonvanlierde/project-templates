@@ -340,18 +340,26 @@ git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=sample-me --data 'stacks=[python,ts]' --data python_kind=library \
   --data ts_dir=web --data ts_kind=web-app --data user_data=nothing --data worker=true \
-  --data site=astro --data site_host=cloudflare --data decision_records=true \
+  --data site=astro --data site_host=cloudflare --data decision_records=true --data 'extras=[docs_site]' \
   "$sample_tpl" "$sample_up" >/dev/null
 # Every sample this render has: a missing one fails here, before the update can pass on it.
 samples=(src/sample_me/__init__.py tests/test_add.py
   web/src/App.tsx web/src/App.test.tsx web/src/main.tsx web/src/app.css
   web/worker/index.ts web/worker/index.test.ts
   site/src/pages/index.astro site/src/pages/about.md site/worker/index.mjs site/worker/index.test.mjs)
-owned=(docs/decisions/0001-start-from-project-templates.md docs/og-card.html)
+owned=(docs/decisions/0001-start-from-project-templates.md docs/og-card.html docs/assets/docs-tokens.css)
 (cd "$sample_up" && rm "${samples[@]}" "${owned[@]}")
 git -C "$sample_up" init -q
 git -C "$sample_up" add -A
 git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "replace the samples"
+# The Starlight docs' owned files come back the same way.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=sample-docs --data 'stacks=[rust]' --data 'extras=[docs_site]' \
+  "$sample_tpl" "$sample_up-docs" >/dev/null
+owned_docs=(docs-site/astro.config.mjs docs-site/public/favicon.svg)
+(cd "$sample_up-docs" && rm "${owned_docs[@]}")
+git -C "$sample_up-docs" init -q
+git -C "$sample_up-docs" add -A
+git -C "$sample_up-docs" -c user.name=t -c user.email=t@example.org commit -q -m "delete the owned docs files"
 find "$sample_tpl/template" -type f \( -name '*test_add.py*' -o -name '__init__.py.jinja' \
   -o -name '*App.tsx*' -o -name '*App.test.tsx*' -o -name '*main.tsx*' -o -name '*app.css*' \
   -o -path '*worker*/index.ts' -o -path '*worker*/index.test.ts' -o -path '*worker*/index.mjs' \
@@ -367,6 +375,9 @@ test -z "$back" || {
   exit 1
 }
 for f in "${owned[@]}"; do test -f "$sample_up/$f"; done
+# shellcheck disable=SC2031 # COPIER_VERSION is set at file top
+uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up-docs" >"$out/sample-up-docs.log" 2>&1
+for f in "${owned_docs[@]}"; do test -f "$sample_up-docs/$f"; done
 
 # install-action falls back to cargo-binstall for a tool past its manifest, which
 # installs an unchecked binary: every step says fallback: none, but cargo-codspeed,
@@ -458,6 +469,11 @@ for selection, expected in [('all', features | {'property', 'mutation'}),
     workflow = (project / '.github/workflows/python.yml').read_text()
     assert ('windows-latest' in workflow) == ('python_windows' in expected), selection
     assert not list(project.rglob('*.rej')), selection
+    # The kept zensical.toml does not list the new tokens file, so docs.css falls back to its values.
+    if 'docs_site' in expected:
+        assert (project / 'docs/assets/docs-tokens.css').is_file(), selection
+        assert 'docs-tokens' not in (project / 'zensical.toml').read_text(), selection
+        assert 'var(--docs-paper, #ffffff)' in (project / 'docs/assets/docs.css').read_text(), selection
     # publish_to_crates is new since v0.14.0: an update keeps the crate unpublishable.
     assert answers['publish_to_crates'] is False, answers
     assert 'publish = false' in (project / 'Cargo.toml').read_text(), selection
@@ -484,3 +500,40 @@ PYTEST
 # from any branch. Renovate projects have no App key.
 grep -qF 'cannot limit branches either' "$out/a/justfile"
 (lacks -F 'cannot limit branches either' "$out/d/justfile")
+
+# A v0.15.0 docs site in a Rust or TypeScript repo stored no docs_engine. The new default would
+# be Starlight; the update keeps it on Zensical and stores that answer.
+# shellcheck disable=SC2030,SC2031 # each test subshell sets its own environment
+(
+  while IFS= read -r git_var; do unset "$git_var"; done < <(git rev-parse --local-env-vars)
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+  engine_tpl=$out/engine-tpl
+  mkdir -p "$engine_tpl"
+  git -C "$repo" archive v0.15.0 copier.yml includes template | tar -x -C "$engine_tpl"
+  git_engine=(git -C "$engine_tpl" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org)
+  "${git_engine[@]}" init -q
+  "${git_engine[@]}" add copier.yml includes template
+  "${git_engine[@]}" commit -qm old
+  for stack in rust ts; do
+    p=$out/engine-$stack
+    "${copier[@]}" --vcs-ref=HEAD --quiet --data project_name=engine-check \
+      --data "stacks=[$stack]" --data 'extras=[docs_site]' "$engine_tpl" "$p"
+    (lacks -q docs_engine "$p/.copier-answers.yml")
+    git -C "$p" -c core.hooksPath=/dev/null init -q
+    git -C "$p" add .
+    git -C "$p" -c core.hooksPath=/dev/null -c user.name=t -c user.email=t@example.org commit -qm old
+  done
+  rm -rf "$engine_tpl/includes" "$engine_tpl/template"
+  cp "$repo/copier.yml" "$engine_tpl/copier.yml"
+  cp -R "$repo/includes" "$repo/template" "$engine_tpl/"
+  "${git_engine[@]}" add -A copier.yml includes template
+  "${git_engine[@]}" commit -qm engine
+  for stack in rust ts; do
+    p=$out/engine-$stack
+    (cd "$p" && uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --vcs-ref=HEAD --defaults --quiet)
+    grep -qx 'docs_engine: zensical' "$p/.copier-answers.yml"
+    test -f "$p/zensical.toml"
+    test -f "$p/docs/assets/docs.css"
+    test ! -e "$p/docs-site"
+  done
+)

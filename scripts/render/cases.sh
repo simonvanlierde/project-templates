@@ -130,6 +130,17 @@ test ! -e "$out/minimal-extras/.github/workflows/cold-install.yml"
 # ds: a command-line-only Python library with the docs site: no API reference.
 "${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=docs-me --data 'stacks=[python]' \
   --data python_api=false . "$out/ds"
+# st: Starlight is the default docs engine for a Rust repo, built from its decision records too:
+# decision_records passed with --data must not read as an update.
+# sp: a Python library that picks it has no API reference. zt: a TypeScript repo picks Zensical,
+# and zs, its twin, keeps the default: Starlight beside a package at the root.
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=star-me --data 'stacks=[rust]' \
+  --data decision_records=true . "$out/st"
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=sp-me --data 'stacks=[python]' \
+  --data docs_engine=starlight . "$out/sp"
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=zt-me --data 'stacks=[ts]' \
+  --data docs_engine=zensical . "$out/zt"
+"${copier[@]}" --vcs-ref=HEAD --data 'extras=[docs_site,cold_install]' --data project_name=zs-me --data 'stacks=[ts]' . "$out/zs"
 # r and t: a Rust and a TypeScript library alone, so each gets the citation files with
 # only its own manifest beside them, and t's hooks run through pnpm. Both have the
 # static site: r the plain one, t the Astro one beside a package at the root.
@@ -498,6 +509,14 @@ refuses 'need a library kind' --data python_kind=app --data 'extras=[mutation]'
 refuses 'The flat layout' --data 'stacks=[python]' --data python_kind=data-pipeline --data python_layout=flat
 # One repo has one GitHub Pages site.
 refuses 'one GitHub Pages site' --data 'extras=[docs_site,cold_install]' --data 'stacks=[python]' --data site=plain
+# docs-site/ and _docs/ belong to the Starlight build.
+# shellcheck disable=SC2016 # the messages quote with backticks
+{
+  refuses 'ts_dir is `docs-site`, where the docs site goes' --data 'extras=[docs_site,cold_install]' --data 'stacks=[ts]' --data ts_dir=docs-site
+  refuses 'rust_dir is `_docs`, where the docs site goes' --data 'extras=[docs_site,cold_install]' --data 'stacks=[rust]' --data rust_dir=_docs
+  refuses 'go_dir is `docs-site/tool`, where the docs site goes' --data 'extras=[docs_site,cold_install]' --data 'stacks=[go]' --data go_dir=docs-site/tool --data docs_engine=starlight
+  refuses 'python_dir is `_docs/pkg`, where the docs site goes' --data 'extras=[docs_site,cold_install]' --data 'stacks=[python]' --data python_dir=_docs/pkg --data docs_engine=starlight
+}
 # A root web app's legal pages are in docs/, which the docs site would publish again.
 refuses 'A web app at the repo root' --data 'extras=[docs_site,cold_install]' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing
 

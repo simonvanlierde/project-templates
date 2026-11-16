@@ -1,0 +1,13 @@
+/* The docs site's look, in one place: Zensical and Starlight both read these. Change the
+   values to match DESIGN.md; each engine's own stylesheet maps them onto its theme.
+   Dark values have their own names because the engines mark the dark scheme differently. */
+:root {
+  --docs-paper: #ffffff;
+  --docs-ink: #1f2328;
+  --docs-accent: #4051b5;
+  --docs-paper-dark: #2e303e;
+  --docs-ink-dark: #e4e5ea;
+  --docs-accent-dark: #a5b4fc;
+  --docs-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --docs-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+}

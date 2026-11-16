@@ -41,6 +41,9 @@ _skip_if_exists:
   - /site/astro.config.mjs
   - /site/src/layouts/Base.astro
   - /zensical.toml
+  - /docs-site/astro.config.mjs
+  - /docs-site/public/favicon.svg
+  - /docs/assets/docs-tokens.css
   - /docs/index.md
   - /docs/reference.md
   # Not a sample: benchmarks.yml runs this file, so one the project deleted comes back.
@@ -110,11 +113,14 @@ _message_after_copy: |
   {%- if site == 'astro' %}
     just site-sync
   {%- endif %}
+  {%- if docs_starlight %}
+    just docs-sync
+  {%- endif %}
   {%- if web_app or site != 'none' or docs_site %}
-    just og-card{{ '   # needs pnpm and Node' if 'ts' not in stacks and site != 'astro' }}
+    just og-card{{ '   # needs pnpm and Node' if 'ts' not in stacks and site != 'astro' and not docs_starlight }}
   {%- endif %}
     just check
-  {%- if stacks | reject('equalto', 'docker') | list or site == 'astro' %}
+  {%- if stacks | reject('equalto', 'docker') | list or site == 'astro' or docs_starlight %}
   Then commit, lockfiles included: CI installs exactly what they list.
   {%- else %}
   Then commit.
@@ -546,7 +552,7 @@ extras:
     Profiling recipes (Python or Rust): profiling
     Verify README setup in a fresh Debian container: cold_install
     Run Python tests on Windows (one extra CI job): python_windows
-    Searchable documentation on GitHub Pages (Zensical; Python libraries can include an API reference): docs_site
+    Searchable documentation on GitHub Pages (Zensical or Starlight; Python libraries on Zensical can include an API reference): docs_site
     Property tests for library code (generated inputs, plus extended weekly runs): property
     Mutation tests for library code (a local recipe and weekly CI run): mutation
   default: >-
@@ -603,6 +609,42 @@ docs_site:
   type: bool
   when: false
   default: "{{ 'docs_site' in extras }}"
+
+# Zensical is Python, so it needs no Node and gives a Python library its API reference.
+# Starlight is Node: it is the default for a repo with a ts or rust stack and no python one.
+# Never asked: pass --data docs_engine=... to pick the other one.
+# An update keeps the stored answer. A project from before this question stays on Zensical:
+# while defaults render, copier leaves _copier_operation unset, and _copier_answers holds only
+# the answers so far (and --data) on a copy but every stored answer on an update. decision_records
+# (stored since 0.14.0) and docs_site (stored before 0.15.0) come later, so either one, when
+# --data did not pass it, marks an update.
+# docs/decisions/0012-docs-engine-per-toolchain.md has the reasons.
+docs_engine:
+  type: str
+  when: "{{ docs_site }}"
+  ask: false
+  help: What builds the documentation site (docs/decisions/0012-docs-engine-per-toolchain.md)
+  choices:
+    Zensical (Python, via uvx; a Python library can add an API reference): zensical
+    Starlight (Astro, via pnpm; a hash-based CSP, no API reference): starlight
+  default: >-
+    {{ 'starlight' if not (['decision_records', 'docs_site'] | reject('in', _copier_conf.data) | select('in', _copier_answers) | list) and 'python' not in stacks and ('ts' in stacks or 'rust' in stacks) else 'zensical' }}
+  # docs-site/ and _docs/ belong to the Starlight build: a package there would share them with it.
+  validator: >-
+    {% if docs_engine == 'starlight' %}{% for q, d in [('python_dir', python_dir), ('ts_dir', ts_dir), ('rust_dir', rust_dir), ('go_dir', go_dir)] if d in ('docs-site', '_docs') or d.startswith(('docs-site/', '_docs/')) %}
+    {{ q }} is `{{ d }}`, where the docs site goes: give {{ q }} another directory, or answer docs_engine=zensical.
+    {% endfor %}{% endif %}
+
+# Computed, never asked: which engine's files render.
+docs_starlight:
+  type: bool
+  when: false
+  default: "{{ docs_site and docs_engine == 'starlight' }}"
+
+docs_zensical:
+  type: bool
+  when: false
+  default: "{{ docs_site and docs_engine == 'zensical' }}"
 
 # --- python -------------------------------------------------------------------
 
@@ -691,7 +733,7 @@ python_api:
 docs_api:
   type: bool
   when: false
-  default: "{{ docs_site and 'python' in stacks and python_kind == 'library' and python_api }}"
+  default: "{{ docs_site and docs_engine == 'zensical' and 'python' in stacks and python_kind == 'library' and python_api }}"
 
 # --- ts -----------------------------------------------------------------------
 
@@ -910,6 +952,27 @@ zensical_version:
   when: false
   default: 0.0.74
 
+# Computed, never asked: the Starlight docs build's pins, exact in docs-site/package.json.
+# The Astro is astro_version above. Renovate bumps them here, a project gets the bump
+# through `copier update`, and its own dependency bot bumps it after that.
+# renovate: datasource=npm depName=@astrojs/starlight
+starlight_version:
+  type: str
+  when: false
+  default: 0.42.8
+
+# renovate: datasource=npm depName=@astrojs/markdown-satteri
+satteri_version:
+  type: str
+  when: false
+  default: 0.4.7
+
+# renovate: datasource=npm depName=@axe-core/playwright
+axe_playwright_version:
+  type: str
+  when: false
+  default: 4.14.0
+
 # renovate: datasource=pypi depName=mkdocstrings-python
 mkdocstrings_python_version:
   type: str
@@ -1089,11 +1152,11 @@ reports_failures:
   when: false
   default: "{{ 'mutation' in test_extras or 'property' in test_extras or dependency_bot == 'dependabot' or web_app or site != 'none' or 'python' in stacks or 'ts' in stacks or 'rust' in stacks or 'go' in stacks }}"
 
-# Computed, not asked: a ts stack or the Astro site installs Node packages with pnpm.
+# Computed, not asked: a ts stack, the Astro site or the Starlight docs install Node packages with pnpm.
 has_pnpm:
   type: bool
   when: false
-  default: "{{ 'ts' in stacks or site == 'astro' }}"
+  default: "{{ 'ts' in stacks or site == 'astro' or docs_starlight }}"
 
 app_port:
   type: int

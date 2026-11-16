@@ -1,9 +1,11 @@
 ---
-status: accepted
+status: accepted, engine rule superseded by 0012
 date: 2026-11-06
 ---
 
 # Zensical builds the docs site
+
+[Decision 0012](0012-docs-engine-per-toolchain.md) adds Starlight as a second engine for repos without Python. The rest of this record stands.
 
 ## Context and Problem Statement
 

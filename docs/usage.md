@@ -333,11 +333,14 @@ To add these tests to an existing project, select `property` or `mutation` in `e
 
 ### Documentation site
 
-Select `docs_site` in `extras` (under `customise`) when outside users need search or versioned docs (the `docs-site` requirement in [Levels](levels.md)): a search-indexed site built from the Markdown in `docs/`. [Zensical](https://zensical.org) builds it, and GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step. Without a `nav` in `zensical.toml`, the menu follows the files.
+Select `docs_site` in `extras` (under `customise`) when outside users need search or versioned docs (the `docs-site` requirement in [Levels](levels.md)): a search-indexed site built from the Markdown in `docs/`. GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step.
 
-A render with `docs_site` gets:
+`docs_engine` picks the builder ([why](decisions/0012-docs-engine-per-toolchain.md)). It is never asked: the default follows the stacks, and `--data docs_engine=zensical` or `--data docs_engine=starlight` on `copier copy` or `copier update` picks the other. [Zensical](https://zensical.org) is the default for a repo with a Python stack, or with neither TypeScript nor Rust, and runs with `uvx`. [Starlight](https://starlight.astro.build) is the default for a TypeScript or Rust repo without Python, and runs with the pnpm and Node the repo has ([Starlight](#starlight-docs-engine)). An update keeps a project's engine, and a project that predates the answer stays on Zensical until it passes `--data docs_engine=starlight`. Both read the paper, ink, accent and font stacks from `docs/assets/docs-tokens.css`, which is yours: edit its values to match your `DESIGN.md`. Without a `nav` in `zensical.toml`, the Zensical menu follows the files.
+
+A render with `docs_site` and Zensical gets:
 
 - `zensical.toml` and `docs/index.md`, the home page. Both are yours: an update leaves them alone.
+- `docs/assets/docs-tokens.css`, the paper, ink, accent and font stacks that both engines read. It is yours: edit its values to match your `DESIGN.md`, and an update leaves it alone.
 - `docs/og-card.html`, the social card, and `docs/assets/og.png` once you run `just og-card`. Commit the PNG.
 - `docs/reference.md`, for a Python library with `python_api`. It holds one `::: <module>` line, which mkdocstrings expands into the API reference from the docstrings. It reads the source without importing the package.
 - `just docs`, which builds into `_docs/` (gitignored), and `just docs-serve`, which serves the site on port 8000 and rebuilds it on each save. Both run the Zensical that `copier.yml` pins with `uvx`, so the project needs no docs dependencies. Like the project's own installs, uvx resolves only releases at least a week old. `copier update` brings a newer pin.
@@ -355,7 +358,7 @@ An existing `zensical.toml` is yours, so updates leave it alone. To use these de
 
 ```toml
 [project]
-extra_css = ["assets/docs.css"]
+extra_css = ["assets/docs-tokens.css", "assets/docs.css"]
 extra_javascript = ["assets/docs.js"]
 
 [project.theme]
@@ -369,7 +372,22 @@ og_image = "assets/og.png"
 anchor_linenums = false
 ```
 
-If you already list stylesheets or scripts, append the new paths instead of replacing those lists. If you use another `custom_dir`, copy the plain-link partial and `main.html` into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
+If you already list stylesheets or scripts, append the new paths instead of replacing those lists. Until `extra_css` lists `assets/docs-tokens.css`, `docs.css` uses the same values as the template's tokens file, so the site looks the same, but your edits to the tokens file do not show. If you use another `custom_dir`, copy the plain-link partial and `main.html` into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
+
+#### Starlight docs engine
+
+With `docs_engine=starlight` the render has a `docs-site/` package instead of `zensical.toml`, `docs-overrides/` and the Zensical assets:
+
+- `docs-site/package.json`, with Astro, Starlight and the Sätteri Markdown processor pinned to the versions in `copier.yml` (Renovate bumps them there), and `pnpm-workspace.yaml`, which resolves only releases a week old. `just docs-sync` installs the packages and writes `docs-site/pnpm-lock.yaml`; commit it, as `just docs` and CI install with `--frozen-lockfile`.
+- `docs-site/astro.config.mjs`, yours after the first render. It sets the site, the base (`/<repo>`), `outDir` (`_docs/`), addresses that end in a slash, and the link-preview tags. `check.mjs` and `axe.mjs` read the site and base from it. The sidebar follows the folders of `docs/`; add a `sidebar` array to the `starlight()` call to order or label it by hand.
+- `docs-site/markdown.mjs`, which sends a link between pages to the page and a link to any other repository file to GitHub, drops the first h1 (the title) and gives wide tables and code blocks a keyboard-reachable scroll box. A link to a file that does not exist stops the build, and so does a `<script>` in the Markdown, which the policy below would allow.
+- `docs-site/csp-hash.mjs`, which writes each page's `Content-Security-Policy` meta tag after the build: `default-src 'none'`, scripts from the site and the sha256 of each inline script, styles from the site and inline, images, fonts and fetches from the site only. Pagefind, the search, adds `'wasm-unsafe-eval'`. It also marks the 404 page `noindex`; Starlight writes the sitemap. Nothing loads from another origin.
+- `docs-site/src/styles/docs.css`, which maps the tokens onto Starlight's variables, and `docs-site/public/favicon.svg`, a placeholder that is yours.
+- `just docs` builds into `_docs/` and runs `docs-site/check.mjs`: every link, asset and anchor resolves, no page or stylesheet loads from another origin, every inline script is in its page's policy, the 404 is `noindex` and the sitemap lists the pages. `just docs-check` loads the pages in Chromium, light and dark at 400 and 1440 px, runs axe, and checks that `/` opens the search. `just docs-serve` serves the site at `http://localhost:4321/<repo>/`.
+- `.github/workflows/docs.yml`, which audits the lockfile (`advisories.yml` repeats that weekly), runs `just docs` and `just docs-check`, and deploys `_docs/` to Pages as the Zensical one does.
+- `just og-card` writes `docs-site/public/og.png` and stamps its hash into `OG` in `astro.config.mjs`.
+
+There is no API reference with Starlight. A repo that needs one from Python docstrings picks Zensical.
 
 One repo has one Pages site, so the template refuses `docs_site` together with a `site` on Pages. A `site` [on a Worker](hosting.md#hosting-on-a-worker) leaves Pages to the docs. Otherwise, a playground page can go in `docs/` as Markdown or HTML.
 

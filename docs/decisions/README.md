@@ -12,9 +12,10 @@ Confirmation section names the check that enforces it, or says none exists yet.
 | [0003](0003-drop-the-ts-docker-image.md) Drop the TypeScript Docker image | accepted | 2026-11-04 |
 | [0004](0004-decision-records-in-rendered-projects.md) Decision records in rendered projects | accepted | 2026-11-04 |
 | [0005](0005-workers-hosting-with-an-optional-script.md) Workers hosting with an optional script | accepted | 2026-11-06 |
-| [0006](0006-zensical-builds-the-docs-site.md) Zensical builds the docs site | accepted | 2026-11-06 |
+| [0006](0006-zensical-builds-the-docs-site.md) Zensical builds the docs site | accepted, engine rule superseded by 0012 | 2026-11-06 |
 | [0007](0007-the-plain-site-is-a-tool-page.md) The plain site is a tool page | accepted | 2026-11-07 |
 | [0008](0008-three-audiences-in-order.md) Three audiences in order | accepted | 2026-11-10 |
 | [0009](0009-optional-features-share-one-extras-answer.md) Optional features share one extras answer | accepted | 2026-11-11 |
 | [0010](0010-a-level-ladder-replaces-the-badge-question.md) A level ladder replaces the badge question | accepted | 2026-11-12 |
 | [0011](0011-rust-releases-through-one-workflow.md) Rust releases through one workflow | accepted | 2026-11-15 |
+| [0012](0012-docs-engine-per-toolchain.md) The docs engine is chosen per toolchain | accepted | 2026-11-16 |

@@ -74,10 +74,10 @@
       "wrangler"
 {%- endif %}
     ]
-{%- if site != 'none' and ts_dir == '.' %},
-{#- site/ is a page of its own: nothing in this package imports it. #}
+{%- if ts_dir == '.' and (site != 'none' or docs_starlight) %},
+{#- site/ and docs-site/ are packages of their own: nothing in this one imports them. #}
     "ignoreFiles": [
-      "site/**"
+      {{ ([] + (['"site/**"'] if site != 'none' else []) + (['"docs-site/**"'] if docs_starlight else [])) | join(',\n      ') }}
     ]
 {%- endif %}
 {%- if web_app %},

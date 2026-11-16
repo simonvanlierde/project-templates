@@ -77,7 +77,7 @@ Coverage is opt-in. `just py-cov` and `just ts-cov` print summaries without thre
 
 ## Documentation site
 
-With the `docs_site` extra, [Zensical](usage.md#documentation-site) builds `docs/` into a site, and mkdocstrings renders a Python library's API reference.
+With the `docs_site` extra, [Zensical or Starlight](usage.md#documentation-site) builds `docs/` into a site. Zensical runs with uvx, and mkdocstrings renders a Python library's API reference. Starlight runs with pnpm and Node, in `docs-site/`.
 
 ## Docker images
 

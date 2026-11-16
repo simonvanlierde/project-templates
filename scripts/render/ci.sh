@@ -143,6 +143,12 @@ grep -q 'cargo deny check advisories' a/.github/workflows/advisories.yml
 grep -q 'go tool govulncheck' a/.github/workflows/advisories.yml
 grep -q 'uv audit --locked' a/.github/workflows/advisories.yml
 grep -q 'pnpm audit --prod' a/.github/workflows/advisories.yml
+# The Starlight docs' lockfile is audited weekly too, as docs.yml says.
+for r in st zs; do
+  sed -n '/^  docs:$/,/^  [a-z]/p' "$r/.github/workflows/advisories.yml" | grep -qx '        working-directory: docs-site'
+  grep -qF "'docs']" "$r/.github/workflows/advisories.yml"
+done
+(lacks -q '^  docs:' zt/.github/workflows/advisories.yml)
 (lacks -q -e '^  rust:' -e '^  go:' b/.github/workflows/advisories.yml)
 grep -q 'working-directory: svc' b/.github/workflows/advisories.yml
 grep -q 'working-directory: crates/cli' c/.github/workflows/advisories.yml
@@ -263,8 +269,12 @@ grep -qx 'name = "codspeed"' c/crates/cli/Cargo.toml
 grep -q 'working-directory: crates/cli' c/.github/workflows/benchmarks.yml
 grep -q 'working-directory: api' c/.github/workflows/benchmarks.yml
 # Every workflow that installs Python packages with uv (uv sync, uvx, or `just docs`) checks
-# them for malware first, as python.yml does. The sweep must see these runs to count.
-mapfile -t synced < <(grep -rl --include='*.yml' -e '- run: uv sync' -e 'uvx ' -e '- run: just docs' ./*/.github/workflows)
+# them for malware first, as python.yml does. The sweep must see these runs to count. The
+# Starlight renders' docs.yml runs `just docs` with pnpm, so it has no uv to check.
+starlight=(st sp nw zs)
+for r in "${starlight[@]}"; do (lacks -qE 'uv|zensical' "$r/.github/workflows/docs.yml"); done
+mapfile -t synced < <(grep -rl --include='*.yml' -e '- run: uv sync' -e 'uvx ' -e '- run: just docs' ./*/.github/workflows |
+  grep -vxF "$(printf './%s/.github/workflows/docs.yml\n' "${starlight[@]}")")
 for f in benchmarks property mutation docs fair copier-update pr-title; do
   # Not grep -q: it exits at the first match, and under pipefail printf's SIGPIPE fails the line.
   printf '%s\n' "${synced[@]}" | grep "/$f.yml$" >/dev/null
