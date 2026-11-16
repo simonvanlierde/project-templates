@@ -41,6 +41,7 @@ _skip_if_exists:
   - /site/astro.config.mjs
   - /site/src/layouts/Base.astro
   - /zensical.toml
+  - /docs/assets/docs-tokens.css
   - /docs/index.md
   - /docs/reference.md
   # Not a sample: benchmarks.yml runs this file, so one the project deleted comes back.
