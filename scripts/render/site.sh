@@ -97,9 +97,10 @@ for r in m k h ds; do
   grep -qx 'font = false' "$r/zensical.toml"
   grep -qxF 'extra_css = ["assets/docs-tokens.css", "assets/docs.css"]' "$r/zensical.toml"
   grep -qx 'custom_dir = "docs-overrides"' "$r/zensical.toml"
-  for asset in .lycheeignore docs/assets/docs-tokens.css docs/assets/docs.css docs/assets/docs.js docs-overrides/partials/source.html; do
+  for asset in .lycheeignore docs/assets/docs.css docs/assets/docs.js docs-overrides/partials/source.html; do
     cmp "$repo/$asset" "$r/$asset"
   done
+  cmp "$repo/template/docs/{% if docs_site %}assets{% endif %}/docs-tokens.css" "$r/docs/assets/docs-tokens.css"
   grep -qF "zensical@$zensical_pin build --strict" "$r/justfile"
   grep -qF "zensical@$zensical_pin serve" "$r/justfile"
   wf=$r/.github/workflows/docs.yml
@@ -110,6 +111,84 @@ for r in m k h ds; do
   sed -n '/^  deploy:$/,$p' "$wf" | grep -qxF "    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
   grep -q 'build_type=workflow' "$r/justfile"
 done
+# Docs engines: Zensical for the Python and Go renders above and the zt one, Starlight for the Rust
+# one (the default there), a Python one that asked for it and the web app's twin.
+astro_pin=$(sed -n '/^astro_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+starlight_pin=$(sed -n '/^starlight_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+satteri_pin=$(sed -n '/^satteri_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+axe_pin=$(sed -n '/^axe_playwright_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+playwright_pin=$(sed -n '/^playwright_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+grep -qx 'docs_engine: zensical' zt/.copier-answers.yml
+grep -qx 'docs_engine: zensical' m/.copier-answers.yml
+grep -qx 'docs_engine: starlight' st/.copier-answers.yml
+for r in st sp nw; do
+  for f in astro.config.mjs package.json pnpm-workspace.yaml csp-hash.mjs markdown.mjs check.mjs axe.mjs src/content.config.mjs src/styles/docs.css public/favicon.svg; do
+    test -f "$r/docs-site/$f"
+  done
+  test -f "$r/docs/assets/docs-tokens.css"
+  cmp "$repo/template/docs/{% if docs_site %}assets{% endif %}/docs-tokens.css" "$r/docs/assets/docs-tokens.css"
+  grep -qF '"../docs/assets/docs-tokens.css"' "$r/docs-site/astro.config.mjs"
+  # No Zensical files, and no mkdocstrings.
+  for f in zensical.toml docs-overrides .lycheeignore docs/assets/docs.css docs/assets/docs.js docs/reference.md; do test ! -e "$r/$f"; done
+  jq -e --arg a "$astro_pin" --arg s "$starlight_pin" --arg m "$satteri_pin" --arg x "$axe_pin" --arg p "$playwright_pin" \
+    '.dependencies.astro == $a and .dependencies["@astrojs/starlight"] == $s and .dependencies["@astrojs/markdown-satteri"] == $m
+     and .devDependencies["@axe-core/playwright"] == $x and .devDependencies.playwright == $p' "$r/docs-site/package.json" >/dev/null
+  jq -e --arg v "pnpm@$pnpm_pin" '.packageManager == $v' "$r/docs-site/package.json" >/dev/null
+  grep -qx 'minimumReleaseAge: 10080' "$r/docs-site/pnpm-workspace.yaml"
+  grep -qx '/_docs/' "$r/.gitignore"
+  grep -qx '/docs-site/.astro/' "$r/.gitignore"
+  grep -qE '^const BASE = "/[a-z0-9.-]+";$' "$r/docs-site/astro.config.mjs"
+  grep -qx 'docs-sync:' "$r/justfile"
+  grep -qx '    pnpm -C docs-site install --frozen-lockfile' "$r/justfile"
+  grep -qx '    pnpm -C docs-site run check' "$r/justfile"
+  grep -qx 'docs-check:' "$r/justfile"
+  # shellcheck disable=SC2016 # a literal "$PWD" in the recipe body
+  grep -qF '"$PWD/docs-site/public/og.png"' "$r/justfile"
+  grep -qF "docs-site/astro.config.mjs" "$r/justfile"
+  (lacks -q 'zensical' "$r/justfile")
+  grep -qx 'const OG = "og.png";' "$r/docs-site/astro.config.mjs"
+  # The workflow builds with pnpm, audits the lockfile, runs axe, and deploys the same artifact.
+  wf=$r/.github/workflows/docs.yml
+  grep -qx '      - run: just docs' "$wf"
+  grep -qx '      - run: just docs-check' "$wf"
+  grep -qx '          package_json_file: docs-site/package.json' "$wf"
+  grep -qx '          path: _docs' "$wf"
+  (lacks -q 'setup-uv' "$wf")
+  test "$(grep -c 'pages: write' "$wf")" = 1
+  test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
+  sed -n '/^  deploy:$/,$p' "$wf" | grep -qxF "    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
+  grep -q 'build_type=workflow' "$r/justfile"
+done
+# The policy starts from default-src 'none'; check.mjs refuses a host or * in the built pages.
+grep -qF "default-src 'none'" st/docs-site/csp-hash.mjs
+# Python with Starlight keeps its stack's files and gets no API reference.
+(lacks -q 'mkdocstrings' sp/justfile)
+test ! -e sp/docs/reference.md
+# Updates leave the project's tokens, config and favicon alone.
+for f in docs/assets/docs-tokens.css docs-site/astro.config.mjs docs-site/public/favicon.svg; do
+  grep -qxF "  - /$f" "$repo/copier.yml"
+done
+# The Rust render builds its decision records into pages, and links between pages resolve.
+test -f st/docs/decisions/README.md
+cp -R st "$out/st-build"
+# shellcheck disable=SC2016 # backticks written to the page, not run
+printf '# Guide\n\nSee [home](index.md), [decisions](decisions/README.md), [Cargo](../Cargo.toml) and [here](#setup).\n\n## Setup\n\n```sh\njust docs\n```\n\n| a | b |\n| - | - |\n| `x` | y |\n' >"$out/st-build/docs/guide.md"
+test -f "$out/st-build/Cargo.toml"
+(cd "$out/st-build" && git init -q && just docs-sync docs docs-check) >starlight-build.log 2>&1 || {
+  tail -40 starlight-build.log >&2
+  exit 1
+}
+grep -qF 'href="/star-me/guide/"' "$out/st-build/_docs/index.html" || grep -rqF 'href="/star-me/guide/"' "$out/st-build/_docs"
+grep -rqF 'https://github.com/example-org/star-me/blob/main/Cargo.toml' "$out/st-build/_docs/guide/index.html"
+grep -qF 'name="robots" content="noindex"' "$out/st-build/_docs/404.html"
+grep -qF "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' 'sha256-" "$out/st-build/_docs/index.html"
+# A link to a file that does not exist stops the build.
+printf '# Broken\n\n[gone](missing.md)\n' >"$out/st-build/docs/broken.md"
+if (cd "$out/st-build" && just docs) >starlight-broken.log 2>&1; then
+  echo "a docs page linking a missing file built" >&2
+  exit 1
+fi
+grep -qF 'points to a file that does not exist' starlight-broken.log
 # k keeps its own README.
 for r in m h ds; do grep -qx '## Documentation' "$r/README.md"; done
 for r in m h; do
@@ -571,7 +650,7 @@ PYTEST
 # Docs-site link previews: the override, the card recipe, and a real build. m is a docs site
 # alone; the card goes to docs/assets/og.png and its hash into og_image.
 for r in m k h ds; do
-  cmp "$repo/template/{% if docs_site %}docs-overrides{% endif %}/main.html" "$r/docs-overrides/main.html"
+  cmp "$repo/template/{% if docs_zensical %}docs-overrides{% endif %}/main.html" "$r/docs-overrides/main.html"
   grep -qx 'og_image = "assets/og.png"' "$r/zensical.toml"
   grep -qF '<h1>' "$r/docs/og-card.html"
   grep -qx '<html lang="en">' "$r/docs/og-card.html"
@@ -581,6 +660,18 @@ for r in m k h ds; do
 done
 grep -qF 'mutate-me' m/docs/og-card.html
 grep -qF 'example-org.github.io/mutate-me</p>' m/docs/og-card.html
+# A Starlight docs site: the same card and recipe, with the tags in the built head.
+for r in st sp nw; do
+  grep -qF '<h1>' "$r/docs/og-card.html"
+  # shellcheck disable=SC2016 # a literal "$PWD" in the recipe body
+  grep -qF '"$PWD/docs-site/public/og.png"' "$r/justfile"
+done
+for t in 'og:title" content="star-me"' 'og:image" content="https://example-org.github.io/star-me/og.png"' 'og:image:alt" content="star-me"' 'og:image:width" content="1200"' 'twitter:card" content="summary_large_image"'; do
+  grep -qF "$t" "$out/st-build/_docs/index.html"
+done
+# The recipe's stamp turns the card's URL into a cache-busting one.
+sed -E -i.bak 's/og\.png(\?v=[0-9a-f]+)?"/og.png?v=deadbeef"/' "$out/st-build/docs-site/astro.config.mjs"
+grep -qx 'const OG = "og.png?v=deadbeef";' "$out/st-build/docs-site/astro.config.mjs"
 (lacks -rq 'og_image' a/)
 for t in 'og:title" content="mutate-me"' 'og:image" content="https://example-org.github.io/mutate-me/assets/og.png' 'og:image:alt"' 'twitter:card" content="summary_large_image"'; do
   grep -qF "$t" m/_docs/index.html

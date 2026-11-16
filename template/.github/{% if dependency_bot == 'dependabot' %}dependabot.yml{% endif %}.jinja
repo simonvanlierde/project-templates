@@ -43,6 +43,7 @@ updates:
       ('uv', 'python' in stacks, python_dir),
       ('npm', 'ts' in stacks, ts_dir),
       ('npm', site == 'astro', 'site'),
+      ('npm', docs_starlight, 'docs-site'),
       ('cargo', 'rust' in stacks, rust_dir),
       ('gomod', 'go' in stacks, go_dir),
     ] if on %}

@@ -112,4 +112,8 @@ mutants.out*/
 
 # What `just docs` builds from docs/
 /_docs/
+{%- if docs_starlight %}
+# Astro's generated types
+/docs-site/.astro/
+{%- endif %}
 {%- endif %}

@@ -263,8 +263,9 @@ grep -qx 'name = "codspeed"' c/crates/cli/Cargo.toml
 grep -q 'working-directory: crates/cli' c/.github/workflows/benchmarks.yml
 grep -q 'working-directory: api' c/.github/workflows/benchmarks.yml
 # Every workflow that installs Python packages with uv (uv sync, uvx, or `just docs`) checks
-# them for malware first, as python.yml does. The sweep must see these runs to count.
-mapfile -t synced < <(grep -rl --include='*.yml' -e '- run: uv sync' -e 'uvx ' -e '- run: just docs' ./*/.github/workflows)
+# them for malware first, as python.yml does. The sweep must see these runs to count. A Starlight
+# docs.yml runs `just docs` with pnpm, so it has no uv to check.
+mapfile -t synced < <(grep -rl --include='*.yml' -e '- run: uv sync' -e 'uvx ' -e '- run: just docs' ./*/.github/workflows | grep -vxFf <(grep -rl --include='docs.yml' 'docs-site/package.json' ./*/.github/workflows))
 for f in benchmarks property mutation docs fair copier-update pr-title; do
   # Not grep -q: it exits at the first match, and under pipefail printf's SIGPIPE fails the line.
   printf '%s\n' "${synced[@]}" | grep "/$f.yml$" >/dev/null

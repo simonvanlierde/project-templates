@@ -1,0 +1,55 @@
+// The docs site: the Markdown in docs/ as Starlight pages, built into _docs/ and deployed to GitHub
+// Pages by docs.yml. The sidebar follows the folders of docs/; to order or label it by hand, add a
+// `sidebar` array to the starlight() call (https://starlight.astro.build/guides/sidebar/).
+// docs/decisions/0012-docs-engine-per-toolchain.md says why the pages carry a hash-based policy.
+import { satteri } from "@astrojs/markdown-satteri";
+import starlight from "@astrojs/starlight";
+import { defineConfig } from "astro/config";
+import cspHash from "./csp-hash.mjs";
+import { docBoxes, docLinks } from "./markdown.mjs";
+
+const SITE = "https://{{ github_user | lower }}.github.io";
+const BASE = "/{{ slug }}";
+const REPO = "https://github.com/{{ github_user }}/{{ slug }}";
+// `just og-card` renders docs/og-card.html to public/og.png and puts its hash in this URL, since
+// link previews cache by URL.
+const OG = "og.png";
+const meta = (attrs) => ({ tag: "meta", attrs });
+
+// "/" opens the search, as on GitHub; Starlight's own key is Ctrl+K.
+const slash = `addEventListener("keydown",e=>{if(e.key!=="/"||e.ctrlKey||e.metaKey||e.altKey||e.target.closest("input,textarea,select,[contenteditable]"))return;e.preventDefault();document.querySelector("button[data-open-modal]")?.click()})`;
+
+export default defineConfig({
+  site: SITE,
+  base: BASE,
+  outDir: "../_docs",
+  build: { inlineStylesheets: "never" },
+  markdown: {
+    // Highlighting writes a `style` attribute on every token; the policy keeps those out.
+    syntaxHighlight: false,
+    processor: satteri({ mdastPlugins: [docLinks({ base: BASE, repo: REPO })], hastPlugins: [docBoxes] }),
+  },
+  integrations: [
+    starlight({
+      title: {{ project_name | to_json }},
+{%- if project_description %}
+      description: {{ project_description | to_json }},
+{%- endif %}
+      social: [{ icon: "github", label: "{{ project_name }} on GitHub", href: REPO }],
+      editLink: { baseUrl: `${REPO}/edit/main/docs/` },
+      // Expressive Code adds an inline script and a `style` attribute to every token.
+      expressiveCode: false,
+      customCss: ["../docs/assets/docs-tokens.css", "./src/styles/docs.css"],
+      head: [
+        meta({ property: "og:image", content: `${SITE}${BASE}/${OG}` }),
+        meta({ property: "og:image:width", content: "1200" }),
+        meta({ property: "og:image:height", content: "630" }),
+        meta({ property: "og:image:alt", content: {{ (project_name ~ (': ' ~ project_description if project_description else '')) | to_json }} }),
+        { tag: "script", content: slash },
+        // The search needs script; without it the button would do nothing.
+        { tag: "noscript", content: "<style>site-search{display:none}</style>" },
+      ],
+    }),
+    cspHash(),
+  ],
+});
