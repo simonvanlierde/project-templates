@@ -20,7 +20,8 @@
     --pen: var(--docs-accent-dark);
   }
 }
-:root, :root[data-theme] {
+:root,
+:root[data-theme] {
   --faint: color-mix(in srgb, var(--ink) 68%, var(--paper));
   --dim: color-mix(in srgb, var(--ink) 62%, var(--paper));
   --rule: color-mix(in srgb, var(--ink) 16%, var(--paper));
@@ -53,18 +54,55 @@
   --sl-color-bg-accent: var(--pen);
   color-scheme: light;
 }
-:root[data-theme="dark"] { color-scheme: dark; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) { color-scheme: dark; } }
-body { background: var(--paper); }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+  }
+}
+body {
+  background: var(--paper);
+}
 
-.sl-markdown-content :not(pre) > code { overflow-wrap: anywhere; }
-.sl-markdown-content :is(h2, h3, h4) { text-wrap: balance; }
-.sl-markdown-content :is(p, li) { text-wrap: pretty; }
+.sl-markdown-content :not(pre) > code {
+  overflow-wrap: anywhere;
+}
+.sl-markdown-content :is(h2, h3, h4) {
+  text-wrap: balance;
+}
+.sl-markdown-content :is(p, li) {
+  text-wrap: pretty;
+}
 
 /* Code without Expressive Code: the tint, scrolling on its own in a box markdown.mjs makes focusable. */
-.sl-markdown-content pre { max-width: 100%; overflow-x: auto; padding: .65rem .75rem; font: .85rem/1.55 var(--docs-mono); background: var(--tint); border: 0; border-radius: 0; }
-.sl-markdown-content pre code { padding: 0; background: none; font: inherit; }
+.sl-markdown-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0.65rem 0.75rem;
+  font: 0.85rem / 1.55 var(--docs-mono);
+  background: var(--tint);
+  border: 0;
+  border-radius: 0;
+}
+.sl-markdown-content pre code {
+  padding: 0;
+  background: none;
+  font: inherit;
+}
 /* Starlight makes a wide table scroll itself with no way to focus it: the wrapper scrolls instead. */
-.scroll { max-width: 100%; margin: 1rem 0; overflow-x: auto; }
-.scroll table { display: table; margin: 0; }
-@media (forced-colors: active) { .sl-markdown-content pre { border: 1px solid CanvasText; } }
+.scroll {
+  max-width: 100%;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+.scroll table {
+  display: table;
+  margin: 0;
+}
+@media (forced-colors: active) {
+  .sl-markdown-content pre {
+    border: 1px solid CanvasText;
+  }
+}

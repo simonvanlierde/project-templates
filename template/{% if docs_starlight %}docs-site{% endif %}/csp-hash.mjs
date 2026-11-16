@@ -1,10 +1,11 @@
-// An Astro integration that runs after the build. It gives every page a Content-Security-Policy meta
-// tag that allows exactly the inline scripts the page has, by their sha256, lists the pages'
-// canonical addresses in the sitemap, and takes the 404 page out of search engines. Starlight
-// writes data-theme="dark" into every page and its inline script corrects it; the attribute goes,
-// so a reader without script gets the system's theme from docs.css.
-// Astro's own hashing is not reliable for Starlight's pages (withastro/astro#16664, #18606, #18607),
-// which is why the hashes are computed from the built files.
+// An Astro integration that runs after the build. It gives every Starlight page a
+// Content-Security-Policy meta tag that allows exactly the inline scripts the page has, by their
+// sha256, and takes the 404 page out of search engines. Starlight writes data-theme="dark" into
+// every page and its inline script corrects it; the attribute goes, so a reader without script
+// gets the system's theme from docs.css.
+// Astro's own `security.csp` leaves Starlight's `is:inline` scripts out of the hashes
+// (withastro/astro#16664, closed as not planned) and writes its tag after the scripts in <head>,
+// which a meta policy then does not cover (#18606), so the hashes come from the built files.
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -52,29 +53,19 @@ const htmlFiles = (dir) =>
     .filter((f) => f.isFile() && f.name.endsWith(".html"))
     .map((f) => resolve(f.parentPath, f.name));
 
-/** Applies the policy to each Starlight page under `dir`, and writes the sitemap from their canonical links. */
+/** Applies the policy to each Starlight page under `dir`. */
 export function finish(dir) {
-  const urls = [];
   for (const file of htmlFiles(dir)) {
     const html = readFileSync(file, "utf8");
     if (!html.includes('<meta name="generator" content="Starlight')) continue;
     let page = withPolicy(html).replace(/(<html[^>]*?) data-theme="dark"/, "$1");
-    if (file === resolve(dir, "404.html")) {
-      // GitHub Pages serves it for any address with no page, so it has no address of its own.
+    // GitHub Pages serves it for any address with no page, so it has no address of its own.
+    if (file === resolve(dir, "404.html"))
       page = page
         .replace(/<link rel="canonical"[^>]*>|<meta property="og:url"[^>]*>/g, "")
         .replace("</title>", '</title><meta name="robots" content="noindex"/>');
-    } else {
-      const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
-      if (canonical) urls.push(canonical);
-    }
     writeFileSync(file, page);
   }
-  const sitemap = [...new Set(urls)].sort().map((u) => `<url><loc>${u}</loc></url>`);
-  writeFileSync(
-    resolve(dir, "sitemap-0.xml"),
-    `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${sitemap.join("")}</urlset>`,
-  );
 }
 
 export default function cspHash() {

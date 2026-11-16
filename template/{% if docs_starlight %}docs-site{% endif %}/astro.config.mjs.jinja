@@ -23,6 +23,8 @@ export default defineConfig({
   site: SITE,
   base: BASE,
   outDir: "../_docs",
+  // Every page address ends in a slash, so the sitemap lists the canonical addresses.
+  trailingSlash: "always",
   build: { inlineStylesheets: "never" },
   markdown: {
     // Highlighting writes a `style` attribute on every token; the policy keeps those out.

@@ -2,7 +2,8 @@
 // - docLinks: a link to another page of docs/ goes to its Starlight page, and a link to any other
 //   file of the repository goes to GitHub, so `usage.md#setup` and `../README.md` both work in the
 //   editor and on the site. A link to a file that does not exist stops the build. The first h1 is
-//   dropped, as the page's title is Starlight's.
+//   dropped, as the page's title is Starlight's. A <script> in the Markdown stops the build too:
+//   csp-hash.mjs allows every inline script it finds, so the policy cannot refuse one.
 // - docBoxes: a wide table or code block scrolls in its own box, which a keyboard can reach, named
 //   by the heading above it so each landmark name is unique on the page.
 import { existsSync, statSync } from "node:fs";
@@ -21,8 +22,9 @@ const inDocs = (fileURL) => {
 const rewrite = (url, from, { base, repo }) => {
   if (/^([a-z][a-z0-9+.-]*:|#|\/)/i.test(url)) return url;
   const [, path, tail = ""] = url.match(/^([^#?]*)([#?].*)?$/);
-  const target = resolve(dirname(from), path);
-  if (!existsSync(target)) throw new Error(`${relative(ROOT, from)}: the link ${url} points to a file that does not exist`);
+  const target = resolve(dirname(from), decodeURIComponent(path));
+  if (!existsSync(target))
+    throw new Error(`${relative(ROOT, from)}: the link ${url} points to a file that does not exist`);
   if (target.startsWith(DOCS + sep) && target.endsWith(".md")) {
     const page = relative(DOCS, target)
       .split(sep)
@@ -30,10 +32,10 @@ const rewrite = (url, from, { base, repo }) => {
       .replace(/\.md$/, "")
       .replace(/(^|\/)(readme|index)$/i, "$1")
       .replace(/\/$/, "");
-    return `${base}/${page ? `${page}/` : ""}${tail}`;
+    return `${base}/${page ? `${encodeURI(page)}/` : ""}${tail}`;
   }
   const kind = statSync(target).isDirectory() ? "tree" : "blob";
-  return `${repo}/${kind}/main/${relative(ROOT, target).split(sep).join("/")}${tail}`;
+  return `${repo}/${kind}/main/${encodeURI(relative(ROOT, target).split(sep).join("/"))}${tail}`;
 };
 
 export const docLinks =
@@ -48,7 +50,11 @@ export const docLinks =
       dropped = true;
       ctx.removeNode(node);
     };
-    return { name: "doc-links", link: go, definition: go, heading: h1 };
+    const html = (node) => {
+      if (/<script\b/i.test(node.value))
+        throw new Error(`${relative(ROOT, from)}: a <script> in the Markdown would run under the page's policy`);
+    };
+    return { name: "doc-links", link: go, definition: go, heading: h1, html };
   };
 
 export const docBoxes = ({ fileURL }) => {

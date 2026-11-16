@@ -121,7 +121,7 @@ playwright_pin=$(sed -n '/^playwright_version:/,/^$/s/^  default: //p' "$repo/co
 grep -qx 'docs_engine: zensical' zt/.copier-answers.yml
 grep -qx 'docs_engine: zensical' m/.copier-answers.yml
 grep -qx 'docs_engine: starlight' st/.copier-answers.yml
-for r in st sp nw; do
+for r in st sp nw zs; do
   for f in astro.config.mjs package.json pnpm-workspace.yaml csp-hash.mjs markdown.mjs check.mjs axe.mjs src/content.config.mjs src/styles/docs.css public/favicon.svg; do
     test -f "$r/docs-site/$f"
   done
@@ -161,6 +161,18 @@ for r in st sp nw; do
 done
 # The policy starts from default-src 'none'; check.mjs refuses a host or * in the built pages.
 grep -qF "default-src 'none'" st/docs-site/csp-hash.mjs
+grep -qx 'docs_engine: starlight' zs/.copier-answers.yml
+# A root TypeScript package leaves docs-site/ to itself in knip, and its biome passes the
+# docs-site files as they render. CI's typescript job runs knip on such a render.
+jq -e '.knip.ignoreFiles == ["docs-site/**"]' zs/package.json >/dev/null
+rm -rf zs-biome
+cp -R zs zs-biome
+git -C zs-biome init -q
+(cd zs-biome && pnpm dlx "@biomejs/biome@$(jq -r '.devDependencies["@biomejs/biome"]' package.json)" check docs-site) >zs-biome.log 2>&1 || {
+  cat zs-biome.log >&2
+  exit 1
+}
+rm -rf zs-biome
 # Python with Starlight keeps its stack's files and gets no API reference.
 (lacks -q 'mkdocstrings' sp/justfile)
 test ! -e sp/docs/reference.md
@@ -173,12 +185,21 @@ test -f st/docs/decisions/README.md
 cp -R st "$out/st-build"
 # shellcheck disable=SC2016 # backticks written to the page, not run
 printf '# Guide\n\nSee [home](index.md), [decisions](decisions/README.md), [Cargo](../Cargo.toml) and [here](#setup).\n\n## Setup\n\n```sh\njust docs\n```\n\n| a | b |\n| - | - |\n| `x` | y |\n' >"$out/st-build/docs/guide.md"
+# A fenced "# comment" is not the page's title, and a link with an escaped space finds its file.
+# shellcheck disable=SC2016 # backticks written to the page, not run
+printf '```sh\n# not the title\n```\n\n# Fenced title\n\nSee [notes](my%%20notes.md).\n' >"$out/st-build/docs/fenced.md"
+printf '# My notes\n\nNotes.\n' >"$out/st-build/docs/my notes.md"
 test -f "$out/st-build/Cargo.toml"
 (cd "$out/st-build" && git init -q && just docs-sync docs docs-check) >starlight-build.log 2>&1 || {
   tail -40 starlight-build.log >&2
   exit 1
 }
-grep -qF 'href="/star-me/guide/"' "$out/st-build/_docs/index.html" || grep -rqF 'href="/star-me/guide/"' "$out/st-build/_docs"
+grep -qF 'href="/star-me/guide/"' "$out/st-build/_docs/index.html"
+grep -qF '<title>Fenced title | star-me</title>' "$out/st-build/_docs/fenced/index.html"
+grep -qF 'href="/star-me/my%20notes/"' "$out/st-build/_docs/fenced/index.html"
+test -f "$out/st-build/_docs/my notes/index.html"
+# Starlight's sitemap lists the canonical, slash-ended addresses that check.mjs compares.
+grep -qF '<loc>https://example-org.github.io/star-me/guide/</loc>' "$out/st-build/_docs/sitemap-0.xml"
 grep -rqF 'https://github.com/example-org/star-me/blob/main/Cargo.toml' "$out/st-build/_docs/guide/index.html"
 grep -qF 'name="robots" content="noindex"' "$out/st-build/_docs/404.html"
 grep -qF "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' 'sha256-" "$out/st-build/_docs/index.html"
@@ -189,6 +210,15 @@ if (cd "$out/st-build" && just docs) >starlight-broken.log 2>&1; then
   exit 1
 fi
 grep -qF 'points to a file that does not exist' starlight-broken.log
+rm "$out/st-build/docs/broken.md"
+# A raw <script> in the Markdown stops the build: the policy would allow it by its hash.
+printf '# Scripted\n\nText <script>alert(1)</script> here.\n' >"$out/st-build/docs/scripted.md"
+if (cd "$out/st-build" && just docs) >starlight-script.log 2>&1; then
+  echo "a docs page with a <script> built" >&2
+  exit 1
+fi
+grep -qF "a <script> in the Markdown would run under the page's policy" starlight-script.log
+rm "$out/st-build/docs/scripted.md"
 # k keeps its own README.
 for r in m h ds; do grep -qx '## Documentation' "$r/README.md"; done
 for r in m h; do
