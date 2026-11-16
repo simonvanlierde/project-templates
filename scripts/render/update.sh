@@ -340,14 +340,14 @@ git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=sample-me --data 'stacks=[python,ts]' --data python_kind=library \
   --data ts_dir=web --data ts_kind=web-app --data user_data=nothing --data worker=true \
-  --data site=astro --data site_host=cloudflare --data decision_records=true \
+  --data site=astro --data site_host=cloudflare --data decision_records=true --data 'extras=[docs_site]' \
   "$sample_tpl" "$sample_up" >/dev/null
 # Every sample this render has: a missing one fails here, before the update can pass on it.
 samples=(src/sample_me/__init__.py tests/test_add.py
   web/src/App.tsx web/src/App.test.tsx web/src/main.tsx web/src/app.css
   web/worker/index.ts web/worker/index.test.ts
   site/src/pages/index.astro site/src/pages/about.md site/worker/index.mjs site/worker/index.test.mjs)
-owned=(docs/decisions/0001-start-from-project-templates.md docs/og-card.html)
+owned=(docs/decisions/0001-start-from-project-templates.md docs/og-card.html docs/assets/docs-tokens.css)
 (cd "$sample_up" && rm "${samples[@]}" "${owned[@]}")
 git -C "$sample_up" init -q
 git -C "$sample_up" add -A
@@ -355,7 +355,7 @@ git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "rep
 # The Starlight docs' owned files come back the same way.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=sample-docs --data 'stacks=[rust]' --data 'extras=[docs_site]' \
   "$sample_tpl" "$sample_up-docs" >/dev/null
-owned_docs=(docs/assets/docs-tokens.css docs-site/astro.config.mjs docs-site/public/favicon.svg)
+owned_docs=(docs-site/astro.config.mjs docs-site/public/favicon.svg)
 (cd "$sample_up-docs" && rm "${owned_docs[@]}")
 git -C "$sample_up-docs" init -q
 git -C "$sample_up-docs" add -A
@@ -469,6 +469,11 @@ for selection, expected in [('all', features | {'property', 'mutation'}),
     workflow = (project / '.github/workflows/python.yml').read_text()
     assert ('windows-latest' in workflow) == ('python_windows' in expected), selection
     assert not list(project.rglob('*.rej')), selection
+    # The kept zensical.toml does not list the new tokens file, so docs.css falls back to its values.
+    if 'docs_site' in expected:
+        assert (project / 'docs/assets/docs-tokens.css').is_file(), selection
+        assert 'docs-tokens' not in (project / 'zensical.toml').read_text(), selection
+        assert 'var(--docs-paper, #ffffff)' in (project / 'docs/assets/docs.css').read_text(), selection
     # publish_to_crates is new since v0.14.0: an update keeps the crate unpublishable.
     assert answers['publish_to_crates'] is False, answers
     assert 'publish = false' in (project / 'Cargo.toml').read_text(), selection

@@ -17,6 +17,8 @@ To move a package directory, run `copier update` with the new path, then delete 
 
 A project from before v0.12.0 with `docs/adr/` moves its records to `docs/decisions/` and removes `docs/adr/`.
 
+A docs site from before v0.16.0 gets `docs/assets/docs-tokens.css`, but its own `zensical.toml` does not load it. Add `"assets/docs-tokens.css"` before `"assets/docs.css"` in `extra_css` ([Documentation site](usage.md#documentation-site)); until then the site keeps the template's colours and fonts.
+
 After an update, refresh and commit the lockfiles (`uv lock`, `pnpm install`, `just go-sync`).
 
 ### Spelling exceptions in existing projects
