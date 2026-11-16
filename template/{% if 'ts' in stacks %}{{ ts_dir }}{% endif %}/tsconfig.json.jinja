@@ -10,7 +10,9 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "allowImportingTsExtensions": true,
+{%- if web_framework != 'svelte' %}
     "jsx": "react-jsx",
+{%- endif %}
     "types": ["vite/client"],
 {%- if web_framework == 'preact' %}
     "paths": {

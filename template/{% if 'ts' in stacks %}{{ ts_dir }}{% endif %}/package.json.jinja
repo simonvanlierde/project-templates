@@ -36,7 +36,7 @@
     "api": "api-extractor run",
 {%- endif %}
 {%- if web_app %}
-    "budget": "node scripts/checkBundleBudget.mjs",
+    "budget": "node scripts/checkBundleBudget.mjs{% if site_path %} dist{{ site_path }}/assets{% endif %}",
     "build": "vite build",
 {%- else %}
     "build": "tsc -p tsconfig.build.json",
@@ -56,7 +56,7 @@
     "test": "vitest run",
 {%- if web_app %}
     "test:e2e": "playwright test",
-    "typecheck": "tsc{% if worker %} && tsc -p worker{% endif %}"
+    "typecheck": "{{ 'svelte-check --fail-on-warnings' if web_framework == 'svelte' else 'tsc' }}{% if worker %} && tsc -p worker{% endif %}"
 {%- else %}
     "typecheck": "tsc --noEmit"
 {%- endif %}
@@ -95,6 +95,8 @@
   "dependencies": {
 {%- if web_framework == 'preact' %}
     "preact": "^11.1.0"
+{%- elif web_framework == 'svelte' %}
+    "svelte": "^5.57.3"
 {%- else %}
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
@@ -119,9 +121,12 @@
 {%- endif %}
 {%- if web_app %}
     "@playwright/test": "^1.64.1",
-{#- @testing-library/react takes the DOM library as a peer; the preact one bundles it. #}
+{#- @testing-library/react takes the DOM library as a peer; the preact and svelte ones bundle it. #}
 {%- if web_framework == 'preact' %}
     "@testing-library/preact": "^3.2.6",
+{%- elif web_framework == 'svelte' %}
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@testing-library/svelte": "^5.4.2",
 {%- else %}
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
@@ -148,7 +153,15 @@
 {%- if publish_to_npm %}
     "publint": "^0.3.25",
 {%- endif %}
+{%- if web_app and web_framework == 'svelte' %}
+    "svelte-check": "^4.7.7",
+{%- endif %}
+{%- if web_app and web_framework == 'svelte' %}
+{#- svelte-check 4.7 refuses TypeScript 7 unless 6 is installed beside it and it runs with --tsgo. #}
+    "typescript": "^6.0.3",
+{%- else %}
     "typescript": "^7.0.2",
+{%- endif %}
 {%- if web_app %}
     "vite": "^8.3.5",
 {%- endif %}

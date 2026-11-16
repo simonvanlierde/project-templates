@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { BASE } from "./base";
 
 /**
  * Guards docs/accessibility.md as the app renders it at /accessibility. The
@@ -21,7 +22,7 @@ const SECTIONS = [
 ];
 
 test("the statement renders its sections and claims no more than was checked", async ({ page }) => {
-  await page.goto("/accessibility");
+  await page.goto(`${BASE}accessibility`);
   const statement = page.locator("article");
   await expect(statement.getByRole("heading", { level: 2 })).toHaveText(SECTIONS);
 

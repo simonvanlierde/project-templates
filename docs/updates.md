@@ -99,7 +99,7 @@ you review `git diff` and restore what was yours.
    Select `ts_kind=web-app`, your framework, and your `user_data` setting.
 2. Review `git diff`:
    - Remove unused starter components.
-   - Integrate the legal page routes and links into your `src/App.tsx`. Add the paths to `tests/e2e/routes.ts`, and set its `LEGAL_LINKED_FROM` to the routes that link the legal pages.
+   - Integrate the legal page routes and links into your `src/App.tsx` (or `App.svelte`). Add the paths to `tests/e2e/routes.ts`, and set its `LEGAL_LINKED_FROM` to the routes that link the legal pages.
    - Restore custom configurations in `vite.config.ts` and `vitest.config.ts`. Retain the template's `markdown()` plugin.
    - Restore custom package names in `package.json` and `wrangler.jsonc`.
    - Fill in all TODO markers in `docs/`.

@@ -485,7 +485,7 @@ grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\"
 (lacks -q 'Preview.*--domain' wk/.github/workflows/ts.yml cfp/.github/workflows/site.yml)
 (lacks -q -- '--domain' d/.github/workflows/ts.yml s/.github/workflows/ts.yml cfa/.github/workflows/site.yml x/.github/workflows/site.yml)
 # shellcheck disable=SC2016 # the backticks are Markdown
-grep -qF 'Only `production`'"'"'s token also needs Zone > Workers Routes: Edit for the zone of `app.example.org`' wk/README.md
+grep -qF 'Only `production`'"'"'s token also needs Zone > Workers Routes: Edit for the zone that holds `app.example.org`' wk/README.md
 # shellcheck disable=SC2016 # the backticks are Markdown
 grep -qF 'only `production`'"'"'s token also gets Zone > Workers Routes: Edit for the zone of `demo.example.org`' cfp/README.md
 (lacks -q 'Workers Routes' d/README.md s/README.md cfa/README.md x/README.md)
@@ -536,7 +536,7 @@ grep -qx 'default_install_hook_types: \[pre-commit, commit-msg, pre-push\]' d/.p
 (lacks -q 'pre-push' a/.pre-commit-config.yaml)
 # Commit messages and PR titles: one committed.toml, read by the commit-msg hook and
 
-# Only a custom-domain production deploy suppresses the duplicate workers.dev origin.
+# Only a production deploy to a custom domain or a route suppresses the duplicate workers.dev origin.
 uv run --no-project --with pyyaml python - "$out" <<'PYTEST'
 from pathlib import Path
 import subprocess, sys, tempfile, yaml
@@ -555,7 +555,7 @@ for path in root.glob('*/.github/workflows/*.yml'):
         if 'deploy-worker.sh' not in runs:
             continue
         header_runs = [step['run'] for step in steps if 'https://:worker.:subdomain.workers.dev/*' in step.get('run', '')]
-        assert bool(header_runs) == ('--domain ' in runs), path
+        assert bool(header_runs) == ('--domain ' in runs or '--route ' in runs), path
         for run in header_runs:
             with tempfile.TemporaryDirectory() as tmp:
                 headers = Path(tmp, run.split(' >> ', 1)[1].strip())

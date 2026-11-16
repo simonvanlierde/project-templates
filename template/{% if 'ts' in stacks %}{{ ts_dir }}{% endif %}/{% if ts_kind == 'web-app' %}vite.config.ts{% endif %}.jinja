@@ -1,5 +1,11 @@
+{% if site_path -%}
+import { copyFileSync } from "node:fs";
+{% endif -%}
 {% if web_framework == 'react' -%}
 import react from "@vitejs/plugin-react";
+{% elif web_framework == 'svelte' -%}
+import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { svelteTesting } from "@testing-library/svelte/vite";
 {% endif -%}
 import { marked } from "marked";
 import { defineConfig, type Plugin } from "vite";
@@ -25,9 +31,33 @@ const markdown = (): Plugin => ({
   },
 });
 
+{%- if site_path %}
+
+/**
+ * Production routes {{ site_path }}/ to the Worker, which looks each request's full path up
+ * in dist/, so the build goes to dist{{ site_path }}/. Cloudflare reads _headers only at the
+ * top of dist/, and answers a page path it has no file for with dist/index.html, so both
+ * get a copy there. That index.html already loads its assets from {{ site_path }}/.
+ */
+const topLevelCopies = (): Plugin => ({
+  name: "top-level-copies",
+  apply: "build",
+  closeBundle() {
+    for (const name of ["index.html", "_headers"]) {
+      copyFileSync(`dist{{ site_path }}/${name}`, `dist/${name}`);
+    }
+  },
+});
+{%- endif %}
+
 export default defineConfig({
+{%- if site_path %}
+  // The path in site_url. import.meta.env.BASE_URL gives it to the app.
+  base: "{{ site_path }}/",
+  build: { outDir: "dist{{ site_path }}" },
+{%- endif %}
 {%- if web_framework == 'preact' %}
-  plugins: [markdown()],
+  plugins: [markdown(){% if site_path %}, topLevelCopies(){% endif %}],
   resolve: {
     // Code written for React, including libraries, imports react and react-dom.
     // preact/compat answers those imports. The longer paths come first: each
@@ -41,7 +71,10 @@ export default defineConfig({
       react: "preact/compat",
     },
   },
+{%- elif web_framework == 'svelte' %}
+  // svelteTesting acts under vitest only: it loads Svelte's browser build and unmounts after each test.
+  plugins: [svelte(), svelteTesting(), markdown(){% if site_path %}, topLevelCopies(){% endif %}],
 {%- else %}
-  plugins: [react(), markdown()],
+  plugins: [react(), markdown(){% if site_path %}, topLevelCopies(){% endif %}],
 {%- endif %}
 });

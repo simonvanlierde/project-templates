@@ -75,6 +75,12 @@ updates:
         patterns: ["*"]
 {%- endif %}
 {%- endif %}
+{%- if eco == 'npm' and dir == ts_dir and web_app and web_framework == 'svelte' %}
+    # svelte-check refuses TypeScript 7 alone. Remove this once svelte-check runs on it.
+    ignore:
+      - dependency-name: typescript
+        versions: [">=7"]
+{%- endif %}
 {%- endfor %}
 
 {%- if compose_only %}

@@ -28,7 +28,7 @@ grep -qx '/web/shots/' d/.gitignore
 # each a route the axe, CSP, privacy and legal-page specs visit.
 for page in accessibility privacy terms; do
   test -f "d/web/docs/$page.md"
-  grep -q "\"/$page\"" d/web/tests/e2e/routes.ts
+  grep -qF "\`\${BASE}$page\`" d/web/tests/e2e/routes.ts
 done
 test -f d/web/tests/e2e/privacy.spec.ts
 test -f d/web/tests/e2e/accessibility-statement.spec.ts
@@ -334,3 +334,91 @@ test -f nw/.github/workflows/ts.yml
 test -f nw/web/docs/privacy.md
 test ! -e nw/docs/privacy.md
 test -f nw/docs/index.md
+
+# sv: Svelte replaces the React starter with App.svelte, main.ts and App.test.ts, and
+# svelte-check replaces tsc, which cannot read a .svelte import.
+test -f sv/src/App.svelte
+test -f sv/src/App.test.ts
+test -f sv/src/main.ts
+for f in App.tsx App.test.tsx main.tsx; do test ! -e "sv/src/$f"; done
+grep -qF 'src="/src/main.ts"' sv/index.html
+grep -qF 'mount(App, { target: root });' sv/src/main.ts
+grep -qF 'from "@testing-library/svelte";' sv/src/App.test.ts
+# The markup survives Jinja: its {#if} would otherwise open a comment.
+grep -qxF '  {#if page}' sv/src/App.svelte
+grep -qxF '  {/if}' sv/src/App.svelte
+grep -qxF 'const description = "A small {demo}";' sv/src/App.svelte
+grep -qxF '    <p>{description}</p>' sv/src/App.svelte
+grep -qF '"/terms": { title: "Terms of use", html: terms },' sv/src/App.svelte
+# The runtime is a dependency, so the licence check covers what the bundle ships.
+jq -e '.dependencies | keys == ["svelte"]' sv/package.json >/dev/null
+jq -e '.devDependencies | has("@sveltejs/vite-plugin-svelte") and has("@testing-library/svelte") and has("svelte-check")' sv/package.json >/dev/null
+jq -e '.devDependencies | has("@vitejs/plugin-react") or has("@testing-library/react") or has("@types/react") | not' sv/package.json >/dev/null
+# svelte-check 4.7 refuses TypeScript 7 without a second install and --tsgo.
+jq -e '.devDependencies.typescript | startswith("^6.")' sv/package.json >/dev/null
+jq -e '.devDependencies.typescript | startswith("^7.")' s/package.json >/dev/null
+jq -e '.scripts.typecheck == "svelte-check --fail-on-warnings"' sv/package.json >/dev/null
+grep -qF 'plugins: [svelte(), svelteTesting(), markdown()],' sv/vite.config.ts
+(lacks -q '"jsx"' sv/tsconfig.json)
+grep -qF '"jsx": "react-jsx",' s/tsconfig.json
+# Biome reads only the <script> blocks, so the rules that miss the markup's names are off there.
+jq -e '.overrides[0].includes == ["**/*.svelte"] and .overrides[0].linter.rules.correctness.noUnusedVariables == "off"' sv/biome.json >/dev/null
+(lacks -q '"overrides"' s/biome.json)
+grep -qxF '      - id: svelte-check' sv/.pre-commit-config.yaml
+grep -qF 'html, svelte]' sv/.pre-commit-config.yaml
+(lacks -q '      - id: tsc' sv/.pre-commit-config.yaml)
+grep -qxF '      - id: tsc' s/.pre-commit-config.yaml
+(lacks -q 'svelte' s/.pre-commit-config.yaml)
+
+# wp: site_url with a path. The build goes to dist/<path>/, the request's full path, under
+# that base; index.html and _headers get copies at the top of dist/, where Cloudflare reads
+# them. Production routes the path on the host's zone in place of --domain.
+grep -qxF '  base: "/tools/path-me/",' wp/web/vite.config.ts
+grep -qxF '  build: { outDir: "dist/tools/path-me" },' wp/web/vite.config.ts
+# shellcheck disable=SC2016 # literal template text
+grep -qF 'copyFileSync(`dist/tools/path-me/${name}`, `dist/${name}`);' wp/web/vite.config.ts
+grep -qxF '  plugins: [markdown(), topLevelCopies()],' wp/web/vite.config.ts
+(lacks -q -e 'base:' -e topLevelCopies -e node:fs d/web/vite.config.ts s/vite.config.ts sv/vite.config.ts)
+jq -e '.scripts.budget == "node scripts/checkBundleBudget.mjs dist/tools/path-me/assets"' wp/web/package.json >/dev/null
+jq -e '.scripts.budget == "node scripts/checkBundleBudget.mjs"' d/web/package.json >/dev/null
+# The specs and the app read the base, so their routes and links follow it.
+grep -qxF 'export const BASE = "/tools/path-me/";' wp/web/tests/e2e/base.ts
+grep -qxF 'export const BASE = "/";' s/tests/e2e/base.ts
+grep -qF 'const BASE = import.meta.env.BASE_URL;' wp/web/src/App.tsx sv/src/App.svelte
+grep -qF 'href={BASE + path.slice(1)}' wp/web/src/App.tsx sv/src/App.svelte
+# shellcheck disable=SC2016 # literal template text
+grep -qF 'page.request.get(`${BASE}_headers`)' wp/web/tests/e2e/csp.spec.ts
+grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --route example.org/tools/path-me --route \"example.org/tools/path-me/*\"'" wp/.github/workflows/ts.yml
+(lacks -q -- '--domain' wp/.github/workflows/ts.yml)
+(lacks -q -- '--route' wk/.github/workflows/ts.yml d/.github/workflows/ts.yml)
+grep -qF 'https://:worker.:subdomain.workers.dev/*' wp/.github/workflows/ts.yml
+grep -qF '"workers_dev": true' wp/web/wrangler.jsonc
+# shellcheck disable=SC2016 # literal template text
+grep -qF 'Zone > Workers Routes: Edit for the zone that holds `example.org`' wp/README.md
+# shellcheck disable=SC2016 # literal template text
+grep -qF 'The production job routes `example.org/tools/path-me`' wp/README.md
+
+# checks.yml has no Node install, so it skips the type-check hook the ts workflow runs:
+# svelte-check for Svelte, tsc otherwise.
+grep -q 'SKIP: biome,svelte-check,betterleaks,zizmor$' sv/.github/workflows/checks.yml
+grep -q 'SKIP: biome,tsc,betterleaks,zizmor$' s/.github/workflows/checks.yml
+# svelte-check refuses TypeScript 7 alone, so neither bot offers it to a Svelte app.
+grep -qxF "    { matchManagers: ['npm'], matchPackageNames: ['typescript'], allowedVersions: '<7' }," svr/renovate.json5
+(lacks -q "allowedVersions: '<7'" d/renovate.json5)
+uv run --no-project --with pyyaml python - sv/.github/dependabot.yml s/.github/dependabot.yml <<'PYTEST'
+import sys, yaml
+def ignores(path):
+    return [u.get('ignore') for u in yaml.safe_load(open(path))['updates'] if u['package-ecosystem'] == 'npm']
+assert ignores(sys.argv[1]) == [[{'dependency-name': 'typescript', 'versions': ['>=7']}]], ignores(sys.argv[1])
+assert ignores(sys.argv[2]) == [None], ignores(sys.argv[2])
+PYTEST
+# Both copies Cloudflare reads at the top of dist/; ci.yml checks that a build makes them.
+grep -qF 'for (const name of ["index.html", "_headers"]) {' wp/web/vite.config.ts
+# The README and the wrangler config name the zone that holds the host, and the DNS record.
+# shellcheck disable=SC2016 # literal Markdown backticks
+grep -qF 'proxied (orange-cloud) DNS record for `example.org`' wp/README.md
+grep -qF 'with --route on the zone that holds example.org.' wp/web/wrangler.jsonc
+# shellcheck disable=SC2016 # literal Markdown backticks
+grep -qF '`svelte-check` for types.' sv/.github/CONTRIBUTING.md
+# shellcheck disable=SC2016 # literal Markdown backticks
+grep -qF '`tsc` for types.' s/.github/CONTRIBUTING.md
