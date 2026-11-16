@@ -672,6 +672,9 @@ done
 # The recipe's stamp turns the card's URL into a cache-busting one.
 sed -E -i.bak 's/og\.png(\?v=[0-9a-f]+)?"/og.png?v=deadbeef"/' "$out/st-build/docs-site/astro.config.mjs"
 grep -qx 'const OG = "og.png?v=deadbeef";' "$out/st-build/docs-site/astro.config.mjs"
+# The CI job audits every render under $out with zizmor, which would read the .github/workflows
+# that installed packages ship inside node_modules. The build is done, so the packages go.
+rm -rf "$out/st-build/docs-site/node_modules"
 (lacks -rq 'og_image' a/)
 for t in 'og:title" content="mutate-me"' 'og:image" content="https://example-org.github.io/mutate-me/assets/og.png' 'og:image:alt"' 'twitter:card" content="summary_large_image"'; do
   grep -qF "$t" m/_docs/index.html
