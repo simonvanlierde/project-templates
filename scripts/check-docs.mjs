@@ -12,6 +12,9 @@ const focusOnScreen = () => {
   const rect = shown.getBoundingClientRect();
   return rect.left >= 0 && rect.right <= innerWidth && rect.bottom > rect.top && shown.checkVisibility({ visibilityProperty: true });
 };
+// The template's own site (the --require-csp run) has the palette toggle and code blocks, so
+// a theme change that renames their markup fails there instead of skipping both checks.
+let copyChecked = false;
 const browser = await chromium.launch();
 try {
   if (requireCsp) {
@@ -82,6 +85,7 @@ try {
         }
         // The theme's palette radio has no box: Tab to it and expect an outline on its visible label.
         const palette = page.locator("input.md-option").first();
+        if (requireCsp) await expect(palette, `${url}: no palette toggle`).toHaveCount(1);
         if (await palette.count()) {
           await palette.focus();
           await page.keyboard.press("Shift+Tab");
@@ -125,6 +129,7 @@ try {
           const expected = (await page.locator(target).innerText()).trimEnd();
           await copy.click();
           await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+          copyChecked = true;
         }
         assert.deepEqual(errors, [], `${url}: JavaScript errors`);
         assert.deepEqual(cspViolations, [], `${url}: Content-Security-Policy violations`);
@@ -152,6 +157,7 @@ try {
       await context.close();
     }
   }
+  if (requireCsp) assert.ok(copyChecked, "No page had a code copy button");
 } finally {
   await browser.close();
 }
