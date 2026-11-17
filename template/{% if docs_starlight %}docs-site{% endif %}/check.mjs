@@ -3,9 +3,12 @@
 // - nothing loads from another origin, in the pages or in their stylesheets;
 // - every page has one Content-Security-Policy that names the sha256 of each of its inline scripts,
 //   and no source in it is a host or `*`;
+// - the inline scripts of all pages are exactly the ones in script-hashes.json, so a script that
+//   an upgrade or a plugin adds needs a reviewed change (UPDATE_HASHES=1, or `just docs-hashes`,
+//   writes the file);
 // - the 404 page is out of search engines, and the sitemap lists every other page.
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import config from "./astro.config.mjs";
 import { scriptHashes } from "./csp-hash.mjs";
@@ -86,6 +89,22 @@ for (const [file, source] of html) {
     if (frag && ids.has(target) && !ids.get(target).has(decodeURIComponent(frag)))
       problems.push(`${here}: ${url} has no #${frag} on the page`);
   }
+}
+
+const hashesFile = resolve(import.meta.dirname, "script-hashes.json");
+const hashes = [...new Set([...html.values()].flatMap((source) => scriptHashes(source)))].sort();
+if (process.env.UPDATE_HASHES) writeFileSync(hashesFile, `${JSON.stringify(hashes, null, 2)}\n`);
+else if (!existsSync(hashesFile)) problems.push("script-hashes.json is missing: run `just docs-hashes` and commit it");
+else {
+  const known = JSON.parse(readFileSync(hashesFile, "utf8"));
+  for (const h of hashes.filter((x) => !known.includes(x)))
+    problems.push(`an inline script is not in script-hashes.json: ${h}`);
+  for (const h of known.filter((x) => !hashes.includes(x)))
+    problems.push(`script-hashes.json lists a script no page has: ${h}`);
+  if (problems.length)
+    problems.push(
+      "Read the script (an upgrade of Starlight or Astro changes them), then run `just docs-hashes` and commit the file",
+    );
 }
 
 for (const css of files.filter((f) => f.endsWith(".css"))) {

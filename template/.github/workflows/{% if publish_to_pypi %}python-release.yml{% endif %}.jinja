@@ -206,6 +206,24 @@ jobs:
           name: sbom-attestation
           overwrite: true # a re-run of this job uploads it again
           path: {% raw %}${{ steps.attest-sbom.outputs.bundle-path }}{% endraw %}
+      # A file PyPI already has must be this build's: skip-existing below would pass over a
+      # different one. Re-run only the failed job, since a new build of the same tag can differ.
+      - name: refuse a file PyPI has with other content
+        env:
+          TAG: {% raw %}${{ github.ref_name }}{% endraw %}
+        run: |-
+          set -euo pipefail
+          code=$(curl -sS -A "{{ slug }} release workflow" -o "$RUNNER_TEMP/pypi.json" -w '%{http_code}' "https://pypi.org/pypi/{{ slug }}/${TAG#v}/json")
+          case $code in
+            404) exit 0 ;;
+            200) ;;
+            *) echo "::error::PyPI answered $code"; exit 1 ;;
+          esac
+          for f in dist/*; do
+            remote=$(jq -r --arg n "$(basename "$f")" '.urls[] | select(.filename == $n) | .digests.sha256' "$RUNNER_TEMP/pypi.json")
+            [ -z "$remote" ] && continue
+            [ "$remote" = "$(sha256sum "$f" | cut -d' ' -f1)" ] || { echo "::error::$f is on PyPI with other content than this build"; exit 1; }
+          done
       # skip-existing: a re-run after PyPI took the wheel but not the sdist uploads only the rest.
       - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:

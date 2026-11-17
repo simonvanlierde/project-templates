@@ -126,13 +126,20 @@ jobs:
 
       # npm, not pnpm: a prebuilt tarball needs no checkout, install or lockfile. npm
       # ships with Node 24+ and supports OIDC since npm 11.5.1. A re-run after npm took the
-      # upload but this job still failed finds the version and goes on to the release job.
+      # upload but this job still failed finds the version and goes on to the release job, once
+      # npm's hash of the tarball matches this build's. Re-run only the failed job: a new build
+      # of the same tag can differ.
       - name: publish to npm
         run: |-
           set -o pipefail
           pkg=$(tar -xzOf ./*.tgz package/package.json | node -e 'const p=JSON.parse(require("fs").readFileSync(0,"utf8"));console.log(p.name+"@"+p.version)')
-          if npm view "$pkg" version >/dev/null 2>&1; then
-            echo "$pkg is already on npm; leaving it"
+          if remote=$(npm view "$pkg" dist.integrity 2>/dev/null) && [ -n "$remote" ]; then
+            mine="sha512-$(openssl dgst -sha512 -binary ./*.tgz | openssl base64 -A)"
+            if [ "$remote" != "$mine" ]; then
+              echo "::error::$pkg is on npm with other content ($remote) than this build ($mine)"
+              exit 1
+            fi
+            echo "$pkg is already on npm with this content; leaving it"
           else
             npm publish --access public ./*.tgz
           fi

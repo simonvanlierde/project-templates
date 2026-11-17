@@ -232,7 +232,7 @@ grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 # The publish step: npm, from a tarball built earlier.
 grep -qx '            npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
 # shellcheck disable=SC2016 # a literal $pkg for the runner's shell
-grep -qF 'npm view "$pkg" version' c/.github/workflows/ts-release.yml
+grep -qF 'npm view "$pkg" dist.integrity' c/.github/workflows/ts-release.yml
 (lacks -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 # The GitHub release waits for the npm publish (t, npm only) and the plain release.yml is not
 # rendered beside it; with PyPI too, python-release.yml makes the release (c).

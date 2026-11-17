@@ -191,7 +191,7 @@ printf '# Guide\n\nSee [home](index.md), [decisions](decisions/README.md), [Carg
 printf '```sh\n# not the title\n```\n\n# Fenced title\n\nSee [notes](my%%20notes.md).\n' >"$out/st-build/docs/fenced.md"
 printf '# My notes\n\nNotes.\n' >"$out/st-build/docs/my notes.md"
 test -f "$out/st-build/Cargo.toml"
-(cd "$out/st-build" && git init -q && just docs-sync docs docs-check) >starlight-build.log 2>&1 || {
+(cd "$out/st-build" && git init -q && just docs-sync docs-hashes docs docs-check) >starlight-build.log 2>&1 || {
   tail -40 starlight-build.log >&2
   exit 1
 }
@@ -204,6 +204,29 @@ grep -qF '<loc>https://example-org.github.io/star-me/guide/</loc>' "$out/st-buil
 grep -rqF 'https://github.com/example-org/star-me/blob/main/Cargo.toml' "$out/st-build/_docs/guide/index.html"
 grep -qF 'name="robots" content="noindex"' "$out/st-build/_docs/404.html"
 grep -qF "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' 'sha256-" "$out/st-build/_docs/index.html"
+# The inline scripts are the ones in script-hashes.json: a file without one of them, or with an
+# extra one, or no file at all, stops `just docs`.
+test "$(jq length "$out/st-build/docs-site/script-hashes.json")" -ge 1
+cp "$out/st-build/docs-site/script-hashes.json" "$out/script-hashes.json"
+jq '.[1:]' "$out/script-hashes.json" >"$out/st-build/docs-site/script-hashes.json"
+if (cd "$out/st-build" && pnpm -C docs-site run check) >starlight-hashes.log 2>&1; then
+  echo "a docs site with an inline script missing from script-hashes.json passed its check" >&2
+  exit 1
+fi
+grep -qF 'an inline script is not in script-hashes.json' starlight-hashes.log
+jq '. + ["sha256-extra"]' "$out/script-hashes.json" >"$out/st-build/docs-site/script-hashes.json"
+if (cd "$out/st-build" && pnpm -C docs-site run check) >starlight-hashes.log 2>&1; then
+  echo "a docs site with a stale entry in script-hashes.json passed its check" >&2
+  exit 1
+fi
+grep -qF 'lists a script no page has' starlight-hashes.log
+rm "$out/st-build/docs-site/script-hashes.json"
+if (cd "$out/st-build" && pnpm -C docs-site run check) >starlight-hashes.log 2>&1; then
+  echo "a docs site with no script-hashes.json passed its check" >&2
+  exit 1
+fi
+grep -qF 'script-hashes.json is missing' starlight-hashes.log
+cp "$out/script-hashes.json" "$out/st-build/docs-site/script-hashes.json"
 # A link to a file that does not exist stops the build.
 printf '# Broken\n\n[gone](missing.md)\n' >"$out/st-build/docs/broken.md"
 if (cd "$out/st-build" && just docs) >starlight-broken.log 2>&1; then
