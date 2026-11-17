@@ -57,6 +57,39 @@ jobs:
           # (`.copier-answers.<name>.yml`). Copier refuses to update a dirty tree, so each
           # layer's update is committed here; the patch is everything since the checkout.
           base=$(git rev-parse HEAD)
+          # A merge conflict must not put markers into a file: a workflow with markers does not run, and
+          # neither does the package. A hunk that differs only in a pinned SHA and its version takes the
+          # newer pin, as the dependency bot may have bumped it in the project and the template in its
+          # release. Any other conflict leaves the project's file as it was and writes the merge, markers
+          # in it, to `<file>.rej`: the hooks refuse a pull request that still has one.
+          resolve=$(cat <<'PY'
+          import re, subprocess, sys
+          before = sys.argv[1]
+          sha, ver = re.compile(r"\b[0-9a-f]{40}\b"), re.compile(r"\d+(?:\.\d+)+")
+          mask = lambda line: ver.sub("V", sha.sub("SHA", line))
+          version = lambda line: [tuple(map(int, v.split("."))) for v in ver.findall(line.partition("#")[2])]
+          block = re.compile(r"^<<<<<<< before updating\n(.*?)^=======\n(.*?)^>>>>>>> after updating\n", re.M | re.S)
+          def pick(m):
+              mine, theirs = m[1].splitlines(), m[2].splitlines()
+              if not mine or len(mine) != len(theirs) or not all(sha.search(a) and sha.search(b) for a, b in zip(mine, theirs)):
+                  return m[0]
+              if any(mask(a) != mask(b) for a, b in zip(mine, theirs)):
+                  return m[0]
+              return m[2] if [version(b) for b in theirs] > [version(a) for a in mine] else m[1]
+          files = subprocess.run(["git", "grep", "-lI", "-e", "^<<<<<<< before updating"], capture_output=True, text=True).stdout.split("\n")
+          for name in filter(None, files):
+              text = open(name, encoding="utf-8", errors="surrogateescape").read()
+              merged = block.sub(pick, text)
+              if "<<<<<<< before updating" not in merged:
+                  open(name, "w", encoding="utf-8", errors="surrogateescape").write(merged)
+                  continue
+              kept = subprocess.run(["git", "show", f"{before}:{name}"], capture_output=True)
+              if kept.returncode:
+                  continue
+              open(name + ".rej", "w", encoding="utf-8", errors="surrogateescape").write(merged)
+              open(name, "wb").write(kept.stdout)
+          PY
+          )
           titles=()
           lines=()
           for answers in .copier-answers.yml .copier-answers.*.yml; do
@@ -101,7 +134,9 @@ jobs:
               fi
               continue
             fi
+            before=$(git rev-parse HEAD)
             uvx --exclude-newer "1 week" "copier@$COPIER_VERSION" update --answers-file "$answers" --defaults --vcs-ref "$latest"
+            python3 -c "$resolve" "$before"
             git add -A
             git -c core.hooksPath=/dev/null -c user.name=copier-update -c user.email=copier-update@localhost \
               commit -q --allow-empty -m "$answers $latest"
@@ -117,8 +152,8 @@ jobs:
           summary=$(printf '%s, ' "${titles[@]}")
           summary=${summary%, }
 
-          # Copier exits 0 on conflicts: inline markers, or .rej files.
-          { git grep -l -e '^<<<<<<< ' HEAD -- . | sed 's/^HEAD://' || true; git ls-files '*.rej'; } | sort -u >conflicts.txt
+          # Copier exits 0 on conflicts; the step above turned them into .rej files.
+          git ls-files '*.rej' | sort -u >conflicts.txt
           {
             echo "Updates this project from its templates:"
             echo
@@ -127,7 +162,7 @@ jobs:
             {% endraw %}{% set refresh = [('\\`uv lock\\`', 'python' in stacks), ('\\`pnpm install\\`', 'ts' in stacks), ('\\`just go-sync\\`', 'go' in stacks), ('\\`just site-sync\\`', site == 'astro'), ('\\`just docs-sync\\`, \\`just docs-hashes\\`', docs_starlight)] | selectattr('1') | map(attribute='0') | list %}{% if refresh %}echo "Read the diff before merging, then refresh the lockfiles ({{ refresh | join(', ') }})."{% else %}echo "Read the diff before merging."{% endif %}{% raw %}
             if [ -s conflicts.txt ]; then
               echo
-              echo "These files have merge conflicts. Their markers are committed as they are:"
+              echo "These changes did not merge. Each file keeps the project's version, and the template's, with the conflicts marked, is in the \`.rej\` file next to it. Copy what you need into the file, then delete the \`.rej\` file: the hooks fail while one is left."
               echo
               sed "s/.*/- \`&\`/" conflicts.txt
             fi

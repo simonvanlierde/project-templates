@@ -30,9 +30,15 @@ After an update, refresh and commit the lockfiles (`uv lock`, `pnpm install`, `j
 PNGs = "PNGs"
 ```
 
+### When an update does not merge
+
+A file you changed on the lines a template release also changed cannot merge. The weekly pull request leaves such a file as it was and writes the template's merge, with Copier's `<<<<<<< before updating` markers, to `<file>.rej` beside it. The body lists those files. Copy what you need into the file and delete the `.rej` file: the `copier-update-rej` and `copier-update-conflict` hooks fail the pull request while one is left. A pinned action or hook that you and the template both bumped is not a conflict: the newer pin wins.
+
+A project whose `copier-update.yml` is from before 0.16.1 commits the markers instead, which stops a workflow or a `pyproject.toml` with one from parsing. Close its pull request, run `copier update --conflict rej` yourself once, resolve the `.rej` files and merge: the project then has the new workflow.
+
 ### Hearing about new releases
 
-- **Renovate:** Automatically opens update PRs using `copier update --skip-answered --defaults`. Inspect PR diffs for conflict markers before merging.
+- **Renovate:** Automatically opens update PRs using `copier update --skip-answered --defaults`. Inspect PR diffs before merging.
 - **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`. It takes the newest tag that is a week old, so a tag pushed with stolen credentials has a week to be noticed before the workflow's token pushes it; the tag's own date counts, so this stops a careless tag, not a forged one. Templates under `simonvanlierde/` skip the wait. Renovate has no such wait. It updates each `.copier-answers*.yml` in turn, so a [layered template](usage.md#layering-another-template) lands in the same PR. Closing that PR unmerged skips its tag; a later tag can open a new PR.
 
 Without [the update App](#the-update-app), `copier-update.yml` pushes with `GITHUB_TOKEN`, which can't change files in `.github/workflows/`: an update that does opens an issue asking for a local update instead. A PR it opens starts no checks either, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so. To open the PR at all, turn on Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests". With the App, the workflow does not need it.

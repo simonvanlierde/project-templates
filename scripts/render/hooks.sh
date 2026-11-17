@@ -131,6 +131,13 @@ printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg
 (cd h-hooks && "${dco_hook[@]}" >/dev/null)
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace\n' >h-hooks/msg
 (cd h-hooks && ! "${dco_hook[@]}" >/dev/null 2>&1)
+# A copier update that left a .rej file or conflict markers fails its pull request's hooks.
+printf 'a\n' >h-hooks/left.md.rej
+printf 'x\n<<<<<<< before updating\ny\n=======\nz\n>>>>>>> after updating\n' >h-hooks/marked.md
+(cd h-hooks && ! uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run copier-update-rej --files left.md.rej >/dev/null 2>&1)
+(cd h-hooks && ! uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run copier-update-conflict --files marked.md >/dev/null 2>&1)
+(cd h-hooks && uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run copier-update-conflict --files .pre-commit-config.yaml >/dev/null)
+rm h-hooks/left.md.rej h-hooks/marked.md
 # citesync passes on each fresh citable render: root (a), nested (c, d, m), one stack (h, r, t).
 # Adding a release to CITATION.cff leaves codemeta.json stale, which fails the hook until
 # the manual-stage writer fixes it. The writer re-indents codemeta.json, so a second

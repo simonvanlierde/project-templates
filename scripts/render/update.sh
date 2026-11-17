@@ -121,6 +121,9 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     fi
     # Both answers files behind, and an update that leaves a conflict marker.
     if [ "$name" = both ]; then cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"; fi
+    # The file the fake copier changes exists in the project, as it does in a real update.
+    mkdir -p "$p/$(dirname "${file:-.github/workflows/ci.yml}")"
+    echo 'project line' >"$p/${file:-.github/workflows/ci.yml}"
     git -C "$p" add -A
     git -C "$p" commit -q -m init
     # The privileged job starts from a clean checkout, not the generator's worktree.
@@ -144,7 +147,13 @@ chmod +x "$cuh/gh" "$cuh/uvx"
           GIT_CONFIG_VALUE_1=https://github.com/evil/simonvanlierde-templates
       fi
       FAKE_TEXT=''
-      if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
+      # A real conflict, and two that differ only in a pinned SHA and its version: the project's pin
+      # is the newer in pin-project and the older in pin-template.
+      pin_a='      - uses: a/b@1111111111111111111111111111111111111111 # v1.2.4'
+      pin_b='      - uses: a/b@2222222222222222222222222222222222222222 # v1.2.3'
+      if [ "$name" = both ]; then FAKE_TEXT=$'<<<<<<< before updating\nproject edit\n=======\ntemplate edit\n>>>>>>> after updating'; fi
+      if [ "$name" = pin-project ]; then FAKE_TEXT=$'<<<<<<< before updating\n'"$pin_a"$'\n=======\n'"$pin_b"$'\n>>>>>>> after updating'; fi
+      if [ "$name" = pin-template ]; then FAKE_TEXT=$'<<<<<<< before updating\n'"$pin_b"$'\n=======\n'"$pin_a"$'\n>>>>>>> after updating'; fi
       export FAKE_TEXT
       FAKE_OPEN_PRS='[]' FAKE_ISSUES='[]' FAKE_CLOSED_PRS='[]'
       if [ "$pr" != - ]; then FAKE_OPEN_PRS=$(printf '[{"number":%s,"isCrossRepository":false}]' "$pr"); fi
@@ -191,6 +200,8 @@ edit true 7 -
 plain false - - README.md
 layer true - - README.md
 both true - - README.md
+pin-project true - - README.md
+pin-template true - - README.md
 declined true - -
 declined-no-token false - -
 declined-plain false - - README.md
@@ -215,8 +226,25 @@ CASES
   git -C layer.git show chore/copier-update:README.md | grep -qx '# from the template'
   # Two templates that both moved share one title, and a conflict marker is named in the body.
   grep -q '^pr create --head chore/copier-update --base main --title chore: update from template v0.10.0, cml v0.10.0 ' both.log
+  # A conflict leaves the project's file as it was, with no marker, and the template's side next to it in a
+  # .rej file that the body names. A pin that differs only in SHA and version takes the newer one.
   # shellcheck disable=SC2016 # the backticks are Markdown
-  grep -qx -- '- `README.md`' both-runner/copier-update/body.md
+  grep -qx -- '- `README.md.rej`' both-runner/copier-update/body.md
+  grep -q 'did not merge' both-runner/copier-update/body.md
+  git -C both.git show chore/copier-update:README.md >both.readme
+  (lacks -q '<<<<<<<\|edit' both.readme)
+  grep -qx 'project line' both.readme
+  git -C both.git show chore/copier-update:README.md.rej | grep -qx '<<<<<<< before updating'
+  git -C both.git show chore/copier-update:README.md.rej | grep -qx 'template edit'
+  for r in pin-project pin-template; do
+    git -C "$r.git" show chore/copier-update:README.md >"$r.readme"
+    (lacks -q '<<<<<<<' "$r.readme")
+    (lacks -q 'did not merge' "$r-runner/copier-update/body.md")
+    (! git -C "$r.git" cat-file -e chore/copier-update:README.md.rej 2>/dev/null)
+  done
+  grep -qF 'a/b@1111111111111111111111111111111111111111 # v1.2.4' pin-project.readme
+  grep -qF 'a/b@1111111111111111111111111111111111111111 # v1.2.4' pin-template.readme
+  (lacks -q '2222222222' pin-project.readme pin-template.readme)
   (lacks -q 'merge conflicts' layer-runner/copier-update/body.md)
   # No token and a workflow change: one issue, the older PR closed, no push.
   # Only the issue this workflow opened counts: it runs with GITHUB_TOKEN there.

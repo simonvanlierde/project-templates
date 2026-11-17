@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- The weekly update pull request no longer commits conflict markers, which stopped a workflow from running and a `pyproject.toml` from parsing. A hunk that differs only in a pinned SHA and its version takes the newer pin, since the dependency bot and a template release both bump them. Any other conflict leaves the project's file as it was and writes the template's merge, with the markers, to `<file>.rej` beside it; the pull request body lists those files. The new `copier-update-conflict` and `copier-update-rej` hooks fail while a marker or a `.rej` file is left, so an unresolved update cannot merge. An existing project gets the new workflow with its next update: until then it commits markers as before, so update it by hand once (`copier update --conflict rej`, then resolve each `.rej` file).
+
 ## [0.16.0] - 2026-11-17
 
 Upgrade steps:
