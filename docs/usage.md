@@ -90,8 +90,8 @@ Pass one with `--data-file`, which reads a local path. Use the same release tag 
 the preset and the template:
 
 ```sh
-curl -fsSLo /tmp/preset.yml https://raw.githubusercontent.com/simonvanlierde/project-templates/v0.16.0/presets/rust-cli.yml
-copier copy --vcs-ref=v0.16.0 --data-file /tmp/preset.yml gh:simonvanlierde/project-templates my-tool
+curl -fsSLo /tmp/preset.yml https://raw.githubusercontent.com/simonvanlierde/project-templates/v0.16.1/presets/rust-cli.yml
+copier copy --vcs-ref=v0.16.1 --data-file /tmp/preset.yml gh:simonvanlierde/project-templates my-tool
 ```
 
 `--data` flags after it override single answers. A preset is a starting point, not a
