@@ -43,10 +43,13 @@ grep -q 'id: golangci-lint$' a/.pre-commit-config.yaml
 grep -q golang.go a/.vscode/extensions.json
 grep -q 'package-ecosystem: gomod' a/.github/dependabot.yml
 # One cooldown for every ecosystem and update type: a week.
-# The exception: the author's own hooks (and sourceledger, in a data pipeline).
-test "$(grep -cx '    cooldown: {default-days: 7}' a/.github/dependabot.yml)" = "$(($(grep -c 'package-ecosystem:' a/.github/dependabot.yml) - 1))"
-grep -qx '    cooldown: {default-days: 7, exclude: \["\*simonvanlierde/\*"\]}' a/.github/dependabot.yml
-grep -qx "    { matchPackageNames: \['simonvanlierde/\*\*', 'sourceledger'\], minimumReleaseAge: null }," d/renovate.json5
+# The exception: the author's own hooks (and sourceledger, in a data pipeline), in a project of his only.
+test "$(grep -cx '    cooldown: {default-days: 7}' a/.github/dependabot.yml)" = "$(grep -c 'package-ecosystem:' a/.github/dependabot.yml)"
+(lacks -q 'simonvanlierde' a/.github/dependabot.yml)
+(lacks -q 'matchPackageNames' d/renovate.json5)
+grep -qx '    cooldown: {default-days: 7, exclude: \["\*simonvanlierde/\*"\]}' own-dependabot/.github/dependabot.yml
+grep -qx '    cooldown: {default-days: 7, exclude: \[sourceledger\]}' own-dependabot/.github/dependabot.yml
+grep -qx "    { matchPackageNames: \['simonvanlierde/\*\*', 'sourceledger'\], minimumReleaseAge: null }," own-renovate/renovate.json5
 (lacks -q semver-major-days a/.github/dependabot.yml)
 grep -qx "  minimumReleaseAge: '7 days'," d/renovate.json5
 (lacks -q "30 days" d/renovate.json5)

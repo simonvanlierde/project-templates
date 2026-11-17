@@ -20,8 +20,9 @@ grep -qF 'data/processed/example.parquet' d/pipe/tests/test_pipeline.py
 grep -qF 'pipeline.main(["build"]) == 3' d/pipe/tests/test_pipeline.py
 grep -qF 'rows = list(pipeline.sourceledger.read_output(OUT))' d/pipe/tests/test_pipeline.py
 grep -qF 'f"example-co2.{OUTPUT_FORMAT}"' d/pipe/tests/test_published.py
-# sourceledger releases resolve without the week's wait; other packages keep it.
-grep -qx 'exclude-newer-package = { sourceledger = false }' d/pipe/pyproject.toml
+# sourceledger releases resolve without the week's wait in a project of its author; other packages keep it.
+grep -qx 'exclude-newer-package = { sourceledger = false }' own-renovate/pyproject.toml
+(lacks -q 'exclude-newer-package' d/pipe/pyproject.toml)
 (lacks -q 'exclude-newer-package' a/pyproject.toml)
 test ! -e a/tests/test_pipeline.py
 test ! -e a/tests/test_published.py
