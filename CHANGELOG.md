@@ -10,6 +10,8 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-17
+
 Upgrade steps:
 
 - Existing projects whose files spell `PNGs` must [add the `PNGs` spelling exception](docs/updates.md#spelling-exceptions-in-existing-projects) to their project-owned `_typos.toml`.
@@ -1012,7 +1014,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/simonvanlierde/project-templates/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/simonvanlierde/project-templates/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/simonvanlierde/project-templates/compare/v0.12.0...v0.13.0
