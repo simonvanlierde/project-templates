@@ -90,7 +90,7 @@ Generated projects use Dependabot by default. `dependency_bot=renovate` writes e
 - Weekly version updates grouped into three PRs: actions and hooks, dev tooling, and minor/patch runtime updates.
 - Runtime major versions get separate individual PRs.
 - Updates wait one week before opening, majors included.
-- Security updates bypass the cooldown, and so do the author's own `simonvanlierde` hooks and packages.
+- Security updates bypass the cooldown. So do the author's own `simonvanlierde` hooks and packages, in the dependency bots of a project owned by `simonvanlierde`: a project of any other owner waits the week for them too. A data pipeline's `uv` resolves sourceledger without the wait whoever owns it, since the template's own floor can be younger than a week.
 
 Dependabot also combines npm security updates into one PR. Renovate refreshes lockfiles weekly on Monday.
 

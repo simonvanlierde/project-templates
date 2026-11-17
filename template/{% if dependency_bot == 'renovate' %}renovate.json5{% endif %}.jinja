@@ -16,8 +16,8 @@
 //
 // `minimumReleaseAge` holds a version update back until the release has been public for
 // a week, long enough for a compromised release to be caught and yanked, majors
-// included. The author's own simonvanlierde hooks and packages skip it: whoever can
-// publish those can push to the repos directly. Security
+// included.{% if github_user | lower == 'simonvanlierde' %} The author's own simonvanlierde hooks and packages skip it: whoever can
+// publish those can push to the repos directly.{% endif %} Security
 // updates ignore it and the schedule. They need Dependabot alerts on in the repo settings,
 // and cover only the dependencies a manifest names.
 //
@@ -76,7 +76,9 @@
     // Template releases, from .copier-answers.yml. Their tags carry no release date,
     // so the week's wait above would hold them back for good.
     { matchManagers: ['copier'], minimumReleaseAge: null },
+{%- if github_user | lower == 'simonvanlierde' %}
     { matchPackageNames: ['simonvanlierde/**'{{ ", 'sourceledger'" if pipeline else '' }}], minimumReleaseAge: null },
+{%- endif %}
 {%- if web_app and web_framework == 'svelte' %}
     // svelte-check refuses TypeScript 7 alone. Remove this once svelte-check runs on it.
     { matchManagers: ['npm'], matchPackageNames: ['typescript'], allowedVersions: '<7' },

@@ -56,7 +56,7 @@ nav = [
 # docs-overrides/main.html reads these: the announcement names `release`, and `og_image`
 # carries the card's hash (`just og-card`), since link previews cache by URL.
 [project.extra]
-release = "0.15.0"
+release = "0.16.0"
 og_image = "assets/og.png?v=6f68f2a2"
 generator = false
 # A fixed storage scope gives the theme bootstrap the same CSP hash at every URL depth.

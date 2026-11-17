@@ -52,9 +52,15 @@ assert not any("checkout" in s.get("uses", "") for s in release["steps"]), relea
 publish_script = release["steps"][-1]["run"]
 verify = ["verify"] * 4
 # Every attestation is checked before the draft exists, so a failed check leaves nothing to delete.
-# `view` asks whether an earlier run left a draft; the fake gh answers nothing, so none is deleted.
-for fail, expected in [("", [*verify, "view", "create", "edit"]), ("create", [*verify, "view", "create"]),
-                       ("verify", ["verify"])]:
+# `view` asks whether an earlier run left a draft (VIEW=true), published the release (VIEW=false) or
+# made none (nothing printed). A failed `view` is an error, not "no release". A failed verify is retried
+# three times, with the sleep faked.
+for fail, view, expected in [("", "", [*verify, "view", "create", "edit"]),
+                             ("", "true", [*verify, "view", "delete", "create", "edit"]),
+                             ("", "false", [*verify, "view"]),
+                             ("view", "", [*verify, "view"]),
+                             ("create", "", [*verify, "view", "create"]),
+                             ("verify", "", ["verify"] * 3)]:
     with tempfile.TemporaryDirectory() as tmp:
         work = pathlib.Path(tmp)
         for directory in ("assets", "provenance", "sbom-attestation", "notes", "bin"):
@@ -66,17 +72,80 @@ for fail, expected in [("", [*verify, "view", "create", "edit"]), ("create", [*v
         (work / "notes/notes.md").write_text("Release notes")
         gh = work / "bin/gh"
         gh.write_text('#!/bin/sh\nprintf "%s\\n" "$2" >>"$(dirname "$0")/../calls"\n'
-                      'test "$2" != "$FAIL" || exit 1\n')
+                      'test "$2" != "$FAIL" || exit 1\n'
+                      'test "$2" != view || test -z "$VIEW" || echo "$VIEW"\n')
         gh.chmod(0o755)
+        sleep = work / "bin/sleep"
+        sleep.write_text("#!/bin/sh\n")
+        sleep.chmod(0o755)
         result = subprocess.run(["bash", "-c", publish_script], cwd=work,
                                 env={"PATH": f"{work / 'bin'}:/usr/bin:/bin", "TAG": "v1.2.3", "GH_REPO": "o/r",
-                                     "FAIL": fail}, check=False)
+                                     "FAIL": fail, "VIEW": view}, check=False)
         assert (result.returncode != 0) == bool(fail), result
         assert (work / "calls").read_text().splitlines() == expected
         # Every asset carries a bundle under its own name; the SBOM's rides on the sdist.
         for bundle in ("package.whl", "package.tar.gz", "package.tar.gz.cdx.json"):
             assert (work / f"assets/{bundle}.intoto.jsonl").is_file()
         assert (work / "assets/package.tar.gz.sbom.intoto.jsonl").is_file()
+# A re-run that finds the version on a registry goes on only when the registry holds this build's
+# bytes, and publishes when it holds nothing. The fakes stand in for curl, npm and cargo.
+import hashlib
+def step(path, job, name):
+    jobs = yaml.safe_load((out / path).read_text())["jobs"]
+    return next(x["run"] for x in jobs[job]["steps"] if x.get("name") == name)
+def run_step(script, work, env, fakes):
+    (work / "bin").mkdir()
+    for name, body in fakes.items():
+        fake = work / "bin" / name
+        fake.write_text("#!/bin/sh\n" + body)
+        fake.chmod(0o755)
+    base = {"PATH": f"{work / 'bin'}:/usr/bin:/bin:/usr/local/bin", "RUNNER_TEMP": str(work)}
+    return subprocess.run(["bash", "-c", script], cwd=work, env={**base, **env}, check=False,
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+# curl writes the body to the file after -o and prints the status (CODE) the way -w does.
+curl = 'while [ $# -gt 0 ]; do [ "$1" = -o ] && out=$2; shift; done\nprintf %s "$BODY" >"$out"\nprintf %s "$CODE"\n'
+pypi = step("c/.github/workflows/python-release.yml", "publish", "refuse a file PyPI has with other content")
+wheel = b"wheel bytes"
+sha = hashlib.sha256(wheel).hexdigest()
+for code, body_sha, ok in [("404", "", True), ("200", sha, True), ("200", "0" * 64, False), ("503", "", False)]:
+    with tempfile.TemporaryDirectory() as tmp:
+        work = pathlib.Path(tmp)
+        (work / "dist").mkdir()
+        (work / "dist/pkg-1.0.0-py3-none-any.whl").write_bytes(wheel)
+        body = json.dumps({"urls": [{"filename": "pkg-1.0.0-py3-none-any.whl", "digests": {"sha256": body_sha}}]})
+        result = run_step(pypi, work, {"TAG": "v1.0.0", "CODE": code, "BODY": body}, {"curl": curl})
+        assert (result.returncode == 0) == ok, (code, body_sha, result)
+npm = step("c/.github/workflows/ts-release.yml", "publish", "publish to npm")
+import base64
+for remote, expected_calls, ok in [("", ["publish"], True), ("same", [], True), ("sha512-other", [], False)]:
+    with tempfile.TemporaryDirectory() as tmp:
+        work = pathlib.Path(tmp)
+        pack = work / "pkg"
+        (pack / "package").mkdir(parents=True)
+        (pack / "package/package.json").write_text('{"name":"pkg","version":"1.0.0"}')
+        subprocess.run(["tar", "-czf", str(work / "pkg-1.0.0.tgz"), "-C", str(pack), "package"], check=True)
+        mine = "sha512-" + base64.b64encode(hashlib.sha512((work / "pkg-1.0.0.tgz").read_bytes()).digest()).decode()
+        value = mine if remote == "same" else remote
+        fake_npm = ('echo "$1" >>"$(dirname "$0")/../calls"\n'
+                    'if [ "$1" = view ]; then test -n "$REMOTE" && echo "$REMOTE" || exit 1; fi\n')
+        result = run_step(npm, work, {"REMOTE": value}, {"npm": fake_npm})
+        calls = [c for c in (work / "calls").read_text().splitlines() if c != "view"] if (work / "calls").exists() else []
+        assert (result.returncode == 0) == ok and calls == expected_calls, (remote, calls, result)
+crates = step("cb/.github/workflows/rust-release.yml", "publish", "publish to crates.io")
+name = tomllib.loads((out / "cb/Cargo.toml").read_text())["package"]["name"]
+crate_bytes = b"crate bytes"
+crate_sha = hashlib.sha256(crate_bytes).hexdigest()
+for code, remote_sha, expected_calls, ok in [("404", "", ["publish"], True), ("200", crate_sha, [], True),
+                                              ("200", "0" * 64, [], False), ("500", "", [], False)]:
+    with tempfile.TemporaryDirectory() as tmp:
+        work = pathlib.Path(tmp)
+        body = json.dumps({"version": {"checksum": remote_sha}})
+        fake_cargo = ('echo "$1" >>"$(dirname "$0")/../calls"\n'
+                      f'if [ "$1" = package ]; then mkdir -p "$RUNNER_TEMP/target/package"; printf %s "$CRATE" >"$RUNNER_TEMP/target/package/{name}-1.0.0.crate"; fi\n')
+        result = run_step(crates, work, {"GITHUB_REF_NAME": "v1.0.0", "CODE": code, "BODY": body,
+                                         "CRATE": crate_bytes.decode()}, {"curl": curl, "cargo": fake_cargo})
+        calls = [c for c in (work / "calls").read_text().splitlines() if c != "package"] if (work / "calls").exists() else []
+        assert (result.returncode == 0) == ok and calls == expected_calls, (code, remote_sha, calls, result)
 # Nothing is published before the tag is verified: the gate runs right after checkout in
 # the first job, and the job that publishes is that job or waits for it.
 def waits_for(jobs, job, gate):

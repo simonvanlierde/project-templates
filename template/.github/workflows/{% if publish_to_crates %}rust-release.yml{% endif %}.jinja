@@ -17,7 +17,8 @@ name: rust release
 #
 # `id-token: write` exposes an OpenID Connect (OIDC) request token to every step in its
 # job. The publish job therefore runs `cargo publish --no-verify`: it compiles nothing,
-# so no dependency's build script runs where the token exists.
+# so no dependency's build script runs where the token exists. Cargo still reads the
+# checkout's `.cargo/config.toml`, so only a signed tag's own commit reaches that token.
 {%- if rust_kind == 'binary' %}
 #
 # `binaries` builds an archive per platform, named as `cargo binstall` looks for it
@@ -195,14 +196,26 @@ jobs:
       - uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
         id: auth
       # --no-verify: the build job already built the packaged crate. A re-run after crates.io took
-      # the upload but this job still failed finds the version and goes on to the release job.
+      # the upload but this job still failed finds the version, packages the crate again (cargo
+      # writes the same bytes from the same files), and goes on to the release job once
+      # crates.io's checksum matches.
       - name: publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: {% raw %}${{ steps.auth.outputs.token }}{% endraw %}
         run: |-
+          set -euo pipefail
           version=${GITHUB_REF_NAME#v}
-          if curl -fsS -A "{{ slug }} release workflow" -o /dev/null "https://crates.io/api/v1/crates/{{ crate_name }}/$version"; then
-            echo "{{ crate_name }} $version is already on crates.io; leaving it"
+          code=$(curl -sS -A "{{ slug }} release workflow" -o "$RUNNER_TEMP/crate.json" -w '%{http_code}' "https://crates.io/api/v1/crates/{{ crate_name }}/$version")
+          case $code in 200 | 404) ;; *) echo "::error::crates.io answered $code"; exit 1 ;; esac
+          if [ "$code" = 200 ]; then
+            cargo package --locked --no-verify --target-dir "$RUNNER_TEMP/target"{{ ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' if rust_dir != '.' }}
+            remote=$(jq -r .version.checksum "$RUNNER_TEMP/crate.json")
+            mine=$(sha256sum "$RUNNER_TEMP/target/package/{{ crate_name }}-$version.crate" | cut -d' ' -f1)
+            if [ "$remote" != "$mine" ]; then
+              echo "::error::{{ crate_name }} $version is on crates.io with other content ($remote) than this build ($mine)"
+              exit 1
+            fi
+            echo "{{ crate_name }} $version is already on crates.io with this content; leaving it"
           else
             cargo publish --locked --no-verify{{ ' --manifest-path ' ~ rust_dir ~ '/Cargo.toml' if rust_dir != '.' }}
           fi
@@ -250,7 +263,7 @@ jobs:
             case $f in *.intoto.jsonl) continue ;; esac
             # The attestation can lag the attest step by a moment.
             for attempt in 1 2 3; do
-              gh attestation verify "$f" --repo "$GH_REPO" --bundle "$f.intoto.jsonl" && break
+              gh attestation verify "$f" --repo "$GH_REPO" --bundle "$f.intoto.jsonl" --signer-workflow "$GH_REPO/.github/workflows/rust-release.yml" && break
               [ "$attempt" -lt 3 ] && sleep 10 || exit 1
             done
           done

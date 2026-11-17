@@ -78,7 +78,7 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 | Generated project CI | PR code and metadata | Workflows use `contents: read` or `{}`; no `pull_request_target` or `workflow_run`; `persist-credentials: false` on checkouts |
 | Release jobs with OIDC | Built artifacts | OIDC tokens isolated to upload jobs without project code execution ([Workflows that can publish](#workflows-that-can-publish)); ruleset limits `v*` tags to admins |
 | Weekly update workflow | New template releases | `copier-update.yml` runs Copier read-only and applies patches in a separate job holding push credentials ([Update](#update)) |
-| Dependency updates | New package and action versions | Renovate and Dependabot enforce a 7-day cooldown on new releases; uv (`exclude-newer`) and pnpm (`minimumReleaseAge`) keep the same week on install; Cargo and Go do not; the author's own `simonvanlierde` hooks and packages skip it |
+| Dependency updates | New package and action versions | Renovate and Dependabot enforce a 7-day cooldown on new releases; uv (`exclude-newer`) and pnpm (`minimumReleaseAge`) keep the same week on install; Cargo and Go do not; the author's own `simonvanlierde` hooks and packages skip it in the bots of his projects only |
 
 ### Secure design principles
 
@@ -99,14 +99,16 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 
 ### Security assessment
 
-Reviewed 2026-11-12 for release 0.15.0:
+Reviewed 2026-11-17 for release 0.16.0:
 
 | Threat | Impact | Controls |
 | --- | --- | --- |
 | Event metadata injected into shell steps | Arbitrary command execution with workflow token | Event fields pass through `env:` instead of inline expansion; zizmor and jactionlint audit workflows |
-| Release job attempts token theft | Malicious package or container published | OIDC tokens scoped strictly to upload jobs without project code; registries restrict uploads to `v*` tags |
+| Release job attempts token theft | Malicious package or container published | OIDC tokens scoped strictly to upload jobs that run no project code (`cargo publish --no-verify` compiles nothing); the PyPI, npm and crates.io environments take `v*` tags only; the GitHub release job holds the write token with no checkout |
 | Copier compromises update workflow | Unauthorized commit pushed to repository | Copier runs read-only; patch applied in separate push job without hook execution |
+| Template tag pushed with stolen credentials | Hostile update proposed to every project | The update workflow takes only a tag a week old, so there is time to notice it; the tagger date is the tagger's claim, so a forged date passes, and the update arrives as a pull request to read |
 | Compromised package or action release | Malicious code in CI or runtime | Pinned action SHAs, committed lockfiles, and 7-day update cooldown |
+| Script injected into the docs site | Page runs attacker code for readers | The Starlight build hashes each inline script into a `Content-Security-Policy` that loads nothing from another origin, and stops on a `<script>` in the Markdown |
 | Crafted answer escapes template syntax | Malformed or insecure project structure | Validators in `copier.yml` validate types, formats, and escape sequences |
 | Branch code reads the Cloudflare token in a `preview` job | Anyone who can push a branch to a pull request a person opened can replace or delete the production Worker, or copy the token until it is rotated | Fork pull requests, pull requests a bot opened (Renovate, Dependabot, the update App) and the Copier update branch get no token, and a bot's push does not start a preview. A person who later marks the pull request ready or reopens it deploys its head as it is, bot commits included. Accepted while the Worker serves only static files: the harm is a replaced site, as with a bad dependency merged to `main`. Give previews their own Cloudflare account before a Worker gets bindings (KV, D1, secrets), since those reach every preview |
 | Update App key read from another branch | Anyone who can push a branch can mint a token with Contents, Pull requests and Workflows write | The `copier-update` environment is limited to `main`. On a private repo on GitHub Free there are no environment branch policies, so the key is readable from any branch: use one App per repo there, or the `GITHUB_TOKEN` path ([The update App](updates.md#the-update-app)). `just repo-settings` says so when the plan refuses its rulesets |

@@ -20,7 +20,8 @@ grep -qF 'data/processed/example.parquet' d/pipe/tests/test_pipeline.py
 grep -qF 'pipeline.main(["build"]) == 3' d/pipe/tests/test_pipeline.py
 grep -qF 'rows = list(pipeline.sourceledger.read_output(OUT))' d/pipe/tests/test_pipeline.py
 grep -qF 'f"example-co2.{OUTPUT_FORMAT}"' d/pipe/tests/test_published.py
-# sourceledger releases resolve without the week's wait; other packages keep it.
+# sourceledger releases resolve without the week's wait, whoever owns the project, since the template's
+# own floor may be younger than a week; other packages keep it.
 grep -qx 'exclude-newer-package = { sourceledger = false }' d/pipe/pyproject.toml
 (lacks -q 'exclude-newer-package' a/pyproject.toml)
 test ! -e a/tests/test_pipeline.py
@@ -231,7 +232,7 @@ grep -q '^      id-token: write ' c/.github/workflows/ts-release.yml
 # The publish step: npm, from a tarball built earlier.
 grep -qx '            npm publish --access public ./\*.tgz' c/.github/workflows/ts-release.yml
 # shellcheck disable=SC2016 # a literal $pkg for the runner's shell
-grep -qF 'npm view "$pkg" version' c/.github/workflows/ts-release.yml
+grep -qF 'npm view "$pkg" dist.integrity' c/.github/workflows/ts-release.yml
 (lacks -q '^  id-token' c/.github/workflows/python-release.yml c/.github/workflows/ts-release.yml)
 # The GitHub release waits for the npm publish (t, npm only) and the plain release.yml is not
 # rendered beside it; with PyPI too, python-release.yml makes the release (c).

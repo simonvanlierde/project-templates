@@ -124,7 +124,7 @@ jobs:
             echo
             printf '%s\n' "${lines[@]}"
             echo
-            {% endraw %}{% set refresh = [('\\`uv lock\\`', 'python' in stacks), ('\\`pnpm install\\`', 'ts' in stacks), ('\\`just go-sync\\`', 'go' in stacks), ('\\`just site-sync\\`', site == 'astro'), ('\\`just docs-sync\\`', docs_starlight)] | selectattr('1') | map(attribute='0') | list %}{% if refresh %}echo "Read the diff before merging, then refresh the lockfiles ({{ refresh | join(', ') }})."{% else %}echo "Read the diff before merging."{% endif %}{% raw %}
+            {% endraw %}{% set refresh = [('\\`uv lock\\`', 'python' in stacks), ('\\`pnpm install\\`', 'ts' in stacks), ('\\`just go-sync\\`', 'go' in stacks), ('\\`just site-sync\\`', site == 'astro'), ('\\`just docs-sync\\`, \\`just docs-hashes\\`', docs_starlight)] | selectattr('1') | map(attribute='0') | list %}{% if refresh %}echo "Read the diff before merging, then refresh the lockfiles ({{ refresh | join(', ') }})."{% else %}echo "Read the diff before merging."{% endif %}{% raw %}
             if [ -s conflicts.txt ]; then
               echo
               echo "These files have merge conflicts. Their markers are committed as they are:"

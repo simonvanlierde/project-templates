@@ -77,6 +77,12 @@ echo '<!-- project edit -->' >>"$out/d/web/docs/privacy.md"
 echo '<!-- project edit -->' >>"$out/d/web/docs/accessibility-assessment.md"
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d" >/dev/null 2>&1
+# The author's own cooldown exemptions render only for a project of his, under each bot. Every other render (github_user=example-org) has none.
+for bot in dependabot renovate; do
+  "${copier[@]}" --vcs-ref=HEAD --data github_user=simonvanlierde --data project_name=own-$bot \
+    --data 'stacks=[python]' --data python_kind=data-pipeline --data license=Apache-2.0 \
+    --data dependency_bot=$bot --data user_data=accounts . "$out/own-$bot"
+done
 grep -q 'project edit' "$out/d/web/src/App.tsx"
 grep -q 'project edit' "$out/d/web/index.html"
 grep -q 'project edit' "$out/d/web/docs/privacy.md"
@@ -485,6 +491,7 @@ refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'built-in crate' --data 'stacks=[rust]' --data project_name=std
 refuses 'no description' --data 'stacks=[rust]' --data publish_to_crates=true --data license=MIT
+refuses 'only public repos' --data 'stacks=[rust]' --data rust_kind=binary --data public=false --data project_description=x --data license=MIT --data publish_to_crates=true
 refuses 'no license' --data 'stacks=[rust]' --data publish_to_crates=true --data license=none --data project_description=Something
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
 # A digit-leading name makes no module name, and the question is hidden behind customise.

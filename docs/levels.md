@@ -29,7 +29,7 @@ The table says what a repo must have to meet a level, not only what the render a
 <!-- levels:start -->
 <!-- Generated from levels.toml by `just levels-doc`; edit that file, not this table. -->
 
-Levels version 0.15.0:
+Levels version 0.16.0:
 
 | Requirement | Level | Applies to | What it asks | Verified by | Source | Counts from |
 | --- | --- | --- | --- | --- | --- | --- |
