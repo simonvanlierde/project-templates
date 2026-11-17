@@ -10,6 +10,12 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-11-17
+
+Upgrade steps:
+
+- A project whose weekly update pull request has `<<<<<<< before updating` markers: close it and run `copier update --conflict rej` once by hand, as [When an update does not merge](docs/updates.md#when-an-update-does-not-merge) says. Later updates then come without markers.
+
 ### Changed
 
 - The weekly update pull request no longer commits conflict markers. A pin that both your dependency bot and the template bumped keeps your pin; any other conflict leaves your file as it was, writes the merge to a `.rej` file beside it and opens the pull request as a draft, and two new hooks fail while a marker or `.rej` file is left. An existing project gets this with its next update, which may itself still commit markers: see [When an update does not merge](docs/updates.md#when-an-update-does-not-merge).
@@ -1023,7 +1029,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/simonvanlierde/project-templates/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/simonvanlierde/project-templates/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/simonvanlierde/project-templates/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/simonvanlierde/project-templates/compare/v0.13.0...v0.14.0
