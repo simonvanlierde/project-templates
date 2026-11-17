@@ -485,6 +485,7 @@ refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=type
 refuses 'Rust keyword' --data 'stacks=[rust]' --data project_name=gen
 refuses 'built-in crate' --data 'stacks=[rust]' --data project_name=std
 refuses 'no description' --data 'stacks=[rust]' --data publish_to_crates=true --data license=MIT
+refuses 'only public repos' --data 'stacks=[rust]' --data rust_kind=binary --data public=false --data project_description=x --data license=MIT --data publish_to_crates=true
 refuses 'no license' --data 'stacks=[rust]' --data publish_to_crates=true --data license=none --data project_description=Something
 refuses 'Python keyword' --data 'stacks=[python]' --data project_name=lambda
 # A digit-leading name makes no module name, and the question is hidden behind customise.

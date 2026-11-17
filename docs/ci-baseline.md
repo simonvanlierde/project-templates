@@ -83,7 +83,7 @@ The `web-app` kind of the TypeScript stack, or a `site`.
 
 | Piece | Where | Why |
 | --- | --- | --- |
-| Publication provenance | Release workflows | Generates Sigstore attestations and provenance bundles for PyPI, npm, and GHCR artifacts |
+| Publication provenance | Release workflows | Generates Sigstore attestations and provenance bundles for PyPI, npm, GHCR and Rust binary release archives |
 | Tag-based release publishing | Release workflows | Restricts publishing to version tags (`vX.Y.Z`) signed with a key in `.github/allowed_signers` on the default branch; disables manual workflow dispatch |
 Rendered workflows default to `contents: read` or `{}`. Docker containers execute as non-root users ([Docker images](tooling.md#docker-images)).
 

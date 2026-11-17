@@ -15,15 +15,20 @@ const files = glob({
   base,
   generateId: ({ entry }) => entry.replace(/\.md$/, "").replace(/(^|\/)readme$/i, "$1index"),
 });
-/** The first ATX h1 outside a fenced code block, as markdown.mjs drops it. */
+/** The first h1 outside front matter and fenced code, ATX or setext, as markdown.mjs drops it. */
 const titleOf = (filePath) => {
+  const lines = readFileSync(resolve(process.cwd(), filePath), "utf8").split("\n");
   let fence;
-  for (const line of readFileSync(resolve(process.cwd(), filePath), "utf8").split("\n")) {
+  let i = 0;
+  if (lines[0]?.trim() === "---") i = lines.indexOf("---", 1) + 1;
+  for (; i < lines.length; i++) {
+    const line = lines[i];
     const mark = line.match(/^ {0,3}(`{3,}|~{3,})/)?.[1];
     if (fence) {
       if (mark?.[0] === fence[0] && mark.length >= fence.length) fence = undefined;
     } else if (mark) fence = mark;
     else if (/^ {0,3}# /.test(line)) return line.replace(/^ {0,3}# |\s+#+\s*$/g, "").trim();
+    else if (line.trim() && /^ {0,3}=+\s*$/.test(lines[i + 1] ?? "")) return line.trim();
   }
 };
 

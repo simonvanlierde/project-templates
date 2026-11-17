@@ -257,9 +257,13 @@ jobs:
           # Immutable once published: check every attestation before anything is uploaded.
           for f in *; do
             case $f in *.intoto.jsonl) continue ;; esac
-            gh attestation verify "$f" --repo "$GH_REPO" --bundle "$f.intoto.jsonl"
+            # The attestation can lag the attest step by a moment.
+            for attempt in 1 2 3; do
+              gh attestation verify "$f" --repo "$GH_REPO" --bundle "$f.intoto.jsonl" --signer-workflow "$GH_REPO/.github/workflows/python-release.yml" && break
+              [ "$attempt" -lt 3 ] && sleep 10 || exit 1
+            done
           done
           gh attestation verify "$sdist" --repo "$GH_REPO" --bundle "$sdist.sbom.intoto.jsonl" \
-            --predicate-type https://cyclonedx.org/bom
+            --predicate-type https://cyclonedx.org/bom --signer-workflow "$GH_REPO/.github/workflows/python-release.yml"
           printf '\nThe SBOM lists the dependency versions this release was tested with, not what an install will resolve.\n' >>../notes/notes.md
           {{ create_release('../notes/notes.md', ' ./*') | indent(10) }}

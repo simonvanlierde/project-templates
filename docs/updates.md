@@ -7,7 +7,7 @@ adopts the template.
 
 `copier update` performs a three-way merge against the latest template release.
 
-User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, `_typos.toml`, citation files (`CITATION.cff`, `codemeta.json`), community-level governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
+User-owned files are never overwritten: `README.md`, `CHANGELOG.md`, `_typos.toml`, `docs/assets/docs-tokens.css`, a Starlight site's `docs-site/astro.config.mjs` and `docs-site/public/favicon.svg`, citation files (`CITATION.cff`, `codemeta.json`), community-level governance documents, web app starter code, `<package>.api.md`, and `go.mod`.
 
 Known limit: once a project has deleted any file the template renders, copier 9.19.1 reads the skip list before it loads the answers. A Compose-only repo's `compose.yaml` and `.env.example`, and the owned files under `ts_dir` or `go_dir`, then merge with the template's and can conflict. Keep your side of each.
 

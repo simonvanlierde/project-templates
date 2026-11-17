@@ -52,9 +52,15 @@ assert not any("checkout" in s.get("uses", "") for s in release["steps"]), relea
 publish_script = release["steps"][-1]["run"]
 verify = ["verify"] * 4
 # Every attestation is checked before the draft exists, so a failed check leaves nothing to delete.
-# `view` asks whether an earlier run left a draft; the fake gh answers nothing, so none is deleted.
-for fail, expected in [("", [*verify, "view", "create", "edit"]), ("create", [*verify, "view", "create"]),
-                       ("verify", ["verify"])]:
+# `view` asks whether an earlier run left a draft (VIEW=true), published the release (VIEW=false) or
+# made none (nothing printed). A failed `view` is an error, not "no release". A failed verify is retried
+# three times, with the sleep faked.
+for fail, view, expected in [("", "", [*verify, "view", "create", "edit"]),
+                             ("", "true", [*verify, "view", "delete", "create", "edit"]),
+                             ("", "false", [*verify, "view"]),
+                             ("view", "", [*verify, "view"]),
+                             ("create", "", [*verify, "view", "create"]),
+                             ("verify", "", ["verify"] * 3)]:
     with tempfile.TemporaryDirectory() as tmp:
         work = pathlib.Path(tmp)
         for directory in ("assets", "provenance", "sbom-attestation", "notes", "bin"):
@@ -66,11 +72,15 @@ for fail, expected in [("", [*verify, "view", "create", "edit"]), ("create", [*v
         (work / "notes/notes.md").write_text("Release notes")
         gh = work / "bin/gh"
         gh.write_text('#!/bin/sh\nprintf "%s\\n" "$2" >>"$(dirname "$0")/../calls"\n'
-                      'test "$2" != "$FAIL" || exit 1\n')
+                      'test "$2" != "$FAIL" || exit 1\n'
+                      'test "$2" != view || test -z "$VIEW" || echo "$VIEW"\n')
         gh.chmod(0o755)
+        sleep = work / "bin/sleep"
+        sleep.write_text("#!/bin/sh\n")
+        sleep.chmod(0o755)
         result = subprocess.run(["bash", "-c", publish_script], cwd=work,
                                 env={"PATH": f"{work / 'bin'}:/usr/bin:/bin", "TAG": "v1.2.3", "GH_REPO": "o/r",
-                                     "FAIL": fail}, check=False)
+                                     "FAIL": fail, "VIEW": view}, check=False)
         assert (result.returncode != 0) == bool(fail), result
         assert (work / "calls").read_text().splitlines() == expected
         # Every asset carries a bundle under its own name; the SBOM's rides on the sdist.

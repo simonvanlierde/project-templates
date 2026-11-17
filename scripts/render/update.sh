@@ -111,6 +111,8 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     fi
     if [ "$name" = own-young ]; then src=gh:simonvanlierde/project-templates; fi
     if [ "$name" = own-young-https ]; then src=https://github.com/simonvanlierde/project-templates; fi
+    # Another owner whose repo name merely contains simonvanlierde gets no exemption.
+    if [ "$name" = lookalike ]; then src=gh:evil/simonvanlierde-templates; fi
     printf '_commit: %s\n_src_path: %s\n' "$commit" "$src" >"$p/.copier-answers.yml"
     # A layered template with its own answers file; this project's own is already current.
     if [ "$name" = layer ]; then
@@ -136,6 +138,10 @@ chmod +x "$cuh/gh" "$cuh/uvx"
       if [ "$name" = own-young ] || [ "$name" = own-young-https ]; then
         export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_1="url.$cuh/tpl-young.insteadOf" \
           GIT_CONFIG_VALUE_1=https://github.com/simonvanlierde/project-templates
+      fi
+      if [ "$name" = lookalike ]; then
+        export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_1="url.$cuh/tpl-young.insteadOf" \
+          GIT_CONFIG_VALUE_1=https://github.com/evil/simonvanlierde-templates
       fi
       FAKE_TEXT=''
       if [ "$name" = both ]; then FAKE_TEXT='<<<<<<< before updating'; fi
@@ -197,6 +203,7 @@ young true - -
 mixed true - -
 own-young true - -
 own-young-https true - -
+lookalike true - -
 CASES
   cd "$cuh"
   # Newest tag by version, not by name.
@@ -240,6 +247,9 @@ CASES
   (lacks -q '^uvx\|^pr create\|^pr edit\|^issue \|^auth setup-git' young.log)
   grep -q 'under a week old' young.out
   grep -q 'under a week old' young.summary
+  # A lookalike owner waits like any other: the exemption is for simonvanlierde/ itself.
+  (lacks -q '^uvx\|^pr create\|^pr edit' lookalike.log)
+  grep -q 'under a week old' lookalike.out
   # The newest tag that is a week old is the one it updates to, not none.
   grep -qx "uvx --exclude-newer 1 week copier@$copier_pin update --answers-file .copier-answers.yml --defaults --vcs-ref v0.9.0" mixed.log
   # A simonvanlierde template is not held back.

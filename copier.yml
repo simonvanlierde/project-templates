@@ -619,7 +619,9 @@ docs_site:
 # while defaults render, copier leaves _copier_operation unset, and _copier_answers holds only
 # the answers so far (and --data) on a copy but every stored answer on an update. decision_records
 # (stored since 0.14.0) and docs_site (stored before 0.15.0) come later, so either one, when
-# --data did not pass it, marks an update.
+# --data did not pass it, marks an update. Only a later question can mark one: an earlier one
+# is in the answers on a copy too. So `copier update --data decision_records=...` on a project
+# from before this question switches it to Starlight: pass `--data docs_engine=zensical` with it.
 # docs/decisions/0012-docs-engine-per-toolchain.md has the reasons.
 docs_engine:
   type: str
@@ -889,6 +891,8 @@ publish_to_crates:
     crates.io refuses a crate with no description: give project_description an answer, or turn publish_to_crates off.
     {% elif publish_to_crates and license == 'none' %}
     crates.io refuses a crate with no license: choose a license, or turn publish_to_crates off.
+    {% elif publish_to_crates and rust_kind == 'binary' and not public %}
+    A binary's release builds on an Arm runner, which GitHub gives only public repos: make the repo public, or turn publish_to_crates off.
     {% endif %}
 
 # --- go -----------------------------------------------------------------------

@@ -17,7 +17,8 @@ name: rust release
 #
 # `id-token: write` exposes an OpenID Connect (OIDC) request token to every step in its
 # job. The publish job therefore runs `cargo publish --no-verify`: it compiles nothing,
-# so no dependency's build script runs where the token exists.
+# so no dependency's build script runs where the token exists. Cargo still reads the
+# checkout's `.cargo/config.toml`, so only a signed tag's own commit reaches that token.
 {%- if rust_kind == 'binary' %}
 #
 # `binaries` builds an archive per platform, named as `cargo binstall` looks for it
@@ -250,7 +251,7 @@ jobs:
             case $f in *.intoto.jsonl) continue ;; esac
             # The attestation can lag the attest step by a moment.
             for attempt in 1 2 3; do
-              gh attestation verify "$f" --repo "$GH_REPO" --bundle "$f.intoto.jsonl" && break
+              gh attestation verify "$f" --repo "$GH_REPO" --bundle "$f.intoto.jsonl" --signer-workflow "$GH_REPO/.github/workflows/rust-release.yml" && break
               [ "$attempt" -lt 3 ] && sleep 10 || exit 1
             done
           done

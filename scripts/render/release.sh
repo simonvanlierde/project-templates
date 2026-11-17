@@ -272,6 +272,11 @@ grep -qF 'crates-bin-aarch64-apple-darwin.tar.gz' cb/.github/workflows/rust-rele
 grep -q 'name=crates-bin' cb/.github/workflows/rust-release.yml
 grep -q 'actions/attest@' cb/.github/workflows/rust-release.yml
 grep -q 'gh attestation verify' cb/.github/workflows/rust-release.yml
+# The check names the workflow that signed, so another workflow's attestation of the same bytes fails it.
+# shellcheck disable=SC2016 # literal workflow text
+grep -qF -- '--signer-workflow "$GH_REPO/.github/workflows/rust-release.yml"' cb/.github/workflows/rust-release.yml
+# shellcheck disable=SC2016 # literal workflow text
+grep -qF -- '--signer-workflow "$GH_REPO/.github/workflows/python-release.yml"' c/.github/workflows/python-release.yml
 grep -q 'x86_64-pc-windows-msvc' cb/.github/workflows/rust-release.yml
 # Library: no archives, no attestation, no binstall metadata; nested crate paths.
 (lacks -q 'binstall' cl/crates/lib/Cargo.toml)

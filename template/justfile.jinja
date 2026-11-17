@@ -145,9 +145,8 @@ docs-serve:
     {{ zensical }} serve
 {%- elif docs_starlight %}
 
-# `just docs` and CI install with --frozen-lockfile.
-
 # Install docs-site/node_modules, and write docs-site/pnpm-lock.yaml if it is missing.
+# `just docs` and CI install with --frozen-lockfile.
 docs-sync:
     pnpm -C docs-site install
 
