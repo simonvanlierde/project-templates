@@ -30,9 +30,17 @@ After an update, refresh and commit the lockfiles (`uv lock`, `pnpm install`, `j
 PNGs = "PNGs"
 ```
 
+### When an update does not merge
+
+A file you changed on the lines a template release also changed cannot merge. The weekly pull request leaves such a file as it was and writes the merge, with Copier's `<<<<<<< before updating` markers around your lines and `>>>>>>> after updating` after the template's, to `<file>.rej` beside it (`<file>.<layer>.rej` for a [layered template](usage.md#layering-another-template)). The body lists those files, and the pull request stays a draft: Copier has already recorded the new template version, so merging without the template's lines would drop them for good. Copy what you need into the file, delete the `.rej` file, and mark the pull request ready. The `copier-update-rej` and `copier-update-conflict` hooks fail while a `.rej` file or a marker is left. While you work on the branch, the weekly run leaves it alone.
+
+A hunk whose lines differ only in a pinned 40-character SHA and the comment after it is not a conflict: your pin stays, since your dependency bot owns pins. That has two costs. A template pin bump on a line next to one of yours is dropped with it, until your bot catches up, and a template that moves an action to a new major version while it changes that action's inputs elsewhere can fail CI on the pull request.
+
+A project whose `copier-update.yml` is from before this change commits the markers instead, which stops a workflow or a `pyproject.toml` with one from parsing. Close its pull request, run `copier update --conflict rej` yourself once, resolve the `.rej` files and merge: the project then has the new workflow. A hand-run update puts the sides the other way round from the weekly pull request: the template's version goes into the file, and your conflicting lines go into the `.rej` file as a diff hunk.
+
 ### Hearing about new releases
 
-- **Renovate:** Automatically opens update PRs using `copier update --skip-answered --defaults`. Inspect PR diffs for conflict markers before merging.
+- **Renovate:** Automatically opens update PRs using `copier update --skip-answered --defaults`. Inspect PR diffs before merging.
 - **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`. It takes the newest tag that is a week old, so a tag pushed with stolen credentials has a week to be noticed before the workflow's token pushes it; the tag's own date counts, so this stops a careless tag, not a forged one. Templates under `simonvanlierde/` skip the wait. Renovate has no such wait. It updates each `.copier-answers*.yml` in turn, so a [layered template](usage.md#layering-another-template) lands in the same PR. Closing that PR unmerged skips its tag; a later tag can open a new PR.
 
 Without [the update App](#the-update-app), `copier-update.yml` pushes with `GITHUB_TOKEN`, which can't change files in `.github/workflows/`: an update that does opens an issue asking for a local update instead. A PR it opens starts no checks either, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so. To open the PR at all, turn on Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests". With the App, the workflow does not need it.

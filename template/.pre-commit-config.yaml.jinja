@@ -47,6 +47,22 @@ repos:
       # Not gated to python: .rumdl.toml ships to every stack.
       - id: check-toml
 
+  # A copier update that cannot merge a file leaves conflict markers or a .rej file: neither may reach main.
+  - repo: local
+    hooks:
+      - id: copier-update-conflict
+        name: a copier update left conflict markers
+        # \r? for a CRLF file, where Copier writes CRLF markers. A .rej file is the other hook's.
+        entry: '^(<<<<<<< before updating|>>>>>>> after updating)\r?$'
+        language: pygrep
+        types: [text]
+        exclude: '\.rej$'
+      - id: copier-update-rej
+        name: a copier update left a .rej file (resolve its hunks in the file next to it, then delete it)
+        entry: delete this file once its hunks are resolved
+        language: fail
+        files: '\.rej$'
+
   # Commit messages follow committed.toml: Conventional Commits, imperative, no period.
   - repo: https://github.com/crate-ci/committed
     rev: faeed42f2e10c244533a01525f13c4d8b6ce383f # frozen: v1.1.11

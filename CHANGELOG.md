@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- The weekly update pull request no longer commits conflict markers. A pin that both your dependency bot and the template bumped keeps your pin; any other conflict leaves your file as it was, writes the merge to a `.rej` file beside it and opens the pull request as a draft, and two new hooks fail while a marker or `.rej` file is left. An existing project gets this with its next update, which may itself still commit markers: see [When an update does not merge](docs/updates.md#when-an-update-does-not-merge).
+
 ## [0.16.0] - 2026-11-17
 
 Upgrade steps:
