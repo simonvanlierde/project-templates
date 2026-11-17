@@ -78,7 +78,7 @@ Out of scope: maintainer account compromise, deliberate weakening of workflows b
 | Generated project CI | PR code and metadata | Workflows use `contents: read` or `{}`; no `pull_request_target` or `workflow_run`; `persist-credentials: false` on checkouts |
 | Release jobs with OIDC | Built artifacts | OIDC tokens isolated to upload jobs without project code execution ([Workflows that can publish](#workflows-that-can-publish)); ruleset limits `v*` tags to admins |
 | Weekly update workflow | New template releases | `copier-update.yml` runs Copier read-only and applies patches in a separate job holding push credentials ([Update](#update)) |
-| Dependency updates | New package and action versions | Renovate and Dependabot enforce a 7-day cooldown on new releases; uv (`exclude-newer`) and pnpm (`minimumReleaseAge`) keep the same week on install; Cargo and Go do not; the author's own `simonvanlierde` hooks and packages skip it |
+| Dependency updates | New package and action versions | Renovate and Dependabot enforce a 7-day cooldown on new releases; uv (`exclude-newer`) and pnpm (`minimumReleaseAge`) keep the same week on install; Cargo and Go do not; the author's own `simonvanlierde` hooks and packages skip it in the bots of his projects only |
 
 ### Secure design principles
 

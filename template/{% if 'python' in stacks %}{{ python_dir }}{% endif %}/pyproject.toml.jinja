@@ -108,9 +108,9 @@ build-backend = "uv_build"
 # Set here, not user-wide, so every machine writes the same uv.lock.
 [tool.uv]
 exclude-newer = "1 week"
-{%- if python_kind == 'data-pipeline' and github_user | lower == 'simonvanlierde' %}
-# sourceledger is the author's own package, so it skips the wait: a template release can
-# need its newest version on the day it ships.
+{%- if python_kind == 'data-pipeline' %}
+# The template requires a sourceledger release that may be under a week old, so sourceledger
+# skips the wait here: a template release can need its newest version on the day it ships.
 exclude-newer-package = { sourceledger = false }
 {%- endif %}
 

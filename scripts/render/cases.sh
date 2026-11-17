@@ -77,8 +77,7 @@ echo '<!-- project edit -->' >>"$out/d/web/docs/privacy.md"
 echo '<!-- project edit -->' >>"$out/d/web/docs/accessibility-assessment.md"
 "${copier[@]}" --vcs-ref=HEAD \
   "${d_args[@]}" . "$out/d" >/dev/null 2>&1
-# The author's own cooldown exemptions render only for a project of his, under each bot, and
-# for sourceledger in a data pipeline. Every other render (github_user=example-org) has none.
+# The author's own cooldown exemptions render only for a project of his, under each bot. Every other render (github_user=example-org) has none.
 for bot in dependabot renovate; do
   "${copier[@]}" --vcs-ref=HEAD --data github_user=simonvanlierde --data project_name=own-$bot \
     --data 'stacks=[python]' --data python_kind=data-pipeline --data license=Apache-2.0 \
