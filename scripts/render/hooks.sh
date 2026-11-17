@@ -131,12 +131,21 @@ printf 'feat: x\n\nSigned-off-by: Ada Lovelace <ada@example.com>\n' >h-hooks/msg
 (cd h-hooks && "${dco_hook[@]}" >/dev/null)
 printf 'feat: x\n\nSigned-off-by: Ada Lovelace\n' >h-hooks/msg
 (cd h-hooks && ! "${dco_hook[@]}" >/dev/null 2>&1)
-# A copier update that left a .rej file or conflict markers fails its pull request's hooks.
-printf 'a\n' >h-hooks/left.md.rej
+# A copier update that left a .rej file or conflict markers fails its pull request's hooks, CRLF
+# markers too. Each hook passes or skips a file without its problem, so the failures are the hooks' own.
+cu_hook=(uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run)
 printf 'x\n<<<<<<< before updating\ny\n=======\nz\n>>>>>>> after updating\n' >h-hooks/marked.md
-(cd h-hooks && ! uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run copier-update-rej --files left.md.rej >/dev/null 2>&1)
-(cd h-hooks && ! uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run copier-update-conflict --files marked.md >/dev/null 2>&1)
-(cd h-hooks && uvx -q "prek${PREK_VERSION:+@$PREK_VERSION}" run copier-update-conflict --files .pre-commit-config.yaml >/dev/null)
+# A .rej file holds markers: only the .rej hook reports it.
+cp h-hooks/marked.md h-hooks/left.md.rej
+printf 'x\r\n<<<<<<< before updating\r\ny\r\n=======\r\nz\r\n>>>>>>> after updating\r\n' >h-hooks/crlf.md
+for t in copier-update-rej:left.md.rej copier-update-conflict:marked.md copier-update-conflict:crlf.md; do
+  (cd h-hooks && ! "${cu_hook[@]}" "${t%%:*}" --files "${t#*:}" >../cu-hook.out 2>&1)
+  grep -q "copier update left .*Failed" cu-hook.out
+  grep -qF "${t#*:}" cu-hook.out
+done
+(cd h-hooks && "${cu_hook[@]}" copier-update-rej --files marked.md >/dev/null)
+(cd h-hooks && "${cu_hook[@]}" copier-update-conflict --files left.md.rej .pre-commit-config.yaml >/dev/null)
+rm cu-hook.out h-hooks/crlf.md
 rm h-hooks/left.md.rej h-hooks/marked.md
 # citesync passes on each fresh citable render: root (a), nested (c, d, m), one stack (h, r, t).
 # Adding a release to CITATION.cff leaves codemeta.json stale, which fails the hook until

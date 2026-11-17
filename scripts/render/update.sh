@@ -56,6 +56,8 @@ case "$1 $2" in
       *) rows=${FAKE_OPEN_PRS:-[]} ;;
     esac
     ;;
+  # The authors of the branch's commits since the base, one per line.
+  "api "*) printf '%s\n' "${FAKE_AUTHORS:-}" && exit 0 ;;
   *) exit 0 ;;
 esac
 fields='' filter=.
@@ -94,6 +96,8 @@ chmod +x "$cuh/gh" "$cuh/uvx"
   GIT_COMMITTER_DATE="@$(($(date +%s) - 40 * 86400)) +0000" git -C "$cuh/tpl-mixed" tag -a -m t v0.8.0
   GIT_COMMITTER_DATE="@$(($(date +%s) - 8 * 86400)) +0000" git -C "$cuh/tpl-mixed" tag -a -m t v0.9.0
   GIT_COMMITTER_DATE="@$(($(date +%s) - 1 * 86400)) +0000" git -C "$cuh/tpl-mixed" tag -a -m t v0.10.0
+  pin_a='      - uses: a/b@1111111111111111111111111111111111111111 # v1.2.4'
+  pin_b='      - uses: a/b@2222222222222222222222222222222222222222 # v1.2.3'
   # name, HAS_TOKEN, the open PR and the issue the fake gh finds ("-": none), and the
   # file the update changes.
   while read -r name token pr issue file; do
@@ -124,6 +128,8 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     # The file the fake copier changes exists in the project, as it does in a real update.
     mkdir -p "$p/$(dirname "${file:-.github/workflows/ci.yml}")"
     echo 'project line' >"$p/${file:-.github/workflows/ci.yml}"
+    # A module at the project root that shadows one the resolver imports.
+    if [ "$name" = pyroot ]; then echo 'raise SystemExit("imported the project re.py")' >"$p/re.py"; fi
     git -C "$p" add -A
     git -C "$p" commit -q -m init
     # The privileged job starts from a clean checkout, not the generator's worktree.
@@ -147,13 +153,22 @@ chmod +x "$cuh/gh" "$cuh/uvx"
           GIT_CONFIG_VALUE_1=https://github.com/evil/simonvanlierde-templates
       fi
       FAKE_TEXT=''
-      # A real conflict, and two that differ only in a pinned SHA and its version: the project's pin
-      # is the newer in pin-project and the older in pin-template.
-      pin_a='      - uses: a/b@1111111111111111111111111111111111111111 # v1.2.4'
-      pin_b='      - uses: a/b@2222222222222222222222222222222222222222 # v1.2.3'
-      if [ "$name" = both ]; then FAKE_TEXT=$'<<<<<<< before updating\nproject edit\n=======\ntemplate edit\n>>>>>>> after updating'; fi
-      if [ "$name" = pin-project ]; then FAKE_TEXT=$'<<<<<<< before updating\n'"$pin_a"$'\n=======\n'"$pin_b"$'\n>>>>>>> after updating'; fi
-      if [ "$name" = pin-template ]; then FAKE_TEXT=$'<<<<<<< before updating\n'"$pin_b"$'\n=======\n'"$pin_a"$'\n>>>>>>> after updating'; fi
+      conflict() { printf '<<<<<<< before updating\n%s\n=======\n%s\n>>>>>>> after updating' "$1" "$2"; }
+      # Hunks that differ only in pinned SHAs and their comments keep the project's pins, whichever
+      # side is newer. A changed repo, a change outside the pin, or unequal hunks stay conflicts.
+      case $name in
+      both | edit-conflict | café) FAKE_TEXT=$(conflict 'project edit' 'template edit') ;;
+      pin-project | pyroot) FAKE_TEXT=$(conflict "$pin_a" "$pin_b") ;;
+      pin-template) FAKE_TEXT=$(conflict "$pin_b" "$pin_a") ;;
+      crlf) FAKE_TEXT=$(conflict "$pin_a" "$pin_b" | sed 's/$/\r/') ;;
+      frozen) FAKE_TEXT=$(conflict '    rev: 1111111111111111111111111111111111111111 # frozen: v1.1.0' '    rev: 2222222222222222222222222222222222222222 # frozen: v1.2.0') ;;
+      repo-swap) FAKE_TEXT=$(conflict '      - uses: a/b@1111111111111111111111111111111111111111 # v1' '      - uses: evil/b@2222222222222222222222222222222222222222 # v2') ;;
+      mixed-hunks) FAKE_TEXT="$(conflict "$pin_a" "$pin_b")"$'\nshared line\n'"$(conflict 'project edit' $'template edit\nsecond template line')" ;;
+      esac
+      # The branch's commits so far: the workflow's own, plus someone's in human.
+      FAKE_AUTHORS='41898282+github-actions[bot]@users.noreply.github.com'
+      if [ "$name" = human ]; then FAKE_AUTHORS+=$'\nada@example.org'; fi
+      export FAKE_AUTHORS
       export FAKE_TEXT
       FAKE_OPEN_PRS='[]' FAKE_ISSUES='[]' FAKE_CLOSED_PRS='[]'
       if [ "$pr" != - ]; then FAKE_OPEN_PRS=$(printf '[{"number":%s,"isCrossRepository":false}]' "$pr"); fi
@@ -179,7 +194,8 @@ chmod +x "$cuh/gh" "$cuh/uvx"
       }
       # shellcheck disable=SC2030 # each fake run reads its own outputs
       LATEST=$(sed -n 's/^latest=//p' "$p.gho") WORKFLOWS=$(sed -n 's/^workflows=//p' "$p.gho")
-      export LATEST WORKFLOWS
+      CONFLICTS=$(sed -n 's/^conflicts=//p' "$p.gho")
+      export LATEST WORKFLOWS CONFLICTS
       if [ -n "$LATEST" ]; then
         cd "$p-clean"
         bash --noprofile --norc -eo pipefail "$cuh/apply.sh" >>"$p.out" 2>&1 || {
@@ -202,6 +218,14 @@ layer true - - README.md
 both true - - README.md
 pin-project true - - README.md
 pin-template true - - README.md
+crlf true - - README.md
+frozen true - - README.md
+repo-swap true - - README.md
+mixed-hunks true - - README.md
+pyroot true - - README.md
+café true - - café.md
+edit-conflict true 7 - README.md
+human true 7 -
 declined true - -
 declined-no-token false - -
 declined-plain false - - README.md
@@ -226,26 +250,56 @@ CASES
   git -C layer.git show chore/copier-update:README.md | grep -qx '# from the template'
   # Two templates that both moved share one title, and a conflict marker is named in the body.
   grep -q '^pr create --head chore/copier-update --base main --title chore: update from template v0.10.0, cml v0.10.0 ' both.log
-  # A conflict leaves the project's file as it was, with no marker, and the template's side next to it in a
-  # .rej file that the body names. A pin that differs only in SHA and version takes the newer one.
+  # A conflict leaves the project's file as it was, with no marker, and the merge next to it in a .rej
+  # file, one per layer, that the body names. The PR is a draft until someone resolves them.
   # shellcheck disable=SC2016 # the backticks are Markdown
-  grep -qx -- '- `README.md.rej`' both-runner/copier-update/body.md
+  for rej in README.md.rej README.md.cml.rej; do
+    grep -qxF -- "- \`\` $rej \`\`" both-runner/copier-update/body.md
+    git -C both.git show "chore/copier-update:$rej" | grep -qx '<<<<<<< before updating'
+    git -C both.git show "chore/copier-update:$rej" | grep -qx 'template edit'
+  done
   grep -q 'did not merge' both-runner/copier-update/body.md
+  # The second layer's scan skips the first layer's .rej file.
+  (! git -C both.git cat-file -e chore/copier-update:README.md.rej.rej 2>/dev/null)
   git -C both.git show chore/copier-update:README.md >both.readme
-  (lacks -q '<<<<<<<\|edit' both.readme)
-  grep -qx 'project line' both.readme
-  git -C both.git show chore/copier-update:README.md.rej | grep -qx '<<<<<<< before updating'
-  git -C both.git show chore/copier-update:README.md.rej | grep -qx 'template edit'
-  for r in pin-project pin-template; do
+  test "$(cat both.readme)" = 'project line'
+  grep -q '^pr create .* --draft$' both.log
+  (lacks -q -- '--draft\|^pr ready' push.log edit.log)
+  # An open PR the update adds conflicts to goes back to draft.
+  grep -qx 'pr ready 7 --undo' edit-conflict.log
+  # A non-ASCII name reaches the resolver unquoted.
+  git -C café.git show 'chore/copier-update:café.md' | grep -qx 'project line'
+  git -C café.git show 'chore/copier-update:café.md.rej' | grep -qx 'template edit'
+  # Pins resolve with no .rej and no body note; CRLF lines keep their CR.
+  for r in pin-project pin-template crlf frozen pyroot; do
     git -C "$r.git" show chore/copier-update:README.md >"$r.readme"
     (lacks -q '<<<<<<<' "$r.readme")
     (lacks -q 'did not merge' "$r-runner/copier-update/body.md")
+    (lacks -q -- '--draft' "$r.log")
     (! git -C "$r.git" cat-file -e chore/copier-update:README.md.rej 2>/dev/null)
   done
-  grep -qF 'a/b@1111111111111111111111111111111111111111 # v1.2.4' pin-project.readme
-  grep -qF 'a/b@1111111111111111111111111111111111111111 # v1.2.4' pin-template.readme
-  (lacks -q '2222222222' pin-project.readme pin-template.readme)
-  (lacks -q 'merge conflicts' layer-runner/copier-update/body.md)
+  grep -qxF "$pin_b" pin-template.readme
+  (lacks -q 1111111111 pin-template.readme)
+  (lacks -q 2222222222 pin-project.readme crlf.readme frozen.readme pyroot.readme)
+  grep -qxF "$pin_a" pin-project.readme
+  grep -qxF "$pin_a"$'\r' crlf.readme
+  grep -qxF '    rev: 1111111111111111111111111111111111111111 # frozen: v1.1.0' frozen.readme
+  grep -qxF "$pin_a" pyroot.readme
+  # A changed repo and a hunk with a real change stay conflicts. In mixed-hunks the .rej keeps only
+  # the real one marked, its pin hunk already resolved.
+  for r in repo-swap mixed-hunks; do
+    git -C "$r.git" show chore/copier-update:README.md | grep -qx 'project line'
+    git -C "$r.git" show chore/copier-update:README.md.rej >"$r.rej"
+  done
+  grep -q 'evil/b@' repo-swap.rej
+  grep -c '^<<<<<<< before updating$' mixed-hunks.rej | grep -qx 1
+  grep -qxF "$pin_a" mixed-hunks.rej
+  grep -qx 'second template line' mixed-hunks.rej
+  (lacks -q 'did not merge' layer-runner/copier-update/body.md)
+  # A branch with someone else's commits is not force-pushed or edited.
+  (lacks -q '^auth setup-git\|^pr edit\|^pr create' human.log)
+  grep -q 'someone other than this workflow' human.out
+  grep -q 'someone other than this workflow' human.summary
   # No token and a workflow change: one issue, the older PR closed, no push.
   # Only the issue this workflow opened counts: it runs with GITHUB_TOKEN there.
   grep -qxF 'issue list --state all --author app/github-actions --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
@@ -257,7 +311,9 @@ CASES
   # A token pushes the branch with the workflow change, over the open PR's, then opens or
   # updates the PR. So does no token with no workflow change.
   for r in push:.github/workflows/ci.yml edit:.github/workflows/ci.yml plain:README.md; do
-    git -C "${r%%:*}.git" show "chore/copier-update:${r#*:}" | grep -qx '# from the template'
+    git -C "${r%%:*}.git" show "chore/copier-update:${r#*:}" >"${r%%:*}.updated"
+    grep -qx '# from the template' "${r%%:*}.updated"
+    grep -qx 'project line' "${r%%:*}.updated"
     (lacks -q '^issue ' "${r%%:*}.log")
   done
   grep -q '^pr create --head chore/copier-update --base main ' push.log

@@ -32,9 +32,11 @@ PNGs = "PNGs"
 
 ### When an update does not merge
 
-A file you changed on the lines a template release also changed cannot merge. The weekly pull request leaves such a file as it was and writes the template's merge, with Copier's `<<<<<<< before updating` markers, to `<file>.rej` beside it. The body lists those files. Copy what you need into the file and delete the `.rej` file: the `copier-update-rej` and `copier-update-conflict` hooks fail the pull request while one is left. A pinned action or hook that you and the template both bumped is not a conflict: the newer pin wins.
+A file you changed on the lines a template release also changed cannot merge. The weekly pull request leaves such a file as it was and writes the merge, with Copier's `<<<<<<< before updating` markers around your lines and `>>>>>>> after updating` after the template's, to `<file>.rej` beside it (`<file>.<layer>.rej` for a [layered template](usage.md#layering-another-template)). The body lists those files, and the pull request stays a draft: Copier has already recorded the new template version, so merging without the template's lines would drop them for good. Copy what you need into the file, delete the `.rej` file, and mark the pull request ready. The `copier-update-rej` and `copier-update-conflict` hooks fail while a `.rej` file or a marker is left. While you work on the branch, the weekly run leaves it alone.
 
-A project whose `copier-update.yml` is from before 0.16.1 commits the markers instead, which stops a workflow or a `pyproject.toml` with one from parsing. Close its pull request, run `copier update --conflict rej` yourself once, resolve the `.rej` files and merge: the project then has the new workflow.
+A hunk whose lines differ only in a pinned 40-character SHA and the comment after it is not a conflict: your pin stays, since your dependency bot owns pins. That has two costs. A template pin bump on a line next to one of yours is dropped with it, until your bot catches up, and a template that moves an action to a new major version while it changes that action's inputs elsewhere can fail CI on the pull request.
+
+A project whose `copier-update.yml` is from before this change commits the markers instead, which stops a workflow or a `pyproject.toml` with one from parsing. Close its pull request, run `copier update --conflict rej` yourself once, resolve the `.rej` files and merge: the project then has the new workflow. A hand-run update puts the sides the other way round from the weekly pull request: the template's version goes into the file, and your conflicting lines go into the `.rej` file as a diff hunk.
 
 ### Hearing about new releases
 

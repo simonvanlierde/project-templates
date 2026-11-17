@@ -52,9 +52,11 @@ repos:
     hooks:
       - id: copier-update-conflict
         name: a copier update left conflict markers
-        entry: '^(<<<<<<< before updating|>>>>>>> after updating)$'
+        # \r? for a CRLF file, where Copier writes CRLF markers. A .rej file is the other hook's.
+        entry: '^(<<<<<<< before updating|>>>>>>> after updating)\r?$'
         language: pygrep
         types: [text]
+        exclude: '\.rej$'
       - id: copier-update-rej
         name: a copier update left a .rej file (resolve its hunks in the file next to it, then delete it)
         entry: delete this file once its hunks are resolved
