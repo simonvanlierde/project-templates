@@ -229,6 +229,15 @@ source = "RFC 9309; Sitemaps protocol 0.9"
 verify = "automated"
 since = 2026-11-11
 
+[requirement.robots-ai-crawlers]
+area = "web-presence"
+level = "standard"
+traits = ["web"]
+text = "The site serves a `robots.txt` that names its sitemap where it has one, allows search and answer bots, disallows AI training crawlers and sets `Content-Signal: search=yes, ai-input=yes, ai-train=no`."
+source = "RFC 9309; Content Signals Policy (Cloudflare, 2025-09-24)"
+verify = "automated"
+since = 2026-11-19
+
 [requirement.ci-tests]
 area = "testing-and-ci"
 level = "standard"
