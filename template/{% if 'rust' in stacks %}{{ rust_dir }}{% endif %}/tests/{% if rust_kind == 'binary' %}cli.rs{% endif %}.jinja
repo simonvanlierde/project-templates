@@ -16,7 +16,8 @@ fn run(args: &[&str]) -> (i32, String) {
     )
 }
 
-fn assert_valid(stdout: &str) -> Value {
+/// Parses stdout and checks it against the schema.
+fn validated(stdout: &str) -> Value {
     let schema: Value = serde_json::from_str(include_str!("../output.schema.json")).unwrap();
     let document: Value = serde_json::from_str(stdout).unwrap();
     jsonschema::validate(&schema, &document).unwrap();
@@ -24,15 +25,36 @@ fn assert_valid(stdout: &str) -> Value {
 }
 
 #[test]
-fn json_success_matches_the_schema() {
+fn json_output_matches_the_schema() {
     let (code, stdout) = run(&["--json", "Ada"]);
     assert_eq!(code, 0);
-    assert_eq!(assert_valid(&stdout)["greeting"], "Hello, Ada!");
+    assert_eq!(validated(&stdout)["greeting"], "Hello, Ada!");
+
+    let (code, stdout) = run(&["--json", "--nope"]);
+    assert_eq!(code, 2);
+    assert_eq!(validated(&stdout)["errors"].as_array().unwrap().len(), 1);
 }
 
 #[test]
-fn json_usage_error_matches_the_schema() {
-    let (code, stdout) = run(&["--json", "--nope"]);
-    assert_eq!(code, 2);
-    assert_eq!(assert_valid(&stdout)["errors"].as_array().unwrap().len(), 1);
+fn help_and_version_exit_zero() {
+    assert_eq!(run(&["--help"]).0, 0);
+    let (code, stdout) = run(&["--version"]);
+    assert_eq!(
+        (code, stdout.trim_end()),
+        (0, concat!("{{ crate_name }} ", env!("CARGO_PKG_VERSION")))
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn a_failed_write_to_stdout_exits_3() {
+    let full = std::fs::OpenOptions::new()
+        .write(true)
+        .open("/dev/full")
+        .unwrap();
+    let status = Command::new(env!("CARGO_BIN_EXE_{{ crate_name }}"))
+        .stdout(full)
+        .status()
+        .unwrap();
+    assert_eq!(status.code(), Some(3));
 }

@@ -77,9 +77,7 @@ The script and its test are the project's after the first render. A binding beyo
 
 ### Interface and public data
 
-A web app or site gets a `docs/interface.md` stub with two tables: the URL parameters the page reads (name, values, default, code) and the data files it serves (path, format, schema, licence, CORS). Fill it in, and delete a table the page has no use for. The `web-data-cors` requirement in [levels](levels.md) asks that each data URL the second table lists answers a request with an `Origin` header with `Access-Control-Allow-Origin`; rows that still say TODO do not count.
-
-`public_data` (under `customise`, for a web app or a site on a Worker) adds `/data/*` to `_headers` with `Access-Control-Allow-Origin: *` and `Access-Control-Expose-Headers: Content-Range, ETag`, so any website, notebook or browser agent can read the files. GitHub Pages sends the first header itself. Data in R2 or another bucket is not behind `_headers`: set its CORS rule there.
+A web app or site gets a `docs/interface.md` stub listing its URL parameters and data files. `public_data` (under `customise`) adds CORS headers for `/data/*` to `_headers`; data in R2 or another bucket is not behind that file, so set its CORS rule there.
 
 ### Moving an app off Cloudflare Pages
 
