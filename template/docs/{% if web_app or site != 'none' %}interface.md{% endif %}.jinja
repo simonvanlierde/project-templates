@@ -15,8 +15,10 @@ TODO: say where the parameters are parsed and what a missing or invalid value do
 ## Data endpoints
 
 Public files that other sites, notebooks or agents may fetch. A project that lists a URL
-here keeps it answering, with `Access-Control-Allow-Origin` set.
+here keeps it answering, with `Access-Control-Allow-Origin` set. A path is relative to the
+site URL, even with a leading `/`, so an app served under `/app/` lists `/data/x.json` for
+`/app/data/x.json`; give a file on another host as a full `https://` URL.
 
-| Path | Format | Schema | Licence | CORS |
+| Path or URL | Format | Schema | Licence | CORS |
 | --- | --- | --- | --- | --- |
 | `/data/TODO.json` | JSON | TODO: link to the schema or column list | {{ license if license != 'none' else 'TODO' }} | {{ 'any origin' if public_data | default(false) else 'TODO: any origin, or none' }} |
