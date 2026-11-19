@@ -208,6 +208,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    outputs:
+      url: {% raw %}${{ steps.upload.outputs.url }}{% endraw %}
     environment:
       name: preview
       url: {% raw %}${{ steps.upload.outputs.url }}{% endraw %}
@@ -294,3 +296,28 @@ jobs:
           WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@{{ wrangler_version }}
         run: |-
           "$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Preview "{{ worker_name }}-pr-$PR" --config wrangler.site.jsonc
+
+  # Posts the preview's address as one pull request comment, edited on each push. A job of
+  # its own, so the write token never shares a runner with the deploy's code.
+  preview-comment:
+    name: "site: preview link"
+    needs: preview
+    if: needs.preview.outputs.url != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - env:
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          REPO: {% raw %}${{ github.repository }}{% endraw %}
+          PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
+          SHA: {% raw %}${{ github.event.pull_request.head.sha }}{% endraw %}
+          URL: {% raw %}${{ needs.preview.outputs.url }}{% endraw %}
+        run: '"$GITHUB_WORKSPACE/.github/scripts/preview-comment.sh" "Site preview" "$URL"'

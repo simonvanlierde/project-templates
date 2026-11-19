@@ -29,12 +29,12 @@ for r in x r d; do
   grep -q '^      id-token: write' <<<"$deploy_job"
   grep -qx '      name: github-pages' <<<"$deploy_job"
   grep -qxF "    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'" <<<"$deploy_job"
-  test "$(grep -c '^    timeout-minutes:' "$wf")" = 3
+  test "$(grep -c '^    timeout-minutes:' "$wf")" = 4
   test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
   grep -qx '      - run: just site' "$wf"
   grep -qx '          path: _site' "$wf"
   # The preview deploys the build job's artifact: it never runs the build with the token.
-  preview_job=$(sed -n '/^  preview:$/,$p' "$wf")
+  preview_job=$(sed -n '/^  preview:$/,/^  preview-comment:$/p' "$wf")
   (! grep -q 'just site' <<<"$preview_job")
   grep -qx '          name: github-pages' <<<"$preview_job"
   grep -qF "if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.head_ref != 'chore/copier-update' && !endsWith(github.event.pull_request.user.login, '[bot]') && !endsWith(github.actor, '[bot]')" <<<"$preview_job"
@@ -45,7 +45,20 @@ for r in x r d; do
   # The PR-state check is its own step, which the deploy step waits on and shares no token with.
   grep -qx '        id: pr' <<<"$preview_job"
   grep -qF "steps.pr.outputs.open == 'true'" <<<"$preview_job"
-  [ "$(sed -n '/^        id: upload$/,$p' <<<"$preview_job" | grep -c GH_TOKEN)" = 0 ]
+  upload_step=$(sed -n '/^        id: upload$/,$p' <<<"$preview_job")
+  grep -qF 'CLOUDFLARE_API_TOKEN:' <<<"$upload_step"
+  (lacks -q GH_TOKEN <<<"$upload_step")
+  grep -qx '      pull-requests: read' <<<"$preview_job"
+  # The address goes to one pull request comment, keyed apart from a web app's own, from a job
+  # of its own, so the write token never shares a runner with the deploy's code.
+  test -x "$r/.github/scripts/preview-comment.sh"
+  comment_job=$(sed -n '/^  preview-comment:$/,$p' "$wf")
+  # shellcheck disable=SC2016
+  grep -qF 'preview-comment.sh" "Site preview" "$URL"' <<<"$comment_job"
+  grep -qx "    if: needs.preview.outputs.url != ''" <<<"$comment_job"
+  grep -qx '      pull-requests: write' <<<"$comment_job"
+  (lacks -qE 'CLOUDFLARE|pnpm|deploy-worker' <<<"$comment_job")
+  test "$(grep -c 'pull-requests: write' "$wf")" = 1
   # shellcheck disable=SC2016
   grep -qF 'group: preview-site-${{ github.event.pull_request.number }}' <<<"$preview_job"
   grep -qF 'X-Robots-Tag: noindex' <<<"$preview_job"
@@ -358,6 +371,7 @@ for r in a m w; do
   test ! -e "$r/.github/workflows/preview-retire.yml"
   test ! -e "$r/.github/scripts/preview-retire.sh"
   test ! -e "$r/.github/scripts/deploy-worker.sh"
+  test ! -e "$r/.github/scripts/preview-comment.sh"
   (lacks -q '_site' "$r/.gitignore")
   (lacks -qx 'site:' "$r/justfile")
 done
@@ -634,7 +648,7 @@ for r in cfp cfa; do
   grep -qxF "          WRANGLER: pnpm --config.minimum-release-age=10080 dlx wrangler@$wrangler_pin" <<<"$deploy_job"
   (lacks -qE 'pages: write|id-token|deploy-pages|_redirects' "$wf")
   (lacks -qF 'repos/{owner}/{repo}/pages' "$r/justfile")
-  test "$(grep -c '^    timeout-minutes:' "$wf")" = 3
+  test "$(grep -c '^    timeout-minutes:' "$wf")" = 4
   test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
 done
 grep -qxF "        run: '\"\$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh\" Production \"\" --config wrangler.site.jsonc --domain demo.example.org'" cfp/.github/workflows/site.yml
