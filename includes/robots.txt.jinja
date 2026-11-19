@@ -1,0 +1,22 @@
+{#- The robots.txt every published site ships: search and answer bots in, AI training crawlers
+    out. The including file sets `sitemap` to the site's absolute sitemap URL, or leaves it
+    empty for a site without one. Outside template/, so it never renders into a project. -#}
+# Search and answer engines may index and quote this site; AI training may not
+# (Content Signals Policy, https://contentsignals.org/). Bots not named below follow `*`.
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+Allow: /
+
+# Training crawlers. Each vendor's search bot (OAI-SearchBot, Claude-SearchBot,
+# Applebot, meta-webindexer) has its own token and stays allowed under `*`.
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: CCBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: meta-externalagent
+Disallow: /
+{% if sitemap %}
+
+Sitemap: {{ sitemap }}
+{% endif -%}

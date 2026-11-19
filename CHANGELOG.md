@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- Every site the template publishes (plain and Astro pages, the Starlight and Zensical docs sites, the web app) ships a `robots.txt` that allows search and answer bots, disallows AI training crawlers, sets `Content-Signal: search=yes, ai-input=yes, ai-train=no` and names the sitemap where the site has one. `levels.toml` gains the matching `robots-ai-crawlers` requirement at the standard level.
+
 ## [0.16.1] - 2026-11-17
 
 Upgrade steps:

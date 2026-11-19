@@ -775,3 +775,19 @@ class Descriptions(HTMLParser):
 assert Descriptions(sys.argv[1]).values == ['Page "<b>" tags & more']
 assert Descriptions(sys.argv[2]).values == ['Mutates "the" tests & more.']
 PYTEST
+
+# robots.txt: search and answer bots in, training crawlers out, at the root of each kind's
+# static files. The docs sites name their sitemap; the pages and the web app have none.
+for f in x/site/robots.txt y/site/public/robots.txt d/web/public/robots.txt st/docs-site/public/robots.txt zt/docs/robots.txt; do
+  grep -qx 'Content-Signal: search=yes, ai-input=yes, ai-train=no' "$f"
+  grep -qx 'User-agent: GPTBot' "$f"
+  grep -qx 'Disallow: /' "$f"
+  grep -qx 'Allow: /' "$f"
+done
+grep -qx 'Sitemap: https://example-org.github.io/star-me/sitemap-index.xml' st/docs-site/public/robots.txt
+grep -qx 'Sitemap: https://example-org.github.io/zt-me/sitemap.xml' zt/docs/robots.txt
+for f in x/site/robots.txt y/site/public/robots.txt d/web/public/robots.txt; do
+  (lacks -q '^Sitemap:' "$f")
+done
+test ! -e zt/docs-site
+test ! -e st/docs/robots.txt
