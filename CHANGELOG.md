@@ -15,6 +15,10 @@ changes are marked **Breaking**.
 - Every site the template publishes (plain and Astro pages, the Starlight and Zensical docs sites, the web app) ships a `robots.txt` that allows search and answer bots, disallows AI training crawlers, sets `Content-Signal: search=yes, ai-input=yes, ai-train=no` and names the sitemap where the site has one. `levels.toml` gains the matching `robots-ai-crawlers` requirement at the standard level.
 - Pull request previews post their link as one comment on the pull request, edited in place on each push, so it no longer hides in the job log. A repo with a web app and a site gets one comment for each. A separate job posts it, the only one with `pull-requests: write`, so the write token never shares a runner with the deploy's code. It posts only a workers.dev address.
 
+### Fixed
+
+- The cold-install workflow no longer runs `just data-release` from the README, which needs `just pipeline`'s output and so failed every citable data-pipeline repo whose README changed.
+
 ## [0.16.1] - 2026-11-17
 
 Upgrade steps:

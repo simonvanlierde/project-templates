@@ -83,15 +83,16 @@ jobs:
           SKIP: hadolint-docker
 {%- endif %}
         # shortcut: drops the task lines that need Docker, a browser's system libraries,
-        # live source URLs or hours (their own workflows run them); list a new slow
-        # recipe here when the README gains one. The parser reads only ``` fences, not
-        # ~~~ ones or nested fences, and a `## ` line inside a block ends the section.
+        # live source URLs or their output (pipeline, data-release) or hours (their own
+        # workflows run them); list a new slow recipe here when the README gains one.
+        # The parser reads only ``` fences, not ~~~ ones or nested fences, and a `## `
+        # line inside a block ends the section.
         run: |-
           awk '/^## /{dev = ($0 == "## Development")}
                dev && /^```/{code = !code && /^```(sh|bash|shell)[[:space:]]*$/; next}
                dev && code' README.md |
 {%- set no_image_prefixes = [('python', 'py'), ('ts', 'ts'), ('rust', 'rs'), ('go', 'go')] | selectattr('0', 'in', stacks) | map(attribute='1') | list if compose_only else [] %}
-            grep -vE '^[[:space:]]*just +(up|{% if compose_only and not no_image_prefixes %}check|fmt|{% endif %}pipeline|ts-(e2e|shots)|[a-z]+-(mutation(-diff)?|property|matrix))( |$)' >"$RUNNER_TEMP/readme.sh" || true
+            grep -vE '^[[:space:]]*just +(up|{% if compose_only and not no_image_prefixes %}check|fmt|{% endif %}pipeline|data-release|ts-(e2e|shots)|[a-z]+-(mutation(-diff)?|property|matrix))( |$)' >"$RUNNER_TEMP/readme.sh" || true
 {%- if no_image_prefixes %}
           # `just check` and `just fmt` also run docker-check and docker-fmt, which need the
           # Docker daemon this container lacks: run each stack's own recipes instead.
