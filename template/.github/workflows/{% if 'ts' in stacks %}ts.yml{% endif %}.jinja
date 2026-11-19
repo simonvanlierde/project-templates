@@ -3,7 +3,7 @@
 name: ts
 
 on:
-{{- push_and_pr(ts_dir, 'ts', ['cloudflare-gate.sh', 'deploy-worker.sh'] if ts_kind == 'web-app' else []) }}
+{{- push_and_pr(ts_dir, 'ts', ['cloudflare-gate.sh', 'deploy-worker.sh', 'preview-comment.sh'] if ts_kind == 'web-app' else []) }}
   workflow_dispatch:
 
 permissions:
@@ -205,7 +205,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
     environment:
       name: preview
       url: {% raw %}${{ steps.upload.outputs.url }}{% endraw %}
@@ -279,6 +279,17 @@ jobs:
           PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
         run: |-
           "$GITHUB_WORKSPACE/.github/scripts/deploy-worker.sh" Preview "{{ worker_slug }}-pr-$PR"
+
+      # Posts the address as one pull request comment, edited on each push. Like the pr
+      # step, it holds GH_TOKEN and no Cloudflare token.
+      - if: steps.upload.outputs.url != ''
+        env:
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          REPO: {% raw %}${{ github.repository }}{% endraw %}
+          PR: {% raw %}${{ github.event.pull_request.number }}{% endraw %}
+          SHA: {% raw %}${{ github.event.pull_request.head.sha }}{% endraw %}
+          URL: {% raw %}${{ steps.upload.outputs.url }}{% endraw %}
+        run: '"$GITHUB_WORKSPACE/.github/scripts/preview-comment.sh" "Preview" "$URL"'
 
   # Production: every push to main deploys the build the checks ran on. Without the
   # token, it skips with a notice.

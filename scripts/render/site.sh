@@ -45,7 +45,13 @@ for r in x r d; do
   # The PR-state check is its own step, which the deploy step waits on and shares no token with.
   grep -qx '        id: pr' <<<"$preview_job"
   grep -qF "steps.pr.outputs.open == 'true'" <<<"$preview_job"
-  [ "$(sed -n '/^        id: upload$/,$p' <<<"$preview_job" | grep -c GH_TOKEN)" = 0 ]
+  [ "$(sed -n '/^        id: upload$/,/^$/p' <<<"$preview_job" | grep -c GH_TOKEN)" = 0 ]
+  # The address goes to one pull request comment, keyed apart from a web app's own.
+  test -x "$r/.github/scripts/preview-comment.sh"
+  # shellcheck disable=SC2016
+  grep -qF 'preview-comment.sh" "Site preview" "$URL"' <<<"$preview_job"
+  grep -qx '      pull-requests: write' <<<"$preview_job"
+  test "$(grep -c 'pull-requests: write' "$wf")" = 1
   # shellcheck disable=SC2016
   grep -qF 'group: preview-site-${{ github.event.pull_request.number }}' <<<"$preview_job"
   grep -qF 'X-Robots-Tag: noindex' <<<"$preview_job"
@@ -358,6 +364,7 @@ for r in a m w; do
   test ! -e "$r/.github/workflows/preview-retire.yml"
   test ! -e "$r/.github/scripts/preview-retire.sh"
   test ! -e "$r/.github/scripts/deploy-worker.sh"
+  test ! -e "$r/.github/scripts/preview-comment.sh"
   (lacks -q '_site' "$r/.gitignore")
   (lacks -qx 'site:' "$r/justfile")
 done

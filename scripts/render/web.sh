@@ -141,7 +141,7 @@ grep -qF "deploy-worker.sh\" Preview \"pipe-me-pr-\$PR\"" d/.github/workflows/ts
 # Both jobs deploy through the one script, which only a web app gets and which runs wrangler.
 test "$(grep -cE 'deploy-worker\.sh" (Preview|Production)' d/.github/workflows/ts.yml)" = 2
 # A nested app's ts.yml also runs when only the script changes, on push and on PRs.
-test "$(grep -cF 'paths: ["web/**", ".github/workflows/ts.yml", ".github/scripts/cloudflare-gate.sh", ".github/scripts/deploy-worker.sh"]' d/.github/workflows/ts.yml)" = 2
+test "$(grep -cF 'paths: ["web/**", ".github/workflows/ts.yml", ".github/scripts/cloudflare-gate.sh", ".github/scripts/deploy-worker.sh", ".github/scripts/preview-comment.sh"]' d/.github/workflows/ts.yml)" = 2
 (lacks -q 'wrangler deploy' d/.github/workflows/ts.yml)
 # Every Cloudflare secrets gate checks both secrets: a missing account id fails each run.
 # Each deploy job runs the gate script right after its checkout, which brings the script.
@@ -248,8 +248,51 @@ grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostrin
 grep -qF '[ "$state" != "open false" ]' d/.github/workflows/ts.yml
 grep -qx '        id: pr' d/.github/workflows/ts.yml
 grep -qF "steps.pr.outputs.open == 'true'" d/.github/workflows/ts.yml
-[ "$(sed -n '/^        id: upload$/,/^  production:/p' d/.github/workflows/ts.yml | grep -c GH_TOKEN)" = 0 ]
-grep -q 'pull-requests: read' d/.github/workflows/ts.yml
+[ "$(sed -n '/^        id: upload$/,/^$/p' d/.github/workflows/ts.yml | grep -c GH_TOKEN)" = 0 ]
+# The comment step posts the address with GH_TOKEN alone, so the preview job may write comments.
+comment_step=$(sed -n '/^      - if: steps.upload.outputs.url != .*$/,/^$/p' d/.github/workflows/ts.yml)
+# shellcheck disable=SC2016
+grep -qF 'preview-comment.sh" "Preview" "$URL"' <<<"$comment_step"
+(lacks -q CLOUDFLARE <<<"$comment_step")
+test "$(sed -n '/^  preview:$/,/^  production:/p' d/.github/workflows/ts.yml | grep -c 'pull-requests: write')" = 1
+test "$(grep -c 'pull-requests: write' d/.github/workflows/ts.yml)" = 1
+test -x d/.github/scripts/preview-comment.sh
+test ! -e m/.github/scripts/preview-comment.sh
+test ! -e a/.github/scripts/preview-comment.sh
+# preview-comment.sh against a stub gh: the first deploy posts, later ones edit that comment,
+# another label's comment stays its own, and a failed call warns without failing the job.
+comment_sh=$out/d/.github/scripts/preview-comment.sh
+cstub=$out/fake-comment
+mkdir -p "$cstub"
+cat >"$cstub/gh" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >>"$STUB/argv"
+[ -z "${GH_FAIL:-}" ] || exit 1
+case $* in
+  *--paginate*) jq -r "${@: -1}" "$STUB/comments" ;;
+  *-X\ PATCH*) echo patch >>"$STUB/calls" ;;
+  *) echo post >>"$STUB/calls" ;;
+esac
+STUB
+chmod +x "$cstub/gh"
+comment() {
+  : >"$cstub/calls"
+  env REPO=o/r PR=7 SHA=0123456789abcdef GH_TOKEN=t STUB="$cstub" PATH="$cstub:$PATH" "$@" \
+    "$comment_sh" Preview https://pipe-me-pr-7.acct.workers.dev >"$cstub/out" 2>&1
+}
+echo '[{"id": 5, "user": {"login": "github-actions[bot]"}, "body": "<!-- preview-comment: Site preview -->"}, {"id": 6, "user": {"login": "someone"}, "body": "<!-- preview-comment: Preview -->"}]' >"$cstub/comments"
+comment
+test "$(cat "$cstub/calls")" = post
+grep -qF 'repos/o/r/issues/7/comments -f body=<!-- preview-comment: Preview -->' "$cstub/argv"
+grep -qF 'https://pipe-me-pr-7.acct.workers.dev' "$cstub/argv"
+grep -qF 'Built from 0123456.' "$cstub/argv"
+echo '[{"id": 9, "user": {"login": "github-actions[bot]"}, "body": "<!-- preview-comment: Preview --> old"}]' >"$cstub/comments"
+: >"$cstub/argv"
+comment
+test "$(cat "$cstub/calls")" = patch
+grep -qF -- '-X PATCH repos/o/r/issues/comments/9' "$cstub/argv"
+comment GH_FAIL=1
+grep -qF '::warning::Could not post the preview address to pull request 7' "$cstub/out"
 # shellcheck disable=SC2016
 grep -qF 'group: preview-${{ github.event.pull_request.number }}' d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
