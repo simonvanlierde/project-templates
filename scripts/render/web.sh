@@ -248,13 +248,18 @@ grep -qF 'gh api "repos/$REPO/pulls/$PR" --jq '\''.state + " " + (.draft|tostrin
 grep -qF '[ "$state" != "open false" ]' d/.github/workflows/ts.yml
 grep -qx '        id: pr' d/.github/workflows/ts.yml
 grep -qF "steps.pr.outputs.open == 'true'" d/.github/workflows/ts.yml
-[ "$(sed -n '/^        id: upload$/,/^$/p' d/.github/workflows/ts.yml | grep -c GH_TOKEN)" = 0 ]
-# The comment step posts the address with GH_TOKEN alone, so the preview job may write comments.
-comment_step=$(sed -n '/^      - if: steps.upload.outputs.url != .*$/,/^$/p' d/.github/workflows/ts.yml)
+upload_step=$(sed -n '/^        id: upload$/,/^  preview-comment:$/p' d/.github/workflows/ts.yml)
+grep -qF 'CLOUDFLARE_API_TOKEN:' <<<"$upload_step"
+(lacks -q GH_TOKEN <<<"$upload_step")
+sed -n '/^  preview:$/,/^  preview-comment:$/p' d/.github/workflows/ts.yml | grep -qx '      pull-requests: read'
+# The comment job posts the address with GH_TOKEN alone, on a runner the deploy's code never
+# touched, and is the only job that may write comments.
+comment_job=$(sed -n '/^  preview-comment:$/,/^  production:$/p' d/.github/workflows/ts.yml)
 # shellcheck disable=SC2016
-grep -qF 'preview-comment.sh" "Preview" "$URL"' <<<"$comment_step"
-(lacks -q CLOUDFLARE <<<"$comment_step")
-test "$(sed -n '/^  preview:$/,/^  production:/p' d/.github/workflows/ts.yml | grep -c 'pull-requests: write')" = 1
+grep -qF 'preview-comment.sh" "Preview" "$URL"' <<<"$comment_job"
+grep -qx "    if: needs.preview.outputs.url != ''" <<<"$comment_job"
+grep -qx '      pull-requests: write' <<<"$comment_job"
+(lacks -qE 'CLOUDFLARE|pnpm|deploy-worker' <<<"$comment_job")
 test "$(grep -c 'pull-requests: write' d/.github/workflows/ts.yml)" = 1
 test -x d/.github/scripts/preview-comment.sh
 test ! -e m/.github/scripts/preview-comment.sh
@@ -267,32 +272,44 @@ mkdir -p "$cstub"
 cat >"$cstub/gh" <<'STUB'
 #!/usr/bin/env bash
 echo "$*" >>"$STUB/argv"
-[ -z "${GH_FAIL:-}" ] || exit 1
 case $* in
-  *--paginate*) jq -r "${@: -1}" "$STUB/comments" ;;
-  *-X\ PATCH*) echo patch >>"$STUB/calls" ;;
-  *) echo post >>"$STUB/calls" ;;
+  *--paginate*) call=list ;;
+  *-X\ PATCH*) call=patch ;;
+  *) call=post ;;
 esac
+[ "${GH_FAIL:-}" != "$call" ] || exit 1
+if [ $call = list ]; then jq -r "${@: -1}" "$STUB/comments"; else echo $call >>"$STUB/calls"; fi
 STUB
 chmod +x "$cstub/gh"
 comment() {
   : >"$cstub/calls"
+  : >"$cstub/argv"
   env REPO=o/r PR=7 SHA=0123456789abcdef GH_TOKEN=t STUB="$cstub" PATH="$cstub:$PATH" "$@" \
-    "$comment_sh" Preview https://pipe-me-pr-7.acct.workers.dev >"$cstub/out" 2>&1
+    "$comment_sh" Preview "${URL:-https://pipe-me-pr-7.acct.workers.dev}" >"$cstub/out" 2>&1
 }
 echo '[{"id": 5, "user": {"login": "github-actions[bot]"}, "body": "<!-- preview-comment: Site preview -->"}, {"id": 6, "user": {"login": "someone"}, "body": "<!-- preview-comment: Preview -->"}]' >"$cstub/comments"
 comment
 test "$(cat "$cstub/calls")" = post
 grep -qF 'repos/o/r/issues/7/comments -f body=<!-- preview-comment: Preview -->' "$cstub/argv"
-grep -qF 'https://pipe-me-pr-7.acct.workers.dev' "$cstub/argv"
+grep -qF '**Preview:** https://pipe-me-pr-7.acct.workers.dev' "$cstub/argv"
 grep -qF 'Built from 0123456.' "$cstub/argv"
 echo '[{"id": 9, "user": {"login": "github-actions[bot]"}, "body": "<!-- preview-comment: Preview --> old"}]' >"$cstub/comments"
-: >"$cstub/argv"
 comment
 test "$(cat "$cstub/calls")" = patch
-grep -qF -- '-X PATCH repos/o/r/issues/comments/9' "$cstub/argv"
-comment GH_FAIL=1
-grep -qF '::warning::Could not post the preview address to pull request 7' "$cstub/out"
+grep -qF -- '-X PATCH repos/o/r/issues/comments/9 -f body=<!-- preview-comment: Preview -->' "$cstub/argv"
+grep -qF '**Preview:** https://pipe-me-pr-7.acct.workers.dev' "$cstub/argv"
+# Each failing call warns with its own reason, and the job still passes.
+for fail in "list:listing its comments failed" "patch:editing comment 9 failed"; do
+  comment GH_FAIL="${fail%%:*}"
+  grep -qF "::warning::Could not post the preview address to pull request 7: ${fail#*:}" "$cstub/out"
+done
+echo '[]' >"$cstub/comments"
+comment GH_FAIL=post
+grep -qF '::warning::Could not post the preview address to pull request 7: posting the comment failed' "$cstub/out"
+# An address outside workers.dev is never posted.
+URL='https://evil.example/login?x=.workers.dev' comment
+grep -qF 'unexpected address' "$cstub/out"
+test ! -s "$cstub/argv"
 # shellcheck disable=SC2016
 grep -qF 'group: preview-${{ github.event.pull_request.number }}' d/.github/workflows/ts.yml
 # shellcheck disable=SC2016
