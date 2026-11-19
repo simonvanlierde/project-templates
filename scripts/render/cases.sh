@@ -597,15 +597,15 @@ grep -qx 'root_dir = "public"' "$out/s/lychee.toml"
 test ! -e "$out/a/lychee.toml"
 # The privacy spec's ALLOWED is for what a browser-storage app keeps; ci.yml runs it.
 grep -q 'What a first visit may keep in the browser, by name, each with a line' "$out/s/tests/e2e/privacy.spec.ts"
-# wk: a web app at the root with the Worker script and a custom domain.
+# wk: a web app at the root with the Worker script and a custom domain, and public data.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=edge-me --data 'stacks=[ts]' \
   --data ts_kind=web-app --data user_data=nothing --data worker=true \
-  --data site_url=https://app.example.org/ . "$out/wk"
+  --data site_url=https://app.example.org/ --data public_data=true . "$out/wk"
 # cfp and cfa: the site on a Worker instead of Pages. cfp is the plain one with the Worker
 # script and a custom domain; cfa the Astro one at its default workers.dev address.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cf-me --data 'stacks=[python]' \
   --data site=plain --data site_host=cloudflare --data worker=true \
-  --data site_url=https://demo.example.org . "$out/cfp"
+  --data site_url=https://demo.example.org --data public_data=true . "$out/cfp"
 "${copier[@]}" --vcs-ref=HEAD --data project_name=cfa-me --data 'stacks=[python]' \
   --data site=astro --data site_host=cloudflare . "$out/cfa"
 # dp: a data-pipeline at the root, whose python.yml ends on the revisions job's `run:` block.

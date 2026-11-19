@@ -1,7 +1,55 @@
 //! {{ project_description or project_name }}
+//!
+//! `{{ slug }} [--json] [NAME]` prints a greeting. Exit codes: 0 ran, 2 usage error.
+//! With `--json` every exit, a usage error included, prints one object on stdout that
+//! `output.schema.json` describes; without it, errors go to stderr.
 
-fn main() {
-    println!("{}", greeting("world"));
+use std::process::ExitCode;
+
+use serde_json::json;
+
+const USAGE: &str = "{{ slug }} [--json] [NAME]";
+
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let json = args.iter().any(|a| a == "--json");
+    match parse(&args) {
+        Ok(name) => {
+            let text = greeting(&name);
+            if json {
+                println!(
+                    "{}",
+                    json!({ "schema_version": 1, "greeting": text, "errors": [] })
+                );
+            } else {
+                println!("{text}");
+            }
+            ExitCode::SUCCESS
+        }
+        Err(message) => {
+            if json {
+                let error = json!({ "message": message, "help": USAGE });
+                println!("{}", json!({ "schema_version": 1, "errors": [error] }));
+            } else {
+                eprintln!("error: {message}\nhelp: {USAGE}");
+            }
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// The name to greet. A flag or value is echoed with `{:?}`, which escapes control characters.
+fn parse(args: &[String]) -> Result<String, String> {
+    let mut name = None;
+    for arg in args {
+        match arg.as_str() {
+            "--json" => {}
+            flag if flag.starts_with('-') => return Err(format!("unknown option {flag:?}")),
+            value if name.is_none() => name = Some(value.to_owned()),
+            value => return Err(format!("unexpected argument {value:?}")),
+        }
+    }
+    Ok(name.unwrap_or_else(|| "world".to_owned()))
 }
 
 fn greeting(name: &str) -> String {
@@ -10,10 +58,15 @@ fn greeting(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::greeting;
+    use super::{greeting, parse};
 
     #[test]
     fn greets() {
         assert_eq!(greeting("world"), "Hello, world!");
+    }
+
+    #[test]
+    fn rejects_an_unknown_option() {
+        assert!(parse(&["--nope".to_owned()]).is_err());
     }
 }

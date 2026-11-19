@@ -75,6 +75,12 @@ A plain site on a Worker also gets `site/_headers`, with the same security heade
 
 The script and its test are the project's after the first render. A binding beyond `ASSETS` (KV, D1, a secret) also reaches every preview: read [decision 0001](decisions/0001-pr-previews-use-the-production-cloudflare-account.md) first.
 
+### Interface and public data
+
+A web app or site gets a `docs/interface.md` stub with two tables: the URL parameters the page reads (name, values, default, code) and the data files it serves (path, format, schema, licence, CORS). Fill it in, and delete a table the page has no use for. The `web-data-cors` requirement in [levels](levels.md) asks that each data URL the second table lists answers a request with an `Origin` header with `Access-Control-Allow-Origin`; rows that still say TODO do not count.
+
+`public_data` (under `customise`, for a web app or a site on a Worker) adds `/data/*` to `_headers` with `Access-Control-Allow-Origin: *` and `Access-Control-Expose-Headers: Content-Range, ETag`, so any website, notebook or browser agent can read the files. GitHub Pages sends the first header itself. Data in R2 or another bucket is not behind `_headers`: set its CORS rule there.
+
 ### Moving an app off Cloudflare Pages
 
 An app made before this template deployed from CI was deployed by Cloudflare Pages. Check first that the account has no Worker named `<slug>`: the first deploy overwrites it. Expect a short gap while the domain moves from Pages to the Worker. To move the app:

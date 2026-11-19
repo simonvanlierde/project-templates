@@ -24,6 +24,18 @@ grep -qF 'web/shots/' d/README.md
 grep -qF 'ts-(e2e|shots)' d/.github/workflows/cold-install.yml
 grep -qx '/web/shots/' d/.gitignore
 (lacks -q '^ts-shots:' a/just/ts.just)
+# interface.md is a stub for every web kind, beside the other docs at the repo root even when
+# the app is nested; the CORS headers for /data/* come only with public_data (wk).
+for r in d wk r; do test -f "$r/docs/interface.md"; done
+grep -qF '[URL parameters and data files](docs/interface.md)' d/README.md
+# shellcheck disable=SC2016 # literal backticks
+grep -qxF '| `/data/TODO.json` | JSON | TODO: link to the schema or column list | Apache-2.0 | TODO: any origin, or none |' d/docs/interface.md
+# shellcheck disable=SC2016 # literal backticks
+grep -qxF '| `/data/TODO.json` | JSON | TODO: link to the schema or column list | MIT | any origin |' wk/docs/interface.md
+test ! -e a/docs/interface.md
+grep -qxF '/data/*' wk/public/_headers
+grep -qxF '  Access-Control-Allow-Origin: *' wk/public/_headers
+(lacks -q 'Access-Control' d/web/public/_headers)
 # The legal pages: statement and privacy always, terms for accounts or uploads,
 # each a route the axe, CSP, privacy and legal-page specs visit.
 for page in accessibility privacy terms; do

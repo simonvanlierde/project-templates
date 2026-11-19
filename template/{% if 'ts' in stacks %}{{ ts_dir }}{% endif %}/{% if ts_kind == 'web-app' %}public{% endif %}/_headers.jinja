@@ -16,3 +16,11 @@
   Cross-Origin-Resource-Policy: same-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
   Strict-Transport-Security: max-age=31536000
+{%- if public_data | default(false) %}
+
+# Public data files: any website can read them. Content-Range and ETag are exposed for range
+# reads and caching. Cloudflare adds these to the /* headers above.
+/data/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Expose-Headers: Content-Range, ETag
+{%- endif %}

@@ -238,6 +238,33 @@ source = "RFC 9309; Content Signals Policy (Cloudflare, 2025-09-24)"
 verify = "automated"
 since = 2026-11-19
 
+[requirement.interface-doc]
+area = "agent-interop"
+level = "standard"
+traits = ["web"]
+text = "`docs/interface.md` lists the URL parameters the page reads and the data files it serves, with each file's format, schema, licence and CORS."
+source = "project-templates"
+verify = "review"
+since = 2026-11-19
+
+[requirement.web-data-cors]
+area = "agent-interop"
+level = "standard"
+traits = ["web"]
+text = "Each data URL that `docs/interface.md` lists answers a request with an `Origin` header with `Access-Control-Allow-Origin`."
+source = "Fetch Standard (CORS protocol)"
+verify = "automated"
+since = 2026-11-19
+
+[requirement.cli-output-schema]
+area = "cli-api-design"
+level = "community"
+traits = ["cli"]
+text = "A command-line tool ships a JSON Schema for its `--json` output in the package, and a test validates real output against it: success, findings and a usage error."
+source = "project-templates"
+verify = "review"
+since = 2026-11-19
+
 [requirement.ci-tests]
 area = "testing-and-ci"
 level = "standard"

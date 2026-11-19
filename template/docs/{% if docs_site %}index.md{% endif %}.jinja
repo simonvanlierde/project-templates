@@ -3,4 +3,5 @@
 {{ project_description }}
 {% endif %}
 TODO: say who this is for and what it does, then link to the pages in this folder.
+{%- if web_app or site != 'none' %} The [interface](interface.md) lists the URL parameters and data files.{% endif %}
 {%- if docs_api %} The [API reference](reference.md) is generated from the docstrings.{% endif %}

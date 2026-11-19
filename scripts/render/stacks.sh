@@ -84,6 +84,15 @@ test -f c/crates/cli/deny.toml
 test -f c/crates/cli/src/main.rs
 test ! -e c/Cargo.toml
 (lacks -q missing_docs c/crates/cli/Cargo.toml)
+# The binary's --json output has a committed schema and a test that runs the binary against it;
+# a library has neither.
+test -f c/crates/cli/output.schema.json
+test -f c/crates/cli/tests/cli.rs
+grep -qF 'CARGO_BIN_EXE_mono-me' c/crates/cli/tests/cli.rs
+grep -q '^serde_json = ' c/crates/cli/Cargo.toml
+grep -q '^jsonschema = ' c/crates/cli/Cargo.toml
+(lacks -q -e serde_json -e jsonschema a/Cargo.toml)
+test ! -e a/output.schema.json
 (lacks -q -- '--doc' c/just/rust.just)
 grep -q 'cargo fmt --manifest-path crates/cli/Cargo.toml --check' c/just/rust.just
 grep -q 'working-directory: crates/cli' c/.github/workflows/rust.yml

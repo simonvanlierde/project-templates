@@ -19,6 +19,7 @@ _skip_if_exists:
   - /CHANGELOG.md
   - /GOVERNANCE.md
   - /docs/roadmap.md
+  - /docs/interface.md
   - /docs/assurance-case.md
   - /docs/accessibility.md
   - /CITATION.cff
@@ -65,6 +66,9 @@ _skip_if_exists:
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts"
+  - "/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}src/main.rs"
+  - "/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}tests/cli.rs"
+  - "/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}output.schema.json"
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
@@ -94,6 +98,9 @@ _exclude:
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}src/main.rs{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}tests/cli.rs{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}output.schema.json{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/index.html{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/style.css{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/main.mjs{% endif %}"
@@ -517,6 +524,15 @@ site_on_workers:
   type: bool
   when: false
   default: "{{ site != 'none' and site_host == 'cloudflare' }}"
+
+# Whether the Worker serves data files under /data/ for other sites, notebooks and agents to
+# read: adds the CORS headers to `_headers`. Pages sends them itself, so only a Worker needs it.
+public_data:
+  type: bool
+  when: "{{ web_app or site_on_workers }}"
+  ask: "{{ customise }}"
+  help: Does the Worker serve public data files under /data/? Yes lets any website read them (CORS) and is listed in docs/interface.md
+  default: false
 
 # The practice ladder in levels.toml (docs/levels.md). The OpenSSF Best Practices
 # badge is for public, open-source projects, so a private or unlicensed repo is off it.
@@ -1043,6 +1059,18 @@ proptest_version:
   type: str
   when: false
   default: 1.12.0
+
+# renovate: datasource=crate depName=jsonschema
+jsonschema_version:
+  type: str
+  when: false
+  default: 0.61.2
+
+# renovate: datasource=crate depName=serde_json
+serde_json_version:
+  type: str
+  when: false
+  default: 1.0.154
 
 # renovate: datasource=crate depName=codspeed-divan-compat
 divan_version:

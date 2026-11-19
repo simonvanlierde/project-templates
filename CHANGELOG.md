@@ -14,6 +14,13 @@ changes are marked **Breaking**.
 
 - Every site the template publishes (plain and Astro pages, the Starlight and Zensical docs sites, the web app) ships a `robots.txt` that allows search and answer bots, disallows AI training crawlers, sets `Content-Signal: search=yes, ai-input=yes, ai-train=no` and names the sitemap where the site has one. `levels.toml` gains the matching `robots-ai-crawlers` requirement at the standard level.
 - Pull request previews post their link as one comment on the pull request, edited in place on each push, so it no longer hides in the job log. A repo with a web app and a site gets one comment for each. A separate job posts it, the only one with `pull-requests: write`, so the write token never shares a runner with the deploy's code. It posts only a workers.dev address.
+- Web kinds (the web app, and a site) get a `docs/interface.md` stub with a URL-parameter table and a data-endpoint table (path, format, schema, licence, CORS), linked from the README. It belongs to the project once rendered. `levels.toml` gains `interface-doc` (standard, review).
+- A `public_data` question (under `customise`, for a web app or a site on a Worker) adds `/data/*` with `Access-Control-Allow-Origin: *` and `Access-Control-Expose-Headers: Content-Range, ETag` to the rendered `_headers`, which is now a template. `levels.toml` gains `web-data-cors` (standard, automated): each data URL that `docs/interface.md` lists answers with `Access-Control-Allow-Origin`.
+- The Rust binary starter takes `[--json] [NAME]` and prints one JSON object on every exit, a usage error (exit 2) included. It ships `output.schema.json` and `tests/cli.rs`, which runs the binary and validates the output against the schema (dev-dependencies `jsonschema`, and `serde_json`). `levels.toml` gains `cli-output-schema` (community, review). The Python data-pipeline kind has no schema of its own: its commands come from sourceledger, which commits its own.
+
+### Changed
+
+- The Rust binary's `src/main.rs`, `tests/cli.rs` and `output.schema.json` are samples the project owns, like the other starter code: a `copier update` leaves existing ones alone and does not bring the `--json` starter to a project that has its own `main.rs`.
 
 ### Fixed
 
