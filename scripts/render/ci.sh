@@ -16,7 +16,7 @@ cold d >"$out/d-readme.sh"
 grep -qx 'uv sync --directory pipe' "$out/d-readme.sh"
 grep -q '^pnpm -C web exec playwright install chromium' "$out/d-readme.sh"
 grep -q '^just check ' "$out/d-readme.sh"
-(lacks -E '^just +(up|pipeline|ts-e2e)' "$out/d-readme.sh")
+(lacks -E '^just +(up|pipeline|data-release|ts-e2e)' "$out/d-readme.sh")
 cold c >"$out/c-readme.sh"
 grep -q '^just hooks ' "$out/c-readme.sh"
 (lacks -q -- '-mutation' "$out/c-readme.sh")
