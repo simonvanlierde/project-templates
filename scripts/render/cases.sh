@@ -638,10 +638,10 @@ lacks -q wrangler "$out/dp/.gitignore"
   --data dependency_bot=renovate . "$out/svr"
 
 # wp: a nested web app under a two-segment path on a custom domain, which production
-# routes to the Worker in place of --domain.
+# routes to the Worker in place of --domain, with public data under that path.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=path-me --data 'stacks=[ts]' \
   --data ts_kind=web-app --data ts_dir=web --data web_framework=preact --data user_data=nothing \
-  --data site_url=https://example.org/tools/path-me/ . "$out/wp"
+  --data site_url=https://example.org/tools/path-me/ --data public_data=true . "$out/wp"
 
 # Every file in template/ must land in at least one render above. No tool measures
 # coverage of Jinja templates, so this is the floor. Copier renders a probe copy of the

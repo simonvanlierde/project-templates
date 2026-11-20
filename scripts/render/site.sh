@@ -618,7 +618,8 @@ grep -qF 'Strict-Transport-Security:' cfp/site/_headers
 meta_csp=$(sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' cfp/site/index.html)
 grep -qxF "  Content-Security-Policy: $meta_csp; frame-ancestors 'none'" cfp/site/_headers
 for r in x cfa; do test ! -e "$r/site/_headers"; done
-# public_data adds the CORS headers for /data/*; a render without it has none.
+# public_data adds the CORS headers for /data/* at the site root.
+grep -qxF '/data/*' cfp/site/_headers
 grep -qxF '  Access-Control-Allow-Origin: *' cfp/site/_headers
 grep -qxF '  Access-Control-Expose-Headers: Content-Range, ETag' cfp/site/_headers
 test -f cfp/site/worker/index.test.mjs

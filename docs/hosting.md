@@ -77,7 +77,7 @@ The script and its test are the project's after the first render. A binding beyo
 
 ### Interface and public data
 
-A web app or site gets a `docs/interface.md` stub listing its URL parameters and data files. `public_data` (under `customise`) adds CORS headers for `/data/*` to `_headers`; data in R2 or another bucket is not behind that file, so set its CORS rule there.
+`public_data` (under `customise`, for a web app or a plain site on a Worker) adds CORS headers for `/data/*` to `_headers`, under the app's path if it has one. An existing project turns it on with `copier update --data public_data=true`; if the project edited `_headers`, keep both sides of the conflict. Data in R2 or another bucket is not behind that file, so set its CORS rule there.
 
 ### Moving an app off Cloudflare Pages
 

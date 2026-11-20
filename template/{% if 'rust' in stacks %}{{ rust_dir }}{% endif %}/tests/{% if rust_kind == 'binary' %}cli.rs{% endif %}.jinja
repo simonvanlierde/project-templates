@@ -1,11 +1,12 @@
 //! Real runs of the binary, checked against the committed `--json` schema.
 
+use std::ffi::OsStr;
 use std::process::Command;
 
 use serde_json::Value;
 
 /// Runs the binary and returns its exit code and stdout.
-fn run(args: &[&str]) -> (i32, String) {
+fn run(args: &[impl AsRef<OsStr>]) -> (i32, String) {
     let out = Command::new(env!("CARGO_BIN_EXE_{{ crate_name }}"))
         .args(args)
         .output()
@@ -36,13 +37,35 @@ fn json_output_matches_the_schema() {
 }
 
 #[test]
-fn help_and_version_exit_zero() {
-    assert_eq!(run(&["--help"]).0, 0);
-    let (code, stdout) = run(&["--version"]);
+fn double_dash_ends_the_flags() {
+    let (code, stdout) = run(&["--json", "--", "-x"]);
     assert_eq!(
-        (code, stdout.trim_end()),
-        (0, concat!("{{ crate_name }} ", env!("CARGO_PKG_VERSION")))
+        (code, validated(&stdout)["greeting"].as_str()),
+        (0, Some("Hello, -x!"))
     );
+    assert_eq!(run(&["--", "--json"]), (0, "Hello, --json!\n".to_owned()));
+}
+
+#[test]
+fn help_lists_the_exit_codes_and_version_prints_the_name() {
+    for flag in ["-h", "--help"] {
+        let (code, stdout) = run(&[flag]);
+        assert_eq!(code, 0);
+        assert!(stdout.contains("0 ran, 2 usage error, 3 "), "{stdout}");
+    }
+    let version = concat!("{{ crate_name }} ", env!("CARGO_PKG_VERSION"), "\n");
+    assert_eq!(run(&["--version"]), (0, version.to_owned()));
+}
+
+#[cfg(unix)]
+#[test]
+fn a_non_utf8_argument_is_a_usage_error() {
+    use std::os::unix::ffi::OsStrExt;
+
+    let (code, stdout) = run(&[OsStr::new("--json"), OsStr::from_bytes(b"\xff")]);
+    assert_eq!(code, 2);
+    let message = validated(&stdout)["errors"][0]["message"].clone();
+    assert!(message.as_str().unwrap().contains(r#""\xFF""#), "{message}");
 }
 
 #[cfg(target_os = "linux")]

@@ -94,7 +94,7 @@ Issues turned on for this repository.
 that serves the build as static assets{% if worker %}, with [`{{ d }}worker/index.ts`]({{ blob }}{{ d }}worker/index.ts) in front of `/api/*`{% endif %}, configured in [`{{ d }}wrangler.jsonc`]({{ blob }}{{ d }}wrangler.jsonc). CI deploys it: every
 push to `main` deploys the build the checks ran on, at `{{ site_url }}`. Every pull request that is
 neither a draft nor from a bot gets a preview URL (see below). [`{{ d }}public/_headers`]({{ blob }}{{ d }}public/_headers) sets the
-response headers, including the Content-Security-Policy that the e2e tests run under.
+response headers, including the Content-Security-Policy that the e2e tests run under. [`docs/interface.md`]({{ blob }}docs/interface.md) lists the URL parameters and data files that scripts and agents can rely on.
 
 One-time setup, for production and previews alike:
 
@@ -121,15 +121,11 @@ Each pull request that is open, not a draft, not from a bot and not from `chore/
 {% endif %}{% if site != 'none' %}
 ## Site
 
-The {{ 'Astro site' if site == 'astro' else 'page' }} in [`site/`]({{ tree }}site) is for the people who use this project. `just site` builds it into `{{ site_out }}/`{% if site == 'astro' %}, from the lockfile that `just site-sync` writes{% endif %}. {% if site_on_workers %}Every push to `main` deploys that build to the Cloudflare Worker `{{ worker_slug }}-site`, configured in [`wrangler.site.jsonc`]({{ blob }}wrangler.site.jsonc){% if site_domain %}, at `{{ site_url }}`{% endif %}.{% if worker %} [`site/worker/index.mjs`]({{ blob }}site/worker/index.mjs) answers `/api/*` in front of the files, and `just site` runs its tests first.{% endif %} The site is public, even when the repo is private.{% else %}Every push to `main` deploys that build to GitHub Pages, at `https://{{ github_user | lower }}.github.io/{{ slug }}/`. A Pages site is public, even when the repo is private.{% endif %}
+The {{ 'Astro site' if site == 'astro' else 'page' }} in [`site/`]({{ tree }}site) is for the people who use this project. `just site` builds it into `{{ site_out }}/`{% if site == 'astro' %}, from the lockfile that `just site-sync` writes{% endif %}. {% if site_on_workers %}Every push to `main` deploys that build to the Cloudflare Worker `{{ worker_slug }}-site`, configured in [`wrangler.site.jsonc`]({{ blob }}wrangler.site.jsonc){% if site_domain %}, at `{{ site_url }}`{% endif %}.{% if worker %} [`site/worker/index.mjs`]({{ blob }}site/worker/index.mjs) answers `/api/*` in front of the files, and `just site` runs its tests first.{% endif %} The site is public, even when the repo is private.{% else %}Every push to `main` deploys that build to GitHub Pages, at `https://{{ github_user | lower }}.github.io/{{ slug }}/`. A Pages site is public, even when the repo is private.{% endif %}{% if not web_app %} [`docs/interface.md`]({{ blob }}docs/interface.md) lists the URL parameters and data files that scripts and agents can rely on.{% endif %}
 {% if not web_app %}
 ### Pull request previews
 {% endif %}
 Each pull request that is open, not a draft, not from a bot and not from `chore/copier-update` gets a preview of the site on its own Cloudflare Worker, `{{ worker_slug }}-site-pr-<number>`, deleted again when the pull request closes or turns draft ([how it works](https://github.com/simonvanlierde/project-templates/blob/main/docs/hosting.md#pull-request-previews)). Its link appears as a comment on the pull request, updated on each push. {% if site_on_workers %}One-time setup: run `just repo-settings`, which creates the `preview` and `production` environments, then add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit{% if site_domain %}; only `production`'s token also gets Zone > Workers Routes: Edit for the zone of `{{ site_domain }}`, as previews run pull request code{% endif %}) and `CLOUDFLARE_ACCOUNT_ID` to both, and give the Cloudflare account a workers.dev subdomain if it has none yet. Previews run the pull request's code with their token, so with one token in both, anyone who can push a branch can deploy over the production site; a second Cloudflare account's token and ID in `preview` keep them apart ([details](https://github.com/simonvanlierde/project-templates/blob/main/docs/hosting.md#pull-request-previews)). Without the token, the deploy and the previews skip with a notice.{% else %}One-time setup: run `just repo-settings`, which creates the `preview` environment and sets Pages to deploy from Actions, then add the secrets `CLOUDFLARE_API_TOKEN` (a custom token with Account > Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` to the `preview` environment, and give the Cloudflare account a workers.dev subdomain if it has none yet. Without the token, the previews skip with a notice.{% endif %} Previews are public: anyone with the address can open one.
-{% endif %}{% if web_app or site != 'none' %}
-## Interface
-
-The [URL parameters and data files]({{ blob }}docs/interface.md) that the page reads and serves, for scripts and agents.
 {% endif %}{% if docs_site %}
 ## Documentation
 

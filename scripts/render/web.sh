@@ -27,15 +27,23 @@ grep -qx '/web/shots/' d/.gitignore
 # interface.md is a stub for every web kind, beside the other docs at the repo root even when
 # the app is nested; the CORS headers for /data/* come only with public_data (wk).
 for r in d wk r; do test -f "$r/docs/interface.md"; done
-grep -qF '[URL parameters and data files](docs/interface.md)' d/README.md
 # shellcheck disable=SC2016 # literal backticks
-grep -qxF '| `/data/TODO.json` | JSON | TODO: link to the schema or column list | Apache-2.0 | TODO: any origin, or none |' d/docs/interface.md
+for r in d cfp; do grep -qF '[`docs/interface.md`](docs/interface.md) lists' "$r/README.md"; done
 # shellcheck disable=SC2016 # literal backticks
-grep -qxF '| `/data/TODO.json` | JSON | TODO: link to the schema or column list | MIT | any origin |' wk/docs/interface.md
+grep -qxF '| `/data/TODO.json` | JSON | TODO: link to the schema or column list | TODO: the data'"'"'s licence | TODO: any origin, or none |' d/docs/interface.md
+grep -qF '| any origin |' wk/docs/interface.md
 test ! -e a/docs/interface.md
+# Cloudflare matches _headers rules on the full request path, so an app under a path gets
+# its data rule there.
 grep -qxF '/data/*' wk/public/_headers
-grep -qxF '  Access-Control-Allow-Origin: *' wk/public/_headers
+grep -qxF '/tools/path-me/data/*' wp/web/public/_headers
 (lacks -q 'Access-Control' d/web/public/_headers)
+# Every render that answered public_data=true has a _headers with the CORS block.
+for answers in */.copier-answers.yml; do
+  if grep -qx 'public_data: true' "$answers"; then
+    grep -rqxF --include=_headers '  Access-Control-Allow-Origin: *' "${answers%/*}"
+  fi
+done
 # The legal pages: statement and privacy always, terms for accounts or uploads,
 # each a route the axe, CSP, privacy and legal-page specs visit.
 for page in accessibility privacy terms; do
