@@ -455,6 +455,13 @@ owned_docs=(docs-site/astro.config.mjs docs-site/public/favicon.svg)
 git -C "$sample_up-docs" init -q
 git -C "$sample_up-docs" add -A
 git -C "$sample_up-docs" -c user.name=t -c user.email=t@example.org commit -q -m "delete the owned docs files"
+# A Rust binary with its own main.rs keeps it, and the update says to drop the starter's dependencies.
+"${copier[@]}" --vcs-ref=HEAD --data project_name=sample-bin --data 'stacks=[rust]' --data rust_kind=binary \
+  "$sample_tpl" "$sample_up-bin" >/dev/null
+echo 'fn main() {}' >"$sample_up-bin/src/main.rs"
+git -C "$sample_up-bin" init -q
+git -C "$sample_up-bin" add -A
+git -C "$sample_up-bin" -c user.name=t -c user.email=t@example.org commit -q -m "own main.rs"
 find "$sample_tpl/template" -type f \( -name '*test_add.py*' -o -name '__init__.py.jinja' \
   -o -name '*App.tsx*' -o -name '*App.test.tsx*' -o -name '*main.tsx*' -o -name '*app.css*' \
   -o -path '*worker*/index.ts' -o -path '*worker*/index.test.ts' -o -path '*worker*/index.mjs' \
@@ -473,6 +480,10 @@ for f in "${owned[@]}"; do test -f "$sample_up/$f"; done
 # shellcheck disable=SC2031 # COPIER_VERSION is set at file top
 uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up-docs" >"$out/sample-up-docs.log" 2>&1
 for f in "${owned_docs[@]}"; do test -f "$sample_up-docs/$f"; done
+# shellcheck disable=SC2031 # COPIER_VERSION is set at file top
+uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up-bin" >"$out/sample-up-bin.log" 2>&1
+grep -qx 'fn main() {}' "$sample_up-bin/src/main.rs"
+grep -qxF 'If src/main.rs is your own, remove serde_json and jsonschema from Cargo.toml unless it uses them.' "$out/sample-up-bin.log"
 
 # install-action falls back to cargo-binstall for a tool past its manifest, which
 # installs an unchecked binary: every step says fallback: none, but cargo-codspeed,

@@ -1,0 +1,25 @@
+# Interface
+
+What a person, a script or an agent can rely on without reading the code: the URL
+parameters the page reads and the data it serves.
+
+## URL parameters
+
+TODO: say where the parameters are parsed and what a missing or invalid value does, or
+delete the table if the page reads none.
+
+| Name | Values | Default | Code |
+| --- | --- | --- | --- |
+| `example` | TODO: `a`, `b` | `a` | TODO: `src/params.ts` |
+
+## Data endpoints
+
+Public files that other sites, notebooks or agents may fetch. A project that lists a URL
+here keeps it answering, with `Access-Control-Allow-Origin` set. A path is relative to the
+site URL, even with a leading `/`, so an app served under `/app/` lists `/data/x.json` for
+`/app/data/x.json`; give a file on another host as a full `https://` URL. Delete the table
+if the project serves no data.
+
+| Path or URL | Format | Schema | Licence | CORS |
+| --- | --- | --- | --- | --- |
+| `/data/TODO.json` | JSON | TODO: link to the schema or column list | TODO: the data's licence | {{ 'any origin' if public_data | default(false) else 'TODO: any origin, or none' }} |

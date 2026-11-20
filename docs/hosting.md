@@ -75,6 +75,10 @@ A plain site on a Worker also gets `site/_headers`, with the same security heade
 
 The script and its test are the project's after the first render. A binding beyond `ASSETS` (KV, D1, a secret) also reaches every preview: read [decision 0001](decisions/0001-pr-previews-use-the-production-cloudflare-account.md) first.
 
+### Interface and public data
+
+`public_data` (under `customise`, for a web app or a plain site on a Worker) adds CORS headers for `/data/*` to `_headers`, under the app's path if it has one. An existing project turns it on with `copier update --data public_data=true`; if the project edited `_headers`, keep both sides of the conflict. Data in R2 or another bucket is not behind that file, so set its CORS rule there.
+
 ### Moving an app off Cloudflare Pages
 
 An app made before this template deployed from CI was deployed by Cloudflare Pages. Check first that the account has no Worker named `<slug>`: the first deploy overwrites it. Expect a short gap while the domain moves from Pages to the Worker. To move the app:

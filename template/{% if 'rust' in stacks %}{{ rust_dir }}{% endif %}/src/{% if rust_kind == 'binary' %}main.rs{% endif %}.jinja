@@ -1,7 +1,94 @@
 //! {{ project_description or project_name }}
+//!
+//! `{{ slug }} [--json] [--] [NAME]` prints a greeting; `--help` lists the exit codes. With
+//! `--json` every exit that prints, a usage error included, writes one object on stdout that
+//! `output.schema.json` describes; without it, errors go to stderr.
 
-fn main() {
-    println!("{}", greeting("world"));
+use std::ffi::OsString;
+use std::io::{self, ErrorKind, Write};
+use std::process::ExitCode;
+
+use serde_json::json;
+
+const USAGE: &str = "{{ slug }} [--json] [--] [NAME]";
+
+enum Action {
+    Greet(String),
+    Help,
+    Version,
+}
+
+fn main() -> ExitCode {
+    let args: Vec<OsString> = std::env::args_os().skip(1).collect();
+    let json = args
+        .iter()
+        .take_while(|a| *a != "--")
+        .any(|a| a == "--json");
+    let (text, code) = match parse(&args) {
+        Ok(Action::Greet(name)) if json => (
+            json!({ "schema_version": 1, "greeting": greeting(&name), "errors": [] }).to_string(),
+            0,
+        ),
+        Ok(Action::Greet(name)) => (greeting(&name), 0),
+        Ok(Action::Help) => (
+            format!(
+                "usage: {USAGE}\n\nExit codes: 0 ran, 2 usage error, 3 stdout could not be written."
+            ),
+            0,
+        ),
+        Ok(Action::Version) => (
+            concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")).to_owned(),
+            0,
+        ),
+        Err(message) if json => {
+            let error = json!({ "message": message, "help": USAGE });
+            (
+                json!({ "schema_version": 1, "errors": [error] }).to_string(),
+                2,
+            )
+        }
+        Err(message) => {
+            eprintln!("error: {message}\nhelp: usage: {USAGE}");
+            return ExitCode::from(2);
+        }
+    };
+    let mut out = io::stdout().lock();
+    match writeln!(out, "{text}").and_then(|()| out.flush()) {
+        Ok(()) => ExitCode::from(code),
+        // A closed pipe (`| head -1`) is the reader's choice, so it gets no message.
+        Err(e) if e.kind() == ErrorKind::BrokenPipe => ExitCode::from(3),
+        Err(e) => {
+            eprintln!("error: cannot write to stdout: {e}");
+            ExitCode::from(3)
+        }
+    }
+}
+
+/// What to do with the arguments after the program name.
+#[expect(
+    clippy::unnecessary_debug_formatting,
+    reason = "{:?} escapes control characters and bytes that are not UTF-8"
+)]
+fn parse(args: &[OsString]) -> Result<Action, String> {
+    let mut name = None;
+    let mut flags = true;
+    for arg in args {
+        let Some(arg) = arg.to_str() else {
+            return Err(format!("argument {arg:?} is not UTF-8"));
+        };
+        match arg {
+            "--" if flags => flags = false,
+            "--json" if flags => {}
+            "-h" | "--help" if flags => return Ok(Action::Help),
+            "--version" if flags => return Ok(Action::Version),
+            flag if flags && flag.starts_with('-') => {
+                return Err(format!("unknown option {flag:?}"));
+            }
+            value if name.is_none() => name = Some(value.to_owned()),
+            value => return Err(format!("unexpected argument {value:?}")),
+        }
+    }
+    Ok(Action::Greet(name.unwrap_or_else(|| "world".to_owned())))
 }
 
 fn greeting(name: &str) -> String {

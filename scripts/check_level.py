@@ -416,6 +416,7 @@ UNCHECKED = {
     "security-txt": "needs the live site",
     "sitemap-answers": "needs the live site",
     "robots-ai-crawlers": "needs the live site",
+    "web-data-cors": "needs the live data URLs",
     "signed-releases": "needs the tag signatures and the keys the release workflow lists; no check yet",
 }
 

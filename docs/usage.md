@@ -61,6 +61,7 @@ The advanced questions and their defaults:
 | `dependency_bot` | Dependabot |
 | `site` | None ([Static site](hosting.md#static-site)) |
 | `site_host` | GitHub Pages; `cloudflare` deploys the site to a Worker ([Static site](hosting.md#static-site)) |
+| `public_data` | Disabled; `/data/*` answers with CORS headers in `_headers`, for data other sites and agents read ([Interface and public data](hosting.md#interface-and-public-data)) |
 | `worker` | Disabled; a Worker script for `/api/*` in a web app or a site on Cloudflare ([Worker script](hosting.md#worker-script)) |
 | `extras` | `cold_install` at `standard` and `community`; otherwise none ([Optional features](#optional-features)) |
 | `level` | `standard` for a public repo with a license ([Levels](levels.md)) |

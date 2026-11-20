@@ -19,6 +19,7 @@ _skip_if_exists:
   - /CHANGELOG.md
   - /GOVERNANCE.md
   - /docs/roadmap.md
+  - /docs/interface.md
   - /docs/assurance-case.md
   - /docs/accessibility.md
   - /CITATION.cff
@@ -65,6 +66,9 @@ _skip_if_exists:
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts"
   - "/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts"
+  - "/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}src/main.rs"
+  - "/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}tests/cli.rs"
+  - "/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}output.schema.json"
   - /site/index.html
   - /site/style.css
   - /site/main.mjs
@@ -94,6 +98,9 @@ _exclude:
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}src/app.css{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.ts{% endif %}"
   - "{% if _copier_operation == 'update' %}/{{ '' if ts_dir | default('.') == '.' else ts_dir ~ '/' }}worker/index.test.ts{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}src/main.rs{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}tests/cli.rs{% endif %}"
+  - "{% if _copier_operation == 'update' %}/{{ '' if rust_dir | default('.') == '.' else rust_dir ~ '/' }}output.schema.json{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/index.html{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/style.css{% endif %}"
   - "{% if _copier_operation == 'update' %}/site/main.mjs{% endif %}"
@@ -140,6 +147,12 @@ _message_after_copy: |
   {%- elif publish_to_pypi | default(false) or publish_to_npm | default(false) or publish_to_crates | default(false) %} Set the version in the package manifest first.
   {%- endif %}
   Later, `copier update` pulls in new template releases.
+# A template file cannot see _copier_operation, so a binary's Cargo.toml gains the starter's
+# dependencies on update even where the project keeps its own main.rs.
+_message_after_update: |
+  {%- if 'rust' in stacks and rust_kind | default('') == 'binary' %}
+  If {{ '' if rust_dir == '.' else rust_dir ~ '/' }}src/main.rs is your own, remove serde_json and jsonschema from Cargo.toml unless it uses them.
+  {%- endif %}
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
 # detail. Everything after `customise` has `ask: "{{ customise }}"`: answered no, it
@@ -517,6 +530,13 @@ site_on_workers:
   type: bool
   when: false
   default: "{{ site != 'none' and site_host == 'cloudflare' }}"
+
+public_data:
+  type: bool
+  when: "{{ web_app or (site == 'plain' and site_on_workers) }}"
+  ask: "{{ customise }}"
+  help: Does the Worker serve public data files under /data/? Yes lets any website read them (CORS); list the files in docs/interface.md
+  default: false
 
 # The practice ladder in levels.toml (docs/levels.md). The OpenSSF Best Practices
 # badge is for public, open-source projects, so a private or unlicensed repo is off it.
@@ -1043,6 +1063,18 @@ proptest_version:
   type: str
   when: false
   default: 1.12.0
+
+# renovate: datasource=crate depName=jsonschema
+jsonschema_version:
+  type: str
+  when: false
+  default: 0.61.2
+
+# renovate: datasource=crate depName=serde_json
+serde_json_version:
+  type: str
+  when: false
+  default: 1.0.154
 
 # renovate: datasource=crate depName=codspeed-divan-compat
 divan_version:

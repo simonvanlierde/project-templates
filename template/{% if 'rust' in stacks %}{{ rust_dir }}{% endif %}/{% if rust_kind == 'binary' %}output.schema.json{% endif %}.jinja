@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "{{ slug }} --json",
+  "description": "The one object {{ slug }} prints with --json; --help and --version print plain text. Rename or remove a field only with a new schema_version and a major release.",
+  "type": "object",
+  "required": ["schema_version", "errors"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "greeting": { "type": "string" },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["message", "help"],
+        "properties": { "message": { "type": "string" }, "help": { "type": "string" } }
+      }
+    }
+  }
+}

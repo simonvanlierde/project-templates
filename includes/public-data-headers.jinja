@@ -1,0 +1,9 @@
+{#- The CORS block for public data in a _headers file. The including file sets `data_path` to
+    the path the files are served under, empty at the root. -#}
+{%- if public_data | default(false) %}
+
+# Public data files: any website can read them, with range reads and caching.
+{{ data_path }}/data/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Expose-Headers: Content-Range, ETag
+{%- endif %}

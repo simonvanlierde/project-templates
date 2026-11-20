@@ -27,9 +27,16 @@ pkg-fmt = "zip"
 {%- endif %}
 
 [dependencies]
-{%- if codspeed or (rust_kind == 'library' and 'property' in test_extras) %}
+{%- if rust_kind == 'binary' %}
+serde_json = "{{ serde_json_version }}"
+{%- endif %}
+{%- if codspeed or (rust_kind == 'library' and 'property' in test_extras) or rust_kind == 'binary' %}
 
 [dev-dependencies]
+{%- if rust_kind == 'binary' %}
+# default-features = false: no HTTP client to fetch a remote $ref.
+jsonschema = { version = "{{ jsonschema_version }}", default-features = false }
+{%- endif %}
 {%- if codspeed %}
 divan = { version = "{{ divan_version }}", package = "codspeed-divan-compat" }
 {%- endif %}
