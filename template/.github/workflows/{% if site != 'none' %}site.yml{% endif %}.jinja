@@ -35,14 +35,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: just@{{ just_version }}
           fallback: none
 
 {%- if site == 'astro' %}
 
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           package_json_file: site/package.json
 
@@ -102,7 +102,7 @@ jobs:
         run: '"$GITHUB_WORKSPACE/.github/scripts/cloudflare-gate.sh" "Production deploy"'
 
       - if: steps.gate.outputs.run == 'true'
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
 {%- if 'ts' in stacks %}
           package_json_file: {{ '' if ts_dir == '.' else ts_dir ~ '/' }}package.json
@@ -227,7 +227,7 @@ jobs:
         run: '"$GITHUB_WORKSPACE/.github/scripts/cloudflare-gate.sh" Preview'
 
       - if: steps.gate.outputs.run == 'true'
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
 {%- if 'ts' in stacks %}
           package_json_file: {{ '' if ts_dir == '.' else ts_dir ~ '/' }}package.json

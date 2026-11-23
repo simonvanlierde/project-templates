@@ -346,7 +346,7 @@ jobs:
           test -n "$pnpm" && test -n "$node"
           { echo "pnpm=$pnpm"; echo "node=$node"; } >> "$GITHUB_OUTPUT"
 
-      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           version: ${{ steps.site-v.outputs.pnpm }}
           runtime: node@${{ steps.site-v.outputs.node }}
@@ -687,7 +687,7 @@ jobs:
           { echo "pnpm=$pnpm"; echo "node=$node"; } >> "$GITHUB_OUTPUT"
 
       - &pnpm-setup
-        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           version: ${{ steps.v.outputs.pnpm }}
           runtime: node@${{ steps.v.outputs.node }}
@@ -852,7 +852,7 @@ jobs:
           toolchain: stable
           components: clippy, rustfmt
 
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-nextest,cargo-deny${{ contains(matrix.answers.extras, 'mutation') && ',cargo-mutants' || '' }}${{ matrix.answers.rust_kind == 'library' && ',cargo-semver-checks' || '' }}
           fallback: none
