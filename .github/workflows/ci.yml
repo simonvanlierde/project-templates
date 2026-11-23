@@ -22,21 +22,21 @@ env:
   # The identity answers copier.yml leaves blank, for every render below.
   COPIER_SETTINGS_PATH: ${{ github.workspace }}/.github/ci-copier-settings.yml
   # renovate: datasource=github-releases depName=j178/prek
-  PREK_VERSION: 0.5.7
+  PREK_VERSION: 0.5.10
   # renovate: datasource=pypi depName=copier
   COPIER_VERSION: 9.19.1
   # renovate: datasource=pypi depName=zizmor
-  ZIZMOR_VERSION: 1.31.1
+  ZIZMOR_VERSION: 1.32.0
   # renovate: datasource=github-releases depName=jdx/jactionlint
-  JACTIONLINT_VERSION: 2.3.0
+  JACTIONLINT_VERSION: 2.6.0
   # renovate: datasource=pypi depName=check-jsonschema
   CHECK_JSONSCHEMA_VERSION: 0.39.0
   # renovate: datasource=pypi depName=rust-just
   JUST_VERSION: 1.59.0
   # renovate: datasource=npm depName=renovate
-  RENOVATEBOT_VERSION: 44.190.2
+  RENOVATEBOT_VERSION: 44.240.0
   # renovate: datasource=npm depName=@playwright/test
-  PLAYWRIGHT_VERSION: 1.64.1
+  PLAYWRIGHT_VERSION: 1.65.1
   # renovate: datasource=npm depName=@axe-core/playwright
   AXE_PLAYWRIGHT_VERSION: 4.14.0
   # As in docs.yml: uv checks every package against OSV's malware advisories before its code runs.

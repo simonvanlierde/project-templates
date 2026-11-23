@@ -17,9 +17,9 @@ license-files = ["LICENSE"]
 {%- endif %}
 {%- if python_kind == 'web-service' %}
 dependencies = [
-  "fastapi>=0.162.0",
+  "fastapi>=0.163.1",
   "opentelemetry-distro>=0.65b0",
-  "opentelemetry-exporter-otlp-proto-http>=1.45.1",
+  "opentelemetry-exporter-otlp-proto-http>=1.45.2",
   "opentelemetry-instrumentation-fastapi>=0.65b0",
   # FastAPI allows older Starlette; 1.2.0 is the first whose TestClient takes httpx2.
   "starlette>=1.10.0",
@@ -72,19 +72,19 @@ Changelog = "https://github.com/{{ github_user }}/{{ slug }}/blob/main/CHANGELOG
 dev = [
   "pytest>=9.2.0",
 {%- if codspeed %}
-  "pytest-codspeed>=5.0.3",
+  "pytest-codspeed>=5.0.4",
 {%- endif %}
   "pytest-cov>=7.1.0",
-  "ruff>=0.17.3",
-  "ty>=0.0.93",
+  "ruff>=0.17.5",
+  "ty>=0.0.104",
 {%- if python_kind == 'research' %}
-  "jupyterlab>=4.6.4",
+  "jupyterlab>=4.6.6",
 {%- endif %}
 {%- if python_kind == 'web-service' %}
   "httpx2>=2.16.0", # fastapi.testclient
 {%- endif %}
 {%- if python_kind == 'library' and 'property' in test_extras %}
-  "hypothesis>=6.170.13",
+  "hypothesis>=6.170.15",
 {%- endif %}
 {%- if python_kind == 'library' and 'mutation' in test_extras %}
   "mutmut>=3.8.1",

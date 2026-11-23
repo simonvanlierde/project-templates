@@ -44,7 +44,7 @@ repos:
 
   # Commit messages follow committed.toml, as in a generated project.
   - repo: https://github.com/crate-ci/committed
-    rev: faeed42f2e10c244533a01525f13c4d8b6ce383f # frozen: v1.1.11
+    rev: 02af07ed1d11ad69a96ab75f08c9831a4e2c00da # frozen: v1.1.12
     hooks:
       - id: committed
         # git writes a merge commit's message itself, so skip the check during a merge.
@@ -52,7 +52,7 @@ repos:
 
   # Every file has a copyright and license, from REUSE.toml or its own header.
   - repo: https://github.com/fsfe/reuse-tool
-    rev: a1bb792acda6fd0724936b4ebbdbc8eceb9c0459 # frozen: v6.2.0
+    rev: ea739bff9c6daa1c4c8a5c5dfd069f3fb0374728 # frozen: v6.3.0
     hooks:
       - id: reuse
 
@@ -68,7 +68,7 @@ repos:
 
   # Also parses renovate.json5, which check-json cannot.
   - repo: https://github.com/simonvanlierde/jsonvet
-    rev: 022d320d5b971eccb28cfa6ce205152cbb382e53 # frozen: v3.2.0
+    rev: b56355ba1b7dd807944177a126592f8cb2cd3255 # frozen: v3.5.1
     hooks:
       - id: jsonvet
 
@@ -103,32 +103,32 @@ repos:
 
   # Successor to gitleaks, which now gets security fixes only.
   - repo: https://github.com/betterleaks/betterleaks
-    rev: 81aff7a638638aae3a659845d089043e1d8fe9ac # frozen: v1.9.0
+    rev: 39d5bdcf34db54e944facac5cf6e8b03db5e2b99 # frozen: v1.10.1
     hooks:
       - id: betterleaks
 
   # Sees only ci.yml: .jinja workflows are not YAML. CI audits the
   # rendered output.
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: c92afdf2c6ca336aaa8f39e2bd8d48f62dbd8e1f # frozen: v1.31.1
+    rev: 06a39750ec31860bb44f2acf67182c40016cd1e7 # frozen: v1.32.0
     hooks:
       - id: zizmor
 
   - repo: https://github.com/jdx/jactionlint
-    rev: a65ab044e916760429068fe5794b8306abdfcbb9 # frozen: v2.3.0
+    rev: 72c00452809bcca05b8bc12acdcf15dd7a9c1c5e # frozen: v2.6.0
     hooks:
       - id: jactionlint
 
   # Uses the template's config, like yamllint.
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: eaeb8abc646954face3eb41726f085385410f761 # frozen: v0.3.1
+    rev: df5a947a3af0dba56640e644c6b9316184749168 # frozen: v0.3.4
     hooks:
       - id: rumdl
         args: [--fix, --config, template/.rumdl.toml]
 
   # The citation files and package manifests must agree (CITATION.cff is the source).
   - repo: https://github.com/simonvanlierde/citesync
-    rev: a3c5a9794449e78a33583e456af41bb24ebd240e # frozen: v0.1.0
+    rev: ba91852652f14682078fc0d93d7123ad5131d289 # frozen: v0.6.0
     hooks:
       - id: citesync
         additional_dependencies: [packaging==26.3, ruamel-yaml==0.19.1, tomlkit==0.15.2]
@@ -143,7 +143,7 @@ repos:
   # Misspelt words in code, comments and docs. It fixes the ones it is sure of and
   # fails, so you review the fix. List a word it must leave alone in _typos.toml.
   - repo: https://github.com/crate-ci/typos
-    rev: 7f9d0819ca1c008ade73f4b41fa9d258d48f605b # frozen: v1.51.1
+    rev: 276087d9a4f06398b3e04825487805e2d7375888 # frozen: v1.52.2
     hooks:
       - id: typos
         # typos reads ruff's copyright rule code in the Python template's pyproject as a
