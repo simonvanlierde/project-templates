@@ -10,18 +10,33 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-26
+
 ### Added
 
-- Every site the template publishes (plain and Astro pages, the Starlight and Zensical docs sites, the web app) ships a `robots.txt` that allows search and answer bots, disallows AI training crawlers, sets `Content-Signal: search=yes, ai-input=yes, ai-train=no` and names the sitemap where the site has one. `levels.toml` gains the matching `robots-ai-crawlers` requirement at the standard level.
+- Every site the template publishes (plain and Astro pages, the Starlight and Zensical docs sites, the web app) ships a `robots.txt` that allows search and answer bots, disallows AI training crawlers, sets `Content-Signal: search=yes, ai-input=yes, ai-train=no` and names the sitemap where the site has one. On a GitHub Pages project site or an app under a path, the host owner must merge these rules into the origin's `/robots.txt`; the file under the project path does not control crawlers. See [Crawler policy](docs/hosting.md#crawler-policy). `levels.toml` gains the matching `robots-ai-crawlers` requirement at the standard level.
 - Pull request previews post their link as one comment on the pull request, edited in place on each push, so it no longer hides in the job log. A repo with a web app and a site gets one comment for each. A separate job posts it, the only one with `pull-requests: write`, so the write token never shares a runner with the deploy's code. It posts only a workers.dev address.
 - New web projects (the web app, and a site) get a `docs/interface.md` stub with a URL-parameter table and a data-endpoint table (path, format, schema, licence, CORS), linked from the README; an existing project's README is its own, so add the link by hand. `levels.toml` gains `interface-doc` (standard, review).
 - A `public_data` question (under `customise`, for a web app or a plain site on a Worker) adds `/data/*`, under the app's path if it has one, with `Access-Control-Allow-Origin: *` and `Access-Control-Expose-Headers: Content-Range, ETag` to the rendered `_headers`, which is now a template. An existing project is not asked: run `copier update --data public_data=true`, and keep both sides of the `_headers` conflict if the project edited that file. `levels.toml` gains `web-data-cors` (standard, automated): each data URL that `docs/interface.md` lists answers with `Access-Control-Allow-Origin`.
-- The Rust binary starter takes `[--json] [--] [NAME]` and prints one JSON object on every exit, a usage error (exit 2) included. It ships `output.schema.json` and `tests/cli.rs`, which runs the binary and validates the output against the schema (dependency `serde_json`, dev-dependency `jsonschema`). `-h`/`--help` lists the exit codes, a non-UTF-8 argument is a usage error, and a failed write to stdout exits 3. The new files are samples the project owns: `copier update` does not bring them to a project with its own `main.rs`, but it adds the two dependencies, and says to remove them. `levels.toml` gains `cli-output-schema` (community, review).
+- The Rust binary starter takes `[--json] [--] [NAME]` and prints greetings and usage errors (exit 2) as one JSON object with `--json`. Help and version stay plain text. It ships `output.schema.json` and `tests/cli.rs`, which runs the binary and validates the output against the schema (dependency `serde_json`, dev-dependency `jsonschema`). `-h`/`--help` lists the exit codes, a non-UTF-8 argument is a usage error, and a failed write to stdout exits 3. The new files are samples the project owns: `copier update` does not bring them to a project with its own `main.rs`, but it adds the two dependencies, and says to remove them. `levels.toml` gains `cli-output-schema` (community, review).
 - A Zensical docs site no longer shows "Made with Zensical" in its footer. The footer shows the author, the licence when there is one, a GitHub link and, for a package on PyPI, a PyPI link. Pages get an edit link, code blocks a copy button, and the header a system, light and dark theme toggle. Links take the docs accent from `docs-tokens.css` instead of the theme's primary colour. An existing project keeps its own `zensical.toml`: copy the new settings from a fresh render ([Documentation site](docs/usage.md#documentation-site)).
+- Python packages publishing to PyPI can attach extra files to the GitHub release with `python_release_asset_dirs`. The workflow checks their build digest, attests them and verifies their provenance before publication. See [Publishing](docs/setup.md#publishing).
+- Docker images record the build commit in their OCI revision label and report it at startup. Python web services report it at `/version`. Web apps and plain and Astro sites expose `version.txt` and show the revision in the starter footer. Local builds include a dirty marker.
+- Rust binary releases unpack the archives to check the executable and any project-owned JSON schema. They verify the archive attestations before publishing to crates.io.
+
+### Changed
+
+- **Breaking:** The Python license check is `scripts/check_licenses.py`, which replaces licensecheck and takes the allow-list the other stacks use. It also checks the dependencies of every extra and uv workspace member, evaluates SPDX expressions (`A OR B` needs one side allowed, `A AND B` both), accepts Zlib, Unicode-3.0 and MIT-CMU (Pillow's license, which every stack now takes), and refuses LGPL in a permissive project and LGPL-2.1-only in every project. A package that `just py-check` now reports as `NOT ALLOWED` has a license the project cannot take, or metadata that names none: for the second, record its SPDX expression under `KNOWN` in the script. The check no longer looks at dependencies that only another platform installs.
+- **Breaking:** Zensical docs build from `docs-site/uv.lock`, including transitive dependencies. Run `just docs-sync` and commit the lockfile when updating an existing Zensical project. If your uv workspace includes `docs-site`, [exclude it first](docs/usage.md#documentation-site).
+- The weekly Copier workflow publishes its update through `.github/scripts/publish-copier-update.sh`. Tests can call the script directly. The workflow uses the copy from the checkout it started with.
 
 ### Fixed
 
+- Weekly Copier updates leave an existing update branch alone when its commits cannot be checked or the branch changes during the run. Without the update App, the updater detects workflow edits even in large updates, asks for a local update and leaves older update PRs open. For PRs the updater can open without the App, select **Approve workflows to run**.
+- Rust binary release archives include `output.schema.json` when the project has one, so consumers can validate the JSON output.
 - The cold-install workflow no longer runs `just data-release` from the README, which needs `just pipeline`'s output and so failed every citable data-pipeline repo whose README changed.
+- `just repo-about` uses the URL in `zensical.toml` when Zensical docs are the project's main site. If the URL is absent, the recipe updates the description and topics and keeps the existing homepage. The social-card and Pages setup comments reflect what the recipes run.
+- Python release SBOMs include runtime dependencies and extras. Dependency groups stay out of the export, and the workflow rejects an empty SBOM when the package has runtime dependencies.
 
 ## [0.16.1] - 2026-11-17
 
@@ -1042,7 +1057,8 @@ Upgrade steps:
 - Dependabot with a one-week cooldown.
 - Coverage recipes for Python and TypeScript.
 
-[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.16.1...HEAD
+[Unreleased]: https://github.com/simonvanlierde/project-templates/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/simonvanlierde/project-templates/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/simonvanlierde/project-templates/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/simonvanlierde/project-templates/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/simonvanlierde/project-templates/compare/v0.14.0...v0.15.0

@@ -1,0 +1,16 @@
+[project]
+name = "docs-site"
+version = "0.0.0"
+requires-python = "~=3.14.0"
+
+[dependency-groups]
+docs = [
+    "zensical=={{ zensical_version }}",
+{%- if docs_api %}
+    "mkdocstrings-python=={{ mkdocstrings_python_version }}",
+{%- endif %}
+]
+
+[tool.uv]
+package = false
+exclude-newer = "1 week"

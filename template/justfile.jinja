@@ -72,6 +72,11 @@ site:
 {%- if site == 'plain' %}
     rm -rf {{ site_out }}
     cp -R site {{ site_out }}
+    git ls-files --error-unmatch -- justfile >/dev/null 2>&1 && git describe --tags --always --dirty > {{ site_out }}/version.txt 2>/dev/null || echo unknown > {{ site_out }}/version.txt
+    if [ -f {{ site_out }}/index.html ]; then \
+      awk 'FNR == NR { revision = $0; gsub(/&/, "\\&amp;", revision); gsub(/</, "\\&lt;", revision); gsub(/>/, "\\&gt;", revision); next } /^[[:blank:]]*<p>Revision: unknown<\/p>$/ { $0 = "  <p>Revision: " revision "</p>" } 1' {{ site_out }}/version.txt {{ site_out }}/index.html > {{ site_out }}/index.stamped && \
+      mv {{ site_out }}/index.stamped {{ site_out }}/index.html; \
+    fi
 {%- if site_on_workers and worker %}
     # The Worker script is code, not a page to serve.
     rm -rf {{ site_out }}/worker
@@ -110,7 +115,10 @@ site-serve:
 {#- Link previews are cached by image URL, so each render puts the PNG's hash into the og:image URL of the page that names it. #}
 {%- macro stamp(png, page) %}sed -E -i.bak "s/og\.png(\?v=[0-9a-f]+)?\"/og.png?v=$(shasum -a 256 {{ png }} | cut -c1-8)\"/" {{ page }} && rm {{ page }}.bak{% endmacro %}
 
-# Needs Chromium: `{{ pw }} install chromium`. Check the result at 300 px wide and cropped to the centre square (docs/hosting.md#social-card).
+{%- if web_app %}
+# Install Chromium once with `{{ pw }} install chromium`.
+{%- endif %}
+# Check the card at 300 px wide and cropped to the centre square.
 
 # Render docs/og-card.html to the 1200x630 social card image, in each place the page serves it from.
 og-card:
@@ -134,9 +142,15 @@ og-card:
 {%- endif %}
 {%- endif %}
 {%- if docs_zensical %}
-{%- set zensical = 'uvx --exclude-newer "1 week"' ~ (' --with mkdocstrings-python==' ~ mkdocstrings_python_version if docs_api else '') ~ ' zensical@' ~ zensical_version %}
+{%- set zensical = 'uv run --project docs-site --locked --only-group docs zensical' %}
 
-# Build docs/ into _docs/, which docs.yml deploys. --strict fails on any warning, such as a broken link.
+# Write docs-site/uv.lock. Commit it so local builds and CI use the same dependencies.
+docs-sync:
+    root=$(uv workspace dir --project docs-site) && docs=$(uv workspace dir --project docs-site --package docs-site) && \
+        { [ "$root" = "$docs" ] || { echo 'Exclude docs-site in [tool.uv.workspace] in the root pyproject.toml before running just docs-sync.' >&2; exit 1; }; }
+    uv lock --project docs-site
+
+# Build docs/ into _docs/. --strict fails on any warning, such as a broken link.
 docs:
     {{ zensical }} build --strict
 
@@ -362,7 +376,7 @@ repo-settings:
 {%- endif %}
 {%- set site_on_pages = site != 'none' and not site_on_workers %}
 {%- if site_on_pages or docs_site %}
-    # {{ 'site.yml' if site_on_pages else 'docs.yml' }} deploys to GitHub Pages from the workflow, not from a branch. GitHub answers
+    # Configure GitHub Pages to deploy from Actions. GitHub answers
     # 409 when Pages is already on, and then the PUT switches its source instead. A 403 or
     # 422 means this repo cannot have Pages, such as a private repo on the free plan.
     if gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow >"$err" 2>&1; then
@@ -397,15 +411,24 @@ repo-settings:
 {%- endif %}
 
 {%- set homepage = site_url if web_app or site_on_workers else (site_address if site != 'none' else ('https://' ~ github_user | lower ~ '.github.io/' ~ slug ~ '/' if docs_site else '')) %}
-# Set the GitHub About box from your answers: description{% if homepage %}, homepage{% endif %} and a topic per stack. Adds topics, never removes yours. Safe to rerun.
+{%- set zensical_homepage = docs_zensical and not web_app and site == 'none' %}
+# Set the GitHub About description and topics from your answers{% if zensical_homepage %} and the homepage from zensical.toml{% elif homepage %}, including the homepage{% endif %}. Keeps existing topics.
 repo-about:
+{%- if zensical_homepage %}
+    homepage=$(uv run --project docs-site --no-sync python -I -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("zensical.toml").read_text(encoding="utf-8"))["project"].get("site_url", ""))') && \
+        { set --; if [ -n "$homepage" ]; then set -- --homepage "$homepage"; fi; \
+          set -- "$@"
+{%- else %}
     gh repo edit
-{%- if project_description %} --description {{ "'" ~ project_description | replace("'", "'\\''") | replace("{{", "{{{{") ~ "'" }}
-{%- endif %}
 {%- if homepage %} --homepage '{{ homepage }}'
+{%- endif %}
+{%- endif %}
+{%- if project_description %} --description {{ "'" ~ project_description | replace("'", "'\\''") | replace("{{", "{{{{") ~ "'" }}
 {%- endif %}
 {%- for t in [('python' in stacks, 'python'), ('ts' in stacks, 'typescript'), ('rust' in stacks, 'rust'), ('go' in stacks, 'go'), ('docker' in stacks, 'docker')] if t[0] %} --add-topic {{ t[1] }}
 {%- endfor %}
+{%- if zensical_homepage %}; [ "$#" -eq 0 ] || gh repo edit "$@"; }
+{%- endif %}
 
 # A repo's own recipes that copier updates never touch. A `local-check` recipe there runs
 # at the end of `just check`.

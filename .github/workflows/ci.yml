@@ -183,7 +183,7 @@ jobs:
               project_name: ci-web
               stacks: [python, docker]
               python_kind: web-service
-              # Has runtime dependencies, so `just py-check` runs the `--license AGPL` variant.
+              # Has runtime dependencies, so `just py-check` reads real package metadata.
               license: AGPL-3.0-or-later
     steps:
       - *checkout

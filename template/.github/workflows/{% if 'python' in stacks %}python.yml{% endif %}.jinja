@@ -71,15 +71,10 @@ jobs:
       # experimental in uv, hence the preview flag.
       - run: uv audit --locked --preview-features audit-command
 {%- if license != 'none' %}
-      # Lists the license of each locked package that ships (no dependency groups), read
-      # from the installed metadata, and fails on one licensecheck's compatibility table
-      # says the license in pyproject.toml cannot take. With no runtime dependencies there
-      # is nothing to check, and licensecheck --zero would fail on the empty list.
-{%- if license == 'AGPL-3.0-or-later' %}
-      # licensecheck reads AGPL-3.0-or-later as the GPL: --license names it.
-{%- endif %}
-      - run: uv export --locked --no-default-groups --no-hashes --no-annotate --no-header --no-emit-project -q -o "$RUNNER_TEMP/requirements.txt"
-      - run: test ! -s "$RUNNER_TEMP/requirements.txt" || uv run --locked --with licensecheck=={{ licensecheck_version }} licensecheck{% if license == 'AGPL-3.0-or-later' %} --license AGPL{% endif %} -r "$RUNNER_TEMP/requirements.txt" --zero
+      # Lists the license of each locked package that ships (every extra and workspace
+      # member, no dependency groups), read from the metadata installed in a throwaway environment, and fails on
+      # one {{ license }} cannot take. The allow-list is in scripts/check_licenses.py.
+      - run: uv run --locked --isolated --no-default-groups --all-extras --all-packages python scripts/check_licenses.py
 {%- endif %}
 
       - run: uv run ruff check --output-format=github

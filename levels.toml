@@ -16,7 +16,7 @@
 # be checked mechanically from the repo or its settings; review: a person has to judge it),
 # since (a date).
 
-version = "0.16.1"
+version = "0.17.0"
 
 # --- minimal: any public repo ---------------------------------------------------------
 
@@ -233,7 +233,7 @@ since = 2026-11-11
 area = "web-presence"
 level = "standard"
 traits = ["web"]
-text = "The site serves a `robots.txt` that names its sitemap where it has one, allows search and answer bots, disallows AI training crawlers and sets `Content-Signal: search=yes, ai-input=yes, ai-train=no`."
+text = "The origin serves `/robots.txt` with rules for the site that name its sitemap where it has one, allow search and answer bots, disallow AI training crawlers and set `Content-Signal: search=yes, ai-input=yes, ai-train=no`."
 source = "RFC 9309; Content Signals Policy (Cloudflare, 2025-09-24)"
 verify = "automated"
 since = 2026-11-19

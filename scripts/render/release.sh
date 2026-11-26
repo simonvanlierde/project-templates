@@ -268,6 +268,91 @@ grep -qF 'pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }
 # shellcheck disable=SC2016 # literal workflow text, not shell expansions
 grep -qF 'tar -czf "dist/$name-$TARGET.tar.gz"' cb/.github/workflows/rust-release.yml
 grep -qF 'crates-bin-aarch64-apple-darwin.tar.gz' cb/.github/workflows/rust-release.yml
+# Exercise the rendered archive and smoke steps with and without a project-owned schema.
+uv run --no-project --with pyyaml python - cb/.github/workflows/rust-release.yml <<'PYTEST'
+import os, pathlib, subprocess, sys, tarfile, tempfile, yaml, zipfile
+workflow = yaml.safe_load(pathlib.Path(sys.argv[1]).read_text())
+steps = workflow["jobs"]["binaries"]["steps"]
+commands = {s.get("name"): s["run"] for s in steps if "run" in s}
+assert next(i for i, s in enumerate(steps) if s.get("name") == "smoke-test the Rust archive") < next(
+    i for i, s in enumerate(steps) if "actions/upload-artifact@" in s.get("uses", "")
+)
+for target in ("x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"):
+    for with_schema in (False, True):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            tools = root / "tools"
+            tools.mkdir()
+            (tools / "cargo").write_text("#!/bin/sh\nexit 0\n")
+            # The Windows runner supplies 7z. Use the real ZIP format in this fixture.
+            (tools / "7z").write_text("#!" + sys.executable + "\n"
+                "import sys, zipfile\n"
+                "if sys.argv[1] == 'a':\n"
+                " with zipfile.ZipFile(sys.argv[3], 'w') as z:\n"
+                "  for name in sys.argv[4:]: z.write(name)\n"
+                "else:\n"
+                " assert sys.argv[1] == 'x'\n"
+                " with zipfile.ZipFile(sys.argv[2]) as z: z.extractall()\n")
+            for tool in tools.iterdir():
+                tool.chmod(0o755)
+            binary = "crates-bin.exe" if "windows" in target else "crates-bin"
+            built = root / "target" / target / "release"
+            built.mkdir(parents=True)
+            (built / binary).write_text("sample executable")
+            (built / binary).chmod(0o755)
+            if with_schema:
+                (root / "output.schema.json").write_text('{"type":"object"}')
+            env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"], TARGET=target)
+            subprocess.run(["bash", "-c", commands["build and archive"]], cwd=root, env=env, check=True)
+            archive = next((root / "dist").iterdir())
+            if "windows" in target:
+                with zipfile.ZipFile(archive) as z:
+                    names = set(z.namelist())
+            else:
+                with tarfile.open(archive) as tar:
+                    names = set(tar.getnames())
+            assert names == ({binary, "output.schema.json"} if with_schema else {binary}), names
+            smoke = ["bash", "-c", commands["smoke-test the Rust archive"]]
+            subprocess.run(smoke, cwd=root, env=env, check=True)
+            if with_schema:
+                if "windows" in target:
+                    with zipfile.ZipFile(archive, "w") as z:
+                        z.write(built / binary, binary)
+                else:
+                    with tarfile.open(archive, "w:gz") as tar:
+                        tar.add(built / binary, arcname=binary)
+                bad = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True)
+                assert bad.returncode and "output.schema.json" in bad.stdout, bad
+
+# Exercise the verification step before the registry upload.
+steps = workflow["jobs"]["publish"]["steps"]
+attest = next(i for i, s in enumerate(steps) if s.get("id") == "attest")
+verify = next(i for i, s in enumerate(steps) if s.get("name") == "verify binary attestations before publishing")
+publish = next(i for i, s in enumerate(steps) if s.get("name") == "publish to crates.io")
+assert attest < verify < publish
+assert steps[verify]["env"]["BUNDLE"] == "${{ steps.attest.outputs.bundle-path }}"
+with tempfile.TemporaryDirectory() as tmp:
+    root = pathlib.Path(tmp)
+    (root / "dist").mkdir()
+    artifact = root / "dist/crates-bin-x86_64-unknown-linux-gnu.tar.gz"
+    artifact.write_bytes(b"original bytes")
+    bundle = root / "bundle.json"
+    bundle.write_bytes(artifact.read_bytes())
+    gh = root / "gh"
+    gh.write_text("""#!/bin/bash
+set -eu
+test "$#" -eq 9
+test "$1 $2 $4 $5 $6 $8 $9" = 'attestation verify --repo example-org/crates-bin --bundle --signer-workflow example-org/crates-bin/.github/workflows/rust-release.yml'
+cmp -s "$3" "$7" || { echo 'artifact does not match bundle' >&2; exit 1; }
+""")
+    gh.chmod(0o755)
+    env = dict(PATH=str(root) + os.pathsep + os.environ["PATH"], GH_REPO="example-org/crates-bin", BUNDLE=str(bundle))
+    smoke = ["bash", "-c", steps[verify]["run"]]
+    subprocess.run(smoke, cwd=root, env=env, check=True)
+    artifact.write_bytes(b"changed bytes")
+    bad = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True)
+    assert bad.returncode and "artifact does not match bundle" in bad.stderr, bad
+PYTEST
 (lacks -q '^publish = false' cb/Cargo.toml)
 grep -q 'name=crates-bin' cb/.github/workflows/rust-release.yml
 grep -q 'actions/attest@' cb/.github/workflows/rust-release.yml

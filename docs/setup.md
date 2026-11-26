@@ -57,7 +57,7 @@ Execute `just repo-settings` once after creating the repository and again whenev
 `just repo-about` syncs repository metadata with `gh repo edit`:
 
 - Updates repository description from `project_description`.
-- Sets the homepage: `site_url` for a web app or a site on a Worker, else the GitHub Pages address of the site or the documentation site.
+- Sets the homepage from `site_url` for a web app or a site on a Worker, or from the site's GitHub Pages address. When Zensical is the main site, it reads `[project].site_url` from `zensical.toml` and keeps the existing homepage if that setting is absent.
 - Adds stack topics (`python`, `typescript`, `rust`, `go`, `docker`). Existing manual topics are preserved.
 
 ## Publishing
@@ -68,7 +68,23 @@ To publish a release:
 2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits. In a web app it also sets the version in `package.json` itself and commits both files.
 3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it against `.github/allowed_signers` on `origin/main` and pushes it. A web app's run first refuses a `package.json` on `origin/main` at another version, and the release workflow refuses such a tag again before it publishes. See [Signed release tags](#signed-release-tags) for the key it needs.
 
-With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. With `publish_to_crates`, `rust-release.yml` publishes to crates.io and creates the GitHub release itself, so it cannot run beside `python-release.yml`: Copier refuses both answers together. A Rust binary also gets archives for four targets, named as `cargo binstall` looks them up, with build provenance attestations that the release job verifies before it uploads. With `publish_to_npm` alone, `ts-release.yml` creates the GitHub release after the npm publish. With npm and either PyPI or crates.io, the PyPI or crates.io workflow makes the release. A project with none of the three uses `release.yml`.
+With `publish_to_pypi`, `python-release.yml` publishes to PyPI and attaches distributions and Sigstore provenance to the GitHub release. With `publish_to_crates`, `rust-release.yml` publishes to crates.io and creates the GitHub release itself, so it cannot run beside `python-release.yml`: Copier refuses both answers together. A Rust binary also gets archives for four targets in the format `cargo binstall` expects. The workflow extracts each archive and compares the executable and any `output.schema.json` with the build files. It verifies the attestations before publishing to crates.io and again before uploading the GitHub release assets. With `publish_to_npm` alone, `ts-release.yml` creates the GitHub release after the npm publish. With npm and either PyPI or crates.io, the PyPI or crates.io workflow makes the release. A project with none of the three uses `release.yml`.
+
+For extra GitHub release files from a Python package, set `python_release_asset_dirs`
+to a list of directories relative to the package, for example `[export, metadata/generated]`.
+If the files need to be built, add `.github/scripts/build-release-assets.sh` at the repo root.
+The build job runs it from the package directory. Each listed directory must contain
+regular files under 2 GiB whose names are unique across the release, ignoring case.
+Start filenames with a letter, digit or underscore, using only those characters, dots and
+hyphens. Limit each name to 242 bytes so its attestation bundle name fits. The workflow
+reserves the source distribution's filename plus `.sbom` for its SBOM attestation.
+The build allows up to 499 files, including distributions and the SBOM, to leave room for
+their attestations. The workflow verifies the provenance before attaching the files and
+bundles to the GitHub release.
+
+The Python build checks the CycloneDX SBOM before publishing. It includes optional extras
+and excludes dependency groups. Its component list may be empty when the lockfile export
+has no runtime dependencies.
 
 If a publishing job fails before any artifacts upload to the registry, re-run the failed CI job on the existing tag. PyPI uploads stay strict: an existing filename fails the job, so inspect the registry for a partial upload first. If any release artifact is already published, keep the git tag and publish a new patch release. This includes a failure in `docker.yml`'s attestation step after the image push. GitHub Actions can re-run a job, but not an individual step; re-running this job rebuilds the image and repoints the semver tags.
 

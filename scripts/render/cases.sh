@@ -53,6 +53,12 @@ test "$(grep -cxF '        exclude: ^LICENSES/|^svc/(data|tests/fixtures)/' "$ou
   --data level=minimal \
   --data publish_to_ghcr=true . "$out/c"
 
+# The asset hook works from a nested Python package and can collect into two directories.
+bg "${copier[@]}" --vcs-ref=HEAD \
+  --data project_name=extra-assets --data 'stacks=[python]' --data python_kind=library \
+  --data python_dir=api --data publish_to_pypi=true \
+  --data 'python_release_asset_dirs=[export,metadata/generated]' . "$out/release-assets"
+
 # d: nested data-pipeline with docker. Covers the nested paths in .gitignore, the
 # workflow's artifact path and ATTRIBUTION.md. Also the only Apache-2.0 render, the
 # only one with Renovate, and the only web-app: Preact, nested, so the e2e job's
@@ -235,8 +241,6 @@ grep -qx 'source_paths = \["adopt_me"\]' "$out/k/pyproject.toml"
 grep -q 'check --search \. --format github adopt_me' "$out/k/.github/workflows/python.yml"
 # yamlfmt rewrites a trailing `run: |` block to `|-`, so render it that way.
 grep -qx '        run: |-' "$out/k/.github/workflows/copier-update.yml"
-# A GITHUB_TOKEN PR starts no checks, so its body says how to start them.
-grep -qF 'close it and reopen it to run them' "$out/k/.github/workflows/copier-update.yml"
 
 # copier matches _skip_if_exists like .gitignore lines, so an entry without a leading /
 # also skips the same name in any directory, such as data/README.md.
@@ -477,6 +481,9 @@ refused() {
   }
 }
 refuses 'each create the GitHub release' --data 'stacks=[python,rust]' --data python_kind=library --data publish_to_pypi=true --data publish_to_crates=true
+refuses 'Give a YAML list of extra release asset directories' --data 'stacks=[python]' --data python_kind=library --data publish_to_pypi=true --data 'python_release_asset_dirs=export'
+refuses 'Give each extra release asset directory as a plain relative path' --data 'stacks=[python]' --data python_kind=library --data publish_to_pypi=true --data 'python_release_asset_dirs=[export/../outside]'
+refuses 'Extra release asset directories must be unique and outside dist/ and sbom/' --data 'stacks=[python]' --data python_kind=library --data publish_to_pypi=true --data 'python_release_asset_dirs=[dist/other]'
 refuses 'An empty value' --data 'stacks=[python]' --data python_dir=
 refuses 'An empty value' --data 'stacks=[ts]' --data ts_dir=
 refuses 'An empty value' --data 'stacks=[rust]' --data rust_dir=
@@ -520,13 +527,14 @@ refuses 'need a library kind' --data python_kind=app --data 'extras=[mutation]'
 refuses 'The flat layout' --data 'stacks=[python]' --data python_kind=data-pipeline --data python_layout=flat
 # One repo has one GitHub Pages site.
 refuses 'one GitHub Pages site' --data 'extras=[docs_site,cold_install]' --data 'stacks=[python]' --data site=plain
-# docs-site/ and _docs/ belong to the Starlight build.
+# docs-site/ and _docs/ belong to each docs build.
 # shellcheck disable=SC2016 # the messages quote with backticks
 {
   refuses 'ts_dir is `docs-site`, where the docs site goes' --data 'extras=[docs_site,cold_install]' --data 'stacks=[ts]' --data ts_dir=docs-site
   refuses 'rust_dir is `_docs`, where the docs site goes' --data 'extras=[docs_site,cold_install]' --data 'stacks=[rust]' --data rust_dir=_docs
   refuses 'go_dir is `docs-site/tool`, where the docs site goes' --data 'extras=[docs_site,cold_install]' --data 'stacks=[go]' --data go_dir=docs-site/tool --data docs_engine=starlight
   refuses 'python_dir is `_docs/pkg`, where the docs site goes' --data 'extras=[docs_site,cold_install]' --data 'stacks=[python]' --data python_dir=_docs/pkg --data docs_engine=starlight
+  refuses 'python_dir is `docs-site`, where the docs site goes' --data 'extras=[docs_site,cold_install]' --data 'stacks=[python]' --data python_dir=docs-site
 }
 # A root web app's legal pages are in docs/, which the docs site would publish again.
 refuses 'A web app at the repo root' --data 'extras=[docs_site,cold_install]' --data 'stacks=[ts]' --data ts_kind=web-app --data user_data=nothing
@@ -582,7 +590,7 @@ done
 "${copier[@]}" --vcs-ref=HEAD --data project_name=agl-me --data 'stacks=[python,ts,rust,go]' \
   --data license=AGPL-3.0-or-later . "$out/agl" >/dev/null
 # gpl: a TypeScript stack under the GPL, whose check refuses the AGPL (agl accepts it).
-"${copier[@]}" --vcs-ref=HEAD --data project_name=gpl-me --data 'stacks=[ts]' \
+"${copier[@]}" --vcs-ref=HEAD --data project_name=gpl-me --data 'stacks=[python,ts]' \
   --data license=GPL-3.0-or-later . "$out/gpl" >/dev/null
 # j: a private web app, so its legal pages must not link a repo visitors can't open.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \

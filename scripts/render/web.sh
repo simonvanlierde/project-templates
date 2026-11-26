@@ -438,7 +438,7 @@ jq -e '.devDependencies | has("@vitejs/plugin-react") or has("@testing-library/r
 jq -e '.devDependencies.typescript | startswith("^6.")' sv/package.json >/dev/null
 jq -e '.devDependencies.typescript | startswith("^7.")' s/package.json >/dev/null
 jq -e '.scripts.typecheck == "svelte-check --fail-on-warnings"' sv/package.json >/dev/null
-grep -qF 'plugins: [svelte(), svelteTesting(), markdown()],' sv/vite.config.ts
+grep -qF 'plugins: [svelte(), svelteTesting(), markdown(), versionFile()],' sv/vite.config.ts
 (lacks -q '"jsx"' sv/tsconfig.json)
 grep -qF '"jsx": "react-jsx",' s/tsconfig.json
 # Biome reads only the <script> blocks, so the rules that miss the markup's names are off there.
@@ -455,9 +455,12 @@ grep -qxF '      - id: tsc' s/.pre-commit-config.yaml
 # them. Production routes the path on the host's zone in place of --domain.
 grep -qxF '  base: "/tools/path-me/",' wp/web/vite.config.ts
 grep -qxF '  build: { outDir: "dist/tools/path-me" },' wp/web/vite.config.ts
+grep -qF 'fileName: "version.txt"' wp/web/vite.config.ts
+grep -qF 'Revision: {import.meta.env.VITE_BUILD_REVISION}' wp/web/src/App.tsx
+grep -qF 'Revision: {import.meta.env.VITE_BUILD_REVISION}' sv/src/App.svelte
 # shellcheck disable=SC2016 # literal template text
 grep -qF 'copyFileSync(`dist/tools/path-me/${name}`, `dist/${name}`);' wp/web/vite.config.ts
-grep -qxF '  plugins: [markdown(), topLevelCopies()],' wp/web/vite.config.ts
+grep -qxF '  plugins: [markdown(), versionFile(), topLevelCopies()],' wp/web/vite.config.ts
 (lacks -q -e 'base:' -e topLevelCopies -e node:fs d/web/vite.config.ts s/vite.config.ts sv/vite.config.ts)
 jq -e '.scripts.budget == "node scripts/checkBundleBudget.mjs dist/tools/path-me/assets"' wp/web/package.json >/dev/null
 jq -e '.scripts.budget == "node scripts/checkBundleBudget.mjs"' d/web/package.json >/dev/null

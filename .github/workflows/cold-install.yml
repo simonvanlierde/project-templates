@@ -1,0 +1,53 @@
+name: cold install
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/cold-install.yml"
+      - ".github/ci-copier-settings.yml"
+      - "copier.yml"
+      - "includes/**"
+      - "template/**"
+  schedule:
+    - cron: "31 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cold-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      COPIER_SETTINGS_PATH: ${{ github.workspace }}/.github/ci-copier-settings.yml
+      UV_NO_CACHE: "1"
+      UV_MALWARE_CHECK: "1"
+      UV_PREVIEW_FEATURES: malware-check
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: read the scaffold's uv version
+        id: uv-version
+        run: |
+          sed -n '/^uv_version:/,/^$/s/^  default: /version=/p' copier.yml >>"$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false
+          version: ${{ steps.uv-version.outputs.version }}
+      - name: install a new scaffold without package caches
+        shell: bash
+        run: |-
+          set -euo pipefail
+          copier_version=$(sed -n '/^copier_version:/,/^$/s/^  default: //p' copier.yml)
+          uvx --exclude-newer "1 week" "copier@$copier_version" copy --defaults --vcs-ref=HEAD \
+            --data project_name=cold-smoke --data 'stacks=[python]' --data python_kind=library \
+            . "$RUNNER_TEMP/cold-smoke"
+          cd "$RUNNER_TEMP/cold-smoke"
+          uv sync --no-dev
+          uv run --no-sync python -c 'import cold_smoke'

@@ -1,8 +1,8 @@
 //! {{ project_description or project_name }}
 //!
 //! `{{ slug }} [--json] [--] [NAME]` prints a greeting; `--help` lists the exit codes. With
-//! `--json` every exit that prints, a usage error included, writes one object on stdout that
-//! `output.schema.json` describes; without it, errors go to stderr.
+//! `--json`, greetings and usage errors write one object on stdout described by
+//! `output.schema.json`. Help and version stay plain text; without JSON, errors go to stderr.
 
 use std::ffi::OsString;
 use std::io::{self, ErrorKind, Write};

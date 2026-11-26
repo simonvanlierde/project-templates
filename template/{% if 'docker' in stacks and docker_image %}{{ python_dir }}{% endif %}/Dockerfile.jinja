@@ -35,7 +35,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # ---- runtime ----------------------------------------------------------------
 FROM python:{{ python_version }}-slim-trixie AS runtime
 
+ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.source="https://github.com/{{ github_user }}/{{ slug }}" \
+      org.opencontainers.image.revision="${BUILD_REVISION}" \
       org.opencontainers.image.description={{ project_description | to_json(ensure_ascii=False) | replace('$', '\\$') }} \
 {%- if license != 'none' %}
       org.opencontainers.image.licenses="{{ license }}" \
@@ -52,6 +54,7 @@ WORKDIR /app
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 
 ENV PATH="/app/.venv/bin:$PATH" \
+    BUILD_REVISION="${BUILD_REVISION}" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 {%- if python_kind == 'web-service' %}

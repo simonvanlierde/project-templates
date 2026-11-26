@@ -77,7 +77,7 @@ Coverage is opt-in. `just py-cov` and `just ts-cov` print summaries without thre
 
 ## Documentation site
 
-With the `docs_site` extra, [Zensical or Starlight](usage.md#documentation-site) builds `docs/` into a site. Zensical runs with uvx, and mkdocstrings renders a Python library's API reference. Starlight runs with pnpm and Node, in `docs-site/`.
+With the `docs_site` extra, [Zensical or Starlight](usage.md#documentation-site) builds `docs/` into a site. Zensical runs from the uv lockfile in `docs-site/`, and mkdocstrings renders a Python library's API reference. Starlight runs with pnpm and Node in `docs-site/`.
 
 ## Docker images
 
@@ -125,7 +125,7 @@ Both `just check` and CI run dependency audits:
 - `pnpm audit --prod` for production TypeScript packages. Astro site workflows use `pnpm audit` to include build tools.
 - `cargo deny check` for Rust crates and licenses.
 - `govulncheck` for Go code paths.
-- A license check per stack, unless `license=none`: licensecheck, `pnpm run licenses`, `cargo deny list` and go-licenses. An Astro site runs the same production dependency check as TypeScript during `just site`; Astro itself is build tooling in `devDependencies`. Each checks only the dependencies that ship: Python's runtime dependencies without dependency groups, TypeScript's `--prod` packages, Rust without dev-dependencies, and the Go packages a build imports, not test-only ones. TypeScript, Rust and Go refuse an LGPL-2.1-only dependency in every project, since GPL-3.0 cannot take it; Go refuses every LGPL-2.1 dependency, because go-licenses cannot tell -only from -or-later. Python follows licensecheck's own table, which lets LGPL-2.1 in.
+- A license check per stack, unless `license=none`: `scripts/check_licenses.py`, `pnpm run licenses`, `cargo deny list` and go-licenses. An Astro site runs the same production dependency check as TypeScript during `just site`; Astro itself is build tooling in `devDependencies`. Each checks only the dependencies that ship: Python's runtime dependencies, every extra and every uv workspace member's, without dependency groups, TypeScript's `--prod` packages, Rust without dev-dependencies, and the Go packages a build imports, not test-only ones. Every stack refuses an LGPL-2.1-only dependency in every project, since GPL-3.0 cannot take it; Go refuses every LGPL-2.1 dependency, because go-licenses cannot tell -only from -or-later. The Python check reads the packages installed for the platform it runs on, so it does not see a dependency that only another platform installs. A Python package with no SPDX expression in its metadata is judged by its license classifiers; when those name no license either, record its license under `KNOWN` in `scripts/check_licenses.py`.
 - Knip for unused TypeScript files, exports, and packages.
 
 ## Release workflows

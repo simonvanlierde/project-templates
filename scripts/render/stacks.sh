@@ -155,7 +155,7 @@ grep -qF '= "${GITHUB_REF_NAME#v}"' c/.github/workflows/ts-release.yml
 grep -q -- '--draft --verify-tag' c/.github/workflows/python-release.yml
 # The SBOM lists what the extras pull in too: a package whose runtime needs are all
 # extras would otherwise ship an SBOM with no components.
-grep -qF 'uv export --locked --no-dev --all-extras --format cyclonedx1.5' c/.github/workflows/python-release.yml
+grep -qF 'uv export --locked --no-default-groups --all-extras --format cyclonedx1.5' c/.github/workflows/python-release.yml
 grep -q -- '--draft=false' c/.github/workflows/python-release.yml
 # shellcheck disable=SC2016 # literal workflow expression
 grep -qF '${{ steps.attest.outputs.bundle-path }}' c/.github/workflows/python-release.yml
@@ -211,6 +211,13 @@ grep -qx '    cargo semver-checks --baseline-rev "$tag"' r/just/rust.just
 (lacks -q semver-checks c/.github/workflows/rust.yml c/just/rust.just)
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
 grep -q 'packages: write' c/.github/workflows/docker.yml
+# Both smoke-test builds and the pushed image get the checked-out commit.
+# shellcheck disable=SC2016 # literal Actions expression in the rendered workflow
+test "$(grep -cxF '          build-args: BUILD_REVISION=${{ github.sha }}' c/.github/workflows/docker.yml)" -eq 3
+grep -qxF 'ARG BUILD_REVISION=unknown' c/api/Dockerfile
+# shellcheck disable=SC2016 # Docker expands the build argument in the runtime image
+grep -qF 'org.opencontainers.image.revision="${BUILD_REVISION}"' c/api/Dockerfile
+grep -qF 'docker compose up --build --watch' c/just/docker.just
 # docker.yml filters by path only when every build context is nested (c), not with a
 # root context (a).
 grep -qF 'paths: ["api/**", ".github/workflows/docker.yml"]' c/.github/workflows/docker.yml

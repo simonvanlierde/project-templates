@@ -86,61 +86,93 @@ done
 # fails on one the license answer cannot take. a is MIT, so the GPL family stays out of
 # the allow-list; agl is AGPL, so it goes in. The pins come from copier.yml, so a version
 # bump needs no edit here.
-lc_pin=$(sed -n '/^licensecheck_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
 gl_pin=$(sed -n '/^go_licenses_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
-# shellcheck disable=SC2016 # a literal $d for the recipe's shell
-export_args='export --locked --no-default-groups --no-hashes --no-annotate --no-header --no-emit-project -q -o "$d/requirements.txt"'
-lc="licensecheck==$lc_pin licensecheck -r \"\$d/requirements.txt\" --zero; }"
-recipe_has a/just/python.just py-check "    d=\$(mktemp -d) && trap 'rm -rf \"\$d\"' EXIT && uv $export_args && { test ! -s \"\$d/requirements.txt\" || uv run --locked --with $lc"
-recipe_has c/just/python.just py-check "    d=\$(mktemp -d) && trap 'rm -rf \"\$d\"' EXIT && uv --directory api $export_args && { test ! -s \"\$d/requirements.txt\" || uv --directory api run --locked --with $lc"
-# licensecheck reads AGPL-3.0-or-later as the GPL, which refuses AGPL dependencies.
-recipe_has agl/just/python.just py-check "    d=\$(mktemp -d) && trap 'rm -rf \"\$d\"' EXIT && uv $export_args && { test ! -s \"\$d/requirements.txt\" || uv run --locked --with licensecheck==$lc_pin licensecheck --license AGPL -r \"\$d/requirements.txt\" --zero; }"
+lc='run --locked --isolated --no-default-groups --all-extras --all-packages python scripts/check_licenses.py'
+recipe_has a/just/python.just py-check "    uv $lc"
+recipe_has c/just/python.just py-check "    uv --directory api $lc"
+# The metadata path: fake installed packages, read without the host's site-packages (-S).
+# The project and its workspace members are skipped by name; a local-path dependency is not.
+meta=$(mktemp -d)
+fake() {
+  mkdir -p "$meta/site/$1-1.0.dist-info"
+  printf 'Metadata-Version: 2.4\nName: %s\nVersion: 1.0\n%b' "$1" "$2" >"$meta/site/$1-1.0.dist-info/METADATA"
+}
+fake render-me 'License-Expression: GPL-3.0-only\n'
+fake member 'License-Expression: GPL-3.0-only\n'
+fake spdx 'License-Expression: MIT OR Apache-2.0\n'
+fake classified 'Classifier: License :: OSI Approved :: MIT License\n'
+fake texted 'License: BSD 3-Clause License\n'
+fake vendored 'License-Expression: GPL-3.0-only\n'
+printf '{"url": "file:///src/vendored", "dir_info": {}}' >"$meta/site/vendored-1.0.dist-info/direct_url.json"
+fake custom 'License: Free for non-commercial use\n'
+# A long License field continues on indented lines.
+fake prose 'License: MIT with restrictions\n'
+fake titled 'License: MIT License\n        Permission is hereby granted...\n'
+fake hidden 'License: MIT\n        Except vendored/, which is GPL-3.0-only\n'
+printf '[project]\nname = "render-me"\n' >"$meta/pyproject.toml"
+printf 'version = 1\n[manifest]\nmembers = ["member", "render-me"]\n' >"$meta/uv.lock"
+rc=0
+(cd "$meta" && PYTHONPATH=site python3 -S "$out/a/scripts/check_licenses.py") >"$meta/out" 2>&1 || rc=$?
+printf '%s\n' 'ok  classified==1.0: MIT' 'NOT ALLOWED  custom==1.0: Free for non-commercial use' \
+  'NOT ALLOWED  hidden==1.0: MIT ...' 'NOT ALLOWED  prose==1.0: MIT with restrictions' \
+  'ok  spdx==1.0: MIT OR Apache-2.0' 'ok  texted==1.0: BSD-3-Clause' 'ok  titled==1.0: MIT' \
+  'NOT ALLOWED  vendored==1.0: GPL-3.0-only' >"$meta/want"
+grep -E '^(ok|NOT ALLOWED) ' "$meta/out" | diff "$meta/want" -
+test "$rc" = 1
+grep -qF 'record it under KNOWN' "$meta/out"
+rm -rf "$meta"
+test -f c/api/scripts/check_licenses.py
 recipe_has a/just/ts.just ts-check '    pnpm run licenses'
 grep -qF '"licenses": "pnpm licenses list --prod --json | node scripts/checkLicenses.mjs"' a/package.json
 lacks -F 'GPL' a/scripts/checkLicenses.mjs a/deny.toml
 # The repo's own CI runs a copy of the MIT render's script; only its header and file name differ.
 diff <(sed 1,2d a/scripts/checkLicenses.mjs | grep -v allow-list) \
   <(sed 1,2d "$repo/scripts/check-licenses.mjs" | grep -v allow-list)
-# The TypeScript check on `pnpm licenses list --json` output: one package per license.
+# The TypeScript and Python checkers parse one SPDX grammar against one allow-list, so every
+# case runs through both. TypeScript reads `pnpm licenses list --json` output.
 licenses_pass() {
   printf '{"%s":[{"name":"p","versions":["1.0.0"]}]}' "$2" | node "$1/scripts/checkLicenses.mjs" >/dev/null 2>&1
 }
-# glob, minimatch and lru-cache are BlueOak-1.0.0, argparse is PSF-2.0 or Python-2.0.
-for l in MIT BlueOak-1.0.0 PSF-2.0 Python-2.0 BSL-1.0 MIT-0 Unlicense CDLA-Permissive-2.0 \
-  '(MIT OR Apache-2.0)' 'MIT OR GPL-3.0-only' 'Apache-2.0 WITH LLVM-exception' 'mit' \
-  '((MIT))' 'MIT AND (Apache-2.0 OR GPL-3.0-only)' 'MIT OR GPL-3.0-only AND CC-BY-4.0'; do
-  licenses_pass a "$l" || {
-    echo "checkLicenses.mjs refuses $l in an MIT project" >&2
-    exit 1
-  }
-done
-for l in GPL-3.0-only 'GPL-3.0-only AND (MIT OR Apache-2.0)' '(MIT OR GPL-3.0-only) AND CC-BY-4.0' \
-  'GPL-2.0-or-later WITH Classpath-exception-2.0' Unknown LicenseRef-Proprietary 'MIT OR' \
-  '(MIT' 'MIT)' 'MIT WITH' 'MIT WITH OR' 'MIT WITH )' 'GPL-3.0-only AND MIT OR GPL-3.0-only' ''; do
-  if licenses_pass a "$l"; then
-    echo "checkLicenses.mjs lets $l into an MIT project" >&2
+py_licenses_pass() {
+  python3 "$1/scripts/check_licenses.py" "$2" >/dev/null 2>&1
+}
+# verdict RENDER allow|refuse EXPRESSION...
+verdict() {
+  local r=$1 want=$2 l check got
+  shift 2
+  for l in "$@"; do
+    for check in licenses_pass py_licenses_pass; do
+      if "$check" "$r" "$l"; then got=allow; else got=refuse; fi
+      [ "$got" = "$want" ] || {
+        echo "$check: the $r render should $want '$l'" >&2
+        exit 1
+      }
+    done
+  done
+}
+# glob, minimatch and lru-cache are BlueOak-1.0.0, argparse is PSF-2.0 or Python-2.0, pillow MIT-CMU.
+verdict a allow MIT mit Zlib Unicode-3.0 MIT-CMU BlueOak-1.0.0 PSF-2.0 Python-2.0 BSL-1.0 MIT-0 \
+  Unlicense CDLA-Permissive-2.0 '(MIT OR Apache-2.0)' 'MIT OR GPL-3.0-only' '((MIT))' \
+  '(MIT AND BSD-3-Clause) OR Proprietary' 'MIT OR GPL-3.0-only AND ISC' \
+  'Apache-2.0 WITH LLVM-exception' 'MIT AND (Apache-2.0 OR GPL-3.0-only)' 'MIT OR GPL-3.0-only AND CC-BY-4.0'
+verdict a refuse LGPL-2.1-only LGPL-2.1-or-later LGPL-3.0-or-later GPL-3.0-only 'MIT AND GPL-3.0-only' \
+  'GPL-3.0-only AND (MIT OR Apache-2.0)' '(MIT OR GPL-3.0-only) AND GPL-3.0-only' \
+  '(MIT OR GPL-3.0-only) AND CC-BY-4.0' 'GPL-2.0-or-later WITH Classpath-exception-2.0' \
+  'GPL-3.0-only AND MIT OR GPL-3.0-only' UNKNOWN Unknown LicenseRef-Proprietary 'Public Domain' \
+  'MIT OR' 'MIT ISC' '(MIT' 'MIT)' 'MIT WITH' 'MIT WITH OR' 'MIT WITH )' ''
+verdict agl allow LGPL-2.1-or-later GPL-3.0-only AGPL-3.0-only 'GPL-3.0-only AND (MIT OR Apache-2.0)'
+verdict agl refuse LGPL-2.1-only GPL-2.0-only
+# A GPL project takes the GPL but not the AGPL, whose network clause its license lacks.
+verdict gpl allow GPL-3.0-only LGPL-2.1-or-later
+verdict gpl refuse AGPL-3.0-only LGPL-2.1-only
+# The Python checker reads operators case-sensitively, as SPDX spells them; the License
+# metadata field can hold prose.
+for l in 'MIT with restrictions' 'MIT or GPL-3.0-only'; do
+  if py_licenses_pass a "$l"; then
+    echo "check_licenses.py lets '$l' into an MIT project" >&2
     exit 1
   fi
 done
-for l in AGPL-3.0-only 'GPL-3.0-only AND (MIT OR Apache-2.0)'; do
-  licenses_pass agl "$l" || {
-    echo "checkLicenses.mjs refuses $l in an AGPL project" >&2
-    exit 1
-  }
-done
-if licenses_pass agl GPL-2.0-only; then
-  echo "checkLicenses.mjs lets GPL-2.0-only into an AGPL project" >&2
-  exit 1
-fi
-# A GPL project takes the GPL but not the AGPL, whose network clause its license lacks.
-licenses_pass gpl GPL-3.0-only || {
-  echo "checkLicenses.mjs refuses GPL-3.0-only in a GPL project" >&2
-  exit 1
-}
-if licenses_pass gpl AGPL-3.0-only; then
-  echo "checkLicenses.mjs lets AGPL-3.0-only into a GPL project" >&2
-  exit 1
-fi
 recipe_has a/just/rust.just rs-check '    cargo deny list'
 # webpki-roots (via reqwest) is CDLA-Permissive-2.0, target-lexicon Apache-2.0 WITH
 # LLVM-exception; cargo-deny wants a WITH expression listed whole.
@@ -151,12 +183,13 @@ for l in AGPL-3.0-or-later GPL-3.0-or-later GPL-3.0-only LGPL-3.0-or-later; do
   grep -qxF "  \"$l\"," agl/deny.toml
 done
 gl="go run github.com/google/go-licenses/v2@$gl_pin"
-permissive=0BSD,Apache-2.0,BlueOak-1.0.0,BSD-2-Clause,BSD-3-Clause,BSL-1.0,CC0-1.0,CDLA-Permissive-2.0,ISC,MIT,MIT-0,MPL-2.0,PSF-2.0,Python-2.0,Unicode-3.0,Unlicense,Zlib
+permissive=0BSD,Apache-2.0,BlueOak-1.0.0,BSD-2-Clause,BSD-3-Clause,BSL-1.0,CC0-1.0,CDLA-Permissive-2.0,ISC,MIT,MIT-0,MIT-CMU,MPL-2.0,PSF-2.0,Python-2.0,Unicode-3.0,Unlicense,Zlib
 recipe_has a/just/go.just go-check "    $gl check --ignore github.com/example-org/render-me --allowed_licenses=$permissive ./..."
 # go-licenses names the GPL family without -only or -or-later: AGPL-3.0, not AGPL-3.0-or-later.
 recipe_has agl/just/go.just go-check "    $gl check --ignore github.com/example-org/agl-me --allowed_licenses=$permissive,GPL-3.0,LGPL-3.0,AGPL-3.0 ./..."
 # A project without a license has nothing to be compatible with: no check.
-lacks -F licensecheck b/just/python.just
+lacks -F check_licenses b/just/python.just
+test ! -e b/svc/scripts
 test ! -e b/scripts/checkLicenses.mjs
 lacks -F go-licenses i/just/go.just
 recipe_has a/justfile check '    @just py-check'
@@ -216,10 +249,7 @@ grep -qx '      - run: cargo deny check' a/.github/workflows/rust.yml
 grep -qx '      - run: go test -race ./...' a/.github/workflows/go.yml
 grep -qx '      - run: go tool govulncheck ./...' a/.github/workflows/go.yml
 grep -qx '      - run: pnpm audit --prod --audit-level=moderate' a/.github/workflows/ts.yml
-# shellcheck disable=SC2016 # a literal $RUNNER_TEMP for the runner's shell
-grep -qxF '      - run: uv export --locked --no-default-groups --no-hashes --no-annotate --no-header --no-emit-project -q -o "$RUNNER_TEMP/requirements.txt"' a/.github/workflows/python.yml
-grep -qxF "      - run: test ! -s \"\$RUNNER_TEMP/requirements.txt\" || uv run --locked --with licensecheck==$lc_pin licensecheck -r \"\$RUNNER_TEMP/requirements.txt\" --zero" a/.github/workflows/python.yml
-grep -qxF "      - run: test ! -s \"\$RUNNER_TEMP/requirements.txt\" || uv run --locked --with licensecheck==$lc_pin licensecheck --license AGPL -r \"\$RUNNER_TEMP/requirements.txt\" --zero" agl/.github/workflows/python.yml
+grep -qxF "      - run: uv $lc" a/.github/workflows/python.yml
 grep -qx '      - run: pnpm run licenses' a/.github/workflows/ts.yml
 grep -qx '      - run: cargo deny list' a/.github/workflows/rust.yml
 grep -qx "      - run: $gl report --ignore github.com/example-org/render-me ./..." a/.github/workflows/go.yml

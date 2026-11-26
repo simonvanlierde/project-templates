@@ -44,7 +44,7 @@ This supersedes only the engine rule of 0006: the requirements, the Pages deploy
 `docs_site` and `site` conflict and the `--strict` build remain. The API reference stays
 Zensical's, since only mkdocstrings reads a Python docstring.
 
-The Starlight render is a `docs-site/` package of its own, as `site/` is for `site=astro`. It
+Each docs engine keeps its build dependencies in `docs-site/` with its own lockfile. Starlight
 reads the Markdown in `docs/` unchanged (links between pages and to other repository files are
 rewritten, the first h1 is the title) and builds into `_docs/` like Zensical. Its pages carry
 `default-src 'none'; script-src 'self' 'wasm-unsafe-eval' <sha256 of each inline script>;

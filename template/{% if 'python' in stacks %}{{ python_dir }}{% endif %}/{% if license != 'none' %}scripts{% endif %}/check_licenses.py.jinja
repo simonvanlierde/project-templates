@@ -1,0 +1,181 @@
+{% from 'includes/dependency-licenses.jinja' import dependency_licenses with context -%}
+"""List the license of each dependency that ships and fail on one {{ license }} cannot take.
+
+`just py-check` and CI run it in an environment that holds only what ships: the locked
+dependencies with every extra and workspace member, no dependency groups. With arguments it checks those SPDX
+expressions instead: `python scripts/check_licenses.py 'MIT OR GPL-2.0-only'`.
+"""
+
+import re
+import sys
+import tomllib
+from importlib import metadata
+from pathlib import Path
+
+# SPDX ids, matched without regard to case. Widen it only for a license that {{ license }}
+# can take; for one package, use KNOWN.
+ALLOWED = frozenset(
+    spdx.lower()
+    for spdx in (
+{%- for l in dependency_licenses %}
+        "{{ l }}",
+{%- endfor %}
+    )
+)
+
+# Packages whose metadata names no license this check can read, by normalized name. Read
+# the package's license file, then record its SPDX expression here.
+KNOWN: dict[str, str] = {}
+
+# What a package without a License-Expression field says instead, in its classifiers or
+# its License field. Names that fit several licenses map to the strictest that is common.
+LEGACY = {
+    "3-Clause BSD License": "BSD-3-Clause",
+    "Apache 2.0": "Apache-2.0",
+    "Apache License 2.0": "Apache-2.0",
+    "Apache License, Version 2.0": "Apache-2.0",
+    "Apache Software License": "Apache-2.0",
+    "BSD": "BSD-3-Clause",
+    "BSD 2-Clause License": "BSD-2-Clause",
+    "BSD 3-Clause License": "BSD-3-Clause",
+    "BSD License": "BSD-3-Clause",
+    "Boost Software License 1.0 (BSL-1.0)": "BSL-1.0",
+    "CC0 1.0 Universal (CC0 1.0) Public Domain Dedication": "CC0-1.0",
+    "GNU Affero General Public License v3": "AGPL-3.0-only",
+    "GNU Affero General Public License v3 or later (AGPLv3+)": "AGPL-3.0-or-later",
+    "GNU General Public License v2 or later (GPLv2+)": "GPL-2.0-or-later",
+    "GNU General Public License v3 (GPLv3)": "GPL-3.0-only",
+    "GNU General Public License v3 or later (GPLv3+)": "GPL-3.0-or-later",
+    # LGPL-2.0-or-later: the licensee may take a later version, so 2.1-or-later holds.
+    "GNU Lesser General Public License v2 or later (LGPLv2+)": "LGPL-2.1-or-later",
+    "GNU Lesser General Public License v3 (LGPLv3)": "LGPL-3.0-only",
+    "GNU Lesser General Public License v3 or later (LGPLv3+)": "LGPL-3.0-or-later",
+    "ISC License (ISCL)": "ISC",
+    "MIT License": "MIT",
+    "MIT No Attribution License (MIT-0)": "MIT-0",
+    "Mozilla Public License 2.0 (MPL 2.0)": "MPL-2.0",
+    "Python Software Foundation License": "PSF-2.0",
+    "The Unlicense (Unlicense)": "Unlicense",
+    "Zero-Clause BSD (0BSD)": "0BSD",
+    "zlib/libpng License": "Zlib",
+}
+
+OPERATORS = frozenset({"AND", "OR", "WITH", "(", ")"})
+
+
+def allowed(expression: str) -> bool:  # noqa: C901 one recursive-descent parser, kept whole
+    """Whether an SPDX expression is allowed.
+
+    An OR needs one side allowed, an AND both. AND binds tighter than OR, and parentheses
+    group. Operators are upper case, as SPDX spells them: `MIT with restrictions` is prose.
+    An exception (`WITH`) only adds permissions, so the license it qualifies
+    decides. A malformed expression is refused.
+    """
+    rest = re.findall(r"[()]|[^\s()]+", expression)[::-1]
+
+    def take(word: str) -> bool:
+        found = bool(rest) and rest[-1] == word
+        if found:
+            rest.pop()
+        return found
+
+    def name() -> str:
+        token = rest.pop() if rest else ")"
+        if token in OPERATORS:
+            raise ValueError(token)
+        return token
+
+    def term() -> bool:
+        if take("("):
+            ok = any_of()
+            if not take(")"):
+                raise ValueError(expression)
+            return ok
+        ok = name().lower() in ALLOWED
+        if take("WITH"):
+            name()
+        return ok
+
+    def all_of() -> bool:
+        ok = term()
+        while take("AND"):
+            # term() runs first, so it consumes its tokens even when ok is already False.
+            ok = term() and ok
+        return ok
+
+    def any_of() -> bool:
+        ok = all_of()
+        while take("OR"):
+            ok = all_of() or ok
+        return ok
+
+    try:
+        return any_of() and not rest
+    except ValueError:
+        return False
+
+
+def license_of(dist: metadata.Distribution) -> str:
+    """The SPDX expression a distribution's metadata gives, or what it says instead."""
+    meta = dist.metadata
+    known = KNOWN.get(canonical(dist.name))
+    if expression := known or meta.get("License-Expression"):
+        return expression
+    classifiers = [
+        c.rsplit(" :: ", 1)[-1]
+        for c in meta.get_all("Classifier", [])
+        if c.startswith("License :: ") and not c.endswith(":: OSI Approved")
+    ]
+    if classifiers:
+        # A package may list every license it holds parts under, so all must be allowed.
+        return " AND ".join(LEGACY.get(c, c) for c in classifiers)
+    # Some packages put the whole license text here. Its first line counts only as a known title,
+    # so text further down cannot hide another license; other text is shown cut, and refused.
+    first, _, more = (meta.get("License") or "UNKNOWN").strip().partition("\n")
+    first = first.strip()
+    return LEGACY.get(first) or (f"{first} ..." if more.strip() else first)
+
+
+def canonical(name: str) -> str:
+    """A package name normalized as PyPI compares names."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def own() -> set[str]:
+    """This project and its uv workspace members, which are not dependencies.
+
+    Matched by name, not by install path: a dependency installed from a local path is checked.
+    """
+    names = {tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["name"]}
+    if Path("uv.lock").exists():
+        lock = tomllib.loads(Path("uv.lock").read_text(encoding="utf-8"))
+        names.update(lock.get("manifest", {}).get("members", []))
+    return {canonical(name) for name in names}
+
+
+def main() -> int:
+    """Print one line per dependency, and return 1 when a license is not allowed."""
+    # shortcut: sees only what this platform installs, resolve per platform when a
+    # dependency that only Windows or macOS installs matters.
+    skip = set() if sys.argv[1:] else own()
+    licenses = {expression: expression for expression in sys.argv[1:]} or {
+        f"{dist.name}=={dist.version}": license_of(dist)
+        for dist in metadata.distributions()
+        if canonical(dist.name) not in skip
+    }
+    refused = 0
+    for name, expression in sorted(licenses.items()):
+        ok = allowed(expression)
+        refused += not ok
+        print(f"{'ok' if ok else 'NOT ALLOWED'}  {name}: {expression}", flush=True)
+    if refused:
+        print(
+            "A dependency's license is not allowed. Add it to ALLOWED in scripts/check_licenses.py only if"
+            " {{ license }} can take it; for a package whose metadata names no license, record it under KNOWN.",
+            file=sys.stderr,
+        )
+    return int(refused > 0)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

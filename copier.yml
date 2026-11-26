@@ -124,12 +124,14 @@ _message_after_copy: |
   {%- endif %}
   {%- if docs_starlight %}
     just docs-sync docs-hashes
+  {%- elif docs_zensical %}
+    just docs-sync
   {%- endif %}
   {%- if web_app or site != 'none' or docs_site %}
     just og-card{{ '   # needs pnpm and Node' if 'ts' not in stacks and site != 'astro' and not docs_starlight }}
   {%- endif %}
     just check
-  {%- if stacks | reject('equalto', 'docker') | list or site == 'astro' or docs_starlight %}
+  {%- if stacks | reject('equalto', 'docker') | list or site == 'astro' or docs_site %}
   Then commit, lockfiles included: CI installs exactly what they list.
   {%- else %}
   Then commit.
@@ -152,6 +154,9 @@ _message_after_copy: |
 _message_after_update: |
   {%- if 'rust' in stacks and rust_kind | default('') == 'binary' %}
   If {{ '' if rust_dir == '.' else rust_dir ~ '/' }}src/main.rs is your own, remove serde_json and jsonschema from Cargo.toml unless it uses them.
+  {%- endif %}
+  {%- if docs_zensical %}
+  Run just docs-sync and commit docs-site/uv.lock before building or deploying the docs.
   {%- endif %}
 
 # The questions run from what the user knows (name, kind, who owns it) to tooling
@@ -649,14 +654,14 @@ docs_engine:
   ask: false
   help: What builds the documentation site (docs/decisions/0012-docs-engine-per-toolchain.md)
   choices:
-    Zensical (Python, via uvx; a Python library can add an API reference): zensical
+    Zensical (Python, via uv; a Python library can add an API reference): zensical
     Starlight (Astro, via pnpm; a hash-based CSP, no API reference): starlight
   default: >-
     {{ 'starlight' if not (['decision_records', 'docs_site'] | reject('in', _copier_conf.data) | select('in', _copier_answers) | list) and 'python' not in stacks and ('ts' in stacks or 'rust' in stacks) else 'zensical' }}
-  # docs-site/ and _docs/ belong to the Starlight build: a package there would share them with it.
+  # docs-site/ holds the generator's dependencies, and _docs/ is its build output.
   validator: >-
-    {% if docs_engine == 'starlight' %}{% for q, d in [('python_dir', python_dir), ('ts_dir', ts_dir), ('rust_dir', rust_dir), ('go_dir', go_dir)] if d in ('docs-site', '_docs') or d.startswith(('docs-site/', '_docs/')) %}
-    {{ q }} is `{{ d }}`, where the docs site goes: give {{ q }} another directory, or answer docs_engine=zensical.
+    {% if docs_site %}{% for q, d in [('python_dir', python_dir), ('ts_dir', ts_dir), ('rust_dir', rust_dir), ('go_dir', go_dir)] if d in ('docs-site', '_docs') or d.startswith(('docs-site/', '_docs/')) %}
+    {{ q }} is `{{ d }}`, where the docs site goes: give {{ q }} another directory.
     {% endfor %}{% endif %}
 
 # Computed, never asked: which engine's files render.
@@ -742,6 +747,25 @@ publish_to_pypi:
   ask: "{{ customise }}"
   help: Add a release workflow publishing to PyPI via trusted publishing (needs setup on pypi.org first)
   default: false
+
+python_release_asset_dirs:
+  type: yaml
+  when: "{{ publish_to_pypi | default(false) }}"
+  ask: "{{ customise }}"
+  help: List of directories relative to the Python package whose files to attach to the GitHub release
+  default: []
+  validator: >-
+    {% if python_release_asset_dirs is string or python_release_asset_dirs is mapping or python_release_asset_dirs is not sequence %}
+    Give a YAML list of extra release asset directories, such as [export].
+    {% else %}
+    {% for dir in python_release_asset_dirs %}
+    {% if dir is not string or dir|trim != dir or not dir|regex_search('^[A-Za-z0-9_][A-Za-z0-9_.-]*(/[A-Za-z0-9_][A-Za-z0-9_.-]*)*$') %}
+    Give each extra release asset directory as a plain relative path without a trailing slash.
+    {% elif dir.split('/')[0] in ['dist', 'sbom'] or python_release_asset_dirs.count(dir) > 1 %}
+    Extra release asset directories must be unique and outside dist/ and sbom/.
+    {% endif %}
+    {% endfor %}
+    {% endif %}
 
 python_api:
   type: bool
@@ -970,7 +994,7 @@ griffe_version:
   when: false
   default: 2.4.1
 
-# Computed, never asked: the Zensical that `just docs` and docs.yml run with uvx, and
+# Computed, never asked: the Zensical that `just docs` and docs.yml install with uv, and
 # the mkdocstrings-python it runs with for a Python library's API reference.
 # renovate: datasource=pypi depName=zensical
 zensical_version:
@@ -1029,17 +1053,9 @@ govulncheck_version:
   when: false
   default: v1.9.0
 
-# Computed, never asked: the license checkers CI and the check recipes run. licensecheck
-# judges each Python package that ships against the license in pyproject.toml, with its
-# own compatibility table. go-licenses, run with `go run` outside go.mod, and the
-# TypeScript check take the allow-list in includes/dependency-licenses.jinja, as
-# deny.toml does for Rust.
-# renovate: datasource=pypi depName=licensecheck
-licensecheck_version:
-  type: str
-  when: false
-  default: 2026.0.8
-
+# Computed, never asked: the Go license checker CI and the check recipe run, with
+# `go run` outside go.mod. It takes the allow-list in includes/dependency-licenses.jinja,
+# as the Python and TypeScript scripts and Rust's deny.toml do.
 # renovate: datasource=go depName=github.com/google/go-licenses/v2
 go_licenses_version:
   type: str

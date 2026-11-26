@@ -52,4 +52,5 @@ $effect(() => {
       <a href={BASE + path.slice(1)} aria-current={PAGES[path] === page ? "page" : undefined}>{name}</a>
     {/each}
   </nav>
+  <p>Revision: {import.meta.env.VITE_BUILD_REVISION}</p>
 </footer>{% endraw %}

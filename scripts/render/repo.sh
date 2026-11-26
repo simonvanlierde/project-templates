@@ -297,6 +297,14 @@ grep -qxF -- 'repo edit --homepage https://demo.example.org --add-topic python' 
 # A docs site on GitHub Pages is the homepage when there is no app or Worker site.
 grep -qxF -- 'repo edit --homepage https://example-org.github.io/cli-me/ --add-topic python' "$fake/about-x"
 grep -qxF -- 'repo edit --homepage https://example-org.github.io/mutate-me/ --add-topic python --add-topic typescript --add-topic rust --add-topic go' "$fake/about-m"
+# An existing project can publish its docs below a custom domain and path.
+mkdir -p "$out/docs-about/docs-site"
+cp m/justfile "$out/docs-about/"
+cp m/docs-site/pyproject.toml "$out/docs-about/docs-site/"
+printf "%s\n" '[project]' "site_url = 'https://example.org/tools/docs/' # project-owned" >"$out/docs-about/zensical.toml"
+# shellcheck disable=SC2031 # $fake/gh logs the command; the parent PATH stays unchanged
+(cd "$out/docs-about" && FAKE_LOG="$fake/about-custom" PATH="$fake:$PATH" just repo-about >/dev/null)
+grep -qxF -- 'repo edit --homepage https://example.org/tools/docs/ --add-topic python --add-topic typescript --add-topic rust --add-topic go' "$fake/about-custom"
 # The community files and the DCO check come with public and go with it, in every render.
 for answers in */.copier-answers.yml; do
   r=${answers%%/*}

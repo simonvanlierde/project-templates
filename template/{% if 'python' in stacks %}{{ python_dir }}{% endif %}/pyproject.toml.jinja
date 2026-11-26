@@ -153,6 +153,9 @@ ignore = [
 # annotations, or package __init__.py.
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S101", "D1", "INP001", "PLR2004", "ANN201"]
+{%- if license != 'none' %}
+"scripts/**" = ["INP001", "T201"] # command-line scripts print and are no package
+{%- endif %}
 {%- if python_kind == 'research' %}
 "*.ipynb" = ["T201", "E402"] # notebooks print and import late
 {%- endif %}
