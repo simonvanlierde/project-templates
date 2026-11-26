@@ -20,6 +20,8 @@ jobs:
         with:
           persist-credentials: false
       # The action sends the job's token on GitHub links, so GitHub's rate limit is not hit.
+      # A relative link under template/ points at a file that exists only once rendered, where
+      # the project's own check follows it; web links there are still checked.
       - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
-          args: --no-progress './**/*.md' './**/*.html'
+          args: --no-progress --exclude '^file://.*/template/' './**/*.md' './**/*.html'

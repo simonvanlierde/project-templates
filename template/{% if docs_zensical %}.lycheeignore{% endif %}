@@ -1,2 +1,7 @@
-# Zensical resolves the repository URL when it renders the source-link partial.
-%7B%7B%20config\.repo_url%20%7D%7D$
+# Zensical fills in config values, such as the repository URL and the release, when it
+# renders the theme overrides.
+%7B%7B%20config\.[a-z_.]+%20%7D%7D$
+# Local preview servers, such as `just docs-serve`, run only while you work.
+^https?://(localhost|127\.0\.0\.1)(:\d+)?(/|$)
+# npm answers link checkers with 403 Forbidden.
+^https://www\.npmjs\.com/?$
