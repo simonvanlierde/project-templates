@@ -428,10 +428,11 @@ sample_tpl=$out/sample-tpl
 sample_up=$out/sample-up
 mkdir -p "$sample_tpl"
 cp -R "$repo/copier.yml" "$repo/includes" "$repo/template" "$sample_tpl/"
+# These throwaway repos have no remote, and a host commit hook can read such a repo as public: --no-verify.
 git_t=(git -C "$sample_tpl" -c user.name=t -c user.email=t@example.org)
 "${git_t[@]}" init -q
 "${git_t[@]}" add -A
-"${git_t[@]}" commit -q -m base
+"${git_t[@]}" commit -q --no-verify -m base
 "${copier[@]}" --vcs-ref=HEAD \
   --data project_name=sample-me --data 'stacks=[python,ts]' --data python_kind=library \
   --data ts_dir=web --data ts_kind=web-app --data user_data=nothing --data worker=true \
@@ -446,7 +447,7 @@ owned=(docs/decisions/0001-start-from-project-templates.md docs/og-card.html doc
 (cd "$sample_up" && rm "${samples[@]}" "${owned[@]}")
 git -C "$sample_up" init -q
 git -C "$sample_up" add -A
-git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q -m "replace the samples"
+git -C "$sample_up" -c user.name=t -c user.email=t@example.org commit -q --no-verify -m "replace the samples"
 # The Starlight docs' owned files come back the same way.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=sample-docs --data 'stacks=[rust]' --data 'extras=[docs_site]' \
   "$sample_tpl" "$sample_up-docs" >/dev/null
@@ -454,20 +455,20 @@ owned_docs=(docs-site/astro.config.mjs docs-site/public/favicon.svg)
 (cd "$sample_up-docs" && rm "${owned_docs[@]}")
 git -C "$sample_up-docs" init -q
 git -C "$sample_up-docs" add -A
-git -C "$sample_up-docs" -c user.name=t -c user.email=t@example.org commit -q -m "delete the owned docs files"
+git -C "$sample_up-docs" -c user.name=t -c user.email=t@example.org commit -q --no-verify -m "delete the owned docs files"
 # A Rust binary with its own main.rs keeps it, and the update says to drop the starter's dependencies.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=sample-bin --data 'stacks=[rust]' --data rust_kind=binary \
   "$sample_tpl" "$sample_up-bin" >/dev/null
 echo 'fn main() {}' >"$sample_up-bin/src/main.rs"
 git -C "$sample_up-bin" init -q
 git -C "$sample_up-bin" add -A
-git -C "$sample_up-bin" -c user.name=t -c user.email=t@example.org commit -q -m "own main.rs"
+git -C "$sample_up-bin" -c user.name=t -c user.email=t@example.org commit -q --no-verify -m "own main.rs"
 find "$sample_tpl/template" -type f \( -name '*test_add.py*' -o -name '__init__.py.jinja' \
   -o -name '*App.tsx*' -o -name '*App.test.tsx*' -o -name '*main.tsx*' -o -name '*app.css*' \
   -o -path '*worker*/index.ts' -o -path '*worker*/index.test.ts' -o -path '*worker*/index.mjs' \
   -o -path '*worker*/index.test.mjs' -o -name 'index.astro.jinja' -o -name 'about.md' \
   -o -name '0001-start-from-project-templates.md.jinja' \) -exec sh -c 'echo "// changed upstream" >>"$1"' _ {} \;
-"${git_t[@]}" commit -q -am "change the samples"
+"${git_t[@]}" commit -q --no-verify -am "change the samples"
 # shellcheck disable=SC2031 # COPIER_VERSION is set at file top
 uvx "copier${COPIER_VERSION:+@$COPIER_VERSION}" update --defaults --vcs-ref=HEAD "$sample_up" >"$out/sample-up.log" 2>&1
 grep -q 'Updating to template version' "$out/sample-up.log"
