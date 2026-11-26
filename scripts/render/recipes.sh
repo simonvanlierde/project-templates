@@ -129,7 +129,7 @@ licenses_pass() {
   printf '{"%s":[{"name":"p","versions":["1.0.0"]}]}' "$2" | node "$1/scripts/checkLicenses.mjs" >/dev/null 2>&1
 }
 # glob, minimatch and lru-cache are BlueOak-1.0.0, argparse is PSF-2.0 or Python-2.0.
-for l in MIT BlueOak-1.0.0 PSF-2.0 Python-2.0 BSL-1.0 MIT-0 Unlicense CDLA-Permissive-2.0 \
+for l in MIT BlueOak-1.0.0 PSF-2.0 Python-2.0 BSL-1.0 MIT-0 MIT-CMU Unlicense CDLA-Permissive-2.0 \
   '(MIT OR Apache-2.0)' 'MIT OR GPL-3.0-only' 'Apache-2.0 WITH LLVM-exception' 'mit' \
   '((MIT))' 'MIT AND (Apache-2.0 OR GPL-3.0-only)' 'MIT OR GPL-3.0-only AND CC-BY-4.0'; do
   licenses_pass a "$l" || {
@@ -174,7 +174,7 @@ for l in AGPL-3.0-or-later GPL-3.0-or-later GPL-3.0-only LGPL-3.0-or-later; do
   grep -qxF "  \"$l\"," agl/deny.toml
 done
 gl="go run github.com/google/go-licenses/v2@$gl_pin"
-permissive=0BSD,Apache-2.0,BlueOak-1.0.0,BSD-2-Clause,BSD-3-Clause,BSL-1.0,CC0-1.0,CDLA-Permissive-2.0,ISC,MIT,MIT-0,MPL-2.0,PSF-2.0,Python-2.0,Unicode-3.0,Unlicense,Zlib
+permissive=0BSD,Apache-2.0,BlueOak-1.0.0,BSD-2-Clause,BSD-3-Clause,BSL-1.0,CC0-1.0,CDLA-Permissive-2.0,ISC,MIT,MIT-0,MIT-CMU,MPL-2.0,PSF-2.0,Python-2.0,Unicode-3.0,Unlicense,Zlib
 recipe_has a/just/go.just go-check "    $gl check --ignore github.com/example-org/render-me --allowed_licenses=$permissive ./..."
 # go-licenses names the GPL family without -only or -or-later: AGPL-3.0, not AGPL-3.0-or-later.
 recipe_has agl/just/go.just go-check "    $gl check --ignore github.com/example-org/agl-me --allowed_licenses=$permissive,GPL-3.0,LGPL-3.0,AGPL-3.0 ./..."

@@ -18,6 +18,7 @@ const ALLOWED = new Set(
     "ISC",
     "MIT",
     "MIT-0",
+    "MIT-CMU",
     "MPL-2.0",
     "PSF-2.0",
     "Python-2.0",
