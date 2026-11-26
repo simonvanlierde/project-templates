@@ -94,7 +94,7 @@ recipe_has c/just/python.just py-check "    uv --directory api $lc"
 py_licenses_pass() {
   python3 "$1/scripts/check_licenses.py" "$2" >/dev/null 2>&1
 }
-for l in MIT mit Zlib Unicode-3.0 'MIT OR GPL-3.0-only' '(MIT AND BSD-3-Clause) OR Proprietary' \
+for l in MIT mit Zlib Unicode-3.0 MIT-CMU 'MIT OR GPL-3.0-only' '(MIT AND BSD-3-Clause) OR Proprietary' \
   'MIT OR GPL-3.0-only AND ISC' 'Apache-2.0 WITH LLVM-exception'; do
   py_licenses_pass a "$l" || {
     echo "check_licenses.py refuses $l in an MIT project" >&2
@@ -118,6 +118,33 @@ if py_licenses_pass agl LGPL-2.1-only; then
   echo "check_licenses.py lets LGPL-2.1-only into an AGPL project" >&2
   exit 1
 fi
+# The metadata path: fake installed packages, read without the host's site-packages (-S).
+# The project and its workspace members are skipped by name; a local-path dependency is not.
+meta=$(mktemp -d)
+fake() {
+  mkdir -p "$meta/site/$1-1.0.dist-info"
+  printf 'Metadata-Version: 2.4\nName: %s\nVersion: 1.0\n%b' "$1" "$2" >"$meta/site/$1-1.0.dist-info/METADATA"
+}
+fake render-me 'License-Expression: GPL-3.0-only\n'
+fake member 'License-Expression: GPL-3.0-only\n'
+fake spdx 'License-Expression: MIT OR Apache-2.0\n'
+fake classified 'Classifier: License :: OSI Approved :: MIT License\n'
+fake texted 'License: BSD 3-Clause License\n'
+fake vendored 'License-Expression: GPL-3.0-only\n'
+printf '{"url": "file:///src/vendored", "dir_info": {}}' >"$meta/site/vendored-1.0.dist-info/direct_url.json"
+fake custom 'License: Free for non-commercial use\n'
+printf '[project]\nname = "render-me"\n' >"$meta/pyproject.toml"
+printf 'version = 1\n[manifest]\nmembers = ["member", "render-me"]\n' >"$meta/uv.lock"
+rc=0
+(cd "$meta" && PYTHONPATH=site python3 -S "$out/a/scripts/check_licenses.py") >"$meta/out" 2>&1 || rc=$?
+printf '%s\n' 'ok  classified==1.0: MIT' 'NOT ALLOWED  custom==1.0: Free for non-commercial use' \
+  'ok  spdx==1.0: MIT OR Apache-2.0' 'ok  texted==1.0: BSD-3-Clause' \
+  'NOT ALLOWED  vendored==1.0: GPL-3.0-only' >"$meta/want"
+grep -E '^(ok|NOT ALLOWED) ' "$meta/out" | diff "$meta/want" -
+test "$rc" = 1
+grep -qF 'record it under KNOWN' "$meta/out"
+rm -rf "$meta"
+test -f c/api/scripts/check_licenses.py
 recipe_has a/just/ts.just ts-check '    pnpm run licenses'
 grep -qF '"licenses": "pnpm licenses list --prod --json | node scripts/checkLicenses.mjs"' a/package.json
 lacks -F 'GPL' a/scripts/checkLicenses.mjs a/deny.toml
