@@ -375,6 +375,8 @@ anchor_linenums = false
 
 If you already list stylesheets or scripts, append the new paths instead of replacing those lists. Until `extra_css` lists `assets/docs-tokens.css`, `docs.css` uses the same values as the template's tokens file, so the site looks the same, but your edits to the tokens file do not show. If you use another `custom_dir`, copy the plain-link partial and `main.html` into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
 
+A new render's footer shows a copyright line (author and licence), a GitHub link and, for a package on PyPI, a PyPI link, without the "Made with Zensical" credit. It also gets edit links, a light, dark and system theme toggle, and the theme features listed in its `zensical.toml`. To get them in an existing project, copy `repo_name`, `edit_uri`, `copyright`, `generator = false`, the `[[project.extra.social]]` entries, `features`, `[project.theme.icon]` and the three `[[project.theme.palette]]` entries from a fresh render.
+
 #### Starlight docs engine
 
 With `docs_engine=starlight` the render has a `docs-site/` package instead of `zensical.toml`, `docs-overrides/` and the Zensical assets:

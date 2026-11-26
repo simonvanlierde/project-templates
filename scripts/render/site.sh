@@ -729,7 +729,15 @@ for r in m k h ds; do
   # shellcheck disable=SC2016 # a literal "$PWD" in the recipe body
   grep -qF '"$PWD/docs/assets/og.png"' "$r/justfile"
   grep -qF 'zensical.toml' "$r/justfile"
+  grep -qx 'generator = false' "$r/zensical.toml"
+  grep -qx 'edit_uri = "edit/main/docs/"' "$r/zensical.toml"
+  grep -qx 'repo = "fontawesome/brands/github"' "$r/zensical.toml"
+  test "$(grep -c '^\[\[project.theme.palette\]\]$' "$r/zensical.toml")" = 3
 done
+# Only a package published to PyPI links there from the footer; k is one, m and h are not.
+grep -qx 'link = "https://pypi.org/project/adopt-me/"' k/zensical.toml
+grep -qx 'copyright = "Ada Lovelace · GPL-3.0-or-later"' k/zensical.toml
+for r in m h ds; do (lacks -q 'pypi.org' "$r/zensical.toml"); done
 grep -qF 'mutate-me' m/docs/og-card.html
 grep -qF 'example-org.github.io/mutate-me</p>' m/docs/og-card.html
 # A Starlight docs site: the same card and recipe, with the tags in the built head.
