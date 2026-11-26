@@ -293,9 +293,11 @@ fi
 grep -qF 'uv.lock' zensical-unlocked.log
 test ! -e m/docs-site/uv.lock
 # A docs migration must keep an existing application workspace's lock and Python range.
-cp -R k zensical-workspace
 (
-  cd zensical-workspace
+  workspace=$(mktemp -d)
+  trap 'rm -rf "$workspace"' EXIT
+  cp -R k "$workspace/project"
+  cd "$workspace/project"
   cat >pyproject.toml <<'TOML'
 [project]
 name = "workspace-app"
