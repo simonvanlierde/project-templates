@@ -349,6 +349,11 @@ A render with `docs_site` and Zensical gets:
 - `just docs` builds into `_docs/` (gitignored). `just docs-serve` serves the site on port 8000 and rebuilds it on each save. Both install from the lockfile.
 - `.github/workflows/docs.yml`. Every pull request and push to `main` runs `just docs`. In a public repo, `docs: build` is a required check. The `deploy` job publishes the build to Pages on a push to `main`. `just repo-settings` sets Pages to deploy from Actions.
 
+If a uv workspace's `members` pattern includes `docs-site`, add `docs-site` to
+`exclude` under `[tool.uv.workspace]` in the root `pyproject.toml` before running
+`just docs-sync`. This keeps the docs lockfile and Python version separate from
+the workspace.
+
 The build is strict: a warning fails it. A link to a page that does not exist is a warning, and so is a link out of `docs/`, such as `../README.md`. Link to files outside `docs/` with their full GitHub URL instead.
 
 TypeScript, Rust and Go projects get the site too, without an API reference. A Rust crate has one on docs.rs and a Go module on pkg.go.dev. The template has none for TypeScript yet.
@@ -357,7 +362,7 @@ The site uses system fonts and a plain repository link. It makes no font or repo
 
 `docs-overrides/main.html` adds link-preview tags to every page: `og:title`, `og:description`, `og:image` (with size and alt text), `og:url` and `twitter:card`. The home page's title is the site name alone, and another page's is `<page> - <site name>`. A page's `description:` front matter replaces the site description. The tags read `site_url`, `site_description` and `og_image` from `zensical.toml` and are skipped when there is no `og_image`. Run `just og-card` to render the card ([Social card](hosting.md#social-card)).
 
-An existing `zensical.toml` is yours, so updates leave it alone. If the Zensical site is your project's homepage, `just repo-about` reads its `[project].site_url`. To use these defaults after an update, add the assets under `[project]`, the theme settings under `[project.theme]`, the card under `[project.extra]` and the code-block setting under `[project.markdown_extensions.pymdownx.highlight]`. Keep any other entries in those tables:
+An existing `zensical.toml` is yours, so updates leave it alone. If the Zensical site is your project's homepage, `just repo-about` reads its `[project].site_url` when set. Otherwise it keeps the existing GitHub homepage. To use these defaults after an update, add the assets under `[project]`, the theme settings under `[project.theme]`, the card under `[project.extra]` and the code-block setting under `[project.markdown_extensions.pymdownx.highlight]`. Keep any other entries in those tables:
 
 ```toml
 [project]

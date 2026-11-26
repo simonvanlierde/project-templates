@@ -34,7 +34,7 @@ if [ "$HAS_TOKEN" != true ] && [ "$WORKFLOWS" = true ]; then
 fi
 
 if [ "$HAS_TOKEN" != true ]; then
-  printf '\n%s\n' "This PR was opened without the update App, so its checks do not start: close it and reopen it to run them." >>"$RUNNER_TEMP/copier-update/body.md"
+  printf '\n%s\n' "Select **Approve workflows to run** in this pull request's merge box to start the checks." >>"$RUNNER_TEMP/copier-update/body.md"
 fi
 
 # Git uses the credential helper for private repos without putting the token in the command line.

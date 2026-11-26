@@ -20,6 +20,7 @@ A project from before v0.12.0 with `docs/adr/` moves its records to `docs/decisi
 A docs site from before v0.16.0 gets `docs/assets/docs-tokens.css`, but its own `zensical.toml` does not load it. Add `"assets/docs-tokens.css"` before `"assets/docs.css"` in `extra_css` ([Documentation site](usage.md#documentation-site)); until then the site keeps the template's colours and fonts.
 
 After an update, refresh and commit the lockfiles (`uv lock`, `pnpm install`, `just go-sync`).
+For Zensical, see [Documentation site](usage.md#documentation-site) for the separate lockfile and uv workspace setup.
 
 ### Spelling exceptions in existing projects
 
@@ -43,7 +44,12 @@ A project whose `copier-update.yml` is from before this change commits the marke
 - **Renovate:** Automatically opens update PRs using `copier update --skip-answered --defaults`. Inspect PR diffs before merging.
 - **Dependabot:** The `.github/workflows/copier-update.yml` workflow runs weekly and on demand. When updates exist, it opens a PR on branch `chore/copier-update`. It takes the newest tag that is a week old, so a tag pushed with stolen credentials has a week to be noticed before the workflow's token pushes it; the tag's own date counts, so this stops a careless tag, not a forged one. Templates under `simonvanlierde/` skip the wait. Renovate has no such wait. It updates each `.copier-answers*.yml` in turn, so a [layered template](usage.md#layering-another-template) lands in the same PR. Closing that PR unmerged skips its tag; a later tag can open a new PR.
 
-Without [the update App](#the-update-app), `copier-update.yml` pushes with `GITHUB_TOKEN`, which can't change files in `.github/workflows/`: an update that does opens an issue asking for a local update instead. An older update PR stays open so you can finish or close it. A PR it opens starts no checks either, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so. To open the PR at all, turn on Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests". With the App, the workflow does not need it.
+Without [the update App](#the-update-app), `copier-update.yml` uses `GITHUB_TOKEN`. If an update
+touches `.github/workflows/`, it opens an issue asking you to update locally. An older update PR
+stays open so you can finish or close it. For other updates, allow the workflow to open a PR under
+Settings > Actions > General > **Allow GitHub Actions to create and approve pull requests**.
+Select **Approve workflows to run** in the pull request's merge box to start the checks. The App
+can open pull requests and start checks without these steps.
 
 The publish job runs `.github/scripts/publish-copier-update.sh` from its original
 checkout. If a project's tests used to extract shell code from the workflow YAML,

@@ -3,10 +3,10 @@ name: copier update
 # Dependabot can't update a Copier template, so this opens the update PR. It runs
 # weekly, finds each template's newest tag, and does nothing when `_commit` in every
 # .copier-answers*.yml already is that tag. The PR lives on one fixed branch.
-# GITHUB_TOKEN can't push a change to .github/workflows/, which most template releases
-# make, and its PR starts no CI. A token from your own GitHub App fixes both; without one,
-# an update that touches a workflow opens an issue instead. See "The update App"
-# in the template's docs/updates.md.
+# GITHUB_TOKEN can't push changes to .github/workflows/, and its PR checks need
+# approval. A token from your own GitHub App can push workflows and start checks.
+# Without it, an update that touches a workflow opens an issue. See "The update
+# App" in the template's docs/updates.md.
 
 on:
   schedule:
@@ -171,7 +171,11 @@ jobs:
           mv body.md "$RUNNER_TEMP/copier-update/body.md"
           git diff --binary "$base" HEAD >"$RUNNER_TEMP/copier-update/update.patch"
 
-          if git diff --name-only --no-renames "$base" HEAD | grep -q '^\.github/workflows/'; then
+          if git diff --quiet --no-renames "$base" HEAD -- .github/workflows/; then
+            :
+          else
+            diff_status=$?
+            [ "$diff_status" -eq 1 ] || exit "$diff_status"
             echo "workflows=true" >>"$GITHUB_OUTPUT"
           fi
           if [ -s conflicts.txt ]; then

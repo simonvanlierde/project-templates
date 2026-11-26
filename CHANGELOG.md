@@ -26,16 +26,16 @@ changes are marked **Breaking**.
 
 ### Changed
 
-- **Breaking:** Zensical docs build from `docs-site/uv.lock`, including transitive dependencies. Run `just docs-sync` and commit the lockfile when updating an existing Zensical project. Keep project-specific settings in `zensical.toml`.
+- **Breaking:** Zensical docs build from `docs-site/uv.lock`, including transitive dependencies. Run `just docs-sync` and commit the lockfile when updating an existing Zensical project. If your uv workspace includes `docs-site`, [exclude it first](docs/usage.md#documentation-site).
 - The weekly Copier workflow publishes its update through `.github/scripts/publish-copier-update.sh`. Tests can call the script directly. The workflow uses the copy from the checkout it started with.
 
 ### Fixed
 
-- Weekly Copier updates leave an existing update branch alone when its commits cannot be checked or the branch changes during the run. When the workflow asks for a local update, it leaves older update pull requests open.
+- Weekly Copier updates leave an existing update branch alone when its commits cannot be checked or the branch changes during the run. Without the update App, the updater detects workflow edits even in large updates, asks for a local update and leaves older update PRs open. For PRs the updater can open without the App, select **Approve workflows to run**.
 - Rust binary release archives include `output.schema.json` when the project has one, so consumers can validate the JSON output.
 - The cold-install workflow no longer runs `just data-release` from the README, which needs `just pipeline`'s output and so failed every citable data-pipeline repo whose README changed.
-- `just repo-about` uses the URL in `zensical.toml` when Zensical docs are the project's main site. The social-card and Pages setup comments reflect what the recipes run.
-- Python releases reject an empty software bill of materials when the package's lockfile lists runtime dependencies. A dependency-free package can still release with an empty component list.
+- `just repo-about` uses the URL in `zensical.toml` when Zensical docs are the project's main site. If the URL is absent, the recipe updates the description and topics and keeps the existing homepage. The social-card and Pages setup comments reflect what the recipes run.
+- Python release SBOMs include runtime dependencies and extras. Dependency groups stay out of the export, and the workflow rejects an empty SBOM when the package has runtime dependencies.
 
 ## [0.16.1] - 2026-11-17
 

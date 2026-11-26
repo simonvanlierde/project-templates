@@ -292,6 +292,49 @@ if (cd m && just docs) >zensical-unlocked.log 2>&1; then
 fi
 grep -qF 'uv.lock' zensical-unlocked.log
 test ! -e m/docs-site/uv.lock
+# A docs migration must keep an existing application workspace's lock and Python range.
+cp -R k zensical-workspace
+(
+  cd zensical-workspace
+  cat >pyproject.toml <<'TOML'
+[project]
+name = "workspace-app"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = ["*-site"]
+exclude = ["docs-site"]
+TOML
+  uv lock
+  cp uv.lock before.lock
+  sed '/^exclude = /d' pyproject.toml >pyproject.included.toml
+  mv pyproject.toml pyproject.excluded.toml
+  mv pyproject.included.toml pyproject.toml
+  if just docs-sync >included.log 2>&1; then
+    echo "docs-sync accepted an application workspace that includes docs-site" >&2
+    exit 1
+  fi
+  grep -qF 'Exclude docs-site' included.log
+  cmp before.lock uv.lock
+  test ! -e docs-site/uv.lock
+  mv pyproject.excluded.toml pyproject.toml
+  just docs-sync
+  cmp before.lock uv.lock
+  grep -q '^requires-python = "==3.14\.\*"$' docs-site/uv.lock
+
+  mkdir -p fake-bin
+  printf '#!/bin/sh\nprintf "%%s\\n" "$@"\n' >fake-bin/gh
+  chmod +x fake-bin/gh
+  PATH="$PWD/fake-bin:$PATH" just repo-about >with-url.log
+  grep -qx -- '--homepage' with-url.log
+  grep -qx -- 'https://example-org.github.io/adopt-me/' with-url.log
+  sed '/^site_url = /d' zensical.toml >zensical.no-url.toml
+  mv zensical.no-url.toml zensical.toml
+  PATH="$PWD/fake-bin:$PATH" just repo-about >without-url.log
+  (lacks -qx -- '--homepage' without-url.log)
+  grep -qx -- 'python' without-url.log
+)
 # A real strict build: the API reference from the docstrings, and the badge pages.
 (cd m && just docs-sync docs)
 grep -qF 'Add two numbers' m/_docs/reference/index.html

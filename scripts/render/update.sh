@@ -80,6 +80,11 @@ cat >"$cuh/uvx" <<'FAKE'
 echo "uvx $*" >>"$FAKE_LOG"
 mkdir -p "$(dirname "$FAKE_FILE")"
 echo "${FAKE_TEXT:-# from the template}" >>"$FAKE_FILE"
+if [ "${FAKE_LARGE_UPDATE:-}" = true ]; then
+  for ((i = 0; i < 4096; i++)); do
+    : >"sample-path-for-large-update-$i.txt"
+  done
+fi
 FAKE
 chmod +x "$cuh/gh" "$cuh/uvx"
 (
@@ -151,6 +156,7 @@ chmod +x "$cuh/gh" "$cuh/uvx"
         FAKE_FILE="${file:-.github/workflows/ci.yml}" \
         GH_TOKEN=fake HAS_TOKEN="$token" REPO=example-org/render-me BASE=main COPIER_VERSION="$copier_pin" \
         RUNNER_TEMP="$p-runner" GITHUB_STEP_SUMMARY="$p.summary"
+      if [ "$name" = issue-large ]; then export FAKE_LARGE_UPDATE=true; fi
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$p.git.insteadOf" \
         GIT_CONFIG_VALUE_0="https://github.com/$REPO.git"
       # A simonvanlierde template, as gh: names it, is the young template here.
@@ -220,6 +226,7 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     )
   done <<'CASES'
 issue false 7 -
+issue-large false - -
 asked false - 3
 push true - -
 edit true 7 -
@@ -324,6 +331,10 @@ CASES
   (lacks -q '^pr close' issue.log)
   grep -q 'Pull request #7 is still open for an older template version' issue.out
   (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml 2>/dev/null)
+  # A large patch still takes the manual-update path if it touches a workflow.
+  grep -qx 'workflows=true' issue-large.gho
+  grep -q '^issue create ' issue-large.log
+  (! git -C issue-large.git rev-parse --verify refs/heads/chore/copier-update 2>/dev/null)
   # An issue that exists, open or closed, is not asked again.
   (lacks -q '^issue create' asked.log)
   # A token pushes the branch with the workflow change, over the open PR's, then opens or
@@ -338,6 +349,8 @@ CASES
   # gh becomes git's credential helper before the push.
   for r in push edit plain; do grep -qx 'auth setup-git' "$r.log"; done
   grep -q '^pr create --head chore/copier-update --base main ' plain.log
+  (lacks -q '^workflows=' plain.gho)
+  grep -qF 'Select **Approve workflows to run**' plain-runner/copier-update/body.md
   grep -q '^pr edit 7 ' edit.log
   (lacks -q '^pr create' edit.log)
   # Declining a tag suppresses both pushes and manual-update issues for that tag.

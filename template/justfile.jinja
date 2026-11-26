@@ -146,6 +146,8 @@ og-card:
 
 # Write docs-site/uv.lock. Commit it so local builds and CI use the same dependencies.
 docs-sync:
+    root=$(uv workspace dir --project docs-site) && docs=$(uv workspace dir --project docs-site --package docs-site) && \
+        { [ "$root" = "$docs" ] || { echo 'Exclude docs-site in [tool.uv.workspace] in the root pyproject.toml before running just docs-sync.' >&2; exit 1; }; }
     uv lock --project docs-site
 
 # Build docs/ into _docs/. --strict fails on any warning, such as a broken link.
@@ -413,8 +415,9 @@ repo-settings:
 # Set the GitHub About description and topics from your answers{% if zensical_homepage %} and the homepage from zensical.toml{% elif homepage %}, including the homepage{% endif %}. Keeps existing topics.
 repo-about:
 {%- if zensical_homepage %}
-    homepage=$(uv run --project docs-site --no-sync python -I -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("zensical.toml").read_text(encoding="utf-8"))["project"]["site_url"])') && \
-        gh repo edit --homepage "$homepage"
+    homepage=$(uv run --project docs-site --no-sync python -I -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("zensical.toml").read_text(encoding="utf-8"))["project"].get("site_url", ""))') && \
+        { set --; if [ -n "$homepage" ]; then set -- --homepage "$homepage"; fi; \
+          set -- "$@"
 {%- else %}
     gh repo edit
 {%- if homepage %} --homepage '{{ homepage }}'
@@ -424,6 +427,8 @@ repo-about:
 {%- endif %}
 {%- for t in [('python' in stacks, 'python'), ('ts' in stacks, 'typescript'), ('rust' in stacks, 'rust'), ('go' in stacks, 'go'), ('docker' in stacks, 'docker')] if t[0] %} --add-topic {{ t[1] }}
 {%- endfor %}
+{%- if zensical_homepage %}; [ "$#" -eq 0 ] || gh repo edit "$@"; }
+{%- endif %}
 
 # A repo's own recipes that copier updates never touch. A `local-check` recipe there runs
 # at the end of `just check`.

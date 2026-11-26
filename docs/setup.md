@@ -57,7 +57,7 @@ Execute `just repo-settings` once after creating the repository and again whenev
 `just repo-about` syncs repository metadata with `gh repo edit`:
 
 - Updates repository description from `project_description`.
-- Sets the homepage: `site_url` for a web app or a site on a Worker, else the GitHub Pages address of the site or the documentation site.
+- Sets the homepage from `site_url` for a web app or a site on a Worker, or from the site's GitHub Pages address. When Zensical is the main site, it reads `[project].site_url` from `zensical.toml` and keeps the existing homepage if that setting is absent.
 - Adds stack topics (`python`, `typescript`, `rust`, `go`, `docker`). Existing manual topics are preserved.
 
 ## Publishing
@@ -76,12 +76,15 @@ If the files need to be built, add `.github/scripts/build-release-assets.sh` at 
 The build job runs it from the package directory. Each listed directory must contain
 regular files under 2 GiB whose names are unique across the release, ignoring case.
 Start filenames with a letter, digit or underscore, using only those characters, dots and
-hyphens. The build allows up to 499 files, including distributions and the SBOM, to leave
-room for their attestations. The workflow verifies the provenance before attaching the
-files and bundles to the GitHub release.
+hyphens. Limit each name to 242 bytes so its attestation bundle name fits. The workflow
+reserves the source distribution's filename plus `.sbom` for its SBOM attestation.
+The build allows up to 499 files, including distributions and the SBOM, to leave room for
+their attestations. The workflow verifies the provenance before attaching the files and
+bundles to the GitHub release.
 
-The Python build checks the CycloneDX SBOM before publishing. Its component list
-may be empty when the lockfile export has no runtime dependencies.
+The Python build checks the CycloneDX SBOM before publishing. It includes optional extras
+and excludes dependency groups. Its component list may be empty when the lockfile export
+has no runtime dependencies.
 
 If a publishing job fails before any artifacts upload to the registry, re-run the failed CI job on the existing tag. PyPI uploads stay strict: an existing filename fails the job, so inspect the registry for a partial upload first. If any release artifact is already published, keep the git tag and publish a new patch release. This includes a failure in `docker.yml`'s attestation step after the image push. GitHub Actions can re-run a job, but not an individual step; re-running this job rebuilds the image and repoints the semver tags.
 

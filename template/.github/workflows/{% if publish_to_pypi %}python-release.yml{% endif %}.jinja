@@ -109,7 +109,7 @@ jobs:
           set -euo pipefail
           mkdir sbom
           sbom="sbom/$(basename dist/*.tar.gz).cdx.json"
-          uv export --locked --no-dev --all-extras --format cyclonedx1.5 -o "$sbom"
+          uv export --locked --no-default-groups --all-extras --format cyclonedx1.5 -o "$sbom"
           count=$(jq -ers '
             if length == 1 and (.[0] |
               .bomFormat == "CycloneDX" and .specVersion == "1.5" and
@@ -121,7 +121,7 @@ jobs:
           ' "$sbom")
           # uv puts the project in metadata.component, so a project with no dependencies has no components.
           if [ "$count" -eq 0 ]; then
-            requirements=$(uv export --locked --no-dev --all-extras --no-hashes --no-annotate --no-header --no-emit-project -q)
+            requirements=$(uv export --locked --no-default-groups --all-extras --no-hashes --no-annotate --no-header --no-emit-project -q)
             if [ -n "$requirements" ]; then
               echo "::error::The release SBOM has no components but the lockfile exports dependencies"
               exit 1
@@ -146,6 +146,8 @@ jobs:
           for file in dist/* sbom/*; do
             name=${file##*/}
             seen["${name,,}"]=1
+            # An extra named <sdist>.sbom would share the sdist's SBOM bundle name.
+            if [[ "$file" == dist/*.tar.gz ]]; then seen["${name,,}.sbom"]=1; fi
             (( ++payload_count ))
           done
           for dir in {{ python_release_asset_dirs | join(' ') }}; do
@@ -169,6 +171,11 @@ jobs:
               key=${name,,}
               if [[ ! -f "$file" || -L "$file" || ! "$name" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]*$ || "$name" == *. || "$key" == *.intoto.jsonl ]]; then
                 printf '::error::Invalid extra release asset %s\n' "$file"
+                exit 1
+              fi
+              # Appending .intoto.jsonl must fit within Linux's 255-byte filename limit.
+              if (( {% raw %}${#name}{% endraw %} > 242 )); then
+                printf '::error::Extra release asset name %s must be at most 242 bytes\n' "$name"
                 exit 1
               fi
               size=$(wc -c < "$file")

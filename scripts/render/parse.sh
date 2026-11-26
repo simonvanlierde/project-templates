@@ -104,6 +104,34 @@ def run_step(script, work, env, fakes):
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 # An empty components list is valid only when the locked runtime requirements and extras are empty.
 sbom_export = next(s["run"] for s in python_release["build"]["steps"] if "cyclonedx1.5" in s.get("run", ""))
+for with_extra in (False, True):
+    with tempfile.TemporaryDirectory() as tmp:
+        work = pathlib.Path(tmp)
+        (work / "dist").mkdir()
+        (work / "dist/pkg.tar.gz").touch()
+        manifest = (
+            '[project]\nname = "pkg"\nversion = "1.0.0"\nrequires-python = ">=3.12"\n'
+            '[dependency-groups]\ndev = []\ndocs = ["docs-only"]\n'
+            '[tool.uv]\ndefault-groups = ["dev", "docs"]\n'
+            '[tool.uv.sources]\ndocs-only = { path = "docs-only" }\n'
+        )
+        dependencies = ["docs-only"]
+        if with_extra:
+            manifest += ('runtime-extra = { path = "runtime-extra" }\n'
+                         '[project.optional-dependencies]\nextra = ["runtime-extra"]\n')
+            dependencies.append("runtime-extra")
+        (work / "pyproject.toml").write_text(manifest)
+        for name in dependencies:
+            (work / name).mkdir()
+            (work / name / "pyproject.toml").write_text(
+                f'[project]\nname = "{name}"\nversion = "1.0.0"\nrequires-python = ">=3.12"\n'
+            )
+        env = {**os.environ, "UV_OFFLINE": "1", "UV_PREVIEW_FEATURES": "sbom-export"}
+        subprocess.run(["uv", "lock", "--quiet"], cwd=work, env=env, check=True)
+        result = subprocess.run(["bash", "-c", sbom_export], cwd=work, env=env, capture_output=True)
+        assert result.returncode == 0, result.stderr.decode()
+        components = json.loads((work / "sbom/pkg.tar.gz.cdx.json").read_text())["components"]
+        assert {component["name"] for component in components} == ({"runtime-extra"} if with_extra else set()), components
 sbom = {"bomFormat": "CycloneDX", "specVersion": "1.5", "metadata": {"component": {"name": "pkg"}}}
 for document, requirements, ok in [
     (json.dumps(sbom | {"components": [{"name": "library"}]}), "library==1", True),
@@ -120,7 +148,7 @@ for document, requirements, ok in [
         (work / "dist").mkdir()
         (work / "dist/pkg.tar.gz").touch()
         result = run_step(sbom_export, work, {"SBOM": document, "REQUIREMENTS": requirements}, {
-            "uv": '[ "$1 $2 $3 $4" = "export --locked --no-dev --all-extras" ] || exit 2\n'
+            "uv": '[ "$1 $2 $3 $4" = "export --locked --no-default-groups --all-extras" ] || exit 2\n'
                   'case " $* " in\n'
                   '  *" --format cyclonedx1.5 "*)\n'
                   '    [ "$SBOM" != missing ] || exit 0\n'
@@ -152,7 +180,8 @@ assert attest["subject-path"].splitlines() == ["dist/*", "sbom/*", "export/*", "
 collect = step(extra_workflow, "build", "collect extra release assets")
 digest = next(s["run"] for s in extra_jobs["build"]["steps"] if s.get("id") == "digest")
 check = step(extra_workflow, "publish", "refuse artifacts that changed after the build")
-for fault in ("", "missing", "duplicate", "duplicate-case", "symlink", "bundle", "oversize", "too-many", "count-limit"):
+for fault in ("", "missing", "duplicate", "duplicate-case", "symlink", "bundle", "sbom-bundle",
+              "long-name", "name-limit", "oversize", "too-many", "count-limit"):
     with tempfile.TemporaryDirectory() as tmp:
         work = pathlib.Path(tmp)
         pkg = work / "api"
@@ -172,15 +201,20 @@ for fault in ("", "missing", "duplicate", "duplicate-case", "symlink", "bundle",
                "duplicate-case": "cp export/maps.tar.gz metadata/generated/MAPS.tar.gz\n",
                "symlink": "ln -s ../dist/pkg.tar.gz export/link\n",
                "bundle": "touch export/file.intoto.jsonl\n",
+               "sbom-bundle": "touch export/PKG.tar.gz.sbom\n",
+               "long-name": f"touch export/{'a' * 243}\n",
+               "name-limit": f"touch export/{'a' * 242}\n",
                "oversize": "truncate -s 2147483648 export/maps.tar.gz\n",
                "too-many": 'for i in {1..496}; do touch "export/file-$i"; done\n',
                "count-limit": 'for i in {1..495}; do touch "export/file-$i"; done\n'}[fault]
         )
         env = {"PATH": "/usr/bin:/bin", "GITHUB_WORKSPACE": str(work), "GITHUB_OUTPUT": str(work / "output")}
         collected = subprocess.run(["bash", "-c", collect], cwd=pkg, env=env, capture_output=True, check=False)
-        assert (collected.returncode == 0) == (fault in ("", "count-limit")), collected
-        if fault == "duplicate-case":
+        assert (collected.returncode == 0) == (fault in ("", "name-limit", "count-limit")), (fault, collected)
+        if fault in ("duplicate-case", "sbom-bundle"):
             assert b"Duplicate release asset name" in collected.stdout, collected
+        if fault == "long-name":
+            assert b"242 bytes" in collected.stdout, collected
         if fault == "oversize":
             assert b"must be under 2 GiB" in collected.stdout, collected
         if fault == "too-many":
