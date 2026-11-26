@@ -7,10 +7,16 @@
 # copier-update pushes with the update App's token when it is set up; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml
-uv run --no-project python "$repo/scripts/test_copier_push.py" "$cu"
+publisher=.github/scripts/publish-copier-update.sh
+test -x "a/$publisher"
+test ! -e "d/$publisher"
+uv run --no-project python "$repo/scripts/test_copier_push.py" "a/$publisher"
 # Copier dependencies and the push token must run on separate workers.
-uv run --no-project --with pyyaml python - "$cu" <<'PYTEST'
+cuh=$out/copier-update
+mkdir -p "$cuh"
+uv run --no-project --with pyyaml python - "$cu" "$cuh/push.sh" <<'PYTEST'
 import sys, yaml
+from pathlib import Path
 jobs = yaml.safe_load(open(sys.argv[1]))["jobs"]
 assert jobs["update"]["permissions"] == {"contents": "read"}
 assert "COPIER_UPDATE_PRIVATE_KEY" not in str(jobs["update"]) and "environment" not in jobs["update"]
@@ -22,25 +28,26 @@ assert {k for k in app[0]["with"] if k.startswith("permission-")} == {"permissio
 assert jobs["push"]["needs"] == "update"
 assert any(s.get("uses", "").startswith("actions/download-artifact@") for s in jobs["push"]["steps"])
 assert not any("uvx" in s.get("run", "") for s in jobs["push"]["steps"])
+publish = next(s for s in jobs["push"]["steps"] if s.get("name") == "Push the update and open the PR")
+assert "git show HEAD^:.github/scripts/publish-copier-update.sh" in publish["run"]
+Path(sys.argv[2]).write_text(publish["run"])
 PYTEST
-cuh=$out/copier-update
-mkdir -p "$cuh"
 awk -v d="$cuh" '/^      - /{n++} n{print >(d "/step" n)}' "$cu"
 grep -l 'copier@' "$cuh"/step* | grep -q .
 (! grep -l 'copier@' "$cuh"/step* | xargs grep -q COPIER_UPDATE_PRIVATE_KEY)
 # shellcheck disable=SC2016 # literal workflow text, not shell expansions
 grep -qF 'GH_TOKEN: ${{ steps.app.outputs.token || github.token }}' "$cu"
 # The token never sits in a command line: git asks gh's credential helper for it.
-(lacks -q 'x-access-token' "$cu")
+(lacks -q 'x-access-token' "$cu" "a/$publisher")
 grep -qx '      issues: write # to ask for a local update when it can.t push one' "$cu"
 # The run below stands in true or false for this expression.
 grep -qF "HAS_TOKEN: \${{ steps.app.outputs.token != '' }}" "$cu"
 # Run the step's script against a fake gh, a fake uvx that changes one file, a template
 # repo with two tags and a bare repo standing in for GitHub. GIT_ALLOW_PROTOCOL=file makes
 # a push that misses the rewrite fail instead of reaching github.com.
-# Each step's script: the copier step runs first, with no token, then the push step.
-for n in copier apply push; do
-  case $n in copier) name=Update ;; apply) name=Apply ;; push) name=Push ;; esac
+# Test the two inline steps and the launch of the standalone publisher.
+for n in copier apply; do
+  case $n in copier) name=Update ;; apply) name=Apply ;; esac
   f=$(grep -l "^      - name: $name" "$cuh"/step*)
   awk '/^        run: \|-$/{f=1;next} f&&NF&&!/^          /{exit} f{sub(/^          /,"");print}' "$f" >"$cuh/$n.sh"
 done
@@ -127,8 +134,10 @@ chmod +x "$cuh/gh" "$cuh/uvx"
     # Both answers files behind, and an update that leaves a conflict marker.
     if [ "$name" = both ]; then cp "$p/.copier-answers.yml" "$p/.copier-answers.cml.yml"; fi
     # The file the fake copier changes exists in the project, as it does in a real update.
-    mkdir -p "$p/$(dirname "${file:-.github/workflows/ci.yml}")"
-    echo 'project line' >"$p/${file:-.github/workflows/ci.yml}"
+    mkdir -p "$p/.github/scripts" "$p/$(dirname "${file:-.github/workflows/ci.yml}")"
+    cp "$out/a/$publisher" "$p/$publisher"
+    if [ "$name" != self-update ]; then echo 'project line' >"$p/${file:-.github/workflows/ci.yml}"; fi
+    if [ "$name" = issue ]; then echo 'project issue notes' >"$p/issue.md"; fi
     # A module at the project root that shadows one the resolver imports.
     if [ "$name" = pyroot ]; then echo 'raise SystemExit("imported the project re.py")' >"$p/re.py"; fi
     git -C "$p" add -A
@@ -215,6 +224,7 @@ asked false - 3
 push true - -
 edit true 7 -
 plain false - - README.md
+self-update true - - .github/scripts/publish-copier-update.sh
 layer true - - README.md
 both true - - README.md
 pin-project true - - README.md
@@ -242,6 +252,9 @@ own-young-https true - -
 lookalike true - -
 CASES
   cd "$cuh"
+  # An update to the publisher itself is committed, while this run uses the checkout's copy.
+  cmp "$out/a/$publisher" "self-update-runner/publish-copier-update.sh"
+  git -C self-update.git show "chore/copier-update:$publisher" | grep -qxF '# from the template'
   # Newest tag by version, not by name.
   grep -qx "uvx --exclude-newer 1 week copier@$copier_pin update --answers-file .copier-answers.yml --defaults --vcs-ref v0.10.0" issue.log
   # Each answers file updates on its own, and the PR names the layer that moved.
@@ -305,6 +318,9 @@ CASES
   # Only the issue this workflow opened counts: it runs with GITHUB_TOKEN there.
   grep -qxF 'issue list --state all --author app/github-actions --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
   grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
+  grep -qF -- "--body-file $cuh/issue-runner/copier-update-issue.md" issue.log
+  grep -qF 'Run `copier update --answers-file' issue-runner/copier-update-issue.md
+  grep -qxF 'project issue notes' issue-clean/issue.md
   (lacks -q '^pr close' issue.log)
   grep -q 'Pull request #7 is still open for an older template version' issue.out
   (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml 2>/dev/null)

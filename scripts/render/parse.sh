@@ -102,6 +102,37 @@ def run_step(script, work, env, fakes):
     base = {"PATH": f"{work / 'bin'}:/usr/bin:/bin:/usr/local/bin", "RUNNER_TEMP": str(work)}
     return subprocess.run(["bash", "-c", script], cwd=work, env={**base, **env}, check=False,
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+# An empty components list is valid only when the locked runtime requirements and extras are empty.
+sbom_export = next(s["run"] for s in python_release["build"]["steps"] if "cyclonedx1.5" in s.get("run", ""))
+sbom = {"bomFormat": "CycloneDX", "specVersion": "1.5", "metadata": {"component": {"name": "pkg"}}}
+for document, requirements, ok in [
+    (json.dumps(sbom | {"components": [{"name": "library"}]}), "library==1", True),
+    (json.dumps(sbom | {"components": []}), "", True),
+    (json.dumps(sbom | {"components": []}), "extra-library==1", False),
+    (json.dumps(sbom | {"components": []}), "!fail!", False),
+    (json.dumps(sbom), "", False),
+    (json.dumps(sbom | {"components": {"name": "library"}}), "", False),
+    ("malformed JSON", "", False),
+    ("missing", "", False),
+]:
+    with tempfile.TemporaryDirectory() as tmp:
+        work = pathlib.Path(tmp)
+        (work / "dist").mkdir()
+        (work / "dist/pkg.tar.gz").touch()
+        result = run_step(sbom_export, work, {"SBOM": document, "REQUIREMENTS": requirements}, {
+            "uv": '[ "$1 $2 $3 $4" = "export --locked --no-dev --all-extras" ] || exit 2\n'
+                  'case " $* " in\n'
+                  '  *" --format cyclonedx1.5 "*)\n'
+                  '    [ "$SBOM" != missing ] || exit 0\n'
+                  '    for output do :; done\n'
+                  '    printf "%s\\n" "$SBOM" >"$output" ;;\n'
+                  '  *" --no-emit-project "*)\n'
+                  '    [ "$REQUIREMENTS" != "!fail!" ] || exit 1\n'
+                  '    printf "%s" "$REQUIREMENTS" ;;\n'
+                  '  *) exit 2 ;;\n'
+                  'esac\n',
+        })
+        assert (result.returncode == 0) == ok, (document, requirements, result)
 # The optional files travel from build to the attestation and reach the release with their bundles.
 extra_workflow = "release-assets/.github/workflows/python-release.yml"
 extra_jobs = yaml.safe_load((out / extra_workflow).read_text())["jobs"]

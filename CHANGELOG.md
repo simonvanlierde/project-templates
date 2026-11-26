@@ -10,7 +10,7 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
-## [0.17.0] - 2026-11-20
+## [0.17.0] - 2026-11-26
 
 ### Added
 
@@ -22,10 +22,12 @@ changes are marked **Breaking**.
 - A Zensical docs site no longer shows "Made with Zensical" in its footer. The footer shows the author, the licence when there is one, a GitHub link and, for a package on PyPI, a PyPI link. Pages get an edit link, code blocks a copy button, and the header a system, light and dark theme toggle. Links take the docs accent from `docs-tokens.css` instead of the theme's primary colour. An existing project keeps its own `zensical.toml`: copy the new settings from a fresh render ([Documentation site](docs/usage.md#documentation-site)).
 - Python packages publishing to PyPI can attach extra files to the GitHub release with `python_release_asset_dirs`. The workflow checks their build digest, attests them and verifies their provenance before publication. See [Publishing](docs/setup.md#publishing).
 - Docker images record the build commit in their OCI revision label and report it at startup. Python web services report it at `/version`. Web apps and plain and Astro sites expose `version.txt` and show the revision in the starter footer. Local builds include a dirty marker.
+- Rust binary releases unpack the archives to check the executable and any project-owned JSON schema. They verify the archive attestations before publishing to crates.io.
 
 ### Changed
 
 - **Breaking:** Zensical docs build from `docs-site/uv.lock`, including transitive dependencies. Run `just docs-sync` and commit the lockfile when updating an existing Zensical project. Keep project-specific settings in `zensical.toml`.
+- The weekly Copier workflow publishes its update through `.github/scripts/publish-copier-update.sh`. Tests can call the script directly. The workflow uses the copy from the checkout it started with.
 
 ### Fixed
 
@@ -33,6 +35,7 @@ changes are marked **Breaking**.
 - Rust binary release archives include `output.schema.json` when the project has one, so consumers can validate the JSON output.
 - The cold-install workflow no longer runs `just data-release` from the README, which needs `just pipeline`'s output and so failed every citable data-pipeline repo whose README changed.
 - `just repo-about` uses the URL in `zensical.toml` when Zensical docs are the project's main site. The social-card and Pages setup comments reflect what the recipes run.
+- Python releases reject an empty software bill of materials when the package's lockfile lists runtime dependencies. A dependency-free package can still release with an empty component list.
 
 ## [0.16.1] - 2026-11-17
 

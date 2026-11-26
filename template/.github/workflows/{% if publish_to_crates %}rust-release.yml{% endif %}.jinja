@@ -22,8 +22,9 @@ name: rust release
 {%- if rust_kind == 'binary' %}
 #
 # `binaries` builds an archive per platform, named as `cargo binstall` looks for it
-# (see [package.metadata.binstall] in Cargo.toml). publish attests them, then the
-# release job checks every attestation, attaches the archives with their bundles as
+# (see [package.metadata.binstall] in Cargo.toml). It extracts each archive to check
+# the files before upload. The publish job attests and verifies the archives before
+# uploading the crate. The release job verifies them again and attaches their bundles as
 # `<asset>.intoto.jsonl` (the name Scorecard's Signed-Releases check scores highest) to a
 # draft, and publishes the draft. Immutable releases accept no assets after publication.
 {%- else %}
@@ -155,6 +156,33 @@ jobs:
             *) tar -czf "dist/$name-$TARGET.tar.gz" -C "$archive" "${files[@]}" ;;
           esac
 
+      - name: smoke-test the Rust archive
+        env:
+          TARGET: {% raw %}${{ matrix.target }}{% endraw %}
+        run: |-
+          set -euo pipefail
+          archive="$PWD/dist/{{ crate_name }}-$TARGET"
+          unpacked=$(mktemp -d)
+          trap 'rm -rf "$unpacked"' EXIT
+          binary={{ crate_name }}
+          case $TARGET in
+            *windows*)
+              binary=$binary.exe
+              (cd "$unpacked" && 7z x "$archive.zip")
+              ;;
+            *)
+              tar -xzf "$archive.tar.gz" -C "$unpacked"
+              test -x "$unpacked/$binary"
+              ;;
+          esac
+          cmp "target/$TARGET/release/$binary" "$unpacked/$binary"
+          if [ -f output.schema.json ]; then
+            cmp -s output.schema.json "$unpacked/output.schema.json" || {
+              echo "::error::$TARGET archive is missing the built output.schema.json or its contents differ"
+              exit 1
+            }
+          fi
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist-{% raw %}${{ matrix.target }}{% endraw %}
@@ -191,6 +219,16 @@ jobs:
         id: attest
         with:
           subject-path: dist/*
+      - name: verify binary attestations before publishing
+        env:
+          GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
+          GH_REPO: {% raw %}${{ github.repository }}{% endraw %}
+          BUNDLE: {% raw %}${{ steps.attest.outputs.bundle-path }}{% endraw %}
+        run: |-
+          set -euo pipefail
+          for file in dist/*; do
+            gh attestation verify "$file" --repo "$GH_REPO" --bundle "$BUNDLE" --signer-workflow "$GH_REPO/.github/workflows/rust-release.yml"
+          done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: provenance

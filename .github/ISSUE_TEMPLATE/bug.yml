@@ -16,7 +16,9 @@ body:
     id: answers
     attributes:
       label: Copier answers
-      description: The answers you used, from `.copier-answers.yml` or the command line.
+      description: >-
+        The answers you used, from `.copier-answers.yml` or the command line. This issue is
+        public, so leave out a `_src_path` that names a folder on your machine.
       render: yaml
     validations:
       required: true

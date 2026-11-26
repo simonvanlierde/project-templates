@@ -17,11 +17,8 @@ def _write_comparison_response(path: Path, case: str) -> None:
     path.write_text(json.dumps({"commits": [{"commit": commit}]}))
 
 
-def check_push(workflow: Path, case: str) -> None:
+def check_push(script: Path, case: str) -> None:
     """Keep unverified commits and reject races at the remote branch."""
-    text = workflow.read_text()
-    section = text.split("          # Git uses the credential helper", 1)[1].split("          # With a .rej", 1)[0]
-    script = "\n".join(line[10:] for line in ("          # Git uses the credential helper" + section).splitlines())
     with tempfile.TemporaryDirectory(prefix="copier-push-") as tmp:
         root = Path(tmp)
         tools = root / "tools"
@@ -83,7 +80,14 @@ esac
 exec "$REAL_GIT" "$@"
 """)
         (tools / "gh").write_text("""#!/usr/bin/env bash
-if [ "$1 $2" = 'auth setup-git' ]; then exit 0; fi
+case "$1 $2" in
+  'auth setup-git') exit 0 ;;
+  'pr list')
+    case " $* " in *" --state closed "*) echo '[]' ;; esac
+    exit 0
+    ;;
+  'pr create') printf '%s\\n' "$*" >>"$PR_LOG"; exit 0 ;;
+esac
 if [ "$1" != api ]; then exit 90; fi
 printf '%s\\n' "$*" >>"$API_LOG"
 if [ "$CASE" = api-failure ]; then exit 1; fi
@@ -108,6 +112,8 @@ fi
                 tool.chmod(0o755)
         response = root / "response.json"
         _write_comparison_response(response, case)
+        (root / "copier-update").mkdir()
+        (root / "copier-update/body.md").write_text("Updates this project from its templates.\n")
         env.update(
             PATH=str(tools) + os.pathsep + os.defpath,
             CASE=case,
@@ -117,13 +123,18 @@ fi
             RESPONSE=str(response),
             API_LOG=str(root / "api.log"),
             PUSH_LOG=str(root / "push.log"),
+            PR_LOG=str(root / "pr.log"),
             REPO="example/tool",
             BASE="main",
-            branch="chore/copier-update",
+            LATEST="v1.2.3",
+            HAS_TOKEN="true",
+            WORKFLOWS="false",
+            CONFLICTS="false",
+            RUNNER_TEMP=str(root),
             GITHUB_STEP_SUMMARY=str(root / "summary"),
         )
         result = subprocess.run(  # noqa: S603 -- checked-in render against a file-only remote
-            [bash, "-euo", "pipefail", "-c", script],
+            [bash, str(script)],
             check=False,
             cwd=checkout,
             env=env,
@@ -140,9 +151,11 @@ fi
             assert f"compare/{base}...{before}" in (root / "api.log").read_text(), case
         if case in {"api-failure", "remote-failure", "human", "unknown-author", "paginated-human", "human-committer"}:
             assert not (root / "push.log").exists(), case
+        assert (root / "pr.log").exists() == (case in {"bot", "missing"}), case
 
 
 if __name__ == "__main__":
+    script = Path(sys.argv[1]).resolve(strict=True)
     failed = []
     for case in (
         "api-failure",
@@ -157,7 +170,7 @@ if __name__ == "__main__":
         "human-committer",
     ):
         try:
-            check_push(Path(sys.argv[1]), case)
+            check_push(script, case)
         except AssertionError as error:
             failed.append(case)
             sys.stderr.write(f"FAIL {case}: {error}\n")

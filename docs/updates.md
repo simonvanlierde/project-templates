@@ -45,6 +45,10 @@ A project whose `copier-update.yml` is from before this change commits the marke
 
 Without [the update App](#the-update-app), `copier-update.yml` pushes with `GITHUB_TOKEN`, which can't change files in `.github/workflows/`: an update that does opens an issue asking for a local update instead. An older update PR stays open so you can finish or close it. A PR it opens starts no checks either, because `GITHUB_TOKEN` events trigger no workflows. Close and reopen the PR to run them; its body says so. To open the PR at all, turn on Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests". With the App, the workflow does not need it.
 
+The publish job runs `.github/scripts/publish-copier-update.sh` from its original
+checkout. If a project's tests used to extract shell code from the workflow YAML,
+call the script directly instead.
+
 #### The update App
 
 A GitHub App of your own gives the workflow a token for each run. The token lasts an hour, reaches only the repo it runs in, and is revoked when the job ends. One App serves all your repos.
