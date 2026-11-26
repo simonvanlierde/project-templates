@@ -211,6 +211,13 @@ grep -qx '    cargo semver-checks --baseline-rev "$tag"' r/just/rust.just
 (lacks -q semver-checks c/.github/workflows/rust.yml c/just/rust.just)
 # publish_to_ghcr=true: docker.yml rendered its pushing half.
 grep -q 'packages: write' c/.github/workflows/docker.yml
+# Both smoke-test builds and the pushed image get the checked-out commit.
+# shellcheck disable=SC2016 # literal Actions expression in the rendered workflow
+test "$(grep -cxF '          build-args: BUILD_REVISION=${{ github.sha }}' c/.github/workflows/docker.yml)" -eq 3
+grep -qxF 'ARG BUILD_REVISION=unknown' c/api/Dockerfile
+# shellcheck disable=SC2016 # Docker expands the build argument in the runtime image
+grep -qF 'org.opencontainers.image.revision="${BUILD_REVISION}"' c/api/Dockerfile
+grep -qF 'docker compose up --build --watch' c/just/docker.just
 # docker.yml filters by path only when every build context is nested (c), not with a
 # root context (a).
 grep -qF 'paths: ["api/**", ".github/workflows/docker.yml"]' c/.github/workflows/docker.yml

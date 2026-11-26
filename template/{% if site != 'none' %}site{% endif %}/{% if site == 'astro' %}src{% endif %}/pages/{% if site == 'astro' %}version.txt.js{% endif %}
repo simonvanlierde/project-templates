@@ -1,0 +1,7 @@
+import { buildRevision } from "../revision.mjs";
+
+export function GET() {
+  return new Response(buildRevision, {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
+}

@@ -104,7 +104,7 @@ sed -n '/^check:/,/^$/p' y/justfile | grep -qx '    @just site'
 zensical_pin=$(sed -n '/^zensical_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
 mkdocstrings_pin=$(sed -n '/^mkdocstrings_python_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
 for r in m k h ds; do
-  for f in zensical.toml docs/index.md .github/workflows/docs.yml; do test -f "$r/$f"; done
+  for f in zensical.toml docs-site/pyproject.toml docs/index.md .github/workflows/docs.yml; do test -f "$r/$f"; done
   grep -qx '/_docs/' "$r/.gitignore"
   grep -qx 'site_dir = "_docs"' "$r/zensical.toml"
   grep -qx 'font = false' "$r/zensical.toml"
@@ -115,10 +115,13 @@ for r in m k h ds; do
   done
   # This repo restyles its own tokens; a render gets the template's.
   cmp "$repo/template/docs/{% if docs_site %}assets{% endif %}/docs-tokens.css" "$r/docs/assets/docs-tokens.css"
-  grep -qF "zensical@$zensical_pin build --strict" "$r/justfile"
-  grep -qF "zensical@$zensical_pin serve" "$r/justfile"
+  grep -qxF '    uv lock --project docs-site' "$r/justfile"
+  grep -qxF '    uv run --project docs-site --locked --only-group docs zensical build --strict' "$r/justfile"
+  grep -qxF '    uv run --project docs-site --locked --only-group docs zensical serve' "$r/justfile"
+  grep -qF "zensical==$zensical_pin" "$r/docs-site/pyproject.toml"
   wf=$r/.github/workflows/docs.yml
   test "$(grep -c 'pages: write' "$wf")" = 1
+  grep -qx '          cache-dependency-glob: docs-site/uv.lock' "$wf"
   grep -qx '      - run: just docs' "$wf"
   grep -qx '          path: _docs' "$wf"
   test "$(grep -c 'uses: actions/checkout@' "$wf")" = "$(grep -c 'persist-credentials: false' "$wf")"
@@ -143,7 +146,7 @@ for r in st sp nw zs; do
   cmp "$repo/template/docs/{% if docs_site %}assets{% endif %}/docs-tokens.css" "$r/docs/assets/docs-tokens.css"
   grep -qF '"../docs/assets/docs-tokens.css"' "$r/docs-site/astro.config.mjs"
   # No Zensical files, and no mkdocstrings.
-  for f in zensical.toml docs-overrides .lycheeignore docs/assets/docs.css docs/assets/docs.js docs/reference.md; do test ! -e "$r/$f"; done
+  for f in zensical.toml docs-overrides docs-site/pyproject.toml .lycheeignore docs/assets/docs.css docs/assets/docs.js docs/reference.md; do test ! -e "$r/$f"; done
   jq -e --arg a "$astro_pin" --arg s "$starlight_pin" --arg m "$satteri_pin" --arg x "$axe_pin" --arg p "$playwright_pin" \
     '.dependencies.astro == $a and .dependencies["@astrojs/starlight"] == $s and .dependencies["@astrojs/markdown-satteri"] == $m
      and .devDependencies["@axe-core/playwright"] == $x and .devDependencies.playwright == $p' "$r/docs-site/package.json" >/dev/null
@@ -264,14 +267,14 @@ done
 # The API reference only for a Python library used through its API.
 for r in m k; do
   test -f "$r/docs/reference.md"
-  grep -qF -- "--with mkdocstrings-python==$mkdocstrings_pin" "$r/justfile"
+  grep -qF "mkdocstrings-python==$mkdocstrings_pin" "$r/docs-site/pyproject.toml"
 done
 grep -qx '::: mutate_me' m/docs/reference.md
 grep -qx 'paths = \["py/src"\]' m/zensical.toml
 grep -qx 'paths = \["\."\]' k/zensical.toml
 for r in h ds; do
   test ! -e "$r/docs/reference.md"
-  (lacks -q 'mkdocstrings' "$r/justfile")
+  (lacks -q 'mkdocstrings' "$r/docs-site/pyproject.toml")
   (lacks -q 'mkdocstrings' "$r/zensical.toml")
 done
 # The badge page links SECURITY.md outside docs/ by URL, which a strict build accepts.
@@ -282,16 +285,23 @@ for r in a c x w; do
   (lacks -q '^docs:' "$r/justfile")
 done
 (lacks -q '"docs: build"' c/.github/rulesets/main-checks.json)
+# A strict build refuses a fresh render until the docs dependencies have a lockfile.
+if (cd m && just docs) >zensical-unlocked.log 2>&1; then
+  echo "Zensical built without a lockfile" >&2
+  exit 1
+fi
+grep -qF 'uv.lock' zensical-unlocked.log
+test ! -e m/docs-site/uv.lock
 # A real strict build: the API reference from the docstrings, and the badge pages.
-(cd m && just docs >/dev/null 2>&1)
+(cd m && just docs-sync docs)
 grep -qF 'Add two numbers' m/_docs/reference/index.html
 # Code blocks carry no empty line-anchor links, which axe flags as links without a name.
 grep -qF '<code>' m/_docs/reference/index.html
 (lacks -q '__codelineno' m/_docs/reference/index.html)
-(cd h && just docs >/dev/null 2>&1)
+(cd h && just docs-sync docs)
 test -f h/_docs/assurance-case/index.html
 # k's flat package: mkdocstrings finds the module at the root, through paths = ["."].
-(cd k && just docs >/dev/null 2>&1)
+(cd k && just docs-sync docs)
 # A private repo's page has no links into the repo, which its readers cannot open.
 (lacks -rq 'github.com/' hush-plain/site hush-astro/site/src)
 grep -q 'href="https://github.com/.*/issues"' x/site/index.html
@@ -337,6 +347,39 @@ grep -qx '          package_json_file: web/package.json' d/.github/workflows/sit
 }
 test -f x/_site/index.html
 test -f x/_site/main.mjs
+# The clean tag and dirty stamp reach the artifact and the starter footer.
+cp -R x/site revision-site
+mkdir revision-fixture
+mv revision-site revision-fixture/site
+cp x/justfile revision-fixture/
+(
+  cd revision-fixture
+  while IFS= read -r git_var; do unset "$git_var"; done < <(git rev-parse --local-env-vars)
+  git init -q
+  git add justfile site/index.html
+  git -c user.name='Test' -c user.email=test@example.org -c commit.gpgsign=false commit -qm 'test: add revision fixture'
+  git tag 'v1&<test>'
+  just site
+  grep -qxF 'v1&<test>' _site/version.txt
+  grep -qF 'Revision: v1&amp;&lt;test&gt;</p>' _site/index.html
+  echo '<!-- work in progress -->' >>site/index.html
+  just site
+  grep -qxF 'v1&<test>-dirty' _site/version.txt
+  grep -qF 'Revision: v1&amp;&lt;test&gt;-dirty</p>' _site/index.html
+  # An archive below a different Git root has no tracked justfile there.
+  mkdir archive
+  cp justfile archive/
+  cp -R site archive/
+  (cd archive && just site)
+  grep -qx 'unknown' archive/_site/version.txt
+  grep -qF 'Revision: unknown</p>' archive/_site/index.html
+  git add archive/justfile archive/site/index.html
+  (cd archive && just site)
+  grep -qxF 'v1&<test>-dirty' archive/_site/version.txt
+) >site-revision.log 2>&1 || {
+  cat site-revision.log >&2
+  exit 1
+}
 # deploy-worker.sh with the site's wrangler command and config, as the workflow sets it.
 site_wrangler=$(sed -n 's/^ *WRANGLER: //p' x/.github/workflows/site.yml | sort -u)
 test "$(wc -l <<<"$site_wrangler")" = 1
@@ -452,6 +495,8 @@ astro_start=$SECONDS
 echo "check-render: the Astro build took $((SECONDS - astro_start)) s" >&2
 test -f y/site/dist/index.html
 test -f y/site/dist/about/index.html
+grep -qxF 'unknown' y/site/dist/version.txt
+grep -qF 'Revision: unknown</p>' y/site/dist/index.html
 grep -qF '<h1>About</h1>' y/site/dist/about/index.html
 grep -qF 'href="/site-me/about/"' y/site/dist/index.html
 test -f y/site/pnpm-lock.yaml
@@ -815,5 +860,6 @@ grep -qx 'Sitemap: https://example-org.github.io/zt-me/sitemap.xml' zt/docs/robo
 for f in x/site/robots.txt y/site/public/robots.txt d/web/public/robots.txt; do
   (lacks -q '^Sitemap:' "$f")
 done
-test ! -e zt/docs-site
+test -f zt/docs-site/pyproject.toml
+test ! -e zt/docs-site/package.json
 test ! -e st/docs/robots.txt

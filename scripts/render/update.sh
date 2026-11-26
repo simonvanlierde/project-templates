@@ -642,6 +642,7 @@ grep -qF 'cannot limit branches either' "$out/a/justfile"
     grep -qx 'docs_engine: zensical' "$p/.copier-answers.yml"
     test -f "$p/zensical.toml"
     test -f "$p/docs/assets/docs.css"
-    test ! -e "$p/docs-site"
+    test -f "$p/docs-site/pyproject.toml"
+    test ! -e "$p/docs-site/package.json"
   done
 )

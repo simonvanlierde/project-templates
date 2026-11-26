@@ -102,6 +102,85 @@ def run_step(script, work, env, fakes):
     base = {"PATH": f"{work / 'bin'}:/usr/bin:/bin:/usr/local/bin", "RUNNER_TEMP": str(work)}
     return subprocess.run(["bash", "-c", script], cwd=work, env={**base, **env}, check=False,
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+# The optional files travel from build to the attestation and reach the release with their bundles.
+extra_workflow = "release-assets/.github/workflows/python-release.yml"
+extra_jobs = yaml.safe_load((out / extra_workflow).read_text())["jobs"]
+assert not any(s.get("with", {}).get("name", "").startswith("release-extra-")
+               for job in python_release.values() for s in job["steps"]), python_release
+for job, paths in (
+    ("build", ["api/export/", "api/metadata/generated/"]),
+    ("publish", ["export/", "metadata/generated/"]),
+    ("release", ["${{ runner.temp }}/release-extra-1/", "${{ runner.temp }}/release-extra-2/"]),
+):
+    transfers = [s["with"] for s in extra_jobs[job]["steps"]
+                 if s.get("with", {}).get("name", "").startswith("release-extra-")]
+    assert [s["name"] for s in transfers] == ["release-extra-1", "release-extra-2"], transfers
+    assert [s["path"] for s in transfers] == paths, transfers
+attest = next(s["with"] for s in extra_jobs["publish"]["steps"] if s.get("id") == "attest")
+assert attest["subject-path"].splitlines() == ["dist/*", "sbom/*", "export/*", "metadata/generated/*"], attest
+collect = step(extra_workflow, "build", "collect extra release assets")
+digest = next(s["run"] for s in extra_jobs["build"]["steps"] if s.get("id") == "digest")
+check = step(extra_workflow, "publish", "refuse artifacts that changed after the build")
+for fault in ("", "missing", "duplicate", "duplicate-case", "symlink", "bundle", "oversize", "too-many", "count-limit"):
+    with tempfile.TemporaryDirectory() as tmp:
+        work = pathlib.Path(tmp)
+        pkg = work / "api"
+        for directory in ("dist", "sbom"):
+            (pkg / directory).mkdir(parents=True)
+        (pkg / "dist/pkg.tar.gz").write_text("sdist")
+        (pkg / "sbom/pkg.tar.gz.cdx.json").write_text("sbom")
+        # The repo's optional hook must run at the configured Python working directory.
+        scripts = work / ".github/scripts"
+        scripts.mkdir(parents=True)
+        (scripts / "build-release-assets.sh").write_text(
+            "mkdir -p export metadata/generated\n"
+            "printf maps >export/maps.tar.gz\n"
+            "printf sums >metadata/generated/SHA256SUMS\n"
+            + {"": "", "missing": "rm export/maps.tar.gz\nrmdir export\n",
+               "duplicate": "cp export/maps.tar.gz metadata/generated/maps.tar.gz\n",
+               "duplicate-case": "cp export/maps.tar.gz metadata/generated/MAPS.tar.gz\n",
+               "symlink": "ln -s ../dist/pkg.tar.gz export/link\n",
+               "bundle": "touch export/file.intoto.jsonl\n",
+               "oversize": "truncate -s 2147483648 export/maps.tar.gz\n",
+               "too-many": 'for i in {1..496}; do touch "export/file-$i"; done\n',
+               "count-limit": 'for i in {1..495}; do touch "export/file-$i"; done\n'}[fault]
+        )
+        env = {"PATH": "/usr/bin:/bin", "GITHUB_WORKSPACE": str(work), "GITHUB_OUTPUT": str(work / "output")}
+        collected = subprocess.run(["bash", "-c", collect], cwd=pkg, env=env, capture_output=True, check=False)
+        assert (collected.returncode == 0) == (fault in ("", "count-limit")), collected
+        if fault == "duplicate-case":
+            assert b"Duplicate release asset name" in collected.stdout, collected
+        if fault == "oversize":
+            assert b"must be under 2 GiB" in collected.stdout, collected
+        if fault == "too-many":
+            assert b"at most 499 payload files" in collected.stdout, collected
+        if fault:
+            continue
+        subprocess.run(["bash", "-c", digest], cwd=pkg, env=env, check=True)
+        env["EXPECTED"] = (work / "output").read_text().strip().removeprefix("value=")
+        subprocess.run(["bash", "-c", check], cwd=pkg, env=env, check=True)
+        (pkg / "metadata/generated/SHA256SUMS").write_text("changed")
+        assert subprocess.run(["bash", "-c", check], cwd=pkg, env=env, check=False).returncode != 0
+        (pkg / "export/maps.tar.gz").unlink()
+        assert subprocess.run(["bash", "-c", check], cwd=pkg, env=env, capture_output=True, check=False).returncode != 0
+with tempfile.TemporaryDirectory() as tmp:
+    work = pathlib.Path(tmp)
+    for directory in ("assets", "provenance", "sbom-attestation", "notes", "release-extra-1", "release-extra-2"):
+        (work / directory).mkdir()
+    for asset in ("assets/pkg.tar.gz", "assets/pkg.tar.gz.cdx.json", "provenance/bundle.json",
+                  "sbom-attestation/bundle.json", "notes/notes.md", "release-extra-1/maps.tar.gz",
+                  "release-extra-2/SHA256SUMS"):
+        (work / asset).touch()
+    publish_extra = step(extra_workflow, "release", "publish the GitHub release")
+    result = run_step(publish_extra, work, {"TAG": "v1.2.3", "GH_REPO": "o/r"}, {
+        "gh": 'case "$2" in verify) echo "$3" >>../verified ;; esac\n',
+    })
+    assert result.returncode == 0, result
+    verified = (work / "verified").read_text().splitlines()
+    assert collections.Counter(verified) == {"maps.tar.gz": 1, "SHA256SUMS": 1, "pkg.tar.gz": 2,
+                                              "pkg.tar.gz.cdx.json": 1}, verified
+    assert (work / "assets/maps.tar.gz.intoto.jsonl").is_file()
+    assert (work / "assets/SHA256SUMS.intoto.jsonl").is_file()
 # curl writes the body to the file after -o and prints the status (CODE) the way -w does.
 curl = 'while [ $# -gt 0 ]; do [ "$1" = -o ] && out=$2; shift; done\nprintf %s "$BODY" >"$out"\nprintf %s "$CODE"\n'
 pypi = step("c/.github/workflows/python-release.yml", "publish", "refuse a file PyPI has with other content")

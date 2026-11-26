@@ -1,5 +1,7 @@
 ---
 {%- set repo = 'https://github.com/' ~ github_user ~ '/' ~ slug %}
+import { buildRevision } from "../revision.mjs";
+
 // The page skeleton every page shares: a compact header, the page in <main>, and a
 // footer with the licence and the privacy line. A Markdown page passes its frontmatter,
 // and its title becomes the page's heading.
@@ -56,6 +58,7 @@ const repo = "{{ repo }}";
         <a href={`${repo}/issues`}>Report a problem</a>
       </p>
 {%- endif %}
+      <p>Revision: {buildRevision}</p>
     </footer>
   </body>
 </html>

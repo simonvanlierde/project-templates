@@ -41,6 +41,10 @@ Replace the example source in `sources.toml`, and its sample tests, with your ow
 A `web-service` project includes:
 
 - A FastAPI app with `GET /health` returning `{"status": "ok"}`, probed by the Docker `HEALTHCHECK`.
+- `GET /version` and the startup log report `BUILD_REVISION`. CI stamps the built commit
+  in both the image environment and its OCI revision label. `just serve` and `just up`
+  use `git describe --tags --always --dirty` locally. Restart `just up` after changing
+  the checkout to refresh the revision used by its Compose watch session.
 - An entrypoint that reads `HOST` and `PORT`. Listens on `127.0.0.1` by default. The Docker image sets `HOST=0.0.0.0`, and `compose.yaml` maps the port to `127.0.0.1`.
 - Interactive docs (`/docs`, `/redoc`, `/openapi.json`) disabled by default; set `API_DOCS=1` to enable them.
 - OpenTelemetry: zero-code instrumentation turns on when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, and exports request spans and duration histograms over OTLP/HTTP. Without it, the telemetry modules are not imported. To send to a collector, set the standard variables:

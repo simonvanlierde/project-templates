@@ -115,5 +115,7 @@ mutants.out*/
 {%- if docs_starlight %}
 # Astro's generated types
 /docs-site/.astro/
+{%- elif docs_zensical and 'python' not in stacks %}
+/docs-site/.venv/
 {%- endif %}
 {%- endif %}

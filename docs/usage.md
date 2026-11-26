@@ -71,6 +71,7 @@ The advanced questions and their defaults:
 | `rust_version` | The crate's minimum supported Rust version (`rust-version` in `Cargo.toml`), the current stable minor by default |
 | `python_api` | Enabled ([API-break check](#api-break-check)) |
 | `publish_to_pypi`, `publish_to_npm`, `publish_to_crates`, `publish_to_ghcr` | Disabled ([Publishing](setup.md#publishing)) |
+| `python_release_asset_dirs` | Empty list. For a PyPI release, set directories of extra GitHub release files ([Publishing](setup.md#publishing)). |
 | `app_port` | 8000 |
 | `site_url` | `https://<project>.<github_user>.workers.dev` (`<project>-site` for a site on Cloudflare), which is right when the account's subdomain is the GitHub user. Another host is a custom domain ([Custom domains](hosting.md#custom-domains)). A web app's may end in a path, served through a route on the zone that holds the host ([An app under a path](hosting.md#an-app-under-a-path)) |
 
@@ -336,7 +337,7 @@ To add these tests to an existing project, select `property` or `mutation` in `e
 
 Select `docs_site` in `extras` (under `customise`) when outside users need search or versioned docs (the `docs-site` requirement in [Levels](levels.md)): a search-indexed site built from the Markdown in `docs/`. GitHub Pages serves it from `main` at `https://<user>.github.io/<repo>/`. The site reads the files in `docs/` as they are, so there is no second copy to keep in step.
 
-`docs_engine` picks the builder ([why](decisions/0012-docs-engine-per-toolchain.md)). It is never asked: the default follows the stacks, and `--data docs_engine=zensical` or `--data docs_engine=starlight` on `copier copy` or `copier update` picks the other. [Zensical](https://zensical.org) is the default for a repo with a Python stack, or with neither TypeScript nor Rust, and runs with `uvx`. [Starlight](https://starlight.astro.build) is the default for a TypeScript or Rust repo without Python, and runs with the pnpm and Node the repo has ([Starlight](#starlight-docs-engine)). An update keeps a project's engine, and a project that predates the answer stays on Zensical until it passes `--data docs_engine=starlight`. Both read the paper, ink, accent and font stacks from `docs/assets/docs-tokens.css`, which is yours: edit its values to match your `DESIGN.md`. Without a `nav` in `zensical.toml`, the Zensical menu follows the files.
+`docs_engine` picks the builder ([why](decisions/0012-docs-engine-per-toolchain.md)). It is never asked: the default follows the stacks, and `--data docs_engine=zensical` or `--data docs_engine=starlight` on `copier copy` or `copier update` picks the other. [Zensical](https://zensical.org) is the default for a repo with a Python stack, or with neither TypeScript nor Rust, and runs with uv. [Starlight](https://starlight.astro.build) is the default for a TypeScript or Rust repo without Python, and runs with the pnpm and Node the repo has ([Starlight](#starlight-docs-engine)). An update keeps a project's engine, and a project that predates the answer stays on Zensical until it passes `--data docs_engine=starlight`. Both read the paper, ink, accent and font stacks from `docs/assets/docs-tokens.css`, which is yours: edit its values to match your `DESIGN.md`. Without a `nav` in `zensical.toml`, the Zensical menu follows the files.
 
 A render with `docs_site` and Zensical gets:
 
@@ -344,7 +345,8 @@ A render with `docs_site` and Zensical gets:
 - `docs/assets/docs-tokens.css`, the paper, ink, accent and font stacks that both engines read. It is yours: edit its values to match your `DESIGN.md`, and an update leaves it alone.
 - `docs/og-card.html`, the social card, and `docs/assets/og.png` once you run `just og-card`. Commit the PNG.
 - `docs/reference.md`, for a Python library with `python_api`. It holds one `::: <module>` line, which mkdocstrings expands into the API reference from the docstrings. It reads the source without importing the package.
-- `just docs`, which builds into `_docs/` (gitignored), and `just docs-serve`, which serves the site on port 8000 and rebuilds it on each save. Both run the Zensical that `copier.yml` pins with `uvx`, so the project needs no docs dependencies. Like the project's own installs, uvx resolves only releases at least a week old. `copier update` brings a newer pin.
+- `docs-site/pyproject.toml` pins Zensical and, for an API reference, mkdocstrings-python. The docs build uses its own Python 3.14 environment. Run `just docs-sync` after the first render and after an update changes these pins. Commit `docs-site/uv.lock`, which records the exact dependencies and their hashes and resolves only releases at least a week old.
+- `just docs` builds into `_docs/` (gitignored). `just docs-serve` serves the site on port 8000 and rebuilds it on each save. Both install from the lockfile.
 - `.github/workflows/docs.yml`. Every pull request and push to `main` runs `just docs`. In a public repo, `docs: build` is a required check. The `deploy` job publishes the build to Pages on a push to `main`. `just repo-settings` sets Pages to deploy from Actions.
 
 The build is strict: a warning fails it. A link to a page that does not exist is a warning, and so is a link out of `docs/`, such as `../README.md`. Link to files outside `docs/` with their full GitHub URL instead.
@@ -355,7 +357,7 @@ The site uses system fonts and a plain repository link. It makes no font or repo
 
 `docs-overrides/main.html` adds link-preview tags to every page: `og:title`, `og:description`, `og:image` (with size and alt text), `og:url` and `twitter:card`. The home page's title is the site name alone, and another page's is `<page> - <site name>`. A page's `description:` front matter replaces the site description. The tags read `site_url`, `site_description` and `og_image` from `zensical.toml` and are skipped when there is no `og_image`. Run `just og-card` to render the card ([Social card](hosting.md#social-card)).
 
-An existing `zensical.toml` is yours, so updates leave it alone. To use these defaults after an update, add the assets under `[project]`, the theme settings under `[project.theme]`, the card under `[project.extra]` and the code-block setting under `[project.markdown_extensions.pymdownx.highlight]`. Keep any other entries in those tables:
+An existing `zensical.toml` is yours, so updates leave it alone. If the Zensical site is your project's homepage, `just repo-about` reads its `[project].site_url`. To use these defaults after an update, add the assets under `[project]`, the theme settings under `[project.theme]`, the card under `[project.extra]` and the code-block setting under `[project.markdown_extensions.pymdownx.highlight]`. Keep any other entries in those tables:
 
 ```toml
 [project]

@@ -29,6 +29,15 @@ def test_health() -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The image revision appears in the version response."""
+    monkeypatch.setattr("{{ module_name }}.app.BUILD_REVISION", "v1.2.3-2-g0123456-dirty")
+    with TestClient(app) as client:
+        response = client.get("/version")
+    assert response.status_code == 200
+    assert response.json() == {"revision": "v1.2.3-2-g0123456-dirty"}
+
+
 def test_unknown_path_is_404() -> None:
     """Anything else is a 404, the API docs included while API_DOCS is unset."""
     with TestClient(app) as client:
@@ -91,6 +100,7 @@ def test_unavailable_collector_keeps_serving_and_stops_on_sigterm(tmp_path: Path
             {
                 "HOST": "127.0.0.1",
                 "PORT": str(port),
+                "BUILD_REVISION": "0123456",
                 "NO_PROXY": "127.0.0.1",
                 "no_proxy": "127.0.0.1",
                 "OTEL_EXPORTER_OTLP_ENDPOINT": f"http://127.0.0.1:{collector.getsockname()[1]}",
@@ -119,6 +129,7 @@ def test_unavailable_collector_keeps_serving_and_stops_on_sigterm(tmp_path: Path
                         pass
                     output = log_path.read_text(encoding="utf-8")
                     if "/v1/traces" in output and "Connection refused" in output:
+                        assert "Build revision: 0123456" in output
                         break
                     assert time.monotonic() < deadline, output
                     time.sleep(0.05)

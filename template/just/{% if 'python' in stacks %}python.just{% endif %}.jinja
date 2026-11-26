@@ -139,5 +139,5 @@ data-release-check out='release':
 
 # Serve on 127.0.0.1:{{ app_port }} (HOST and PORT override), outside Docker.
 serve:
-    {{ uv }} run {{ slug }}
+    BUILD_REVISION="$(git ls-files --error-unmatch -- justfile >/dev/null 2>&1 && git describe --tags --always --dirty 2>/dev/null || echo unknown)" {{ uv }} run {{ slug }}
 {%- endif %}

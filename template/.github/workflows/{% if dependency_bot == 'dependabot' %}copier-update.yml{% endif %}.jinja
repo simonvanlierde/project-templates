@@ -158,7 +158,7 @@ jobs:
             echo
             printf '%s\n' "${lines[@]}"
             echo
-            {% endraw %}{% set refresh = [('\\`uv lock\\`', 'python' in stacks), ('\\`pnpm install\\`', 'ts' in stacks), ('\\`just go-sync\\`', 'go' in stacks), ('\\`just site-sync\\`', site == 'astro'), ('\\`just docs-sync\\`, \\`just docs-hashes\\`', docs_starlight)] | selectattr('1') | map(attribute='0') | list %}{% if refresh %}echo "Read the diff before merging, then refresh the lockfiles ({{ refresh | join(', ') }})."{% else %}echo "Read the diff before merging."{% endif %}{% raw %}
+            {% endraw %}{% set refresh = [('\\`uv lock\\`', 'python' in stacks), ('\\`pnpm install\\`', 'ts' in stacks), ('\\`just go-sync\\`', 'go' in stacks), ('\\`just site-sync\\`', site == 'astro'), ('\\`just docs-sync\\`', docs_zensical), ('\\`just docs-sync\\`, \\`just docs-hashes\\`', docs_starlight)] | selectattr('1') | map(attribute='0') | list %}{% if refresh %}echo "Read the diff before merging, then refresh the lockfiles ({{ refresh | join(', ') }})."{% else %}echo "Read the diff before merging."{% endif %}{% raw %}
             if [ -s conflicts.txt ]; then
               echo
               echo "These changes did not merge. Each file keeps the project's version, and the template's, with the conflicts marked, is in the \`.rej\` file next to it. Copy what you need into the file and delete the \`.rej\` file: the hooks fail while one is left. The PR stays a draft until you mark it ready."

@@ -31,7 +31,7 @@ Get it from the [releases](https://github.com/{{ github_user }}/{{ slug }}/relea
 
 {# uv runs Python and installs prek; a TS-only project gets prek through pnpm. -#}
 {% set tools = [
-  ('[uv](https://docs.astral.sh/uv/)', 'python' in stacks or 'ts' not in stacks),
+  ('[uv](https://docs.astral.sh/uv/)', 'python' in stacks or 'ts' not in stacks or docs_zensical),
   ('[just](https://just.systems)', true),
   ('[Node.js](https://nodejs.org)', has_pnpm),
   ('[pnpm](https://pnpm.io)', has_pnpm),
@@ -129,7 +129,7 @@ Each pull request that is open, not a draft, not from a bot and not from `chore/
 {% endif %}{% if docs_site %}
 ## Documentation
 
-The documentation is the Markdown in [`docs/`]({{ tree }}docs), published at `https://{{ github_user | lower }}.github.io/{{ slug }}/`{% if docs_api %} with an API reference from the docstrings{% endif %}. `just docs` builds it into `_docs/` and fails on a broken link, `just docs-serve` previews it, and every push to `main` deploys it to GitHub Pages once `just repo-settings` has turned Pages on. A Pages site is public, even when the repo is private.
+The documentation is the Markdown in [`docs/`]({{ tree }}docs), published at `https://{{ github_user | lower }}.github.io/{{ slug }}/`{% if docs_api %} with an API reference from the docstrings{% endif %}. {% if docs_zensical %}Run `just docs-sync` and commit `docs-site/uv.lock` before the first build. {% endif %}`just docs` builds it into `_docs/` and fails on a broken link, `just docs-serve` previews it, and every push to `main` deploys it to GitHub Pages once `just repo-settings` has turned Pages on. A Pages site is public, even when the repo is private.
 {% endif %}
 ## License
 

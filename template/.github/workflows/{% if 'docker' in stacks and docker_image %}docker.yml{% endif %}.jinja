@@ -104,6 +104,7 @@ jobs:
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: {{ python_dir }}
+          build-args: BUILD_REVISION={% raw %}${{ github.sha }}{% endraw %}
           cache-from: {% raw %}type=gha,scope=python{% endraw %}
 {%- if publish_to_ghcr %}
           # No cache-to: this job runs on pull requests and the weekly rebuild, and a cache
@@ -166,6 +167,7 @@ jobs:
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: {{ python_dir }}
+          build-args: BUILD_REVISION={% raw %}${{ github.sha }}{% endraw %}
           cache-from: {% raw %}${{ !startsWith(github.ref, 'refs/tags/') && 'type=gha,scope=python' || '' }}{% endraw %}
           cache-to: {% raw %}type=gha,mode=max,scope=python{% endraw %}
           push: false
@@ -200,6 +202,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: {{ python_dir }}
+          build-args: BUILD_REVISION={% raw %}${{ github.sha }}{% endraw %}
           cache-from: {% raw %}${{ !startsWith(github.ref, 'refs/tags/') && 'type=gha,scope=python' || '' }}{% endraw %}
           push: true
           tags: {% raw %}${{ steps.meta.outputs.tags }}{% endraw %}

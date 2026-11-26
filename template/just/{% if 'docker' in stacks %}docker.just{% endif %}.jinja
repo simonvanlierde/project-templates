@@ -1,7 +1,7 @@
 {%- if docker_image -%}
-# Run the service, rebuilding the image when src/ or the lockfile changes.
+# Run the service, rebuilding on changes. Restart to refresh the launch revision.
 up:
-    docker compose up --watch
+    BUILD_REVISION="$(git ls-files --error-unmatch -- justfile >/dev/null 2>&1 && git describe --tags --always --dirty 2>/dev/null || echo unknown)" docker compose up --build --watch
 {%- else -%}
 # Lint images, pinned by digest so CI and a laptop run the same tools.
 shellcheck := "koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d"

@@ -5,6 +5,13 @@ static site (`site`) go live. A web app always deploys to a Cloudflare Worker. A
 deploys to GitHub Pages, or to a Worker with `site_host=cloudflare`. Either way, each pull
 request gets a preview on its own Worker.
 
+Web app and static site builds write `version.txt` under the published base path.
+The starter footers also show the revision. A local build from a checkout reports
+`git describe --tags --always --dirty`. A source archive without Git reports `unknown`.
+To show the revision in an existing app's footer, use `import.meta.env.VITE_BUILD_REVISION`.
+For an existing Astro layout, import `buildRevision` from `../revision.mjs`.
+In a plain site's footer, add `<p>Revision: unknown</p>` on its own line for `just site` to fill in.
+
 ## Crawler policy
 
 Every site build includes a `robots.txt` with rules that allow search and answer bots and disallow named AI training crawlers.
@@ -19,7 +26,7 @@ Answer `site` (under `customise`) to give any project a static page beside its c
 
 The two choices differ only in what is in `site/` and how `just site` builds it:
 
-- `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a working [tool page](#the-plain-tool-page). Plain HTML, CSS and an ES module, no build step or framework. `just site` copies `site/` to `_site/`. For a page that needs a build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
+- `site=plain`: `site/index.html`, `site/style.css` and `site/main.mjs`, a working [tool page](#the-plain-tool-page) in plain HTML, CSS and JavaScript. `just site` copies `site/` to `_site/` and stamps the revision there. For a custom build, replace the recipe's body with yours, such as `uv run site/build.py --out _site`, and add the setup it needs (uv, Rust, Node) before `just site` in the `build` job of `site.yml`.
 - `site=astro`: a small Astro project. `package.json` pins astro at the version in `copier.yml`, `src/layouts/Base.astro` has the same header and footer, and `src/pages/` holds `index.astro` and a Markdown page, `about.md`. Run `just site-sync` once and commit the `site/pnpm-lock.yaml` it writes. `just site` installs from that lockfile and runs `astro build` into `site/dist/`. The `build` job sets up Node and pnpm from `site/package.json`, so the repo needs no TypeScript stack. Pages serves the site at `https://<user>.github.io/<repo>/`, so `site` and `base` in `astro.config.mjs` match it. On a Worker (`site_host=cloudflare`) the site is served from `/`: `site` is the Worker's address and there is no `base`.
 
 `just site-serve` serves either one at `http://localhost:4321/`, under `/<repo>/` for an Astro site on Pages, as Pages does.

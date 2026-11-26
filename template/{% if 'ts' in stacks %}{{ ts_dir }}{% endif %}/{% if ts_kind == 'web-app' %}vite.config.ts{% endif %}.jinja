@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 {% if site_path -%}
 import { copyFileSync } from "node:fs";
 {% endif -%}
@@ -9,6 +10,26 @@ import { svelteTesting } from "@testing-library/svelte/vite";
 {% endif -%}
 import { marked } from "marked";
 import { defineConfig, type Plugin } from "vite";
+
+function buildRevision(): string {
+  try {
+    const options = { encoding: "utf8", stdio: "pipe" } as const;
+    execFileSync("git", ["ls-files", "--error-unmatch", "--", "package.json"], options);
+    return execFileSync("git", ["describe", "--tags", "--always", "--dirty"], options).trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+const revision = buildRevision();
+
+const versionFile = (): Plugin => ({
+  name: "version-file",
+  apply: "build",
+  generateBundle() {
+    this.emitFile({ type: "asset", fileName: "version.txt", source: `${revision}\n` });
+  },
+});
 
 /**
  * Turns an imported .md file into its HTML at build time, so the pages in docs/
@@ -51,13 +72,14 @@ const topLevelCopies = (): Plugin => ({
 {%- endif %}
 
 export default defineConfig({
+  define: { "import.meta.env.VITE_BUILD_REVISION": JSON.stringify(revision) },
 {%- if site_path %}
   // The path in site_url. import.meta.env.BASE_URL gives it to the app.
   base: "{{ site_path }}/",
   build: { outDir: "dist{{ site_path }}" },
 {%- endif %}
 {%- if web_framework == 'preact' %}
-  plugins: [markdown(){% if site_path %}, topLevelCopies(){% endif %}],
+  plugins: [markdown(), versionFile(){% if site_path %}, topLevelCopies(){% endif %}],
   resolve: {
     // Code written for React, including libraries, imports react and react-dom.
     // preact/compat answers those imports. The longer paths come first: each
@@ -73,8 +95,8 @@ export default defineConfig({
   },
 {%- elif web_framework == 'svelte' %}
   // svelteTesting acts under vitest only: it loads Svelte's browser build and unmounts after each test.
-  plugins: [svelte(), svelteTesting(), markdown(){% if site_path %}, topLevelCopies(){% endif %}],
+  plugins: [svelte(), svelteTesting(), markdown(), versionFile(){% if site_path %}, topLevelCopies(){% endif %}],
 {%- else %}
-  plugins: [react(), markdown(){% if site_path %}, topLevelCopies(){% endif %}],
+  plugins: [react(), markdown(), versionFile(){% if site_path %}, topLevelCopies(){% endif %}],
 {%- endif %}
 });

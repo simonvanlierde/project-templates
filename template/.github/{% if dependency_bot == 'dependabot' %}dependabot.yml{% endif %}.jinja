@@ -41,6 +41,7 @@ updates:
 {#- An Astro site in site/ is an npm package of its own. #}
 {%- for eco, on, dir in [
       ('uv', 'python' in stacks, python_dir),
+      ('uv', docs_zensical, 'docs-site'),
       ('npm', 'ts' in stacks, ts_dir),
       ('npm', site == 'astro', 'site'),
       ('npm', docs_starlight, 'docs-site'),
@@ -56,7 +57,7 @@ updates:
   - package-ecosystem: {{eco}}
     directory: {{'/' if dir == '.' else '/' ~ dir}}
     schedule: {interval: weekly}
-    cooldown: {{ '{default-days: 7, exclude: [sourceledger]}' if eco == 'uv' and pipeline and github_user | lower == 'simonvanlierde' else '{default-days: 7}' }}
+    cooldown: {{ '{default-days: 7, exclude: [sourceledger]}' if eco == 'uv' and dir == python_dir and pipeline and github_user | lower == 'simonvanlierde' else '{default-days: 7}' }}
     commit-message: {prefix: chore, include: scope}
     groups:
       runtime:

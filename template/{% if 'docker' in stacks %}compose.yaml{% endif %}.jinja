@@ -32,6 +32,8 @@ services:
   app:
     build:
       context: {{ python_dir }}
+      args:
+        BUILD_REVISION: ${BUILD_REVISION:-unknown}
     ports:
       - "127.0.0.1:{{ app_port }}:{{ app_port }}"
     env_file:

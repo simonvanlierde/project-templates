@@ -112,13 +112,75 @@ jobs:
         with:
           name: sbom
           path: {{ python_dir }}/sbom/
+{%- if python_release_asset_dirs %}
+
+      - name: collect extra release assets
+        run: |
+          set -euo pipefail
+          script="$GITHUB_WORKSPACE/.github/scripts/build-release-assets.sh"
+          if [[ -f "$script" ]]; then bash "$script"; fi
+          export LC_ALL=C
+          shopt -s nullglob dotglob
+          declare -A seen=()
+          payload_count=0
+          for file in dist/* sbom/*; do
+            name=${file##*/}
+            seen["${name,,}"]=1
+            (( ++payload_count ))
+          done
+          for dir in {{ python_release_asset_dirs | join(' ') }}; do
+            if [[ "$(realpath -e -- "$dir")" != "$PWD/$dir" ]]; then
+              printf '::error::Extra release asset directory %s is missing or a symlink\n' "$dir"
+              exit 1
+            fi
+            files=("$dir"/*)
+            if (( {% raw %}${#files[@]}{% endraw %} == 0 )); then
+              printf '::error::Extra release asset directory %s is empty\n' "$dir"
+              exit 1
+            fi
+            # GitHub allows 1000 assets. Each payload has a bundle, and the sdist has one more.
+            (( payload_count += {% raw %}${#files[@]}{% endraw %} ))
+            if (( payload_count > 499 )); then
+              echo "::error::A release with attestations can carry at most 499 payload files"
+              exit 1
+            fi
+            for file in "${files[@]}"; do
+              name=${file##*/}
+              key=${name,,}
+              if [[ ! -f "$file" || -L "$file" || ! "$name" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]*$ || "$name" == *. || "$key" == *.intoto.jsonl ]]; then
+                printf '::error::Invalid extra release asset %s\n' "$file"
+                exit 1
+              fi
+              size=$(wc -c < "$file")
+              if (( size >= 2147483648 )); then
+                printf '::error::Extra release asset %s must be under 2 GiB\n' "$file"
+                exit 1
+              fi
+              if [[ ${seen[$key]+yes} ]]; then
+                printf '::error::Duplicate release asset name %s\n' "$name"
+                exit 1
+              fi
+              seen["$key"]=1
+            done
+          done
+{%- for dir in python_release_asset_dirs %}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-extra-{{ loop.index }}
+          path: {{ python_dir }}/{{ dir }}/
+          if-no-files-found: error
+{%- endfor %}
+{%- endif %}
 
       # What publish signs and uploads must be what was built here, whatever the test job ran.
       - id: digest
-        run: echo "value=$(sha256sum dist/* sbom/* | sha256sum | cut -d' ' -f1)" >>"$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          value=$(sha256sum dist/* sbom/*{% for dir in python_release_asset_dirs %} {{ dir }}/*{% endfor %} | sha256sum | cut -d' ' -f1)
+          echo "value=$value" >>"$GITHUB_OUTPUT"
 
   # Publish only what passes, on the exact commit being released. The dev group runs
-  # here, after dist/ is uploaded; publish compares a digest of dist/ and sbom/ with the build job's.
+  # here after the build has uploaded the files publish will check.
   test:
     needs: build
     runs-on: ubuntu-latest
@@ -174,10 +236,19 @@ jobs:
         with:
           name: sbom
           path: sbom/
+{%- for dir in python_release_asset_dirs %}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-extra-{{ loop.index }}
+          path: {{ dir }}/
+{%- endfor %}
       - name: refuse artifacts that changed after the build
         env:
           EXPECTED: {% raw %}${{ needs.build.outputs.digest }}{% endraw %}
-        run: test "$(sha256sum dist/* sbom/* | sha256sum | cut -d' ' -f1)" = "$EXPECTED"
+        run: |
+          set -euo pipefail
+          actual=$(sha256sum dist/* sbom/*{% for dir in python_release_asset_dirs %} {{ dir }}/*{% endfor %} | sha256sum | cut -d' ' -f1)
+          test "$actual" = "$EXPECTED"
       # A signed build-provenance attestation per file, so anyone can check where a wheel
       # was built: `gh attestation verify <file> --repo <owner>/<repo>`. This job runs no
       # project code, so the token that signs it never reaches the test suite.
@@ -187,6 +258,9 @@ jobs:
           subject-path: |
             dist/*
             sbom/*
+{%- for dir in python_release_asset_dirs %}
+            {{ dir }}/*
+{%- endfor %}
       # sbom-path takes one literal path, not a glob as subject-path does.
       - id: sbom
         run: echo "path=$(echo sbom/*.cdx.json)" >>"$GITHUB_OUTPUT"
@@ -258,6 +332,12 @@ jobs:
         with:
           name: release-notes
           path: notes/
+{%- for dir in python_release_asset_dirs %}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-extra-{{ loop.index }}
+          path: {% raw %}${{ runner.temp }}{% endraw %}/release-extra-{{ loop.index }}/
+{%- endfor %}
       # No checkout or project code runs with the write token.
       - name: publish the GitHub release
         env:
@@ -267,10 +347,13 @@ jobs:
         run: |-
           set -euo pipefail
           cd assets
+          sdist=$(echo *.tar.gz)
+{%- for dir in python_release_asset_dirs %}
+          mv -- "$RUNNER_TEMP/release-extra-{{ loop.index }}/"* .
+{%- endfor %}
           # One provenance bundle covers every asset; each gets a copy under its own name.
           # The glob also checks that each attest step produced exactly one bundle.
           for f in *; do cp ../provenance/*.json "$f.intoto.jsonl"; done
-          sdist=$(echo *.tar.gz)
           cp ../sbom-attestation/*.json "$sdist.sbom.intoto.jsonl"
           # Immutable once published: check every attestation before anything is uploaded.
           for f in *; do

@@ -1,0 +1,13 @@
+import { execFileSync } from "node:child_process";
+
+function readRevision() {
+  try {
+    const options = { encoding: "utf8", stdio: "pipe" };
+    execFileSync("git", ["ls-files", "--error-unmatch", "--", "package.json"], options);
+    return execFileSync("git", ["describe", "--tags", "--always", "--dirty"], options).trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+export const buildRevision = readRevision();

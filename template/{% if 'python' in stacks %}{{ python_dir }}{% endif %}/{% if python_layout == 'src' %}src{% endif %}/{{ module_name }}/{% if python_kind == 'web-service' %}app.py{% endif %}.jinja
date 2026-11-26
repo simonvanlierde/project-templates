@@ -6,6 +6,8 @@ import os
 
 from fastapi import FastAPI
 
+BUILD_REVISION = os.environ.get("BUILD_REVISION") or "unknown"
+
 # /docs, /redoc and /openapi.json list every route to anyone who asks, so they are off
 # unless API_DOCS is set (to anything), e.g. for local development.
 app = FastAPI(title={{ title }}, openapi_url="/openapi.json" if os.environ.get("API_DOCS") else None)
@@ -16,3 +18,9 @@ def health() -> dict[str, str]:
     """Liveness: the process answers. The image's HEALTHCHECK probes this."""
     # Unauthenticated: no version, config or environment in the body.
     return {"status": "ok"}
+
+
+@app.get("/version")
+def version() -> dict[str, str]:
+    """Return the revision stamped into this build."""
+    return {"revision": BUILD_REVISION}
