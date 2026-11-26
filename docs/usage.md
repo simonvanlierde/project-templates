@@ -373,7 +373,9 @@ og_image = "assets/og.png"
 anchor_linenums = false
 ```
 
-If you already list stylesheets or scripts, append the new paths instead of replacing those lists. Until `extra_css` lists `assets/docs-tokens.css`, `docs.css` uses the same values as the template's tokens file, so the site looks the same, but your edits to the tokens file do not show. If you use another `custom_dir`, copy the plain-link partial and `main.html` into that directory instead. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
+If you already list stylesheets or scripts, append the new paths instead of replacing those lists. Until `extra_css` lists `assets/docs-tokens.css`, `docs.css` uses the same values as the template's tokens file, so the site looks the same, but your edits to the tokens file do not show. If you use another `custom_dir`, copy the plain-link partial and `main.html` into that directory instead.
+
+A new render's footer shows a copyright line (the author, and the licence when there is one), a GitHub link and, for a package on PyPI, a PyPI link, without the "Made with Zensical" credit. It also gets edit links, a light, dark and system theme toggle, and the theme features listed in its `zensical.toml`. To get them in an existing project, copy these from a fresh render: `repo_name`, `edit_uri` and `copyright` under `[project]`; `features`, the `[project.theme.icon]` table and the three `[[project.theme.palette]]` entries, in that order, under `[project.theme]`; and `generator = false` and the `[[project.extra.social]]` entries under `[project.extra]`. Leave out the PyPI entry if the package is not on PyPI. Edit links and the GitHub link need `repo_url`. Run `just docs` and check the menu and search with Tab, Enter, Space and Escape at a narrow browser width.
 
 #### Starlight docs engine
 
