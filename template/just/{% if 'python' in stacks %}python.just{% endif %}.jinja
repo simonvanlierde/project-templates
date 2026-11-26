@@ -14,7 +14,7 @@ py-check:
     {{ uv }} run --locked pytest
     {{ uv }} audit --locked --preview-features audit-command
 {%- if license != 'none' %}
-    d=$(mktemp -d) && trap 'rm -rf "$d"' EXIT && {{ uv }} export --locked --no-default-groups --no-hashes --no-annotate --no-header --no-emit-project -q -o "$d/requirements.txt" && { test ! -s "$d/requirements.txt" || {{ uv }} run --locked --with licensecheck=={{ licensecheck_version }} licensecheck{% if license == 'AGPL-3.0-or-later' %} --license AGPL{% endif %} -r "$d/requirements.txt" --zero; }
+    {{ uv }} run --locked --isolated --no-default-groups --all-extras python scripts/check_licenses.py
 {%- endif %}
 
 # Fix what ruff can fix, then format.

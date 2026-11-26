@@ -153,7 +153,7 @@ TEST_CMD = re.compile(
     r"\bpytest\b|cargo (nextest run|test)\b|\bpnpm (run )?test\b|\bvitest\b|\bgo test\b|\bjust (test|check)\b"
 )
 LICENCE_CMD = re.compile(
-    r"\blicensecheck\b|pip-licenses|cargo[- ]deny (list|check)\b|license-checker|pnpm (run )?licenses\b|go-licenses"
+    r"\blicensecheck\b|check_licenses\.py|pip-licenses|cargo[- ]deny (list|check)\b|license-checker|pnpm (run )?licenses\b|go-licenses"
 )
 RELEASE_UPLOAD = re.compile(
     r"upload-artifact|gh release upload|pypa/gh-action-pypi-publish|cargo publish|npm publish|pnpm publish"

@@ -86,15 +86,38 @@ done
 # fails on one the license answer cannot take. a is MIT, so the GPL family stays out of
 # the allow-list; agl is AGPL, so it goes in. The pins come from copier.yml, so a version
 # bump needs no edit here.
-lc_pin=$(sed -n '/^licensecheck_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
 gl_pin=$(sed -n '/^go_licenses_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
-# shellcheck disable=SC2016 # a literal $d for the recipe's shell
-export_args='export --locked --no-default-groups --no-hashes --no-annotate --no-header --no-emit-project -q -o "$d/requirements.txt"'
-lc="licensecheck==$lc_pin licensecheck -r \"\$d/requirements.txt\" --zero; }"
-recipe_has a/just/python.just py-check "    d=\$(mktemp -d) && trap 'rm -rf \"\$d\"' EXIT && uv $export_args && { test ! -s \"\$d/requirements.txt\" || uv run --locked --with $lc"
-recipe_has c/just/python.just py-check "    d=\$(mktemp -d) && trap 'rm -rf \"\$d\"' EXIT && uv --directory api $export_args && { test ! -s \"\$d/requirements.txt\" || uv --directory api run --locked --with $lc"
-# licensecheck reads AGPL-3.0-or-later as the GPL, which refuses AGPL dependencies.
-recipe_has agl/just/python.just py-check "    d=\$(mktemp -d) && trap 'rm -rf \"\$d\"' EXIT && uv $export_args && { test ! -s \"\$d/requirements.txt\" || uv run --locked --with licensecheck==$lc_pin licensecheck --license AGPL -r \"\$d/requirements.txt\" --zero; }"
+lc='run --locked --isolated --no-default-groups --all-extras python scripts/check_licenses.py'
+recipe_has a/just/python.just py-check "    uv $lc"
+recipe_has c/just/python.just py-check "    uv --directory api $lc"
+# The Python check on SPDX expressions, against the allow-list the other stacks take.
+py_licenses_pass() {
+  python3 "$1/scripts/check_licenses.py" "$2" >/dev/null 2>&1
+}
+for l in MIT mit Zlib Unicode-3.0 'MIT OR GPL-3.0-only' '(MIT AND BSD-3-Clause) OR Proprietary' \
+  'MIT OR GPL-3.0-only AND ISC' 'Apache-2.0 WITH LLVM-exception'; do
+  py_licenses_pass a "$l" || {
+    echo "check_licenses.py refuses $l in an MIT project" >&2
+    exit 1
+  }
+done
+for l in LGPL-2.1-only LGPL-2.1-or-later LGPL-3.0-or-later GPL-3.0-only 'MIT AND GPL-3.0-only' \
+  '(MIT OR GPL-3.0-only) AND GPL-3.0-only' UNKNOWN 'MIT OR' 'MIT ISC' '(MIT' 'MIT)' 'MIT WITH' 'Public Domain' ''; do
+  if py_licenses_pass a "$l"; then
+    echo "check_licenses.py lets $l into an MIT project" >&2
+    exit 1
+  fi
+done
+for l in LGPL-2.1-or-later GPL-3.0-only AGPL-3.0-only; do
+  py_licenses_pass agl "$l" || {
+    echo "check_licenses.py refuses $l in an AGPL project" >&2
+    exit 1
+  }
+done
+if py_licenses_pass agl LGPL-2.1-only; then
+  echo "check_licenses.py lets LGPL-2.1-only into an AGPL project" >&2
+  exit 1
+fi
 recipe_has a/just/ts.just ts-check '    pnpm run licenses'
 grep -qF '"licenses": "pnpm licenses list --prod --json | node scripts/checkLicenses.mjs"' a/package.json
 lacks -F 'GPL' a/scripts/checkLicenses.mjs a/deny.toml
@@ -156,7 +179,8 @@ recipe_has a/just/go.just go-check "    $gl check --ignore github.com/example-or
 # go-licenses names the GPL family without -only or -or-later: AGPL-3.0, not AGPL-3.0-or-later.
 recipe_has agl/just/go.just go-check "    $gl check --ignore github.com/example-org/agl-me --allowed_licenses=$permissive,GPL-3.0,LGPL-3.0,AGPL-3.0 ./..."
 # A project without a license has nothing to be compatible with: no check.
-lacks -F licensecheck b/just/python.just
+lacks -F check_licenses b/just/python.just
+test ! -e b/svc/scripts
 test ! -e b/scripts/checkLicenses.mjs
 lacks -F go-licenses i/just/go.just
 recipe_has a/justfile check '    @just py-check'
@@ -216,10 +240,7 @@ grep -qx '      - run: cargo deny check' a/.github/workflows/rust.yml
 grep -qx '      - run: go test -race ./...' a/.github/workflows/go.yml
 grep -qx '      - run: go tool govulncheck ./...' a/.github/workflows/go.yml
 grep -qx '      - run: pnpm audit --prod --audit-level=moderate' a/.github/workflows/ts.yml
-# shellcheck disable=SC2016 # a literal $RUNNER_TEMP for the runner's shell
-grep -qxF '      - run: uv export --locked --no-default-groups --no-hashes --no-annotate --no-header --no-emit-project -q -o "$RUNNER_TEMP/requirements.txt"' a/.github/workflows/python.yml
-grep -qxF "      - run: test ! -s \"\$RUNNER_TEMP/requirements.txt\" || uv run --locked --with licensecheck==$lc_pin licensecheck -r \"\$RUNNER_TEMP/requirements.txt\" --zero" a/.github/workflows/python.yml
-grep -qxF "      - run: test ! -s \"\$RUNNER_TEMP/requirements.txt\" || uv run --locked --with licensecheck==$lc_pin licensecheck --license AGPL -r \"\$RUNNER_TEMP/requirements.txt\" --zero" agl/.github/workflows/python.yml
+grep -qxF "      - run: uv $lc" a/.github/workflows/python.yml
 grep -qx '      - run: pnpm run licenses' a/.github/workflows/ts.yml
 grep -qx '      - run: cargo deny list' a/.github/workflows/rust.yml
 grep -qx "      - run: $gl report --ignore github.com/example-org/render-me ./..." a/.github/workflows/go.yml

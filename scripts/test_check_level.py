@@ -201,6 +201,7 @@ def test_main_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
     "step",
     [
         'uv run --locked --with licensecheck==2025.1.0 licensecheck -r "$RUNNER_TEMP/requirements.txt" --zero',
+        "uv run --locked --isolated --no-default-groups --all-extras python scripts/check_licenses.py",
         "pnpm run licenses",
         "cargo deny list",
         "go run github.com/google/go-licenses/v2@v2.0.1 check ./...",

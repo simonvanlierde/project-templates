@@ -26,6 +26,7 @@ changes are marked **Breaking**.
 
 ### Changed
 
+- **Breaking:** The Python license check is `scripts/check_licenses.py`, which replaces licensecheck and takes the allow-list the other stacks use. It also checks the dependencies of every extra, evaluates SPDX expressions (`A OR B` needs one side allowed, `A AND B` both), accepts Zlib and Unicode-3.0, and refuses LGPL in a permissive project and LGPL-2.1-only in every project. A package that `just py-check` now reports as `NOT ALLOWED` has a license the project cannot take, or metadata that names none: for the second, record its SPDX expression under `KNOWN` in the script. The check no longer looks at dependencies that only another platform installs.
 - **Breaking:** Zensical docs build from `docs-site/uv.lock`, including transitive dependencies. Run `just docs-sync` and commit the lockfile when updating an existing Zensical project. If your uv workspace includes `docs-site`, [exclude it first](docs/usage.md#documentation-site).
 - The weekly Copier workflow publishes its update through `.github/scripts/publish-copier-update.sh`. Tests can call the script directly. The workflow uses the copy from the checkout it started with.
 
