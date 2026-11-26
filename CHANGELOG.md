@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Fixed
+
+- A Zensical docs site's weekly link check skips links it cannot follow: a `{{ config.* }}` value Zensical fills in, a local preview server such as `http://localhost:8000`, and `https://www.npmjs.com`, which answers link checkers with 403 Forbidden.
+
 ## [0.17.0] - 2026-11-26
 
 ### Added
