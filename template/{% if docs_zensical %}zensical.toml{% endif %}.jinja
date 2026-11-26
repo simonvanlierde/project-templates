@@ -10,7 +10,7 @@ site_url = "https://{{ github_user | lower }}.github.io/{{ slug }}/"
 repo_url = "https://github.com/{{ github_user }}/{{ slug }}"
 repo_name = "{{ github_user }}/{{ slug }}"
 edit_uri = "edit/main/docs/"
-copyright = {{ (author_name ~ (' · ' ~ license if license != 'none' else '')) | to_json(ensure_ascii=False) }}
+copyright = {{ ((author_name | trim | e) ~ (' · ' ~ license if license != 'none' else '')) | to_json(ensure_ascii=False) }}
 site_dir = "_docs"
 extra_css = ["assets/docs-tokens.css", "assets/docs.css"]
 extra_javascript = ["assets/docs.js"]
