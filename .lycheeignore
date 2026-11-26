@@ -1,2 +1,8 @@
 # Zensical resolves the repository URL when it renders the source-link partial.
 %7B%7B%20config\.repo_url%20%7D%7D$
+# The docs announcement bar fills in the release when Zensical renders it.
+%7B%7B%20config\.extra\.release%20%7D%7D$
+# Local preview servers, such as `just docs-serve`, run only while you work.
+^https?://(localhost|127\.0\.0\.1)(:\d+)?(/|$)
+# npm answers link checkers with 403 Forbidden.
+^https://www\.npmjs\.com/?$
