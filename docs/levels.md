@@ -29,7 +29,7 @@ The table says what a repo must have to meet a level, not only what the render a
 <!-- levels:start -->
 <!-- Generated from levels.toml by `just levels-doc`; edit that file, not this table. -->
 
-Levels version 0.16.1:
+Levels version 0.17.0:
 
 | Requirement | Level | Applies to | What it asks | Verified by | Source | Counts from |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -56,7 +56,7 @@ Levels version 0.16.1:
 | `security-headers` | standard | web | The site sends a Content-Security-Policy, and its root sends Strict-Transport-Security. | automated | OWASP Secure Headers Project | 2026-11-11 |
 | `security-txt` | standard | web | The site root serves `/.well-known/security.txt` with a `Contact:` line. | automated | RFC 9116 | 2026-11-11 |
 | `sitemap-answers` | standard | web | Each sitemap that `robots.txt` names loads. | automated | RFC 9309; Sitemaps protocol 0.9 | 2026-11-11 |
-| `robots-ai-crawlers` | standard | web | The site serves a `robots.txt` that names its sitemap where it has one, allows search and answer bots, disallows AI training crawlers and sets `Content-Signal: search=yes, ai-input=yes, ai-train=no`. | automated | RFC 9309; Content Signals Policy (Cloudflare, 2025-09-24) | 2026-11-19 |
+| `robots-ai-crawlers` | standard | web | The origin serves `/robots.txt` with rules for the site that name its sitemap where it has one, allow search and answer bots, disallow AI training crawlers and set `Content-Signal: search=yes, ai-input=yes, ai-train=no`. | automated | RFC 9309; Content Signals Policy (Cloudflare, 2025-09-24) | 2026-11-19 |
 | `interface-doc` | standard | web | `docs/interface.md` lists the URL parameters the page reads and the data files it serves, with each file's format, schema, licence and CORS. | review | project-templates | 2026-11-19 |
 | `web-data-cors` | standard | web | Each data URL that `docs/interface.md` lists answers a request with an `Origin` header with `Access-Control-Allow-Origin`. | automated | Fetch Standard (CORS protocol) | 2026-11-19 |
 | `ci-tests` | standard | all | A CI workflow runs the repo's test suite on every pull request. | automated | DLR Software Engineering Guidelines v1.0.0 (EST.2, EST.4, EAA.8), doi:10.5281/zenodo.1344612 | 2026-11-11 |

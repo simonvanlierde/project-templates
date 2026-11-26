@@ -140,9 +140,19 @@ jobs:
           cargo build --release --locked --target "$TARGET"
           mkdir dist
           name={{ crate_name }}
+          archive=$(mktemp -d)
+          trap 'rm -rf "$archive"' EXIT
+          binary=$name
+          case $TARGET in *windows*) binary=$name.exe ;; esac
+          cp "target/$TARGET/release/$binary" "$archive/"
+          files=("$binary")
+          if [ -f output.schema.json ]; then
+            cp output.schema.json "$archive/"
+            files+=(output.schema.json)
+          fi
           case $TARGET in
-            *windows*) (cd "target/$TARGET/release" && 7z a -tzip "$OLDPWD/dist/$name-$TARGET.zip" "$name.exe") ;;
-            *) tar -czf "dist/$name-$TARGET.tar.gz" -C "target/$TARGET/release" "$name" ;;
+            *windows*) (cd "$archive" && 7z a -tzip "$OLDPWD/dist/$name-$TARGET.zip" "${files[@]}") ;;
+            *) tar -czf "dist/$name-$TARGET.tar.gz" -C "$archive" "${files[@]}" ;;
           esac
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

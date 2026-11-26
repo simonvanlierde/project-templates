@@ -7,6 +7,7 @@
 # copier-update pushes with the update App's token when it is set up; GITHUB_TOKEN can't push workflow
 # changes, so without it a workflow change becomes an issue, not a failed push.
 cu=a/.github/workflows/copier-update.yml
+uv run --no-project python "$repo/scripts/test_copier_push.py" "$cu"
 # Copier dependencies and the push token must run on separate workers.
 uv run --no-project --with pyyaml python - "$cu" <<'PYTEST'
 import sys, yaml
@@ -297,14 +298,15 @@ CASES
   grep -qx 'second template line' mixed-hunks.rej
   (lacks -q 'did not merge' layer-runner/copier-update/body.md)
   # A branch with someone else's commits is not force-pushed or edited.
-  (lacks -q '^auth setup-git\|^pr edit\|^pr create' human.log)
+  (lacks -q '^pr edit\|^pr create' human.log)
   grep -q 'someone other than this workflow' human.out
   grep -q 'someone other than this workflow' human.summary
-  # No token and a workflow change: one issue, the older PR closed, no push.
+  # No token and a workflow change: one issue, the older PR stays open, no push.
   # Only the issue this workflow opened counts: it runs with GITHUB_TOKEN there.
   grep -qxF 'issue list --state all --author app/github-actions --search "Update from template v0.10.0 by hand" in:title --json number --jq .[0].number' issue.log
   grep -c '^issue create --title Update from template v0.10.0 by hand ' issue.log | grep -qx 1
-  grep -q '^pr close 7 --delete-branch ' issue.log
+  (lacks -q '^pr close' issue.log)
+  grep -q 'Pull request #7 is still open for an older template version' issue.out
   (! git -C issue.git cat-file -e chore/copier-update:.github/workflows/ci.yml 2>/dev/null)
   # An issue that exists, open or closed, is not asked again.
   (lacks -q '^issue create' asked.log)

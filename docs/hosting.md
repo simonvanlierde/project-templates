@@ -5,6 +5,14 @@ static site (`site`) go live. A web app always deploys to a Cloudflare Worker. A
 deploys to GitHub Pages, or to a Worker with `site_host=cloudflare`. Either way, each pull
 request gets a preview on its own Worker.
 
+## Crawler policy
+
+Every site build includes a `robots.txt` with rules that allow search and answer bots and disallow named AI training crawlers.
+Crawlers read the origin's `/robots.txt`, as [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309.html#section-2.3) specifies.
+A GitHub Pages project site puts its file at `/<repo>/robots.txt`; an app mounted under a path puts it under that path.
+Those files do not control crawling there. Ask the host owner to merge the rules into the origin's `/robots.txt`, scoped to the project's path.
+Keep rules for other projects on that host. A site served from the origin root already puts the file where crawlers look.
+
 ## Static site
 
 Answer `site` (under `customise`) to give any project a static page beside its code: a playground, a demo or a report. GitHub Pages serves it from `main`, or a Cloudflare Worker with `site_host=cloudflare`, and each pull request gets a preview. The page's readers are the project's users, so it stays small: the tool in the first screen, details in disclosures.

@@ -268,6 +268,39 @@ grep -qF 'pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }
 # shellcheck disable=SC2016 # literal workflow text, not shell expansions
 grep -qF 'tar -czf "dist/$name-$TARGET.tar.gz"' cb/.github/workflows/rust-release.yml
 grep -qF 'crates-bin-aarch64-apple-darwin.tar.gz' cb/.github/workflows/rust-release.yml
+# Exercise the rendered archive step with and without a project-owned schema.
+uv run --no-project --with pyyaml python - cb/.github/workflows/rust-release.yml <<'PYTEST'
+import os, pathlib, subprocess, sys, tarfile, tempfile, yaml, zipfile
+workflow = yaml.safe_load(pathlib.Path(sys.argv[1]).read_text())
+script = next(s["run"] for s in workflow["jobs"]["binaries"]["steps"] if s.get("name") == "build and archive")
+for target in ("x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"):
+    for with_schema in (False, True):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            tools = root / "tools"
+            tools.mkdir()
+            (tools / "cargo").write_text("#!/bin/sh\nexit 0\n")
+            # The Windows runner supplies 7z; this stand-in writes its requested ZIP members.
+            (tools / "7z").write_text("#!" + sys.executable + "\nimport sys, zipfile\nwith zipfile.ZipFile(sys.argv[3], 'w') as z:\n for name in sys.argv[4:]: z.write(name)\n")
+            for tool in tools.iterdir():
+                tool.chmod(0o755)
+            binary = "crates-bin.exe" if "windows" in target else "crates-bin"
+            built = root / "target" / target / "release"
+            built.mkdir(parents=True)
+            (built / binary).write_text("sample executable")
+            if with_schema:
+                (root / "output.schema.json").write_text('{"type":"object"}')
+            env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"], TARGET=target)
+            subprocess.run(["bash", "-c", script], cwd=root, env=env, check=True)
+            archive = next((root / "dist").iterdir())
+            if "windows" in target:
+                with zipfile.ZipFile(archive) as z:
+                    names = set(z.namelist())
+            else:
+                with tarfile.open(archive) as tar:
+                    names = set(tar.getnames())
+            assert names == ({binary, "output.schema.json"} if with_schema else {binary}), names
+PYTEST
 (lacks -q '^publish = false' cb/Cargo.toml)
 grep -q 'name=crates-bin' cb/.github/workflows/rust-release.yml
 grep -q 'actions/attest@' cb/.github/workflows/rust-release.yml
