@@ -87,37 +87,9 @@ done
 # the allow-list; agl is AGPL, so it goes in. The pins come from copier.yml, so a version
 # bump needs no edit here.
 gl_pin=$(sed -n '/^go_licenses_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
-lc='run --locked --isolated --no-default-groups --all-extras python scripts/check_licenses.py'
+lc='run --locked --isolated --no-default-groups --all-extras --all-packages python scripts/check_licenses.py'
 recipe_has a/just/python.just py-check "    uv $lc"
 recipe_has c/just/python.just py-check "    uv --directory api $lc"
-# The Python check on SPDX expressions, against the allow-list the other stacks take.
-py_licenses_pass() {
-  python3 "$1/scripts/check_licenses.py" "$2" >/dev/null 2>&1
-}
-for l in MIT mit Zlib Unicode-3.0 MIT-CMU 'MIT OR GPL-3.0-only' '(MIT AND BSD-3-Clause) OR Proprietary' \
-  'MIT OR GPL-3.0-only AND ISC' 'Apache-2.0 WITH LLVM-exception'; do
-  py_licenses_pass a "$l" || {
-    echo "check_licenses.py refuses $l in an MIT project" >&2
-    exit 1
-  }
-done
-for l in LGPL-2.1-only LGPL-2.1-or-later LGPL-3.0-or-later GPL-3.0-only 'MIT AND GPL-3.0-only' \
-  '(MIT OR GPL-3.0-only) AND GPL-3.0-only' UNKNOWN 'MIT OR' 'MIT ISC' '(MIT' 'MIT)' 'MIT WITH' 'Public Domain' ''; do
-  if py_licenses_pass a "$l"; then
-    echo "check_licenses.py lets $l into an MIT project" >&2
-    exit 1
-  fi
-done
-for l in LGPL-2.1-or-later GPL-3.0-only AGPL-3.0-only; do
-  py_licenses_pass agl "$l" || {
-    echo "check_licenses.py refuses $l in an AGPL project" >&2
-    exit 1
-  }
-done
-if py_licenses_pass agl LGPL-2.1-only; then
-  echo "check_licenses.py lets LGPL-2.1-only into an AGPL project" >&2
-  exit 1
-fi
 # The metadata path: fake installed packages, read without the host's site-packages (-S).
 # The project and its workspace members are skipped by name; a local-path dependency is not.
 meta=$(mktemp -d)
@@ -133,12 +105,17 @@ fake texted 'License: BSD 3-Clause License\n'
 fake vendored 'License-Expression: GPL-3.0-only\n'
 printf '{"url": "file:///src/vendored", "dir_info": {}}' >"$meta/site/vendored-1.0.dist-info/direct_url.json"
 fake custom 'License: Free for non-commercial use\n'
+# A long License field continues on indented lines.
+fake prose 'License: MIT with restrictions\n'
+fake titled 'License: MIT License\n        Permission is hereby granted...\n'
+fake hidden 'License: MIT\n        Except vendored/, which is GPL-3.0-only\n'
 printf '[project]\nname = "render-me"\n' >"$meta/pyproject.toml"
 printf 'version = 1\n[manifest]\nmembers = ["member", "render-me"]\n' >"$meta/uv.lock"
 rc=0
 (cd "$meta" && PYTHONPATH=site python3 -S "$out/a/scripts/check_licenses.py") >"$meta/out" 2>&1 || rc=$?
 printf '%s\n' 'ok  classified==1.0: MIT' 'NOT ALLOWED  custom==1.0: Free for non-commercial use' \
-  'ok  spdx==1.0: MIT OR Apache-2.0' 'ok  texted==1.0: BSD-3-Clause' \
+  'NOT ALLOWED  hidden==1.0: MIT ...' 'NOT ALLOWED  prose==1.0: MIT with restrictions' \
+  'ok  spdx==1.0: MIT OR Apache-2.0' 'ok  texted==1.0: BSD-3-Clause' 'ok  titled==1.0: MIT' \
   'NOT ALLOWED  vendored==1.0: GPL-3.0-only' >"$meta/want"
 grep -E '^(ok|NOT ALLOWED) ' "$meta/out" | diff "$meta/want" -
 test "$rc" = 1
@@ -151,46 +128,51 @@ lacks -F 'GPL' a/scripts/checkLicenses.mjs a/deny.toml
 # The repo's own CI runs a copy of the MIT render's script; only its header and file name differ.
 diff <(sed 1,2d a/scripts/checkLicenses.mjs | grep -v allow-list) \
   <(sed 1,2d "$repo/scripts/check-licenses.mjs" | grep -v allow-list)
-# The TypeScript check on `pnpm licenses list --json` output: one package per license.
+# The TypeScript and Python checkers parse one SPDX grammar against one allow-list, so every
+# case runs through both. TypeScript reads `pnpm licenses list --json` output.
 licenses_pass() {
   printf '{"%s":[{"name":"p","versions":["1.0.0"]}]}' "$2" | node "$1/scripts/checkLicenses.mjs" >/dev/null 2>&1
 }
-# glob, minimatch and lru-cache are BlueOak-1.0.0, argparse is PSF-2.0 or Python-2.0.
-for l in MIT BlueOak-1.0.0 PSF-2.0 Python-2.0 BSL-1.0 MIT-0 MIT-CMU Unlicense CDLA-Permissive-2.0 \
-  '(MIT OR Apache-2.0)' 'MIT OR GPL-3.0-only' 'Apache-2.0 WITH LLVM-exception' 'mit' \
-  '((MIT))' 'MIT AND (Apache-2.0 OR GPL-3.0-only)' 'MIT OR GPL-3.0-only AND CC-BY-4.0'; do
-  licenses_pass a "$l" || {
-    echo "checkLicenses.mjs refuses $l in an MIT project" >&2
-    exit 1
-  }
-done
-for l in GPL-3.0-only 'GPL-3.0-only AND (MIT OR Apache-2.0)' '(MIT OR GPL-3.0-only) AND CC-BY-4.0' \
-  'GPL-2.0-or-later WITH Classpath-exception-2.0' Unknown LicenseRef-Proprietary 'MIT OR' \
-  '(MIT' 'MIT)' 'MIT WITH' 'MIT WITH OR' 'MIT WITH )' 'GPL-3.0-only AND MIT OR GPL-3.0-only' ''; do
-  if licenses_pass a "$l"; then
-    echo "checkLicenses.mjs lets $l into an MIT project" >&2
+py_licenses_pass() {
+  python3 "$1/scripts/check_licenses.py" "$2" >/dev/null 2>&1
+}
+# verdict RENDER allow|refuse EXPRESSION...
+verdict() {
+  local r=$1 want=$2 l check got
+  shift 2
+  for l in "$@"; do
+    for check in licenses_pass py_licenses_pass; do
+      if "$check" "$r" "$l"; then got=allow; else got=refuse; fi
+      [ "$got" = "$want" ] || {
+        echo "$check: the $r render should $want '$l'" >&2
+        exit 1
+      }
+    done
+  done
+}
+# glob, minimatch and lru-cache are BlueOak-1.0.0, argparse is PSF-2.0 or Python-2.0, pillow MIT-CMU.
+verdict a allow MIT mit Zlib Unicode-3.0 MIT-CMU BlueOak-1.0.0 PSF-2.0 Python-2.0 BSL-1.0 MIT-0 \
+  Unlicense CDLA-Permissive-2.0 '(MIT OR Apache-2.0)' 'MIT OR GPL-3.0-only' '((MIT))' \
+  '(MIT AND BSD-3-Clause) OR Proprietary' 'MIT OR GPL-3.0-only AND ISC' \
+  'Apache-2.0 WITH LLVM-exception' 'MIT AND (Apache-2.0 OR GPL-3.0-only)' 'MIT OR GPL-3.0-only AND CC-BY-4.0'
+verdict a refuse LGPL-2.1-only LGPL-2.1-or-later LGPL-3.0-or-later GPL-3.0-only 'MIT AND GPL-3.0-only' \
+  'GPL-3.0-only AND (MIT OR Apache-2.0)' '(MIT OR GPL-3.0-only) AND GPL-3.0-only' \
+  '(MIT OR GPL-3.0-only) AND CC-BY-4.0' 'GPL-2.0-or-later WITH Classpath-exception-2.0' \
+  'GPL-3.0-only AND MIT OR GPL-3.0-only' UNKNOWN Unknown LicenseRef-Proprietary 'Public Domain' \
+  'MIT OR' 'MIT ISC' '(MIT' 'MIT)' 'MIT WITH' 'MIT WITH OR' 'MIT WITH )' ''
+verdict agl allow LGPL-2.1-or-later GPL-3.0-only AGPL-3.0-only 'GPL-3.0-only AND (MIT OR Apache-2.0)'
+verdict agl refuse LGPL-2.1-only GPL-2.0-only
+# A GPL project takes the GPL but not the AGPL, whose network clause its license lacks.
+verdict gpl allow GPL-3.0-only LGPL-2.1-or-later
+verdict gpl refuse AGPL-3.0-only LGPL-2.1-only
+# The Python checker reads operators case-sensitively, as SPDX spells them; the License
+# metadata field can hold prose.
+for l in 'MIT with restrictions' 'MIT or GPL-3.0-only'; do
+  if py_licenses_pass a "$l"; then
+    echo "check_licenses.py lets '$l' into an MIT project" >&2
     exit 1
   fi
 done
-for l in AGPL-3.0-only 'GPL-3.0-only AND (MIT OR Apache-2.0)'; do
-  licenses_pass agl "$l" || {
-    echo "checkLicenses.mjs refuses $l in an AGPL project" >&2
-    exit 1
-  }
-done
-if licenses_pass agl GPL-2.0-only; then
-  echo "checkLicenses.mjs lets GPL-2.0-only into an AGPL project" >&2
-  exit 1
-fi
-# A GPL project takes the GPL but not the AGPL, whose network clause its license lacks.
-licenses_pass gpl GPL-3.0-only || {
-  echo "checkLicenses.mjs refuses GPL-3.0-only in a GPL project" >&2
-  exit 1
-}
-if licenses_pass gpl AGPL-3.0-only; then
-  echo "checkLicenses.mjs lets AGPL-3.0-only into a GPL project" >&2
-  exit 1
-fi
 recipe_has a/just/rust.just rs-check '    cargo deny list'
 # webpki-roots (via reqwest) is CDLA-Permissive-2.0, target-lexicon Apache-2.0 WITH
 # LLVM-exception; cargo-deny wants a WITH expression listed whole.

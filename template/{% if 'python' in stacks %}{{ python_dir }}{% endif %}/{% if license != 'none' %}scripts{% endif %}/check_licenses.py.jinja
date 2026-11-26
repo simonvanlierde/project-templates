@@ -2,7 +2,7 @@
 """List the license of each dependency that ships and fail on one {{ license }} cannot take.
 
 `just py-check` and CI run it in an environment that holds only what ships: the locked
-dependencies with every extra, no dependency groups. With arguments it checks those SPDX
+dependencies with every extra and workspace member, no dependency groups. With arguments it checks those SPDX
 expressions instead: `python scripts/check_licenses.py 'MIT OR GPL-2.0-only'`.
 """
 
@@ -67,20 +67,21 @@ def allowed(expression: str) -> bool:  # noqa: C901 one recursive-descent parser
     """Whether an SPDX expression is allowed.
 
     An OR needs one side allowed, an AND both. AND binds tighter than OR, and parentheses
-    group. An exception (`WITH`) only adds permissions, so the license it qualifies
+    group. Operators are upper case, as SPDX spells them: `MIT with restrictions` is prose.
+    An exception (`WITH`) only adds permissions, so the license it qualifies
     decides. A malformed expression is refused.
     """
     rest = re.findall(r"[()]|[^\s()]+", expression)[::-1]
 
     def take(word: str) -> bool:
-        found = bool(rest) and rest[-1].upper() == word
+        found = bool(rest) and rest[-1] == word
         if found:
             rest.pop()
         return found
 
     def name() -> str:
         token = rest.pop() if rest else ")"
-        if token.upper() in OPERATORS:
+        if token in OPERATORS:
             raise ValueError(token)
         return token
 
@@ -128,9 +129,11 @@ def license_of(dist: metadata.Distribution) -> str:
     if classifiers:
         # A package may list every license it holds parts under, so all must be allowed.
         return " AND ".join(LEGACY.get(c, c) for c in classifiers)
-    # Some packages put the whole license text here: its first line names it, or nothing does.
-    stated = (meta.get("License") or "").strip().partition("\n")[0] or "UNKNOWN"
-    return LEGACY.get(stated, stated)
+    # Some packages put the whole license text here. Its first line counts only as a known title,
+    # so text further down cannot hide another license; other text is shown cut, and refused.
+    first, _, more = (meta.get("License") or "UNKNOWN").strip().partition("\n")
+    first = first.strip()
+    return LEGACY.get(first) or (f"{first} ..." if more.strip() else first)
 
 
 def canonical(name: str) -> str:

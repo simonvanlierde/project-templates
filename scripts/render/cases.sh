@@ -590,7 +590,7 @@ done
 "${copier[@]}" --vcs-ref=HEAD --data project_name=agl-me --data 'stacks=[python,ts,rust,go]' \
   --data license=AGPL-3.0-or-later . "$out/agl" >/dev/null
 # gpl: a TypeScript stack under the GPL, whose check refuses the AGPL (agl accepts it).
-"${copier[@]}" --vcs-ref=HEAD --data project_name=gpl-me --data 'stacks=[ts]' \
+"${copier[@]}" --vcs-ref=HEAD --data project_name=gpl-me --data 'stacks=[python,ts]' \
   --data license=GPL-3.0-or-later . "$out/gpl" >/dev/null
 # j: a private web app, so its legal pages must not link a repo visitors can't open.
 "${copier[@]}" --vcs-ref=HEAD --data project_name=private-web --data 'stacks=[ts]' \

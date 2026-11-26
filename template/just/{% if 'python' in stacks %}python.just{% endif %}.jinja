@@ -14,7 +14,7 @@ py-check:
     {{ uv }} run --locked pytest
     {{ uv }} audit --locked --preview-features audit-command
 {%- if license != 'none' %}
-    {{ uv }} run --locked --isolated --no-default-groups --all-extras python scripts/check_licenses.py
+    {{ uv }} run --locked --isolated --no-default-groups --all-extras --all-packages python scripts/check_licenses.py
 {%- endif %}
 
 # Fix what ruff can fix, then format.
