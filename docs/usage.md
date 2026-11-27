@@ -145,6 +145,7 @@ With `decision_records` on, a project keeps its architectural choices in `docs/d
 - `just ts-shots`: full-page screenshots of every route at 390 and 1440 px, light and dark, in `shots/`, to attach to a pull request that changes the UI.
 - Pull request previews: a `preview` job in `.github/workflows/ts.yml`, `.github/workflows/preview-retire.yml` and `.github/scripts/preview-retire.sh`.
 - Bundle size budget in `scripts/checkBundleBudget.mjs`: 100 KiB of gzipped JavaScript in the largest file. It catches a heavy dependency or a broken chunk split, not ordinary features, so keep it at least 25% above the build rather than just above it.
+- Page-weight budget in `scripts/page-weight.mjs`: each built page's first visit, gzipped, at 200 kB or less, the same check a [static site](hosting.md#static-site) gets. `pnpm run page-weight` runs it after a build, and so do `just ts-check` and CI.
 
 The starter app is yours after the first render. `copier update` never touches `src/App.tsx`, `src/App.test.tsx`, `src/main.tsx` (or the Svelte `src/App.svelte`, `src/App.test.ts` and `src/main.ts`), `src/app.css` or the Worker script, even to bring back one you deleted. It leaves `index.html`, `tests/e2e/routes.ts` and the Markdown files in `docs/` alone too, but re-creates one you delete.
 

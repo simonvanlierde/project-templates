@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- A site and a web app fail CI when a built page's first visit, gzipped, weighs over its budget: 200 kB a page, set in `.github/scripts/page-weight.mjs` for a site and `scripts/page-weight.mjs` for a web app, with per-page overrides. The check needs only Node. `site.yml` runs `just site-page-weight` after the build, and a web app's `ts.yml` and `just ts-check` run `pnpm run page-weight`. It counts the page's HTML and the same-origin files it loads up front, not cross-origin requests or dynamic imports. See [Static site](docs/hosting.md#static-site).
+
 ### Fixed
 
 - A Zensical docs site's weekly link check skips links it cannot follow: a `{{ config.* }}` value Zensical fills in, a local preview server such as `http://localhost:8000`, and `https://www.npmjs.com`, which answers link checkers with 403 Forbidden.

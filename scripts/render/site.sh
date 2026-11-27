@@ -392,6 +392,56 @@ grep -qx '          package_json_file: web/package.json' d/.github/workflows/sit
 }
 test -f x/_site/index.html
 test -f x/_site/main.mjs
+# The page-weight budget runs after the build, in CI and by hand, and passes on the starter.
+for r in x r d y t; do
+  test -f "$r/.github/scripts/page-weight.mjs"
+  grep -qx '      - run: just site-page-weight' "$r/.github/workflows/site.yml"
+  # shellcheck disable=SC2016 # literal Markdown
+  grep -qF '`just site-page-weight` runs the same check' "$r/README.md"
+done
+grep -qx '    node .github/scripts/page-weight.mjs _site' x/justfile
+grep -qx '    node .github/scripts/page-weight.mjs site/dist /site-me' y/justfile
+sed -n '/^check:/,/^$/p' y/justfile | grep -qx '    @just site-page-weight'
+for r in a m w; do test ! -e "$r/.github/scripts/page-weight.mjs"; done
+(cd x && just site-page-weight) >x-page-weight.log 2>&1 || {
+  cat x-page-weight.log >&2
+  exit 1
+}
+# The starter's own stylesheet and module count, through their relative links.
+x_kb=$(awk '$1 == "index.html" { print $2 }' x-page-weight.log)
+awk -v kb="$x_kb" -v min="$(cat x/_site/index.html x/_site/style.css x/_site/main.mjs | gzip -c | wc -c)" 'BEGIN { exit !(kb * 1000 >= min * 0.9) }'
+# Fixtures: a root-relative link under the base path and the module it imports count; a
+# dynamic import, a cross-origin script, a commented-out tag, 404.html and a redirect stub do not.
+pw=$out/page-weight
+weigh() { # fixture, expected exit code, base path
+  local rc=0
+  node x/.github/scripts/page-weight.mjs "$pw/$1" ${3:+"$3"} >"$pw/$1.out" 2>&1 || rc=$?
+  [ "$rc" = "$2" ] || {
+    echo "check-render: page-weight on $1 exited $rc, not $2" >&2
+    cat "$pw/$1.out" >&2
+    return 1
+  }
+}
+mkdir -p "$pw/heavy/docs" "$pw/light" "$pw/broken"
+printf '<link rel="stylesheet" href="/me/a.css"><script type="module" src="/me/app.js"></script>\n' >"$pw/heavy/docs/index.html"
+printf 'body{}\n' >"$pw/heavy/a.css"
+printf 'import "./dep.mjs";\n' >"$pw/heavy/app.js"
+head -c 250000 /dev/urandom >"$pw/heavy/dep.mjs"
+weigh heavy 1 /me
+grep -qE '^over budget: docs/index.html weighs 2[45][0-9]\.[0-9] kB, its budget is 200 kB$' "$pw/heavy.out"
+grep -qF 'raise DEFAULT_BUDGET_KB or add an OVERRIDES entry' "$pw/heavy.out"
+printf '<!-- <script src="gone.js"> --><script src="https://cdn.example.org/big.js"></script><script type="module" src="app.js"></script>\n' >"$pw/light/index.html"
+printf 'import("./dep.mjs");\n' >"$pw/light/app.js"
+cp "$pw/heavy/dep.mjs" "$pw/light/dep.mjs"
+printf '<script src="dep.mjs"></script><script src="gone.js"></script>\n' >"$pw/light/404.html"
+printf '<meta http-equiv="refresh" content="0; url=/"><script src="gone.js"></script>\n' >"$pw/light/old.html"
+weigh light 0
+(lacks -qE '^(404|old)\.html' "$pw/light.out")
+printf '<img src="logo.png">\n' >"$pw/broken/index.html"
+weigh broken 2
+grep -qxF "missing file: index.html links to logo.png, which is not in $pw/broken/ (pass the base path if links carry one)" "$pw/broken.out"
+weigh absent 2
+grep -qxF "No $pw/absent/ folder: build the site first." "$pw/absent.out"
 # The clean tag and dirty stamp reach the artifact and the starter footer.
 cp -R x/site revision-site
 mkdir revision-fixture
@@ -522,7 +572,7 @@ grep -A1 -x '  - package-ecosystem: npm' y/.github/dependabot.yml | grep -qx '  
 (lacks -q 'ignorePaths\|enabledManagers' d/renovate.json5)
 # A root package's tools leave the site alone: knip reports none of it, biome skips the
 # .astro files it can only half read.
-jq -e '.knip.ignoreFiles == ["site/**"]' t/package.json >/dev/null
+jq -e '.knip.ignoreFiles == [".github/scripts/page-weight.mjs", "site/**"]' t/package.json >/dev/null
 jq -e '.files.includes | index("!site/**/*.astro")' t/biome.json >/dev/null
 (lacks -q 'astro' x/.github/workflows/site.yml)
 # The starter pages are the project's; package.json stays the template's.
@@ -544,6 +594,12 @@ grep -qxF 'unknown' y/site/dist/version.txt
 grep -qF 'Revision: unknown</p>' y/site/dist/index.html
 grep -qF '<h1>About</h1>' y/site/dist/about/index.html
 grep -qF 'href="/site-me/about/"' y/site/dist/index.html
+# The Astro build's links carry the Pages base path, which the budget strips.
+(cd y && just site-page-weight) >y-page-weight.log 2>&1 || {
+  cat y-page-weight.log >&2
+  exit 1
+}
+grep -q '^about/index.html ' y-page-weight.log
 test -f y/site/pnpm-lock.yaml
 # just site-serve serves each starter at the address its comment names. The port must be
 # free first: astro dev leaves the process group, so the cleanup kills what holds the port.

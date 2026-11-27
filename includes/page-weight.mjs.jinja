@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+// Fails when a built page's first-visit weight goes over its budget. A page weighs its
+// gzipped HTML plus the same-origin files it loads up front: stylesheets, scripts and the
+// modules they import statically, preloads, icons and images. gzip stands in for the
+// bytes on the wire. Cross-origin requests, fonts reached only through CSS @font-face and
+// dynamic import() chunks load later or elsewhere and are not counted.
+//
+//   node page-weight.mjs <build folder> [base path]
+//
+// The base path is the prefix the site's links carry that the build folder does not,
+// such as /<repo> on GitHub Pages. Exits 1 when a page is over budget, 2 when the build
+// folder or a file a page links to is missing.
+import { readdir, readFile } from "node:fs/promises";
+import { posix } from "node:path";
+import process from "node:process";
+import { gzipSync } from "node:zlib";
+
+// The budget per page, in kB (1,000 bytes). It leaves room for a framework and a web font
+// over the starter, and still trips on a heavy dependency or an uncompressed image. When a
+// page goes over, find what grew first, then raise the budget or add an override in its
+// own commit, with the reason.
+const DEFAULT_BUDGET_KB = 200;
+// Budgets for single pages, in kB, keyed by the path under the build folder.
+/** @type {Record<string, number>} */
+const OVERRIDES = {};
+
+const TAG = /<(script|link|img|astro-island)\b[^>]*>/gi;
+const LINK_REL = /\b(stylesheet|preload|modulepreload|icon)\b/i;
+const ISLAND_URLS = ["component-url", "renderer-url", "before-hydration-url"];
+// Static `import ... from "x"` and `import "x"`; `import("x")` has a paren and stays out.
+const STATIC_IMPORT = /\b(?:from|import)\s*["']([^"']+)["']/g;
+// A scheme (https:, data:), a protocol-relative //host or a bare #fragment: not a file here.
+const ELSEWHERE = /^([a-z][a-z0-9+.-]*:|\/\/|#)/i;
+
+const [root, base = ""] = process.argv.slice(2);
+if (!root) {
+  console.error("usage: node page-weight.mjs <build folder> [base path]");
+  process.exit(2);
+}
+
+function attr(tag, name) {
+  return new RegExp(`\\s${name}=(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i").exec(tag)?.slice(1).find(Boolean);
+}
+
+// The file under root that a link in the file at `from` points to, or undefined when it
+// is not on this site. Root-relative links lose the base path; others resolve from `from`.
+function resolve(ref, from) {
+  if (!ref || ELSEWHERE.test(ref)) return undefined;
+  const path = decodeURIComponent(ref.split(/[?#]/)[0]);
+  if (!path.startsWith("/")) return posix.join(posix.dirname(from), path);
+  const local = base && (path === base || path.startsWith(`${base}/`)) ? path.slice(base.length) : path;
+  return posix.normalize(local).replace(/^\/+/, "");
+}
+
+function linksOf(html, page) {
+  const refs = [];
+  // A tag inside an HTML comment, such as the web app's note on scripts, loads nothing.
+  const live = html.replace(/<!--[\s\S]*?-->/g, "");
+  for (const [tag, name] of [...live.matchAll(TAG)].map((m) => [m[0], m[1].toLowerCase()])) {
+    if (name === "link" && !LINK_REL.test(attr(tag, "rel") ?? "")) continue;
+    if (name === "astro-island") refs.push(...ISLAND_URLS.map((a) => attr(tag, a)));
+    else refs.push(attr(tag, name === "link" ? "href" : "src"));
+  }
+  return refs.map((r) => resolve(r, page)).filter(Boolean);
+}
+
+async function gzipped(file, page) {
+  const bytes = await readFile(posix.join(root, file)).catch((e) => {
+    if (e.code !== "ENOENT") throw e;
+    const hint = base ? `the base path is ${base}` : "pass the base path if links carry one";
+    console.error(`missing file: ${page} links to ${file}, which is not in ${root}/ (${hint})`);
+    process.exit(2);
+  });
+  return { bytes, gz: gzipSync(bytes).length };
+}
+
+async function weigh(page) {
+  const seen = new Set([page]);
+  const queue = [page];
+  let total = 0;
+  while (queue.length) {
+    const file = queue.shift();
+    const { bytes, gz } = await gzipped(file, page);
+    total += gz;
+    const found = file === page ? linksOf(bytes.toString(), page) : [];
+    if (/\.m?js$/.test(file)) {
+      for (const [, spec] of bytes.toString().matchAll(STATIC_IMPORT)) {
+        // A bare specifier (`react`) was bundled at build time and is no file here.
+        if (spec.startsWith(".") || spec.startsWith("/")) found.push(resolve(spec, file));
+      }
+    }
+    for (const dep of found.filter((f) => f && !seen.has(f))) {
+      seen.add(dep);
+      queue.push(dep);
+    }
+  }
+  return { page, kb: total / 1000, budget: OVERRIDES[page] ?? DEFAULT_BUDGET_KB };
+}
+
+const files = await readdir(root, { recursive: true }).catch(() => {
+  console.error(`No ${root}/ folder: build the site first.`);
+  process.exit(2);
+});
+const pages = [];
+// 404.html and meta-refresh redirect stubs are not pages a reader opens on a first visit.
+for (const f of files.map((p) => p.split("\\").join("/")).filter((p) => p.endsWith(".html") && p !== "404.html")) {
+  if (!/http-equiv=["']?refresh/i.test(await readFile(posix.join(root, f), "utf8"))) pages.push(f);
+}
+if (!pages.length) {
+  console.error(`No HTML pages in ${root}/: build the site first.`);
+  process.exit(2);
+}
+const rows = [];
+for (const page of pages) rows.push(await weigh(page));
+rows.sort((a, b) => b.kb - a.kb);
+console.log(`${"page".padEnd(46)}${"kB (gzip)".padStart(10)}${"budget".padStart(8)}`);
+for (const r of rows) {
+  console.log(`${r.page.padEnd(46)}${r.kb.toFixed(1).padStart(10)}${String(r.budget).padStart(8)}`);
+}
+const over = rows.filter((r) => r.kb > r.budget);
+for (const r of over) {
+  console.error(`over budget: ${r.page} weighs ${r.kb.toFixed(1)} kB, its budget is ${r.budget} kB`);
+}
+if (over.length) {
+  console.error(
+    "Make the page lighter, or raise DEFAULT_BUDGET_KB or add an OVERRIDES entry in this script, with the reason in the commit.",
+  );
+  process.exit(1);
+}

@@ -67,6 +67,9 @@ jobs:
 {%- endif %}
       - run: just site
 
+      # Each page's first-visit weight, gzipped, against the budget in .github/scripts/page-weight.mjs.
+      - run: just site-page-weight
+
       # The deploy and preview jobs both ship this one build{% if site_on_workers %}: a tar in an artifact,
       # named for Pages by the action but deployed to a Worker{% endif %}.
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
