@@ -251,7 +251,7 @@ grep -qx '      - run: pnpm audit --prod --audit-level=moderate' a/.github/workf
 grep -qxF "      - run: uv $lc" a/.github/workflows/python.yml
 grep -qx '      - run: pnpm run licenses' a/.github/workflows/ts.yml
 grep -qx '      - run: cargo deny list' a/.github/workflows/rust.yml
-grep -qx "      - run: $gl report --ignore github.com/example-org/render-me ./..." a/.github/workflows/go.yml
+grep -qxF "      - run: $gl --licenses=$permissive -L go.mod" a/.github/workflows/go.yml
 # Trusted publishing and attestations need the job-level write scopes; the
 # workflow-level grant stays read-only.
 grep -q '^      id-token: write ' c/.github/workflows/python-release.yml
