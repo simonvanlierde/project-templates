@@ -3,7 +3,8 @@
 // gzipped HTML plus the same-origin files it loads up front: stylesheets, scripts and the
 // modules they import statically, preloads, icons and images. gzip stands in for the
 // bytes on the wire. Cross-origin requests, fonts reached only through CSS @font-face and
-// dynamic import() chunks load later or elsewhere and are not counted.
+// dynamic import() chunks load later or elsewhere and are not counted, and neither are
+// imports inside an inline <script>.
 //
 //   node page-weight.mjs <build folder> [base path]
 //
@@ -32,7 +33,8 @@ const STATIC_IMPORT = /\b(?:from|import)\s*["']([^"']+)["']/g;
 // A scheme (https:, data:), a protocol-relative //host or a bare #fragment: not a file here.
 const ELSEWHERE = /^([a-z][a-z0-9+.-]*:|\/\/|#)/i;
 
-const [root, base = ""] = process.argv.slice(2);
+const [root, rawBase = ""] = process.argv.slice(2);
+const base = rawBase.replace(/\/+$/, "");
 if (!root) {
   console.error("usage: node page-weight.mjs <build folder> [base path]");
   process.exit(2);
@@ -46,7 +48,12 @@ function attr(tag, name) {
 // is not on this site. Root-relative links lose the base path; others resolve from `from`.
 function resolve(ref, from) {
   if (!ref || ELSEWHERE.test(ref)) return undefined;
-  const path = decodeURIComponent(ref.split(/[?#]/)[0]);
+  let path = ref.split(/[?#]/)[0];
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    // A stray % is a literal file name.
+  }
   if (!path.startsWith("/")) return posix.join(posix.dirname(from), path);
   const local = base && (path === base || path.startsWith(`${base}/`)) ? path.slice(base.length) : path;
   return posix.normalize(local).replace(/^\/+/, "");
@@ -64,23 +71,31 @@ function linksOf(html, page) {
   return refs.map((r) => resolve(r, page)).filter(Boolean);
 }
 
-async function gzipped(file, page) {
+// Undefined when `file` is missing and only a module `via` imports it: text in a string or
+// a comment can look like an import, so that warns instead of failing.
+async function gzipped(file, page, via) {
   const bytes = await readFile(posix.join(root, file)).catch((e) => {
     if (e.code !== "ENOENT") throw e;
+    if (via !== page) {
+      console.warn(`skipped: ${via} seems to import ${file}, which is not in ${root}/`);
+      return undefined;
+    }
     const hint = base ? `the base path is ${base}` : "pass the base path if links carry one";
     console.error(`missing file: ${page} links to ${file}, which is not in ${root}/ (${hint})`);
     process.exit(2);
   });
-  return { bytes, gz: gzipSync(bytes).length };
+  return bytes && { bytes, gz: gzipSync(bytes).length };
 }
 
 async function weigh(page) {
   const seen = new Set([page]);
-  const queue = [page];
+  const queue = [[page, page]];
   let total = 0;
   while (queue.length) {
-    const file = queue.shift();
-    const { bytes, gz } = await gzipped(file, page);
+    const [file, via] = queue.shift();
+    const loaded = await gzipped(file, page, via);
+    if (!loaded) continue;
+    const { bytes, gz } = loaded;
     total += gz;
     const found = file === page ? linksOf(bytes.toString(), page) : [];
     if (/\.m?js$/.test(file)) {
@@ -91,7 +106,7 @@ async function weigh(page) {
     }
     for (const dep of found.filter((f) => f && !seen.has(f))) {
       seen.add(dep);
-      queue.push(dep);
+      queue.push([dep, file]);
     }
   }
   return { page, kb: total / 1000, budget: OVERRIDES[page] ?? DEFAULT_BUDGET_KB };

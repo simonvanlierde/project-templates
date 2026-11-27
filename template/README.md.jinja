@@ -96,7 +96,7 @@ push to `main` deploys the build the checks ran on, at `{{ site_url }}`. Every p
 neither a draft nor from a bot gets a preview URL (see below). [`{{ d }}public/_headers`]({{ blob }}{{ d }}public/_headers) sets the
 response headers, including the Content-Security-Policy that the e2e tests run under. [`docs/interface.md`]({{ blob }}docs/interface.md) lists the URL parameters and data files that scripts and agents can rely on.
 
-CI fails when a page's first visit, gzipped, weighs over its budget: 200 kB unless [`{{ d }}scripts/page-weight.mjs`]({{ blob }}{{ d }}scripts/page-weight.mjs) sets another. `pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} run page-weight` runs the same check after a build.
+CI fails when a page's first visit, gzipped, weighs over its budget: 200 kB (1 kB = 1,000 bytes) unless [`{{ d }}scripts/page-weight.mjs`]({{ blob }}{{ d }}scripts/page-weight.mjs) sets another. `pnpm{% if ts_dir != '.' %} -C {{ ts_dir }}{% endif %} run page-weight` runs the same check after a build.
 
 One-time setup, for production and previews alike:
 

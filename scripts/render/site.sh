@@ -412,6 +412,7 @@ x_kb=$(awk '$1 == "index.html" { print $2 }' x-page-weight.log)
 awk -v kb="$x_kb" -v min="$(cat x/_site/index.html x/_site/style.css x/_site/main.mjs | gzip -c | wc -c)" 'BEGIN { exit !(kb * 1000 >= min * 0.9) }'
 # Fixtures: a root-relative link under the base path and the module it imports count; a
 # dynamic import, a cross-origin script, a commented-out tag, 404.html and a redirect stub do not.
+# An import-looking comment warns, and a stray % in a link is a file name, not an error.
 pw=$out/page-weight
 weigh() { # fixture, expected exit code, base path
   local rc=0
@@ -429,15 +430,18 @@ printf 'import "./dep.mjs";\n' >"$pw/heavy/app.js"
 head -c 250000 /dev/urandom >"$pw/heavy/dep.mjs"
 weigh heavy 1 /me
 grep -qE '^over budget: docs/index.html weighs 2[45][0-9]\.[0-9] kB, its budget is 200 kB$' "$pw/heavy.out"
+weigh heavy 1 /me/
+grep -qE '^over budget: docs/index.html weighs 2[45][0-9]\.[0-9] kB, its budget is 200 kB$' "$pw/heavy.out"
 grep -qF 'raise DEFAULT_BUDGET_KB or add an OVERRIDES entry' "$pw/heavy.out"
 printf '<!-- <script src="gone.js"> --><script src="https://cdn.example.org/big.js"></script><script type="module" src="app.js"></script>\n' >"$pw/light/index.html"
-printf 'import("./dep.mjs");\n' >"$pw/light/app.js"
+printf 'import("./dep.mjs");\n// import "./widget.js" to add the widget\n' >"$pw/light/app.js"
 cp "$pw/heavy/dep.mjs" "$pw/light/dep.mjs"
 printf '<script src="dep.mjs"></script><script src="gone.js"></script>\n' >"$pw/light/404.html"
 printf '<meta http-equiv="refresh" content="0; url=/"><script src="gone.js"></script>\n' >"$pw/light/old.html"
 weigh light 0
 (lacks -qE '^(404|old)\.html' "$pw/light.out")
-printf '<img src="logo.png">\n' >"$pw/broken/index.html"
+grep -qxF "skipped: app.js seems to import widget.js, which is not in $pw/light/" "$pw/light.out"
+printf '<img src="logo.png"><img src="a%%zz.png">\n' >"$pw/broken/index.html"
 weigh broken 2
 grep -qxF "missing file: index.html links to logo.png, which is not in $pw/broken/ (pass the base path if links carry one)" "$pw/broken.out"
 weigh absent 2
