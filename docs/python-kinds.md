@@ -44,23 +44,26 @@ After `just pipeline` succeeds in a licensed data-pipeline project, build the re
 just data-release release && just data-release-check release
 ```
 
-Check that the `resources` list in `release/datapackage.json` contains every output you intend to publish.
-An empty `resources` list describes a metadata-only bundle. If you intend to publish data, stop until the intended
+The recipes resolve `release/` relative to the Python project. For example, if the project
+lives in `apps/pipe/`, look for `apps/pipe/release/datapackage.json`.
+Check that the descriptor's `resources` list contains every output you intend to publish.
+An empty list describes a metadata-only bundle. If you intend to publish data, stop until the intended
 resources are present.
 
-Archive the `release/` folder. Check the archive's file list against the reuse terms in `sources.toml`.
-Keep restricted inputs and their outputs out.
+Archive the release directory with `release/` at the top level. Check the archive's file list
+against the reuse terms in `sources.toml`. Keep restricted inputs and their outputs out.
 
-Unpack the archive in a separate directory so it contains the `release/` folder.
-With SourceLedger already installed, run these checks offline.
+Install SourceLedger before going offline. If the bundle includes RO-Crate or Croissant metadata,
+install `sourceledger[release]` to get the validators. Unpack the archive in a new directory and
+run these checks from the directory containing `release/`.
 
 ```sh
-sourceledger verify release && (cd release && sha256sum --check SHA256SUMS)
+sourceledger verify release && sourceledger release --check release
 ```
 
-`verify` checks the data files against `datapackage.json`. The checksum list also covers
-`datapackage.json` and any additional metadata. On macOS, use `shasum -a 256 -c SHA256SUMS`
-in the release folder for the checksum check.
+`verify` checks the data files against `datapackage.json`. The release check uses
+`SHA256SUMS` to detect missing, changed, and unlisted files, and checks the descriptor's
+checksum along with the data and any additional metadata.
 For each shipped resource, open its entry in `datapackage.json` to find the upstream link,
 the recorded vintage and the SHA-256 of the downloaded source.
 
