@@ -13,6 +13,7 @@ changes are marked **Breaking**.
 ### Changed
 
 - `just release X.Y.Z` refuses unless `pyproject.toml`, `Cargo.toml` and `package.json` all name X.Y.Z, in every project, not only one that publishes to PyPI, crates.io or npm. Before, a project that published nowhere could tag v0.2.0 with 0.1.0 in its manifests. A web app's `package.json` is still set by the first run.
+- A Go project's license check runs osv-scanner (`osv-scanner scan source --licenses=... -L go.mod`) in place of go-licenses, which has had no release since 2025-09 and carries unmerged fixes. It reads the licenses of the `go.mod` dependencies from deps.dev, so it needs network access, and the allow-list now uses the same SPDX ids as the other stacks. Run `copier update`; nothing else to do. The scanner needs Go 1.27.3, so a project on an older Go toolchain downloads that one for the check.
 
 ### Fixed
 

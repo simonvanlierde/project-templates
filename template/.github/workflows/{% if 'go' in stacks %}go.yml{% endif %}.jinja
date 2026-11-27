@@ -1,4 +1,4 @@
-{% from 'includes/dependency-licenses.jinja' import go_dependency_licenses with context -%}
+{% from 'includes/dependency-licenses.jinja' import dependency_licenses with context -%}
 {% from 'includes/triggers.jinja' import push_and_pr -%}
 {%- set d = '' if go_dir == '.' else go_dir ~ '/' -%}
 name: go
@@ -68,9 +68,9 @@ jobs:
       - run: go test -race ./...
       - run: go tool govulncheck ./...
 {%- if license != 'none' %}
-      # Each dependency's license, then a failure on one that {{ license }} cannot take.
-      - run: go run github.com/google/go-licenses/v2@{{ go_licenses_version }} report --ignore {{ go_module }} ./...
-      - run: go run github.com/google/go-licenses/v2@{{ go_licenses_version }} check --ignore {{ go_module }} --allowed_licenses={{ go_dependency_licenses | join(',') }} ./...
+      # Fails on a go.mod dependency whose license {{ license }} cannot take, and prints the
+      # license of each. The scanner looks the licenses up on deps.dev.
+      - run: go run github.com/google/osv-scanner/v2/cmd/osv-scanner@{{ osv_scanner_version }} scan source --licenses={{ dependency_licenses | join(',') }} -L go.mod
 {%- endif %}
 
       - if: github.event_name != 'pull_request' && steps.go-cache.outputs.cache-hit != 'true'

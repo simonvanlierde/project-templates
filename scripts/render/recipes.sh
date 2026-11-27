@@ -86,7 +86,7 @@ done
 # fails on one the license answer cannot take. a is MIT, so the GPL family stays out of
 # the allow-list; agl is AGPL, so it goes in. The pins come from copier.yml, so a version
 # bump needs no edit here.
-gl_pin=$(sed -n '/^go_licenses_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
+osv_pin=$(sed -n '/^osv_scanner_version:/,/^$/s/^  default: //p' "$repo/copier.yml")
 lc='run --locked --isolated --no-default-groups --all-extras --all-packages python scripts/check_licenses.py'
 recipe_has a/just/python.just py-check "    uv $lc"
 recipe_has c/just/python.just py-check "    uv --directory api $lc"
@@ -182,16 +182,15 @@ done
 for l in AGPL-3.0-or-later GPL-3.0-or-later GPL-3.0-only LGPL-3.0-or-later; do
   grep -qxF "  \"$l\"," agl/deny.toml
 done
-gl="go run github.com/google/go-licenses/v2@$gl_pin"
+gl="go run github.com/google/osv-scanner/v2/cmd/osv-scanner@$osv_pin scan source"
 permissive=0BSD,Apache-2.0,BlueOak-1.0.0,BSD-2-Clause,BSD-3-Clause,BSL-1.0,CC0-1.0,CDLA-Permissive-2.0,ISC,MIT,MIT-0,MIT-CMU,MPL-2.0,PSF-2.0,Python-2.0,Unicode-3.0,Unlicense,Zlib
-recipe_has a/just/go.just go-check "    $gl check --ignore github.com/example-org/render-me --allowed_licenses=$permissive ./..."
-# go-licenses names the GPL family without -only or -or-later: AGPL-3.0, not AGPL-3.0-or-later.
-recipe_has agl/just/go.just go-check "    $gl check --ignore github.com/example-org/agl-me --allowed_licenses=$permissive,GPL-3.0,LGPL-3.0,AGPL-3.0 ./..."
+recipe_has a/just/go.just go-check "    $gl --licenses=$permissive -L go.mod"
+recipe_has agl/just/go.just go-check "    $gl --licenses=$permissive,GPL-2.0-or-later,GPL-3.0-only,GPL-3.0-or-later,LGPL-2.1-or-later,LGPL-3.0-only,LGPL-3.0-or-later,AGPL-3.0-only,AGPL-3.0-or-later -L go.mod"
 # A project without a license has nothing to be compatible with: no check.
 lacks -F check_licenses b/just/python.just
 test ! -e b/svc/scripts
 test ! -e b/scripts/checkLicenses.mjs
-lacks -F go-licenses i/just/go.just
+lacks -F osv-scanner i/just/go.just
 recipe_has a/justfile check '    @just py-check'
 recipe_has a/justfile check '    @just ts-check'
 # Whitespace control around the fmt recipe's last line must not glue the next comment onto it.
