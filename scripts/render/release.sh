@@ -54,6 +54,18 @@ test "$("$notes" v1.1.0 "$out/sample-changelog.md" | grep -c .)" = 2
 test "$("$notes" 1.0.0 "$out/sample-changelog.md")" = $'\n- first release'
 (! "$notes" 2.0.0 "$out/sample-changelog.md" 2>/dev/null)
 (! "$notes" 1.0 "$out/sample-changelog.md" 2>/dev/null)
+# A project that publishes nowhere still refuses a release whose manifests name another
+# version, before it reads git or changes a file. a has Python and Rust at 0.1.0.
+cp -R a "$out/a-rel"
+(
+  cd "$out/a-rel"
+  (! just release 0.2.0 >release.log 2>&1)
+  grep -qxF 'pyproject.toml is not at 0.2.0' release.log
+  sed -i 's/^version = "0.1.0"$/version = "0.2.0"/' pyproject.toml
+  (! just release 0.2.0 >release.log 2>&1)
+  grep -qxF 'Cargo.toml is not at 0.2.0' release.log
+)
+rm -rf "$out/a-rel"
 # just release: the first run cuts the changelog, the second signs and pushes the tag.
 # The key is made here and the remote is a local bare repo; the host's git config and
 # keys are not read.
@@ -174,9 +186,9 @@ cp -R k "$rel/w"
   grep -qxF 'the refused tag v0.1.0 was already here; delete it, then run this again: git tag -d v0.1.0' release.log
   git rev-parse -q --verify refs/tags/v0.1.0 >/dev/null
 )
-# c lists three manifests in citesync.toml. Bumping the two the recipe reads, but not
-# Cargo.toml, stops the release at citesync with CHANGELOG.md unchanged. No remote: the
-# check runs before the fetch.
+# c lists three manifests in citesync.toml, and the recipe reads all three. With them at
+# 0.2.0 and CITATION.cff at 0.1.0, the release stops at citesync with CHANGELOG.md
+# unchanged. No remote: the check runs before the fetch.
 cp -R c "$rel/c"
 (
   cd "$rel/c"
@@ -184,6 +196,8 @@ cp -R c "$rel/c"
   sed -i 's/^## \[Unreleased\]$/&\n\n- first thing/' CHANGELOG.md
   sed -i 's/^version = "0.1.0"$/version = "0.2.0"/' api/pyproject.toml
   sed -i 's/^  "version": "0.1.0",$/  "version": "0.2.0",/' apps/web/package.json
+  sed -i 's/^version = "0.1.0"$/version = "0.2.0"/' crates/cli/Cargo.toml
+  echo 'version: 0.1.0' >>CITATION.cff
   git add -A
   git -c user.name=t -c user.email=t@t.test commit -qm base --no-verify
   (! just release 0.2.0 >../c-release.log 2>&1)

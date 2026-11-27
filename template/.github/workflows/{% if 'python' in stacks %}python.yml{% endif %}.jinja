@@ -146,7 +146,8 @@ jobs:
 
   revisions:
     # Weekly only. Comments on one open issue when a publisher served new bytes for a
-    # source the committed fetch log already had. The only job that may write issues.
+    # source the committed fetch log already had. A source with a `sha256` pin never gets
+    # here: its new bytes fail `fetch`. The only job that may write issues.
     name: report revised sources
     needs: check
     if: {% raw %}${{ !cancelled() && github.event_name == 'schedule' }}{% endraw %}

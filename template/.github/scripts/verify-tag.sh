@@ -4,6 +4,9 @@
 # started, the tag must also still mark GITHUB_SHA, the commit the workflow builds. REF is the default branch, never the tag:
 # the tagged commit's copy of the list is whatever the tag's pusher wrote. GitHub's
 # "Verified" mark is no substitute, since it accepts a key registered to any account.
+# This check catches a mistake, not an attacker: a release workflow runs the copy in the
+# tagged commit, which the tag's pusher can change. The controls are the tags ruleset,
+# which limits who can push v* tags, and the required review on a registry release environment.
 # --fetch first fetches the tag and REF's branch from origin, for a workflow: checkout
 # fetches the tagged commit, not the annotated tag object that holds the signature.
 # Usage: verify-tag.sh [--fetch] TAG origin/BRANCH

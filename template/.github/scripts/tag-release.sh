@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Sign the release tag vX.Y.Z on origin/main with your SSH signing key and push it.
-# The release workflow publishes only a tag signed with a key in .github/allowed_signers
-# on main, and this script runs the same check before it pushes. Run it on an
-# up-to-date main.
+# The release workflow checks that the tag is signed with a key in .github/allowed_signers
+# on main, and this script runs the same check before it pushes (verify-tag.sh says what
+# that check does not stop). Run it on an up-to-date main.
 # Usage: tag-release.sh X.Y.Z
 set -euo pipefail
 
