@@ -53,9 +53,10 @@ resources are present.
 Archive the release directory with `release/` at the top level. Check the archive's file list
 against the reuse terms in `sources.toml`. Keep restricted inputs and their outputs out.
 
-Install SourceLedger before going offline. If the bundle includes RO-Crate or Croissant metadata,
-install `sourceledger[release]` to get the validators. Unpack the archive in a new directory and
-run these checks from the directory containing `release/`.
+Unpack the archive in a new directory. With SourceLedger installed, run these checks from
+the directory containing `release/`. Both commands run offline for a Data Package-only
+release. If the bundle includes RO-Crate or Croissant metadata, install `sourceledger[release]`
+and allow network access for the metadata validators.
 
 ```sh
 sourceledger verify release && sourceledger release --check release
