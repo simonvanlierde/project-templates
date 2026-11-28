@@ -59,6 +59,8 @@ call the script directly instead.
 
 A GitHub App of your own gives the workflow a token for each run. The token lasts an hour, reaches only the repo it runs in, and is revoked when the job ends. One App serves all your repos.
 
+Enable the App only for templates whose maintainers and releases you trust. Its update PRs can change workflows and run them before merge with access to repository secrets. Without the App, workflow changes require a manual update: review them before pushing.
+
 1. Create the App at <https://github.com/settings/apps/new>. Give it a name and any homepage URL, untick Webhook > Active, and give it the repository permissions Contents, Pull requests and Workflows, each "Read and write". Let it be installed on this account only.
 2. On the App's page, note the Client ID and generate a private key, which downloads a `.pem` file.
 3. Install the App on each repo that uses the template (Install App, then Only select repositories).

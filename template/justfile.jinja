@@ -206,7 +206,7 @@ citation:
 release version:
     #!/usr/bin/env bash
     set -euo pipefail
-    version={% raw %}{{ version }}{% endraw %}
+    version={% raw %}{{ quote(version) }}{% endraw %}
     [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a version: $version" >&2; exit 1; }
     tag=v$version
     repo=https://github.com/{{ github_user }}/{{ slug }}
@@ -237,6 +237,10 @@ release version:
 {%- if public and citable %}
         echo "Archive it in Software Heritage: https://archive.softwareheritage.org/save/ (git, $repo). The README badge then links to the SWHID."
 {%- endif %}
+        exit 0
+    fi
+    if grep "^## \[$version\] - " CHANGELOG.md >/dev/null; then
+        echo "Merge the release commit to main, then run: just release $version"
         exit 0
     fi
     prev=$(sed -n 's/^## \[\([0-9][0-9.]*\)\].*/\1/p' CHANGELOG.md | head -1)
