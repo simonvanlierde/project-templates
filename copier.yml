@@ -1055,12 +1055,13 @@ govulncheck_version:
 
 # Computed, never asked: the Go license checker CI and the check recipe run, with
 # `go run` outside go.mod. It takes the allow-list in includes/dependency-licenses.jinja,
-# as the Python and TypeScript scripts and Rust's deny.toml do.
-# renovate: datasource=go depName=github.com/google/go-licenses/v2
-go_licenses_version:
+# as the Python and TypeScript scripts and Rust's deny.toml do. It needs Go 1.27.3, which
+# a newer toolchain fetches itself.
+# renovate: datasource=go depName=github.com/google/osv-scanner/v2
+osv_scanner_version:
   type: str
   when: false
-  default: v2.0.1
+  default: v2.7.1
 
 # --- test extras --------------------------------------------------------------
 
