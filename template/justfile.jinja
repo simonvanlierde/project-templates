@@ -32,6 +32,7 @@ check:
 {%- endif %}
 {%- if site == 'astro' %}
     @just site
+    @just site-page-weight
 {%- endif %}
     @if just --show local-check >/dev/null 2>&1; then just local-check; fi
 
@@ -88,6 +89,10 @@ site:
 {%- endif %}
     ASTRO_TELEMETRY_DISABLED=1 pnpm -C site run build
 {%- endif %}
+
+# Fail when a page in {{ site_out }}/ is over its first-visit weight budget, set in .github/scripts/page-weight.mjs. Run after `just site`.
+site-page-weight:
+    node .github/scripts/page-weight.mjs {{ site_out }}{% if site == 'astro' and not site_on_workers %} /{{ slug }}{% endif %}
 {%- endif %}
 {%- if site == 'astro' %}
 

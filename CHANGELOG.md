@@ -10,6 +10,10 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Added
+
+- A site and a web app fail CI when a built page's first visit, gzipped, weighs over its budget: 200 kB a page, set in `.github/scripts/page-weight.mjs` for a site and `scripts/page-weight.mjs` for a web app, with per-page overrides. The check needs only Node. `site.yml` runs `just site-page-weight` after the build, and a web app's `ts.yml` and `just ts-check` run `pnpm run page-weight`. It counts the page's HTML and the same-origin files it loads up front, not cross-origin requests or dynamic imports. See [Static site](docs/hosting.md#static-site).
+
 ### Changed
 
 - `just release X.Y.Z` refuses unless `pyproject.toml`, `Cargo.toml` and `package.json` all name X.Y.Z, in every project, not only one that publishes to PyPI, crates.io or npm. Before, a project that published nowhere could tag v0.2.0 with 0.1.0 in its manifests. A web app's `package.json` is still set by the first run.

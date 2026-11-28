@@ -47,6 +47,9 @@
     "dev": "vite",
 {%- endif %}
     "fix": "biome check --write",
+{%- if web_app %}
+    "page-weight": "node scripts/page-weight.mjs dist",
+{%- endif %}
 {%- if license != 'none' %}
     "licenses": "pnpm licenses list --prod --json | node scripts/checkLicenses.mjs",
 {%- endif %}
@@ -75,9 +78,10 @@
 {%- endif %}
     ]
 {%- if ts_dir == '.' and (site != 'none' or docs_starlight) %},
-{#- site/ and docs-site/ are packages of their own: nothing in this one imports them. #}
+{#- site/ and docs-site/ are packages of their own: nothing in this one imports them.
+    site.yml runs the site's page-weight script with node, which knip does not read. #}
     "ignoreFiles": [
-      {{ ([] + (['"site/**"'] if site != 'none' else []) + (['"docs-site/**"'] if docs_starlight else [])) | join(',\n      ') }}
+      {{ ([] + (['".github/scripts/page-weight.mjs"', '"site/**"'] if site != 'none' else []) + (['"docs-site/**"'] if docs_starlight else [])) | join(',\n      ') }}
     ]
 {%- endif %}
 {%- if web_app %},

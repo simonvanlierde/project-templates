@@ -116,6 +116,22 @@ grep -q 'script-src .self.;' d/web/public/_headers
 (lacks -q "'unsafe-inline'" d/web/public/_headers)
 grep -q '"budget": "node scripts/checkBundleBudget.mjs"' d/web/package.json
 grep -q 'pnpm -C web run budget' d/just/ts.just
+# The page-weight budget: one script for the site and the web app, run by CI and ts-check.
+jq -e '.scripts["page-weight"] == "node scripts/page-weight.mjs dist"' d/web/package.json wp/web/package.json >/dev/null
+grep -qx '    pnpm -C web run page-weight' d/just/ts.just
+grep -qx '      - run: pnpm run page-weight' d/.github/workflows/ts.yml
+cmp d/web/scripts/page-weight.mjs d/.github/scripts/page-weight.mjs
+# shellcheck disable=SC2016 # literal Markdown
+grep -qF '[`web/scripts/page-weight.mjs`]' d/README.md
+# A build under the app's path keeps that path in dist/, so its root-relative links need no base.
+pw=$out/web-page-weight
+mkdir -p "$pw/dist/tools/path-me/assets"
+printf '<script type="module" crossorigin src="/tools/path-me/assets/index.js"></script>\n' >"$pw/dist/tools/path-me/index.html"
+head -c 250000 /dev/urandom >"$pw/dist/tools/path-me/assets/index.js"
+rc=0
+node wp/web/scripts/page-weight.mjs "$pw/dist" >"$pw/out" 2>&1 || rc=$?
+test "$rc" = 1
+grep -qE "^over budget: tools/path-me/index.html weighs 2[45][0-9]\.[0-9] kB, its budget is 200 kB$" "$pw/out"
 grep -qF 'image: mcr.microsoft.com/playwright:v' d/.github/workflows/ts.yml
 grep -qF 'needs.playwright.outputs.version }}-noble' d/.github/workflows/ts.yml
 # e2e waits for the version job only, which reads the nested lockfile.

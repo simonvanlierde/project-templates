@@ -90,6 +90,8 @@ jobs:
 {%- endif %}
 {%- if ts_kind == 'web-app' %}
       - run: pnpm run budget
+      # Each page's first-visit weight, gzipped, against the budget in scripts/page-weight.mjs.
+      - run: pnpm run page-weight
 
       # The preview and production jobs deploy this build, so they ship what the checks ran on.
       - if: github.event_name == 'pull_request' || github.event_name == 'push'
