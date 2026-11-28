@@ -28,13 +28,45 @@ A `data-pipeline` project includes:
   - `build`: verifies downloads against fetch records, prepends five provenance columns, writes `data/processed/<id>.parquet`, and emits `datapackage.json` with checksums, sources, and licenses.
     Set `output_format = "csv"` at the top of `sources.toml` to write CSV instead.
   - `validate`: checks output files against the manifest, fetch records, and reuse terms. It fails when an output came from an older download, a source has no reuse terms, or a raw file changed after it was fetched.
-- Lifecycle recipes: `just fetch`, `just build`, `just validate`, and `just pipeline` to run all three. `just status` lists source fetch timestamps, and `just attribution` generates the table for `ATTRIBUTION.md`. With a license, `just data-release [DIR]` (default `release/`) writes the folder to publish: the data without the sources whose terms forbid redistribution, `datapackage.json` and `SHA256SUMS`, with the dataset's name, licence and authors from `codemeta.json`. `just data-release-check [DIR]` checks it. The name avoids the project's own `just release`, which tags a version.
+- Lifecycle recipes: `just fetch`, `just build`, `just validate`, and `just pipeline` to run all three. `just status` lists source fetch timestamps, and `just attribution` generates the table for `ATTRIBUTION.md`. With a license, `just data-release [DIR]` (default `release/`) writes redistributable outputs, `datapackage.json` and `SHA256SUMS`. RO-Crate and Croissant take the dataset's descriptive fields from CodeMeta when `release_formats` selects them. `just data-release-check [DIR]` checks the release folder. The project's own `just release` tags a version.
 - `ATTRIBUTION.md`: documents upstream data sources and reuse terms.
 - Tests: verify pipeline execution against local fixtures without network access.
 - CI workflow: runs the pipeline against live manifest URLs, then writes a release folder and checks it. Weekly scheduled runs (`TRIPWIRE=1`) check published numbers against expectations and compare fetched data against `data/fetches.jsonl`. When source bytes change, CI reports differences in an issue ("Source data revised upstream"). Run `just pipeline` locally and commit `data/fetches.jsonl` to record the new version. Inspect local changes with `uv run <slug> revisions <older copy of the log>`.
 - Docker stub: with the `docker` stack, the image holds the installed package and a `/health` stub, not `sources.toml` or `data/`. To run the stages in the container, copy the manifest into the image and adjust `CMD`.
 
 Replace the example source in `sources.toml`, and its sample tests, with your own sources.
+
+### Verify a data release before publishing
+
+After `just pipeline` succeeds in a licensed data-pipeline project, build the release into a new folder.
+
+```sh
+just data-release release && just data-release-check release
+```
+
+The recipes resolve `release/` relative to the Python project. For example, if the project
+lives in `apps/pipe/`, look for `apps/pipe/release/datapackage.json`.
+Check that the descriptor's `resources` list contains every output you intend to publish.
+An empty list describes a metadata-only bundle. If you intend to publish data, stop until the intended
+resources are present.
+
+Archive the release directory with `release/` at the top level. Check the archive's file list
+against the reuse terms in `sources.toml`. Keep restricted inputs and their outputs out.
+
+Unpack the archive in a new directory. With SourceLedger installed, run these checks from
+the directory containing `release/`. Both commands run offline for a Data Package-only
+release. If the bundle includes RO-Crate or Croissant metadata, install `sourceledger[release]`
+and allow network access for the metadata validators.
+
+```sh
+sourceledger verify release && sourceledger release --check release
+```
+
+`verify` checks the data files against `datapackage.json`. The release check uses
+`SHA256SUMS` to detect missing, changed, and unlisted files, and checks the descriptor's
+checksum along with the data and any additional metadata.
+For each shipped resource, open its entry in `datapackage.json` to find the upstream link,
+the recorded vintage and the SHA-256 of the downloaded source.
 
 ## web-service
 
