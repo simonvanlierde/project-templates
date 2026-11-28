@@ -40,9 +40,16 @@ jobs:
       workflows: {% raw %}${{ steps.copier.outputs.workflows }}{% endraw %}
       conflicts: {% raw %}${{ steps.copier.outputs.conflicts }}{% endraw %}
     steps:
+      - name: Require the default branch
+        env:
+          DEFAULT_BRANCH: {% raw %}${{ github.event.repository.default_branch }}{% endraw %}
+        shell: bash
+        run: test "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: {% raw %}${{ github.sha }}{% endraw %}
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -195,7 +202,7 @@ jobs:
   push:
     name: publish copier update
     needs: update
-    if: needs.update.outputs.latest != ''
+    if: needs.update.outputs.latest != '' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # The App's private key is a secret of this environment, which `just repo-settings`
@@ -210,6 +217,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ github.sha }}
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:

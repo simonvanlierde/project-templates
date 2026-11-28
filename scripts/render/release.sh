@@ -99,6 +99,8 @@ cp -R k "$rel/w"
   git add -A
   git commit -q -s -m 'chore: init'
   git push -q origin main
+  (! just release 'not a version' >release.log 2>&1)
+  grep -qxF 'not a version: not a version' release.log
   # An empty [Unreleased] and a manifest at another version both refuse, changing nothing.
   (! just release 0.1.0 >release.log 2>&1)
   grep -qxF '[Unreleased] has no entries to release' release.log
@@ -112,6 +114,12 @@ cp -R k "$rel/w"
   grep -qx '## \[0.1.0\] - [0-9-]*' CHANGELOG.md
   grep -qx '\[Unreleased\]: https://github.com/example-org/adopt-me/compare/v0.1.0...HEAD' CHANGELOG.md
   (! git rev-parse --verify -q v0.1.0 >/dev/null)
+  # Repeating preparation before merge must not duplicate the changelog or commit.
+  prepared=$(git rev-parse HEAD)
+  just release 0.1.0 >/dev/null
+  test "$(git rev-parse HEAD)" = "$prepared"
+  test "$(grep -c '^## \[0.1.0\] - ' CHANGELOG.md)" -eq 1
+  test "$(grep -c '^\[0.1.0\]:' CHANGELOG.md)" -eq 1
   git push -q origin main
   just release 0.1.0 >/dev/null
   test "$(git cat-file -t v0.1.0)" = tag

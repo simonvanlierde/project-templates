@@ -230,7 +230,7 @@ for answers in */.copier-answers.yml; do
   for recipe in release repo-settings; do
     # shellcheck disable=SC2016 # a literal "$1" for the recipe body
     (cd "${answers%/*}" && just --show "$recipe") |
-      sed -e '1,/^[a-z-]*\( [a-z]*\)*:$/d' -e 's/^    //' -e 's/{{ version }}/"$1"/' -e 's/{owner}\/{repo}/OWNER\/REPO/g' |
+      sed -e '1,/^[a-z-]*\( [a-z]*\)*:$/d' -e 's/^    //' -e 's/{{ quote(version) }}/"$1"/' -e 's/{{ version }}/"$1"/' -e 's/{owner}\/{repo}/OWNER\/REPO/g' |
       shellcheck -s bash -e SC2043 - || {
       echo "${answers%/*}: just $recipe fails shellcheck" >&2
       exit 1

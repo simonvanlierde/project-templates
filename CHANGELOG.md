@@ -21,6 +21,9 @@ changes are marked **Breaking**.
 
 ### Fixed
 
+- `just release` treats its version argument as a literal string before validation, so an invalid argument containing spaces fails with `not a version` instead of running part of the argument as a shell command.
+- Repeating `just release X.Y.Z` before its release commit merges leaves the changelog and commit unchanged. It prints the merge instruction instead of adding a duplicate version section.
+- The weekly template updater publishes only from the default branch. A manual run on another branch or a tag cannot replace `chore/copier-update` with that ref's commits.
 - `verify-tag.sh` and `tag-release.sh` no longer claim the signature check stops an unsigned tag from publishing: the workflow runs the tagged commit's copy, which the tag's pusher can change. The comments name the tags ruleset and the release environment's review as the controls.
 - A data pipeline's README and `python.yml` say that a source with a `sha256` pin never reaches the weekly "Source data revised upstream" issue: its new bytes fail `just fetch` first.
 - `just repo-settings` adds the `main` branch policy for the `ghcr` environment only in a project that publishes an image to GHCR.

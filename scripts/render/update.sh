@@ -15,10 +15,16 @@ uv run --no-project python "$repo/scripts/test_copier_push.py" "a/$publisher"
 cuh=$out/copier-update
 mkdir -p "$cuh"
 uv run --no-project --with pyyaml python - "$cu" "$cuh/push.sh" <<'PYTEST'
-import sys, yaml
+import os, subprocess, sys, yaml
 from pathlib import Path
 jobs = yaml.safe_load(open(sys.argv[1]))["jobs"]
 assert jobs["update"]["permissions"] == {"contents": "read"}
+gate = jobs["update"]["steps"][0]
+assert gate["name"] == "Require the default branch"
+assert gate["env"]["DEFAULT_BRANCH"] == "${{ github.event.repository.default_branch }}"
+for ref in ("refs/heads/main", "refs/heads/feature", "refs/tags/main", "refs/heads/Main"):
+    result = subprocess.run(["bash", "-e", "-c", gate["run"]], env={"PATH": os.environ["PATH"], "GITHUB_REF": ref, "DEFAULT_BRANCH": "main"})
+    assert (result.returncode == 0) == (ref == "refs/heads/main"), ref
 assert "COPIER_UPDATE_PRIVATE_KEY" not in str(jobs["update"]) and "environment" not in jobs["update"]
 # The App key is an environment secret; repo-settings limits that environment to main.
 assert jobs["push"]["environment"] == "copier-update"
@@ -26,6 +32,11 @@ app = [s for s in jobs["push"]["steps"] if s.get("uses", "").startswith("actions
 assert len(app) == 1 and app[0]["if"] == "vars.COPIER_UPDATE_CLIENT_ID != ''", app
 assert {k for k in app[0]["with"] if k.startswith("permission-")} == {"permission-contents", "permission-pull-requests", "permission-workflows"}
 assert jobs["push"]["needs"] == "update"
+for job in ("update", "push"):
+    checkout = next(step for step in jobs[job]["steps"] if step.get("uses", "").startswith("actions/checkout@"))
+    assert checkout["with"]["ref"] == "${{ github.sha }}"
+# Dispatching a feature branch or a tag must never replace the fixed update PR.
+assert jobs["push"]["if"] == "needs.update.outputs.latest != '' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)"
 assert any(s.get("uses", "").startswith("actions/download-artifact@") for s in jobs["push"]["steps"])
 assert not any("uvx" in s.get("run", "") for s in jobs["push"]["steps"])
 publish = next(s for s in jobs["push"]["steps"] if s.get("name") == "Push the update and open the PR")
