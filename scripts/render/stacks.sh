@@ -226,6 +226,9 @@ grep -qF 'paths: ["api/**", ".github/workflows/docker.yml"]' c/.github/workflows
 # shellcheck disable=SC2016 # literal $env in the recipe
 grep -qF '"$env" = "ghcr"' c/justfile
 grep -qF -- '-f name="main" -f type="branch"' c/justfile
+# Without an image to push (cb publishes a crate only), the ghcr branch is not rendered.
+# shellcheck disable=SC2016 # literal $env in the recipe
+(lacks -qF '"$env" = "ghcr"' cb/justfile)
 # The publish job has no checkout; the wheels land in the root dist/.
 grep -qx '          path: dist/' c/.github/workflows/python-release.yml
 # A release made with GITHUB_TOKEN starts no workflow, so npm publishing

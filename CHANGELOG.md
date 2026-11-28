@@ -10,8 +10,16 @@ changes are marked **Breaking**.
 
 ## [Unreleased]
 
+### Changed
+
+- `just release X.Y.Z` refuses unless `pyproject.toml`, `Cargo.toml` and `package.json` all name X.Y.Z, in every project, not only one that publishes to PyPI, crates.io or npm. Before, a project that published nowhere could tag v0.2.0 with 0.1.0 in its manifests. A web app's `package.json` is still set by the first run.
+- A Go project's license check runs osv-scanner (`osv-scanner scan source --licenses=... -L go.mod`) in place of go-licenses, which has had no release since 2025-09 and carries unmerged fixes. It reads the licenses of the `go.mod` dependencies from deps.dev, so it needs network access, and the allow-list now uses the same SPDX ids as the other stacks. Run `copier update`; nothing else to do. The scanner needs Go 1.27.3, so a project on an older Go toolchain downloads that one for the check.
+
 ### Fixed
 
+- `verify-tag.sh` and `tag-release.sh` no longer claim the signature check stops an unsigned tag from publishing: the workflow runs the tagged commit's copy, which the tag's pusher can change. The comments name the tags ruleset and the release environment's review as the controls.
+- A data pipeline's README and `python.yml` say that a source with a `sha256` pin never reaches the weekly "Source data revised upstream" issue: its new bytes fail `just fetch` first.
+- `just repo-settings` adds the `main` branch policy for the `ghcr` environment only in a project that publishes an image to GHCR.
 - A Zensical docs site's weekly link check skips links it cannot follow: a `{{ config.* }}` value Zensical fills in, a local preview server such as `http://localhost:8000`, and `https://www.npmjs.com`, which answers link checkers with 403 Forbidden.
 
 ## [0.17.0] - 2026-11-26

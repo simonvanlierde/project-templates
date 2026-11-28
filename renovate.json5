@@ -149,6 +149,12 @@
       matchDepNames: ["node"],
       allowedVersions: "<25",
     },
+    // howfairis scores five GitHub checks and still works (0.15.0, last commit 2025-04, a
+    // weekly run in fair.yml). It is finished, not abandoned, and has no maintained successor.
+    {
+      matchPackageNames: ["fair-software/howfairis"],
+      abandonmentThreshold: null,
+    },
     // Maintained (commits in 2026-08) but tagged about once a year, which trips
     // the 1-year abandonment threshold.
     {

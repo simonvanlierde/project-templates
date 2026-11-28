@@ -204,7 +204,7 @@ def test_main_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
         "uv run --locked --isolated --no-default-groups --all-extras --all-packages python scripts/check_licenses.py",
         "pnpm run licenses",
         "cargo deny list",
-        "go run github.com/google/go-licenses/v2@v2.0.1 check ./...",
+        "go run github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.1 scan source --licenses=MIT -L go.mod",
     ],
 )
 def test_dependency_licenses_finds_the_template_steps(tmp_path: Path, step: str):

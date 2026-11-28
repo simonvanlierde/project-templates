@@ -64,7 +64,7 @@ Execute `just repo-settings` once after creating the repository and again whenev
 
 To publish a release:
 
-1. Set the version `X.Y.Z` in the manifest you publish (`pyproject.toml`, `package.json` or `Cargo.toml`). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts without a `version`, which citesync skips. Once you add one, after the first release, keep it in step, or citesync fails with `version-mismatch`.
+1. Set the version `X.Y.Z` in each manifest the project has (`pyproject.toml`, `package.json`, `Cargo.toml`; a web app's `package.json` is set in step 2). A citable project sets it in every manifest `citesync.toml` lists, or in every manifest at the root when it has no `citesync.toml`. `CITATION.cff` starts without a `version`, which citesync skips. Once you add one, after the first release, keep it in step, or citesync fails with `version-mismatch`.
 2. Run `just release X.Y.Z`. It checks that version and, in a citable project, runs the citesync hook, then cuts `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - date`, fixes the compare links and commits. In a web app it also sets the version in `package.json` itself and commits both files.
 3. Merge that commit to `main`, then run `just release X.Y.Z` again on up-to-date `main`. It signs the annotated tag `vX.Y.Z` on `origin/main`, checks it against `.github/allowed_signers` on `origin/main` and pushes it. A web app's run first refuses a `package.json` on `origin/main` at another version, and the release workflow refuses such a tag again before it publishes. See [Signed release tags](#signed-release-tags) for the key it needs.
 
